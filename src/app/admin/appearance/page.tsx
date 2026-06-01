@@ -24,13 +24,14 @@ function AppearancePage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    supabase.from('restaurant_settings').select('*').maybeSingle().then(({ data }) => {
-      if (data) {
-        setSettingsId(data.id);
-        setName(data.restaurant_name);
-        setColor(data.primary_color);
-        setLogoUrl(data.logo_url || '');
-        setLogoInput(data.logo_url || '');
+    supabase.from('restaurant_settings').select('*').limit(1).then(({ data }) => {
+      const row = data?.[0];
+      if (row) {
+        setSettingsId(row.id);
+        setName(row.restaurant_name);
+        setColor(row.primary_color);
+        setLogoUrl(row.logo_url || '');
+        setLogoInput(row.logo_url || '');
       }
     });
   }, []);
