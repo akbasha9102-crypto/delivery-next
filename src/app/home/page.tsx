@@ -7,6 +7,7 @@ import { useCart } from '@/context/CartContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Moon, Sun, Plus, Minus, X } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 
 type Category = { id: string; name: string };
 type Extra    = { id: string; name: string; price: number };
@@ -18,6 +19,8 @@ type Item     = {
 export default function HomePage() {
   const { dark, toggleDark } = useDarkMode();
   const { items: cartItems, addItem, decrementItem, removeItem, total } = useCart();
+  const { restaurant_name, primary_color, logo_url } = useSettings();
+  const p = primary_color; // shorthand for inline styles
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [items,      setItems]      = useState<Item[]>([]);
@@ -133,7 +136,11 @@ export default function HomePage() {
         <button onClick={toggleDark} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 transition-all active:scale-90">
           {dark ? <Sun size={18} className="text-yellow-400"/> : <Moon size={18} className="text-gray-500"/>}
         </button>
-        <h1 className="text-xl font-bold text-[#944a00]">CulinaShare</h1>
+        {logo_url ? (
+          <Image src={logo_url} alt={restaurant_name} width={120} height={36} className="h-9 w-auto object-contain" unoptimized/>
+        ) : (
+          <h1 className="text-xl font-bold" style={{ color: p }}>{restaurant_name}</h1>
+        )}
         <div className="w-9"/>
       </header>
 
@@ -145,11 +152,10 @@ export default function HomePage() {
               key={cat.id}
               data-cat={cat.id}
               onClick={() => scrollToCategory(cat.id)}
-              className={`px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all active:scale-95 flex-shrink-0 ${
-                activeCategory === cat.id
-                  ? 'bg-[#e67e22] text-white shadow-sm shadow-orange-200 dark:shadow-orange-900/40'
-                  : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'
-              }`}
+              className="px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all active:scale-95 flex-shrink-0"
+              style={activeCategory === cat.id
+                ? { backgroundColor: p, color: '#fff' }
+                : {}}
             >
               {cat.name}
             </button>
@@ -177,7 +183,7 @@ export default function HomePage() {
                       {cat.name}
                     </h2>
                     <div className="flex-1 h-px bg-gradient-to-l from-gray-200 to-transparent dark:from-slate-700"/>
-                    <div className="w-2 h-2 rounded-full bg-[#e67e22] flex-shrink-0"/>
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p }}/>
                   </div>
 
                   {/* ── Items Grid ── */}
@@ -215,17 +221,18 @@ export default function HomePage() {
                               </p>
                             )}
                             <div className="mt-auto pt-1">
-                              <p className="text-[#e67e22] font-extrabold text-sm text-right mb-2">
+                              <p className="font-extrabold text-sm text-right mb-2" style={{ color: p }}>
                                 {item.price.toLocaleString()} د.ع
                               </p>
                               {count > 0 ? (
-                                <div className="flex items-center justify-between bg-orange-50 dark:bg-orange-900/20 rounded-xl px-2 py-1.5">
+                                <div className="flex items-center justify-between rounded-xl px-2 py-1.5" style={{ backgroundColor: p + '18' }}>
                                   <button
                                     onClick={() => addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url })}
-                                    className="w-7 h-7 rounded-full bg-[#e67e22] text-white flex items-center justify-center active:scale-90">
+                                    className="w-7 h-7 rounded-full text-white flex items-center justify-center active:scale-90"
+                                    style={{ backgroundColor: p }}>
                                     <Plus size={14}/>
                                   </button>
-                                  <span className="font-bold text-[#e67e22] text-sm">{count}</span>
+                                  <span className="font-bold text-sm" style={{ color: p }}>{count}</span>
                                   <button
                                     onClick={() => decrementItem(item.id)}
                                     className="w-7 h-7 rounded-full bg-gray-200 dark:bg-slate-600 text-gray-600 dark:text-slate-300 flex items-center justify-center active:scale-90">
@@ -236,7 +243,8 @@ export default function HomePage() {
                                 <button
                                   onClick={() => handleAdd(item)}
                                   disabled={!item.is_available}
-                                  className="w-full bg-[#e67e22] hover:bg-[#d35400] text-white font-bold text-sm py-2 rounded-xl transition-all active:scale-95 disabled:opacity-40">
+                                  className="w-full text-white font-bold text-sm py-2 rounded-xl transition-all active:scale-95 disabled:opacity-40"
+                                  style={{ backgroundColor: p }}>
                                   + أضف
                                 </button>
                               )}
@@ -274,12 +282,13 @@ export default function HomePage() {
           </div>
           <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-3">
             <Link href="/cart"
-              className="bg-[#e67e22] hover:bg-[#d35400] text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95">
+              className="text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95"
+              style={{ backgroundColor: p }}>
               تأكيد الطلب
             </Link>
             <div className="text-right">
               <p className="text-xs text-gray-400 dark:text-slate-500">الإجمالي</p>
-              <p className="text-[#e67e22] font-bold text-lg">{total.toLocaleString()} د.ع</p>
+              <p className="font-bold text-lg" style={{ color: p }}>{total.toLocaleString()} د.ع</p>
             </div>
           </div>
         </div>
@@ -320,7 +329,8 @@ export default function HomePage() {
               ))}
             </div>
             <button onClick={confirmExtras}
-              className="w-full bg-[#e67e22] text-white font-bold py-3.5 rounded-xl transition-all active:scale-95">
+              className="w-full text-white font-bold py-3.5 rounded-xl transition-all active:scale-95"
+              style={{ backgroundColor: p }}>
               إضافة للسلة
             </button>
           </div>

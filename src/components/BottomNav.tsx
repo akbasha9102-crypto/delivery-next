@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Truck, UtensilsCrossed, LayoutDashboard, ClipboardList } from 'lucide-react';
+import { ShoppingCart, Truck, UtensilsCrossed, LayoutDashboard, ClipboardList, Palette } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 const clientTabs = [
@@ -11,9 +11,10 @@ const clientTabs = [
 ];
 
 const adminTabs = [
-  { href: '/admin/dashboard', icon: LayoutDashboard,  label: 'اللوحة' },
-  { href: '/admin/orders',    icon: ClipboardList,     label: 'الطلبات' },
-  { href: '/admin/menu',      icon: UtensilsCrossed,   label: 'المنيو' },
+  { href: '/admin/dashboard',  icon: LayoutDashboard,  label: 'اللوحة' },
+  { href: '/admin/orders',     icon: ClipboardList,     label: 'الطلبات' },
+  { href: '/admin/menu',       icon: UtensilsCrossed,   label: 'المنيو' },
+  { href: '/admin/appearance', icon: Palette,           label: 'المظهر' },
 ];
 
 export function ClientBottomNav() {

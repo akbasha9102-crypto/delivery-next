@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+:root {
+  --primary:       #e67e22;
+  --primary-dark:  #d35400;
+  --primary-text:  #944a00;
+  --primary-light: #fff3e0;
+}
+
 html, body { height: 100%; direction: rtl; }
 * { box-sizing: border-box; }
 
