@@ -167,7 +167,7 @@ export default function HomePage() {
       <div className="px-4 pt-5">
         {loading ? (
           <div className="flex justify-center mt-24">
-            <div className="w-10 h-10 border-4 border-[#e67e22] border-t-transparent rounded-full animate-spin"/>
+            <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: `${p} transparent transparent transparent` }}/>
           </div>
         ) : (
           <div className="space-y-10">
@@ -274,7 +274,7 @@ export default function HomePage() {
                 <span className="flex-1 text-right text-sm text-gray-700 dark:text-slate-300 mx-2">
                   {item.quantity}× {item.name}
                 </span>
-                <span className="text-[#e67e22] text-sm font-bold">
+                <span className="text-sm font-bold" style={{ color: p }}>
                   {(item.price * item.quantity).toLocaleString()} د.ع
                 </span>
               </div>
@@ -312,17 +312,14 @@ export default function HomePage() {
                     n.has(e.id) ? n.delete(e.id) : n.add(e.id);
                     return n;
                   })}
-                  className={`w-full flex justify-between items-center px-4 py-3 rounded-xl border transition-all ${
-                    selectedExtras.has(e.id)
-                      ? 'bg-orange-50 dark:bg-orange-900/20 border-[#e67e22]'
-                      : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600'
-                  }`}>
-                  <span className={`font-bold text-sm ${selectedExtras.has(e.id) ? 'text-[#e67e22]' : 'text-gray-400'}`}>
+                  className="w-full flex justify-between items-center px-4 py-3 rounded-xl border transition-all bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600"
+                  style={selectedExtras.has(e.id) ? { borderColor: p, backgroundColor: p + '18' } : {}}>
+                  <span className="font-bold text-sm" style={{ color: selectedExtras.has(e.id) ? p : '#9ca3af' }}>
                     {selectedExtras.has(e.id) ? '✓' : '○'}
                   </span>
                   <div className="text-right">
                     <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{e.name}</p>
-                    {e.price > 0 && <p className="text-[#e67e22] text-xs">+{e.price.toLocaleString()} د.ع</p>}
+                    {e.price > 0 && <p className="text-xs" style={{ color: p }}>+{e.price.toLocaleString()} د.ع</p>}
                     {e.price === 0 && <p className="text-gray-400 text-xs">مجاني</p>}
                   </div>
                 </button>

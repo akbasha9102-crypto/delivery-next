@@ -24,7 +24,7 @@ function AppearancePage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    supabase.from('restaurant_settings').select('*').single().then(({ data }) => {
+    supabase.from('restaurant_settings').select('*').maybeSingle().then(({ data }) => {
       if (data) {
         setSettingsId(data.id);
         setName(data.restaurant_name);
@@ -61,16 +61,17 @@ function AppearancePage() {
       logo_url: logoInput.trim() || null,
       updated_at: new Date().toISOString(),
     };
-    const { error } = settingsId
-      ? await supabase.from('restaurant_settings').update(payload).eq('id', settingsId)
-      : await supabase.from('restaurant_settings').insert([payload]);
+    const upsertPayload = settingsId ? { ...payload, id: settingsId } : payload;
+    const { data: saved, error } = await supabase
+      .from('restaurant_settings')
+      .upsert(upsertPayload)
+      .select()
+      .single();
 
     setSaving(false);
-    if (error) { showToast('حدث خطأ أثناء الحفظ', false); return; }
+    if (error) { console.error('appearance save error:', error); showToast('حدث خطأ أثناء الحفظ', false); return; }
 
-    // Apply instantly without refresh
-    const root = document.documentElement;
-    root.style.setProperty('--primary', color);
+    if (saved?.id) setSettingsId(saved.id);
     setLogoUrl(logoInput.trim());
     showToast('تم حفظ المظهر بنجاح ✓');
   };
