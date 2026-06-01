@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -182,9 +183,9 @@ export default function HomePage() {
             ))}
           </div>
           <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-3">
-            <a href="/cart" className="bg-[#e67e22] hover:bg-[#d35400] text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95">
+            <Link href="/cart" className="bg-[#e67e22] hover:bg-[#d35400] text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95">
               تأكيد الطلب
-            </a>
+            </Link>
             <div className="text-right">
               <p className="text-xs text-gray-400 dark:text-slate-500">الإجمالي</p>
               <p className="text-[#e67e22] font-bold text-lg">{total.toLocaleString()} د.ع</p>

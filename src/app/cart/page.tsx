@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
@@ -57,7 +58,7 @@ export default function CartPage() {
           <div className="text-6xl mb-4">🎉</div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">تم إرسال طلبك!</h2>
           <p className="text-gray-500 dark:text-slate-400 mb-6">سيتم التواصل معك قريباً</p>
-          <a href="/track" className="bg-[#e67e22] text-white font-bold px-6 py-3 rounded-xl inline-block">تتبع طلبك</a>
+          <Link href="/track" className="bg-[#e67e22] text-white font-bold px-6 py-3 rounded-xl inline-block">تتبع طلبك</Link>
         </div>
         <ClientBottomNav />
       </div>
