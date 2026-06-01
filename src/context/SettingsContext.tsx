@@ -38,9 +38,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
 
   useEffect(() => {
-    supabase.from('restaurant_settings').select('*').single().then(({ data }) => {
+    supabase.from('restaurant_settings').select('*').maybeSingle().then(({ data }) => {
       if (data) setSettings(data);
     });
+
+    const channel = supabase
+      .channel('settings-live')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'restaurant_settings' }, ({ new: row }) => {
+        setSettings(row as Settings);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   useEffect(() => {
