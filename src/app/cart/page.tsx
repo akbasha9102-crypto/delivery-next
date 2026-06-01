@@ -4,9 +4,14 @@ import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Trash2, MapPin, ChevronDown } from 'lucide-react';
+import { Trash2, MapPin, ChevronDown, UserCircle, Pencil } from 'lucide-react';
 
-const PHONE_KEY = 'deliveryPhone';
+const KEYS = {
+  name:     'deliveryName',
+  phone:    'deliveryPhone',
+  district: 'deliveryDistrict',
+  address:  'deliveryAddress',
+};
 
 const BASRA_DISTRICTS = [
   { id: 'ashar',      name: 'العشار',      desc: 'قلب البصرة التجاري والاقتصادي' },
@@ -25,20 +30,55 @@ const BASRA_DISTRICTS = [
   { id: 'khor',       name: 'خور الزبير', desc: 'منطقة صناعية وميناء جنوب الزبير' },
 ] as const;
 
+type SavedInfo = { name: string; phone: string; district: string; address: string };
+
+function loadSaved(): SavedInfo | null {
+  const name  = localStorage.getItem(KEYS.name)  || '';
+  const phone = localStorage.getItem(KEYS.phone) || '';
+  if (!name || !phone) return null;
+  return {
+    name,
+    phone,
+    district: localStorage.getItem(KEYS.district) || '',
+    address:  localStorage.getItem(KEYS.address)  || '',
+  };
+}
+
+function saveInfo(info: SavedInfo) {
+  localStorage.setItem(KEYS.name,     info.name);
+  localStorage.setItem(KEYS.phone,    info.phone);
+  localStorage.setItem(KEYS.district, info.district);
+  localStorage.setItem(KEYS.address,  info.address);
+}
+
 export default function CartPage() {
   const { items, removeItem, clearCart, total } = useCart();
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+
+  const [name,     setName]     = useState('');
+  const [phone,    setPhone]    = useState('');
   const [district, setDistrict] = useState('');
-  const [address, setAddress] = useState('');
-  const [note, setNote] = useState('');
+  const [address,  setAddress]  = useState('');
+  const [note,     setNote]     = useState('');
+
+  // modal states
+  const [showSaved,   setShowSaved]   = useState(false); // نافذة المعلومات المحفوظة
+  const [showConfirm, setShowConfirm] = useState(false); // نافذة تأكيد الهاتف
+  const [editing,     setEditing]     = useState(false); // وضع التعديل
+
   const [loading, setLoading] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done,    setDone]    = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(PHONE_KEY);
-    if (saved) setPhone(saved);
+    const saved = loadSaved();
+    if (saved) {
+      setName(saved.name);
+      setPhone(saved.phone);
+      setDistrict(saved.district);
+      setAddress(saved.address);
+      setShowSaved(true); // فيه معلومات محفوظة → شوّل النافذة
+    } else {
+      setEditing(true); // أول مرة → شوّل الفورم مباشرة
+    }
   }, []);
 
   const selectedDistrict = BASRA_DISTRICTS.find(d => d.id === district);
@@ -47,7 +87,18 @@ export default function CartPage() {
     ? `${selectedDistrict.name}${address.trim() ? ' — ' + address.trim() : ''}`
     : address.trim() || null;
 
-  const handleConfirm = () => {
+  const handleConfirmSaved = () => {
+    if (items.length === 0) { alert('السلة فارغة'); return; }
+    setShowSaved(false);
+    setShowConfirm(true);
+  };
+
+  const handleEditSaved = () => {
+    setShowSaved(false);
+    setEditing(true);
+  };
+
+  const handleConfirmForm = () => {
     if (!name.trim() || !phone.trim()) { alert('الرجاء إدخال الاسم ورقم الهاتف'); return; }
     if (items.length === 0) { alert('السلة فارغة'); return; }
     setShowConfirm(true);
@@ -55,7 +106,8 @@ export default function CartPage() {
 
   const submitOrder = async () => {
     setLoading(true);
-    localStorage.setItem(PHONE_KEY, phone.trim());
+    saveInfo({ name: name.trim(), phone: phone.trim(), district, address: address.trim() });
+
     const { data: order, error } = await supabase.from('orders').insert([{
       client_name: name.trim(), client_phone: phone.trim(),
       delivery_address: fullAddress, client_note: note.trim() || null,
@@ -122,55 +174,50 @@ export default function CartPage() {
           )}
         </div>
 
-        {/* Order Info */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
-          <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">معلومات الطلب</h3>
+        {/* فورم التعديل — يظهر فقط إذا ما فيه معلومات محفوظة أو المستخدم يريد التعديل */}
+        {editing && (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
+            <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">معلومات الطلب</h3>
 
-          {/* Name */}
-          <input type="text" value={name} onChange={e => setName(e.target.value)}
-            placeholder="الاسم *" dir="rtl"
-            className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22] mb-3"
-          />
+            <input type="text" value={name} onChange={e => setName(e.target.value)}
+              placeholder="الاسم *" dir="rtl"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22] mb-3"
+            />
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+              placeholder="رقم الهاتف *" dir="rtl"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22] mb-3"
+            />
 
-          {/* Phone */}
-          <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-            placeholder="رقم الهاتف *" dir="rtl"
-            className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22] mb-3"
-          />
-
-          {/* District picker */}
-          <div className="mb-3">
-            <div className="relative">
-              <select value={district} onChange={e => setDistrict(e.target.value)} dir="rtl"
-                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#e67e22] appearance-none">
-                <option value="">اختر منطقة التوصيل</option>
-                {BASRA_DISTRICTS.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-              <ChevronDown size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+            {/* District picker */}
+            <div className="mb-3">
+              <div className="relative">
+                <select value={district} onChange={e => setDistrict(e.target.value)} dir="rtl"
+                  className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#e67e22] appearance-none">
+                  <option value="">اختر منطقة التوصيل</option>
+                  {BASRA_DISTRICTS.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+              </div>
+              {selectedDistrict && (
+                <div className="mt-2 bg-orange-50 dark:bg-orange-900/15 border border-orange-200 dark:border-orange-800/40 rounded-xl px-4 py-2.5 flex items-center gap-2.5">
+                  <MapPin size={14} className="text-[#e67e22] flex-shrink-0"/>
+                  <p className="text-sm text-gray-600 dark:text-slate-400 text-right flex-1">{selectedDistrict.desc}</p>
+                </div>
+              )}
             </div>
 
-            {selectedDistrict && (
-              <div className="mt-2 bg-orange-50 dark:bg-orange-900/15 border border-orange-200 dark:border-orange-800/40 rounded-xl px-4 py-2.5 flex items-center gap-2.5">
-                <MapPin size={14} className="text-[#e67e22] flex-shrink-0"/>
-                <p className="text-sm text-gray-600 dark:text-slate-400 text-right flex-1">{selectedDistrict.desc}</p>
-              </div>
-            )}
+            <input type="text" value={address} onChange={e => setAddress(e.target.value)}
+              placeholder="تفاصيل العنوان (شارع، زقاق...)" dir="rtl"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22] mb-3"
+            />
+            <input type="text" value={note} onChange={e => setNote(e.target.value)}
+              placeholder="ملاحظات (اختياري)" dir="rtl"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22]"
+            />
           </div>
-
-          {/* Address detail */}
-          <input type="text" value={address} onChange={e => setAddress(e.target.value)}
-            placeholder="تفاصيل العنوان (شارع، زقاق...)" dir="rtl"
-            className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22] mb-3"
-          />
-
-          {/* Note */}
-          <input type="text" value={note} onChange={e => setNote(e.target.value)}
-            placeholder="ملاحظات (اختياري)" dir="rtl"
-            className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22]"
-          />
-        </div>
+        )}
 
         {/* Total + Button */}
         <div>
@@ -178,14 +225,62 @@ export default function CartPage() {
             <span className="text-[#e67e22] font-bold text-xl">{total.toLocaleString()} د.ع</span>
             <span className="font-bold text-gray-900 dark:text-slate-100">الإجمالي</span>
           </div>
-          <button onClick={handleConfirm} disabled={items.length === 0}
-            className="w-full bg-[#e67e22] hover:bg-[#d35400] disabled:opacity-40 text-white font-bold py-4 rounded-xl text-lg transition-all active:scale-95">
-            تأكيد الطلب
-          </button>
+          {editing && (
+            <button onClick={handleConfirmForm} disabled={items.length === 0}
+              className="w-full bg-[#e67e22] hover:bg-[#d35400] disabled:opacity-40 text-white font-bold py-4 rounded-xl text-lg transition-all active:scale-95">
+              تأكيد الطلب
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Confirm Modal */}
+      {/* ── نافذة المعلومات المحفوظة ── */}
+      {showSaved && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-center mb-4">
+              <UserCircle size={40} className="text-[#e67e22]"/>
+            </div>
+            <h3 className="text-lg font-bold text-center text-[#944a00] mb-1">معلوماتك المحفوظة</h3>
+            <p className="text-gray-400 dark:text-slate-500 text-center text-sm mb-5">هل تريد استخدام نفس المعلومات؟</p>
+
+            <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 space-y-3 mb-5 text-right">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-900 dark:text-slate-100 font-semibold">{name}</span>
+                <span className="text-gray-400 dark:text-slate-500 text-sm">الاسم</span>
+              </div>
+              <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-600 pt-3">
+                <span className="text-[#e67e22] font-bold tracking-widest">{phone}</span>
+                <span className="text-gray-400 dark:text-slate-500 text-sm">الهاتف</span>
+              </div>
+              {selectedDistrict && (
+                <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-600 pt-3">
+                  <span className="text-gray-900 dark:text-slate-100 font-semibold">{selectedDistrict.name}</span>
+                  <span className="text-gray-400 dark:text-slate-500 text-sm">المنطقة</span>
+                </div>
+              )}
+              {address && (
+                <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-600 pt-3">
+                  <span className="text-gray-900 dark:text-slate-100 font-semibold text-sm">{address}</span>
+                  <span className="text-gray-400 dark:text-slate-500 text-sm">العنوان</span>
+                </div>
+              )}
+            </div>
+
+            <button onClick={handleConfirmSaved}
+              className="w-full bg-[#e67e22] text-white font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95">
+              نعم، أكمل الطلب
+            </button>
+            <button onClick={handleEditSaved}
+              className="w-full border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95">
+              <Pencil size={15}/>
+              تعديل المعلومات
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── نافذة تأكيد الهاتف ── */}
       {showConfirm && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm">
@@ -199,9 +294,9 @@ export default function CartPage() {
               className="w-full bg-[#e67e22] text-white font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95 disabled:opacity-60">
               {loading ? 'جاري الإرسال...' : 'نعم، الرقم صحيح — أرسل الطلب'}
             </button>
-            <button onClick={() => setShowConfirm(false)}
+            <button onClick={() => { setShowConfirm(false); setShowSaved(false); setEditing(true); }}
               className="w-full border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 font-semibold py-3 rounded-xl transition-all active:scale-95">
-              تعديل الرقم
+              تعديل المعلومات
             </button>
           </div>
         </div>
