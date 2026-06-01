@@ -37,6 +37,13 @@ export default function HomePage() {
       setLoading(false);
     };
     fetchData();
+
+    const ch = supabase.channel('menu-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, fetchData)
+      .subscribe();
+
+    return () => { supabase.removeChannel(ch); };
   }, []);
 
   useEffect(() => {
