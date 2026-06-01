@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
+import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { Moon, Sun, LogOut } from 'lucide-react';
 
@@ -23,7 +24,7 @@ function timeAgo(d: string) {
   return `منذ ${Math.floor(s / 3600)} س`;
 }
 
-export default function DashboardPage() {
+function DashboardPage() {
   const router = useRouter();
   const { dark, toggleDark } = useDarkMode();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -174,4 +175,8 @@ export default function DashboardPage() {
       <AdminBottomNav />
     </div>
   );
+}
+
+export default function DashboardPageGuarded() {
+  return <AdminGuard><DashboardPage /></AdminGuard>;
 }

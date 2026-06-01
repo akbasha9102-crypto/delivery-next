@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
+import { AdminGuard } from '@/components/AdminGuard';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[] };
@@ -27,7 +28,7 @@ const TABS = [
   { id: 'completed' as const, name: 'مكتمل' },
 ];
 
-export default function OrdersPage() {
+function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'pending' | 'preparing' | 'ready' | 'completed'>('pending');
@@ -122,4 +123,8 @@ export default function OrdersPage() {
       <AdminBottomNav />
     </div>
   );
+}
+
+export default function OrdersPageGuarded() {
+  return <AdminGuard><OrdersPage /></AdminGuard>;
 }

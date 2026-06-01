@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
+import { AdminGuard } from '@/components/AdminGuard';
 import { X, Plus, Pencil, Trash2 } from 'lucide-react';
 
 type Category = { id: string; name: string };
@@ -11,7 +12,7 @@ type Item = { id: string; category_id: string; name: string; description: string
 
 const DEFAULT_IMAGE = 'https://via.placeholder.com/300x200.png?text=Food';
 
-export default function MenuPage() {
+function MenuPage() {
   const { dark } = useDarkMode();
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -268,4 +269,8 @@ export default function MenuPage() {
       <AdminBottomNav />
     </div>
   );
+}
+
+export default function MenuPageGuarded() {
+  return <AdminGuard><MenuPage /></AdminGuard>;
 }
