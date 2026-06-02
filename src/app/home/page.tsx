@@ -196,12 +196,16 @@ export default function HomePage() {
                           className={`bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col ${!item.is_available ? 'opacity-55' : ''}`}>
 
                           {/* Image */}
-                          <div className="relative flex-shrink-0">
+                          <div className="relative flex-shrink-0 overflow-hidden">
                             <Image
                               src={item.image_url || 'https://placehold.co/300x200/f5f5f5/ccc?text='}
                               alt={item.name}
                               width={300} height={180}
                               className="w-full h-36 object-cover"
+                              style={{
+                                transform: `scale(${1 + Math.min(count, 10) * 0.08})`,
+                                transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+                              }}
                               unoptimized
                             />
                             {!item.is_available && (
