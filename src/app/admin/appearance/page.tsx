@@ -24,7 +24,7 @@ function AppearancePage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    supabase.from('restaurant_settings').select('*').limit(1).then(({ data }) => {
+    supabase.from('restaurant_settings').select('*').order('updated_at', { ascending: false }).limit(1).then(({ data }) => {
       const row = data?.[0];
       if (row) {
         setSettingsId(row.id);

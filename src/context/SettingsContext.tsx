@@ -38,7 +38,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
 
   useEffect(() => {
-    supabase.from('restaurant_settings').select('*').limit(1).then(({ data }) => {
+    supabase.from('restaurant_settings').select('*').order('updated_at', { ascending: false }).limit(1).then(({ data }) => {
       if (data?.[0]) setSettings(data[0]);
     });
 
