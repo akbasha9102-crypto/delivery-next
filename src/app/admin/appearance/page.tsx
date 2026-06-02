@@ -21,9 +21,13 @@ function AppearancePage() {
   const [saving,     setSaving]     = useState(false);
   const [uploading,  setUploading]  = useState(false);
   const [toast,      setToast]      = useState<{ msg: string; ok: boolean } | null>(null);
+  const [categories, setCategories] = useState<{ id: string; name: string; color?: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    supabase.from('categories').select('id, name, color').order('created_at', { ascending: true })
+      .then(({ data }) => { if (data) setCategories(data); });
+
     supabase.from('restaurant_settings').select('*').order('updated_at', { ascending: false }).limit(1).then(({ data }) => {
       const row = data?.[0];
       if (row) {
@@ -75,6 +79,11 @@ function AppearancePage() {
     if (saved?.id) setSettingsId(saved.id);
     setLogoUrl(logoInput.trim());
     showToast('تم حفظ المظهر بنجاح ✓');
+  };
+
+  const updateCatColor = async (id: string, newColor: string) => {
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, color: newColor } : c));
+    await supabase.from('categories').update({ color: newColor }).eq('id', id);
   };
 
   const darken = (hex: string) => {
@@ -196,6 +205,26 @@ function AppearancePage() {
           style={{ backgroundColor: color }}>
           {saving ? 'جاري الحفظ...' : 'حفظ المظهر'}
         </button>
+
+        {/* Category Colors */}
+        {categories.length > 0 && (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
+            <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 text-right mb-4">ألوان الأقسام</label>
+            <div className="space-y-3">
+              {categories.map(cat => (
+                <div key={cat.id} className="flex items-center justify-between">
+                  <input
+                    type="color"
+                    value={cat.color || '#e67e22'}
+                    onChange={e => updateCatColor(cat.id, e.target.value)}
+                    className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600"
+                  />
+                  <span className="font-semibold text-gray-800 dark:text-slate-200 text-sm">{cat.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Toast */}
