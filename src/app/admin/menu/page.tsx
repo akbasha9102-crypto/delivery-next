@@ -6,7 +6,7 @@ import { AdminBottomNav } from '@/components/BottomNav';
 import { AdminGuard } from '@/components/AdminGuard';
 import { X, Plus, Pencil, Trash2 } from 'lucide-react';
 
-type Category = { id: string; name: string };
+type Category = { id: string; name: string; color?: string };
 type Extra = { id: string; name: string; price: number };
 type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; extras_json?: string };
 
@@ -21,6 +21,7 @@ function MenuPage() {
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [activeTab, setActiveTab] = useState<'add' | 'list'>('add');
   const [newCat, setNewCat] = useState('');
+  const [newCatColor, setNewCatColor] = useState('#e67e22');
   const [form, setForm] = useState({ category_id: '', name: '', description: '', price: '', image_url: '' });
   const [editItem, setEditItem] = useState<Item | null>(null);
   const [editForm, setEditForm] = useState({ category_id: '', name: '', description: '', price: '', image_url: '' });
@@ -48,9 +49,14 @@ function MenuPage() {
   const addCategory = async () => {
     if (!newCat.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from('categories').insert([{ name: newCat.trim() }]);
+    const { error } = await supabase.from('categories').insert([{ name: newCat.trim(), color: newCatColor }]);
     error ? showToast('تعذّر إضافة القسم', false) : (setNewCat(''), fetchMenu(), showToast('✓ تم إضافة القسم'));
     setSaving(false);
+  };
+
+  const updateCatColor = async (id: string, color: string) => {
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, color } : c));
+    await supabase.from('categories').update({ color }).eq('id', id);
   };
 
   const addItem = async () => {
@@ -194,6 +200,11 @@ function MenuPage() {
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">➕ قسم جديد</h3>
               <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="اسم القسم" dir="rtl" className={input} />
+              <div className="flex items-center justify-end gap-3 mb-3">
+                <span className="text-sm text-gray-400 dark:text-slate-500">لون القسم</span>
+                <input type="color" value={newCatColor} onChange={e => setNewCatColor(e.target.value)}
+                  className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600" />
+              </div>
               <button onClick={addCategory} disabled={saving || !newCat.trim()} className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-3 rounded-xl active:scale-95 transition-all">
                 {saving ? 'جاري الحفظ...' : 'إضافة القسم'}
               </button>
@@ -231,6 +242,13 @@ function MenuPage() {
                 <div key={cat.id}>
                   <div className="flex items-center justify-end gap-2 mb-3">
                     <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">{cat.name}</h3>
+                    <input
+                      type="color"
+                      value={cat.color || '#e67e22'}
+                      onChange={e => updateCatColor(cat.id, e.target.value)}
+                      className="w-7 h-7 rounded-full cursor-pointer border-2 border-gray-200 dark:border-slate-600"
+                      title="لون القسم"
+                    />
                     <span className="bg-orange-100 dark:bg-orange-900/20 text-[#f97316] text-xs font-bold px-2.5 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">{catItems.length}</span>
                   </div>
                   {catItems.length === 0 ? (

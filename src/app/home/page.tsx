@@ -9,7 +9,7 @@ import { ClientBottomNav } from '@/components/BottomNav';
 import { Moon, Sun, Plus, Minus, X } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 
-type Category = { id: string; name: string };
+type Category = { id: string; name: string; color?: string };
 type Extra    = { id: string; name: string; price: number };
 type Item     = {
   id: string; name: string; price: number; description: string;
@@ -147,14 +147,14 @@ export default function HomePage() {
       {/* ══ CATEGORY PILLS (sticky) ══ */}
       <div className="sticky top-14 z-30 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-700 px-4 py-2.5">
         <div ref={pillsRef} className="flex gap-2 overflow-x-auto scrollbar-hide flex-row-reverse">
-          {[{ id: 'all', name: 'الكل' }, ...categories].map(cat => (
+          {[{ id: 'all', name: 'الكل' } as Category, ...categories].map(cat => (
             <button
               key={cat.id}
               data-cat={cat.id}
               onClick={() => scrollToCategory(cat.id)}
               className="px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all active:scale-95 flex-shrink-0"
               style={activeCategory === cat.id
-                ? { backgroundColor: p, color: '#fff' }
+                ? { backgroundColor: cat.color || p, color: '#fff' }
                 : {}}
             >
               {cat.name}
@@ -174,6 +174,7 @@ export default function HomePage() {
             {categories.map(cat => {
               const catItems = items.filter(i => i.category_id === cat.id);
               if (catItems.length === 0) return null;
+              const c = cat.color || p;
               return (
                 <section key={cat.id} ref={el => { sectionRefs.current[cat.id] = el; }}>
 
@@ -183,7 +184,7 @@ export default function HomePage() {
                       {cat.name}
                     </h2>
                     <div className="flex-1 h-px bg-gradient-to-l from-gray-200 to-transparent dark:from-slate-700"/>
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p }}/>
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c }}/>
                   </div>
 
                   {/* ── Items Grid ── */}
@@ -221,18 +222,18 @@ export default function HomePage() {
                               </p>
                             )}
                             <div className="mt-auto pt-1">
-                              <p className="font-extrabold text-sm text-right mb-2" style={{ color: p }}>
+                              <p className="font-extrabold text-sm text-right mb-2" style={{ color: c }}>
                                 {item.price.toLocaleString()} د.ع
                               </p>
                               {count > 0 ? (
-                                <div className="flex items-center justify-between rounded-xl px-2 py-1.5" style={{ backgroundColor: p + '18' }}>
+                                <div className="flex items-center justify-between rounded-xl px-2 py-1.5" style={{ backgroundColor: c + '18' }}>
                                   <button
                                     onClick={() => addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url })}
                                     className="w-7 h-7 rounded-full text-white flex items-center justify-center active:scale-90"
-                                    style={{ backgroundColor: p }}>
+                                    style={{ backgroundColor: c }}>
                                     <Plus size={14}/>
                                   </button>
-                                  <span className="font-bold text-sm" style={{ color: p }}>{count}</span>
+                                  <span className="font-bold text-sm" style={{ color: c }}>{count}</span>
                                   <button
                                     onClick={() => decrementItem(item.id)}
                                     className="w-7 h-7 rounded-full bg-gray-200 dark:bg-slate-600 text-gray-600 dark:text-slate-300 flex items-center justify-center active:scale-90">
@@ -244,7 +245,7 @@ export default function HomePage() {
                                   onClick={() => handleAdd(item)}
                                   disabled={!item.is_available}
                                   className="w-full text-white font-bold text-sm py-2 rounded-xl transition-all active:scale-95 disabled:opacity-40"
-                                  style={{ backgroundColor: p }}>
+                                  style={{ backgroundColor: c }}>
                                   + أضف
                                 </button>
                               )}
