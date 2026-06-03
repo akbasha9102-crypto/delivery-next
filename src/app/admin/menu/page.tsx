@@ -29,6 +29,7 @@ function MenuPage() {
   const [extraName, setExtraName] = useState('');
   const [extraPrice, setExtraPrice] = useState('');
   const [search, setSearch] = useState('');
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
 
   const fetchMenu = async () => {
     setLoading(true);
@@ -252,6 +253,27 @@ function MenuPage() {
               )}
             </div>
 
+            {/* Category filter chips */}
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <button
+                onClick={() => setSelectedCat(null)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${!selectedCat ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                الكل ({items.length})
+              </button>
+              {categories.map(cat => {
+                const count = items.filter(i => i.category_id === cat.id).length;
+                const active = selectedCat === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCat(active ? null : cat.id)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                    {cat.name} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
             {search && (
               <p className="text-sm text-gray-400 dark:text-slate-500 text-right">
                 {items.filter(i => i.name.includes(search) || i.description?.includes(search)).length} نتيجة لـ &quot;{search}&quot;
@@ -261,9 +283,10 @@ function MenuPage() {
             {categories.map(cat => {
               const catItems = items.filter(i =>
                 i.category_id === cat.id &&
-                (!search || i.name.includes(search) || i.description?.includes(search))
+                (!search || i.name.includes(search) || i.description?.includes(search)) &&
+                (!selectedCat || i.category_id === selectedCat)
               );
-              if (search && catItems.length === 0) return null;
+              if (catItems.length === 0) return null;
               return (
                 <div key={cat.id}>
                   <div className="flex items-center justify-end gap-2 mb-3">
