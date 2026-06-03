@@ -8,10 +8,10 @@ type OrderItem = { id: string; item_name: string; quantity: number; price: numbe
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[] };
 
 const STATUS = {
-  pending:   { label: 'واردة',        bg: 'bg-yellow-500',  next: 'preparing' as const, nextLabel: 'ابدأ التجهيز' },
-  preparing: { label: 'قيد التجهيز', bg: 'bg-blue-500',    next: 'ready'    as const, nextLabel: 'جاهز للتسليم' },
-  ready:     { label: 'جاهز',         bg: 'bg-green-500',   next: 'completed' as const, nextLabel: 'تم التسليم' },
-  completed: { label: 'مكتمل',        bg: 'bg-gray-400',    next: null,                 nextLabel: '' },
+  pending:   { label: 'واردة',        color: '#f59e0b', next: 'preparing' as const, nextLabel: 'ابدأ التجهيز',  btnColor: '#3b82f6' },
+  preparing: { label: 'قيد التجهيز', color: '#3b82f6', next: 'ready'     as const, nextLabel: 'جاهز للتسليم', btnColor: '#22c55e' },
+  ready:     { label: 'جاهز',        color: '#22c55e', next: 'completed'  as const, nextLabel: 'تم التسليم',   btnColor: '#6b7280' },
+  completed: { label: 'مكتمل',       color: '#9ca3af', next: null,                  nextLabel: '',             btnColor: '#9ca3af' },
 };
 
 function timeAgo(d: string) {
@@ -65,18 +65,24 @@ function OrdersPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 stagger-0">
-        <div className="px-4 py-4 text-center">
-          <h1 className="text-xl font-bold text-[#2563eb]">الطلبات الحية</h1>
-        </div>
         <div className="flex border-b border-gray-100 dark:border-slate-700">
           {TABS.map(t => {
+            const cfg = STATUS[t.id];
             const count = orders.filter(o => o.status === t.id).length;
+            const active = tab === t.id;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
-                className={`flex-1 py-3 text-center transition-all border-b-2 ${tab === t.id ? 'border-[#2563eb] text-[#2563eb]' : 'border-transparent text-gray-400 dark:text-slate-500'}`}>
-                <span className="text-sm font-bold">{t.name}</span>
+                className="flex-1 py-4 text-center transition-all border-b-2 flex flex-col items-center gap-1"
+                style={{ borderBottomColor: active ? cfg.color : 'transparent' }}>
+                <span className={`text-sm font-bold ${active ? '' : 'text-gray-400 dark:text-slate-500'}`}
+                  style={{ color: active ? cfg.color : undefined }}>
+                  {t.name}
+                </span>
                 {count > 0 && (
-                  <span className={`ml-1 text-xs font-bold px-1.5 py-0.5 rounded-full ${t.id === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-slate-400'}`}>{count}</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                    style={{ backgroundColor: active ? cfg.color : '#d1d5db' }}>
+                    {count}
+                  </span>
                 )}
               </button>
             );
@@ -94,25 +100,41 @@ function OrdersPage() {
             {filtered.map(order => {
               const cfg = STATUS[order.status];
               return (
-                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
-                  <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
-                    <span className={`${cfg.bg} text-white text-xs font-bold px-3 py-1 rounded-full`}>{cfg.label}</span>
-                    <span className="text-gray-400 dark:text-slate-500 text-sm">{timeAgo(order.created_at)}</span>
+                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                  <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
+                  <div className="p-4">
+                    {/* Client + price */}
+                    <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
+                      <p className="text-green-500 font-bold text-lg">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-900 dark:text-slate-100 text-base">{order.client_name}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{order.client_phone}{order.delivery_address ? ` — ${order.delivery_address}` : ''}</p>
+                      </div>
+                    </div>
+                    {/* Items */}
+                    <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 mb-3 space-y-2">
+                      {order.items?.map(i => (
+                        <div key={i.id} className="flex justify-between items-center">
+                          <span className="text-[#f97316] font-semibold text-sm">{(i.price * i.quantity).toLocaleString()} د.ع</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-800 dark:text-slate-200 text-sm">{i.item_name}</span>
+                            <span className="bg-white dark:bg-slate-600 text-gray-600 dark:text-slate-300 text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center">{i.quantity}×</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                   </div>
-                  <p className="font-bold text-lg text-right text-gray-900 dark:text-slate-100">{order.client_name}</p>
-                  <p className="text-gray-500 dark:text-slate-400 text-right text-sm mb-2">{order.client_phone}{order.delivery_address ? ` — ${order.delivery_address}` : ''}</p>
-                  {order.client_note && <p className="text-orange-500 text-right text-sm mb-2">📝 {order.client_note}</p>}
-                  <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 mb-3 space-y-1">
-                    {order.items?.map(i => (
-                      <p key={i.id} className="text-right text-sm text-gray-700 dark:text-slate-300">{i.quantity}× {i.item_name}</p>
-                    ))}
-                  </div>
-                  <div className="flex justify-between items-center">
-                    {cfg.next ? (
-                      <button onClick={() => advance(order)} className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold px-4 py-2 rounded-xl text-sm transition-all active:scale-95">{cfg.nextLabel}</button>
-                    ) : <div />}
-                    <p className="font-bold text-green-600 dark:text-green-400 text-lg">{order.total_amount.toLocaleString()} د.ع</p>
-                  </div>
+                  {/* Full-width action button */}
+                  {cfg.next ? (
+                    <button onClick={() => advance(order)}
+                      className="w-full py-4 text-white font-bold text-base transition-all active:opacity-80"
+                      style={{ backgroundColor: cfg.btnColor }}>
+                      {cfg.nextLabel}
+                    </button>
+                  ) : (
+                    <div className="w-full py-4 bg-gray-100 dark:bg-slate-700 text-center text-gray-400 font-bold text-sm">✓ مكتمل</div>
+                  )}
                 </div>
               );
             })}

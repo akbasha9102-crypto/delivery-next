@@ -11,10 +11,10 @@ type OrderItem = { id: string; item_name: string; quantity: number; price: numbe
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[] };
 
 const STATUS = {
-  pending:   { label: 'جديد',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز',  color: '#eab308', dot: 'bg-yellow-400' },
-  preparing: { label: 'قيد التجهيز', next: 'ready'    as const, nextLabel: 'جاهز للتسليم', color: '#3b82f6', dot: 'bg-blue-400' },
-  ready:     { label: 'جاهز',        next: 'completed' as const, nextLabel: 'تم التسليم',    color: '#22c55e', dot: 'bg-green-400' },
-  completed: { label: 'مكتمل',       next: null,                 nextLabel: '',              color: '#9ca3af', dot: 'bg-gray-400' },
+  pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز',  color: '#f59e0b', dot: 'bg-yellow-400', btnColor: '#3b82f6' },
+  preparing: { label: 'قيد التجهيز', next: 'ready'     as const, nextLabel: 'جاهز للتسليم', color: '#3b82f6', dot: 'bg-blue-400',   btnColor: '#22c55e' },
+  ready:     { label: 'جاهز',        next: 'completed'  as const, nextLabel: 'تم التسليم',   color: '#22c55e', dot: 'bg-green-400',  btnColor: '#6b7280' },
+  completed: { label: 'مكتمل',       next: null,                  nextLabel: '',              color: '#9ca3af', dot: 'bg-gray-400',   btnColor: '#9ca3af' },
 };
 
 function timeAgo(d: string) {
@@ -77,10 +77,10 @@ function DashboardPage() {
           </button>
         </div>
         <div className="text-center">
-          <p className="font-bold text-gray-900 dark:text-slate-100">🍽️ لوحة الكاشير</p>
+          <p className="font-bold text-gray-900 dark:text-slate-100">الإحصاء</p>
           <p className="text-xs text-gray-400 dark:text-slate-500">تحديث فوري</p>
         </div>
-        <a href="/admin/menu" className="px-3 py-2 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-[#f97316] text-sm font-bold border border-orange-200 dark:border-orange-800 active:scale-90 transition-all">المنيو</a>
+        <div className="w-20" />
       </header>
 
       {/* Stats */}
@@ -124,47 +124,53 @@ function DashboardPage() {
               const cfg = STATUS[order.status];
               return (
                 <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
-                  <div className="h-1" style={{ backgroundColor: cfg.color }} />
+                  <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
                   <div className="p-4">
-                    <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2.5 h-2.5 rounded-full ${cfg.dot}`} />
-                        <span className="text-sm font-bold" style={{ color: cfg.color }}>{cfg.label}</span>
-                        <span className="text-xs text-gray-400 dark:text-slate-500">{timeAgo(order.created_at)}</span>
+                    {/* Header: status + client + price */}
+                    <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <div className={`w-2.5 h-2.5 rounded-full ${cfg.dot}`} />
+                          <span className="text-sm font-bold" style={{ color: cfg.color }}>{cfg.label}</span>
+                          <span className="text-xs text-gray-400 dark:text-slate-500">{timeAgo(order.created_at)}</span>
+                        </div>
+                        <p className="text-green-500 font-bold text-lg">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 dark:text-slate-500 font-normal">د.ع</span></p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-gray-900 dark:text-slate-100">{order.client_name}</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500">{order.client_phone}</p>
+                        <p className="font-bold text-gray-900 dark:text-slate-100 text-base">{order.client_name}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{order.client_phone}</p>
                       </div>
                     </div>
 
-                    <div className="space-y-2 mb-3">
+                    {/* Items */}
+                    <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 mb-3 space-y-2">
                       {order.items?.map(item => (
-                        <div key={item.id} className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-slate-700/50 last:border-0">
+                        <div key={item.id} className="flex justify-between items-center">
                           <span className="text-[#f97316] font-bold text-sm">{(item.price * item.quantity).toLocaleString()} د.ع</span>
                           <div className="flex items-center gap-2">
                             <span className="text-gray-800 dark:text-slate-200 text-sm">{item.item_name}</span>
-                            <span className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 text-xs font-bold px-2 py-0.5 rounded-lg">{item.quantity}×</span>
+                            <span className="bg-white dark:bg-slate-600 text-gray-600 dark:text-slate-300 text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center">{item.quantity}×</span>
                           </div>
                         </div>
                       ))}
                     </div>
 
                     {order.delivery_address && <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">📍 {order.delivery_address}</p>}
-                    {order.client_note && <p className="text-xs text-yellow-600 dark:text-yellow-400 text-right mb-3">📝 {order.client_note}</p>}
-
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-50 dark:border-slate-700">
-                      {cfg.next ? (
-                        <button onClick={() => updateStatus(order.id, cfg.next!)}
-                          className="bg-[#f97316] hover:bg-[#ea6c00] text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-all active:scale-95">
-                          {cfg.nextLabel}
-                        </button>
-                      ) : (
-                        <span className="bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 font-bold px-4 py-2.5 rounded-xl text-sm">✓ مكتمل</span>
-                      )}
-                      <p className="font-bold text-gray-900 dark:text-slate-100 text-lg">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 dark:text-slate-500">د.ع</span></p>
-                    </div>
+                    {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right mb-3">📝 {order.client_note}</p>}
                   </div>
+
+                  {/* Full-width action button */}
+                  {cfg.next ? (
+                    <button onClick={() => updateStatus(order.id, cfg.next!)}
+                      className="w-full py-4 text-white font-bold text-base transition-all active:opacity-80"
+                      style={{ backgroundColor: cfg.btnColor }}>
+                      {cfg.nextLabel}
+                    </button>
+                  ) : (
+                    <div className="w-full py-4 bg-gray-100 dark:bg-slate-700 text-center text-gray-400 dark:text-slate-500 font-bold text-sm">
+                      ✓ مكتمل
+                    </div>
+                  )}
                 </div>
               );
             })}

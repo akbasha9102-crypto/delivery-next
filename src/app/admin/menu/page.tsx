@@ -174,10 +174,8 @@ function MenuPage() {
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between stagger-0">
-        <a href="/admin/dashboard" className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 font-bold px-4 py-2 rounded-xl text-sm active:scale-95 transition-all border border-gray-200 dark:border-slate-600">← رجوع</a>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">🍴 تعديل المنيو</h1>
-        <div className="w-20" />
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 text-center stagger-0">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">تعديل المنيو</h1>
       </header>
 
       {toast && (
