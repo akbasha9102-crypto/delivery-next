@@ -184,10 +184,10 @@ function MenuPage() {
         </div>
       )}
 
-      {/* Tabs */}
+      {/* Tabs — القائمة يمين، إضافة يسار (RTL) */}
       <div className="flex mx-4 mt-4 mb-4 bg-gray-100 dark:bg-slate-800 rounded-2xl p-1 stagger-1">
-        <button onClick={() => setActiveTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${activeTab === 'add' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>إضافة</button>
         <button onClick={() => setActiveTab('list')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${activeTab === 'list' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>القائمة ({items.length})</button>
+        <button onClick={() => setActiveTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${activeTab === 'add' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>إضافة</button>
       </div>
 
       <div className="px-4 stagger-2">
@@ -256,8 +256,14 @@ function MenuPage() {
                       {catItems.map(item => (
                         <div key={item.id} className={`bg-white dark:bg-slate-800 rounded-2xl border transition-opacity ${item.is_available ? 'border-gray-100 dark:border-slate-700' : 'border-gray-200 dark:border-slate-600 opacity-60'}`}>
                           <div className="p-4">
-                            {/* Item info */}
-                            <div className="flex justify-between items-start mb-3">
+                            {/* Item info + image */}
+                            <div className="flex items-start gap-3 mb-3">
+                              <img
+                                src={item.image_url || DEFAULT_IMAGE}
+                                alt={item.name}
+                                className="w-20 h-20 rounded-xl object-cover flex-shrink-0 bg-gray-100 dark:bg-slate-700"
+                                onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_IMAGE; }}
+                              />
                               <div className="text-right flex-1">
                                 <p className={`font-bold text-base ${item.is_available ? 'text-gray-900 dark:text-slate-100' : 'text-gray-400 dark:text-slate-500'}`}>{item.name}</p>
                                 {item.description && <p className="text-xs text-gray-400 dark:text-slate-500 mt-1 line-clamp-2">{item.description}</p>}
