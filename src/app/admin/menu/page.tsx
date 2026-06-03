@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { AdminGuard } from '@/components/AdminGuard';
-import { X, Plus, Pencil, Trash2 } from 'lucide-react';
+import { X, Plus, Pencil, Trash2, Search } from 'lucide-react';
 
 type Category = { id: string; name: string; color?: string };
 type Extra = { id: string; name: string; price: number };
@@ -28,6 +28,7 @@ function MenuPage() {
   const [extras, setExtras] = useState<Extra[]>([]);
   const [extraName, setExtraName] = useState('');
   const [extraPrice, setExtraPrice] = useState('');
+  const [search, setSearch] = useState('');
 
   const fetchMenu = async () => {
     setLoading(true);
@@ -234,8 +235,35 @@ function MenuPage() {
           </div>
         ) : (
           <div className="space-y-6 pb-8">
+            {/* Search */}
+            <div className="relative">
+              <Search size={16} className="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 dark:text-slate-500" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="ابحث عن وجبة..."
+                dir="rtl"
+                className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-2xl py-3 pr-10 pl-4 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute top-1/2 -translate-y-1/2 left-3 text-gray-400 hover:text-gray-600">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {search && (
+              <p className="text-sm text-gray-400 dark:text-slate-500 text-right">
+                {items.filter(i => i.name.includes(search) || i.description?.includes(search)).length} نتيجة لـ &quot;{search}&quot;
+              </p>
+            )}
+
             {categories.map(cat => {
-              const catItems = items.filter(i => i.category_id === cat.id);
+              const catItems = items.filter(i =>
+                i.category_id === cat.id &&
+                (!search || i.name.includes(search) || i.description?.includes(search))
+              );
+              if (search && catItems.length === 0) return null;
               return (
                 <div key={cat.id}>
                   <div className="flex items-center justify-end gap-2 mb-3">
