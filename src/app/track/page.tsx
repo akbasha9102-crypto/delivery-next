@@ -218,6 +218,7 @@ type Order = {
   id: string; client_name: string; client_phone: string;
   delivery_address: string | null; total_amount: number;
   status: string; created_at: string;
+  driver_name?: string | null; driver_phone?: string | null;
 };
 
 export default function TrackPage() {
@@ -323,6 +324,13 @@ export default function TrackPage() {
               </div>
               <p className="text-[#e67e22] font-bold text-lg mb-1">{STEPS[current]?.label}</p>
               <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
+              {order.status === 'ready' && order.driver_name && (
+                <div className="mt-4 pt-4 border-t border-orange-200 dark:border-orange-800">
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mb-1">السائق</p>
+                  <p className="font-bold text-gray-900 dark:text-slate-100 text-base">{order.driver_name}</p>
+                  <p className="text-[#e67e22] font-bold text-sm mt-0.5" dir="ltr">{order.driver_phone}</p>
+                </div>
+              )}
             </div>
 
             {/* Order Details */}

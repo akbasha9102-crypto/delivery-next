@@ -5,10 +5,11 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, LogOut } from 'lucide-react';
+import { Moon, Sun, LogOut, X } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[] };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null };
+type Driver = { id: string; name: string; phone: string; is_available: boolean };
 
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز',  color: '#f59e0b', dot: 'bg-yellow-400', btnColor: '#3b82f6' },
@@ -17,11 +18,9 @@ const STATUS = {
   completed: { label: 'مكتمل',       next: null,                  nextLabel: '',              color: '#9ca3af', dot: 'bg-gray-400',   btnColor: '#9ca3af' },
 };
 
-// تاريخ محلي بدون UTC
 function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-
 
 function waitInfo(createdAt: string) {
   const mins = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000);
@@ -39,6 +38,48 @@ function formatDateLabel(dateStr: string) {
   return d.toLocaleDateString('ar-IQ', { weekday:'short', day:'numeric', month:'short' });
 }
 
+function DriverPickerModal({ drivers, onPick, onClose }: {
+  drivers: Driver[];
+  onPick: (driver: Driver) => void;
+  onClose: () => void;
+}) {
+  const available = drivers.filter(d => d.is_available);
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-w-lg p-5 pb-8" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <button onClick={onClose} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
+            <X size={18} />
+          </button>
+          <p className="font-bold text-gray-900 dark:text-slate-100 text-lg">اختر السائق</p>
+          <div className="w-9" />
+        </div>
+
+        {available.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-4xl mb-3">🏍️</p>
+            <p className="text-gray-500 dark:text-slate-400 font-medium">لا يوجد سواقون متاحون</p>
+            <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">أضف سواقين من صفحة السواقون</p>
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-72 overflow-y-auto">
+            {available.map(d => (
+              <button key={d.id} onClick={() => onPick(d)}
+                className="w-full flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl px-4 py-3.5 active:scale-95 transition-all">
+                <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">تعيين</span>
+                <div className="text-right">
+                  <p className="font-bold text-gray-900 dark:text-slate-100">{d.name}</p>
+                  <p className="text-sm text-gray-400 dark:text-slate-500 mt-0.5" dir="ltr">{d.phone}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DashboardPage() {
   const router = useRouter();
   const { dark, toggleDark } = useDarkMode();
@@ -47,6 +88,8 @@ function DashboardPage() {
   const [loading,   setLoading]   = useState(true);
   const [filter,    setFilter]    = useState<'pending'|'preparing'|'ready'|'completed'>('pending');
   const [newOrderFlash, setNewOrderFlash] = useState(false);
+  const [drivers,   setDrivers]   = useState<Driver[]>([]);
+  const [pickerOrderId, setPickerOrderId] = useState<string | null>(null);
   const [, setTick] = useState(0);
 
   const initialLoadDone  = useRef(false);
@@ -55,6 +98,10 @@ function DashboardPage() {
   useEffect(() => {
     const id = setInterval(() => setTick(t => t+1), 60000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    supabase.from('drivers').select('*').then(({ data }) => setDrivers(data || []));
   }, []);
 
   const fetchOrders = useCallback(async () => {
@@ -99,6 +146,29 @@ function DashboardPage() {
     await supabase.from('orders').update({ status }).eq('id', id);
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: status as Order['status'] } : o));
   };
+
+  const assignDriverAndStart = async (orderId: string, driver: Driver) => {
+    await supabase.from('orders').update({
+      status: 'preparing',
+      driver_name: driver.name,
+      driver_phone: driver.phone,
+    }).eq('id', orderId);
+    setOrders(prev => prev.map(o =>
+      o.id === orderId ? { ...o, status: 'preparing', driver_name: driver.name, driver_phone: driver.phone } : o
+    ));
+    setPickerOrderId(null);
+  };
+
+  const handleAction = (order: Order) => {
+    const next = STATUS[order.status].next;
+    if (!next) return;
+    if (order.status === 'pending') {
+      setPickerOrderId(order.id);
+    } else {
+      updateStatus(order.id, next);
+    }
+  };
+
   const logout = async () => { await supabase.auth.signOut(); router.replace('/login'); };
 
   const counts       = { pending:0, preparing:0, ready:0, completed:0 } as Record<string,number>;
@@ -210,10 +280,21 @@ function DashboardPage() {
 
                     {order.delivery_address && <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">📍 {order.delivery_address}</p>}
                     {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
+
+                    {/* Driver info (shown when assigned) */}
+                    {order.driver_name && (
+                      <div className="mt-2 flex items-center justify-end gap-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2">
+                        <div className="text-right">
+                          <p className="text-blue-700 dark:text-blue-300 font-bold text-sm">{order.driver_name}</p>
+                          <p className="text-blue-500 text-xs" dir="ltr">{order.driver_phone}</p>
+                        </div>
+                        <span className="text-xl">🏍️</span>
+                      </div>
+                    )}
                   </div>
 
                   {cfg.next ? (
-                    <button onClick={() => updateStatus(order.id, cfg.next!)}
+                    <button onClick={() => handleAction(order)}
                       className="w-full py-4 text-white font-bold text-base transition-all active:opacity-80"
                       style={{ backgroundColor: cfg.btnColor }}>
                       {cfg.nextLabel}
@@ -229,6 +310,15 @@ function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Driver picker modal */}
+      {pickerOrderId && (
+        <DriverPickerModal
+          drivers={drivers}
+          onPick={driver => assignDriverAndStart(pickerOrderId, driver)}
+          onClose={() => setPickerOrderId(null)}
+        />
+      )}
 
       <AdminBottomNav />
     </div>
