@@ -19,7 +19,7 @@ function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
-  const [activeTab, setActiveTab] = useState<'add' | 'list'>('add');
+  const [activeTab, setActiveTab] = useState<'add' | 'list'>('list');
   const [newCat, setNewCat] = useState('');
   const [newCatColor, setNewCatColor] = useState('#e67e22');
   const [form, setForm] = useState({ category_id: '', name: '', description: '', price: '', image_url: '' });
@@ -254,23 +254,41 @@ function MenuPage() {
                   ) : (
                     <div className="space-y-3">
                       {catItems.map(item => (
-                        <div key={item.id} className={`bg-white dark:bg-slate-800 rounded-2xl border overflow-hidden ${item.is_available ? 'border-gray-100 dark:border-slate-700' : 'border-gray-200 dark:border-slate-600 opacity-70'}`}>
-                          <div className="flex justify-between items-center p-4">
-                            <div className="flex gap-2">
-                              <button onClick={() => deleteItem(item.id)} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-400 px-3 py-1.5 rounded-xl text-xs font-bold active:scale-90 transition-all">حذف</button>
-                              <button onClick={() => openEdit(item)} className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-400 px-3 py-1.5 rounded-xl text-xs font-bold active:scale-90 transition-all flex items-center gap-1"><Pencil size={12} />تعديل</button>
+                        <div key={item.id} className={`bg-white dark:bg-slate-800 rounded-2xl border transition-opacity ${item.is_available ? 'border-gray-100 dark:border-slate-700' : 'border-gray-200 dark:border-slate-600 opacity-60'}`}>
+                          <div className="p-4">
+                            {/* Item info */}
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="text-right flex-1">
+                                <p className={`font-bold text-base ${item.is_available ? 'text-gray-900 dark:text-slate-100' : 'text-gray-400 dark:text-slate-500'}`}>{item.name}</p>
+                                {item.description && <p className="text-xs text-gray-400 dark:text-slate-500 mt-1 line-clamp-2">{item.description}</p>}
+                                <p className={`font-bold text-sm mt-2 ${item.is_available ? 'text-[#f97316]' : 'text-gray-400 dark:text-slate-500'}`}>{item.price.toLocaleString()} د.ع</p>
+                              </div>
                             </div>
-                            <div className="text-right flex-1 mr-3">
-                              <p className={`font-bold ${item.is_available ? 'text-gray-900 dark:text-slate-100' : 'text-gray-400 dark:text-slate-500'}`}>{item.name}</p>
-                              {item.description && <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5 truncate">{item.description}</p>}
-                              <p className={`font-bold mt-1 text-sm ${item.is_available ? 'text-[#f97316]' : 'text-gray-400 dark:text-slate-500'}`}>{item.price.toLocaleString()} د.ع</p>
+
+                            {/* Footer: toggle + actions */}
+                            <div className="flex justify-between items-center pt-3 border-t border-gray-50 dark:border-slate-700">
+                              {/* Toggle switch */}
+                              <label className="flex items-center gap-2 cursor-pointer select-none">
+                                <span className={`text-xs font-bold ${item.is_available ? 'text-green-500' : 'text-gray-400 dark:text-slate-500'}`}>
+                                  {item.is_available ? 'متاح' : 'مخفي'}
+                                </span>
+                                <div className="relative" onClick={() => toggleAvailable(item)}>
+                                  <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${item.is_available ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />
+                                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${item.is_available ? 'left-5' : 'left-0.5'}`} />
+                                </div>
+                              </label>
+
+                              {/* Edit + Delete */}
+                              <div className="flex gap-2">
+                                <button onClick={() => openEdit(item)} className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-500 p-2.5 rounded-xl active:scale-90 transition-all">
+                                  <Pencil size={15} />
+                                </button>
+                                <button onClick={() => deleteItem(item.id)} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-400 p-2.5 rounded-xl active:scale-90 transition-all">
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                          <button onClick={() => toggleAvailable(item)}
-                            className={`w-full mx-4 mb-4 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95 ${item.is_available ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-500' : 'bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-400 dark:text-slate-500'}`}
-                            style={{ width: 'calc(100% - 2rem)' }}>
-                            {item.is_available ? '● متاح للزبائن — اضغط للإخفاء' : '○ مخفي — اضغط للإتاحة'}
-                          </button>
                         </div>
                       ))}
                     </div>
