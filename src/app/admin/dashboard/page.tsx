@@ -100,9 +100,18 @@ function DashboardPage() {
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    supabase.from('drivers').select('*').then(({ data }) => setDrivers(data || []));
+  const fetchDrivers = useCallback(async () => {
+    const { data } = await supabase.from('drivers').select('*').order('name');
+    setDrivers(data || []);
   }, []);
+
+  useEffect(() => {
+    fetchDrivers();
+    const ch = supabase.channel('drivers-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, fetchDrivers)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [fetchDrivers]);
 
   const fetchOrders = useCallback(async () => {
     const start = new Date(today + 'T00:00:00').toISOString();
@@ -163,7 +172,7 @@ function DashboardPage() {
     const next = STATUS[order.status].next;
     if (!next) return;
     if (order.status === 'pending') {
-      setPickerOrderId(order.id);
+      fetchDrivers().then(() => setPickerOrderId(order.id));
     } else {
       updateStatus(order.id, next);
     }
