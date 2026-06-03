@@ -9,7 +9,7 @@ import { Moon, Sun, LogOut, X } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null };
-type Driver = { id: string; name: string; phone: string; is_available: boolean };
+type Driver = { id: string; name: string; phone: string; status: string };
 
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز',  color: '#f59e0b', dot: 'bg-yellow-400', btnColor: '#3b82f6' },
@@ -43,7 +43,7 @@ function DriverPickerModal({ drivers, onPick, onClose }: {
   onPick: (driver: Driver) => void;
   onClose: () => void;
 }) {
-  const available = drivers.filter(d => d.is_available);
+  const available = drivers.filter(d => d.status === 'available');
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-w-lg p-5 pb-8" onClick={e => e.stopPropagation()}>

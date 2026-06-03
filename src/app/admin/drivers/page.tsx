@@ -5,7 +5,7 @@ import { AdminBottomNav } from '@/components/BottomNav';
 import { AdminGuard } from '@/components/AdminGuard';
 import { Plus, Trash2, CheckCircle, Circle } from 'lucide-react';
 
-type Driver = { id: string; name: string; phone: string; is_available: boolean };
+type Driver = { id: string; name: string; phone: string; status: string };
 
 function DriversPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -25,15 +25,20 @@ function DriversPage() {
   const addDriver = async () => {
     if (!name.trim() || !phone.trim()) return;
     setAdding(true);
-    await supabase.from('drivers').insert({ name: name.trim(), phone: phone.trim() });
+    await supabase.from('drivers').insert({ name: name.trim(), phone: phone.trim(), status: 'unavailable' });
     setName(''); setPhone('');
     setAdding(false);
     fetchDrivers();
   };
 
   const toggleAvailable = async (d: Driver) => {
-    await supabase.from('drivers').update({ is_available: !d.is_available }).eq('id', d.id);
-    setDrivers(prev => prev.map(x => x.id === d.id ? { ...x, is_available: !d.is_available } : x));
+    const newStatus = d.status === 'available' ? 'unavailable' : 'available';
+    const { error } = await supabase.from('drivers').update({ status: newStatus }).eq('id', d.id);
+    if (!error) {
+      setDrivers(prev => prev.map(x => x.id === d.id ? { ...x, status: newStatus } : x));
+    } else {
+      fetchDrivers();
+    }
   };
 
   const deleteDriver = async (id: string) => {
@@ -75,27 +80,30 @@ function DriversPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {drivers.map(d => (
-              <div key={d.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <button onClick={() => deleteDriver(d.id)}
-                    className="p-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-400 active:scale-90 transition-all">
-                    <Trash2 size={16} />
-                  </button>
-                  <button onClick={() => toggleAvailable(d)}
-                    className={`p-2 rounded-xl active:scale-90 transition-all ${d.is_available ? 'bg-green-50 dark:bg-green-900/20 text-green-500' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
-                    {d.is_available ? <CheckCircle size={18} /> : <Circle size={18} />}
-                  </button>
+            {drivers.map(d => {
+              const available = d.status === 'available';
+              return (
+                <div key={d.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => deleteDriver(d.id)}
+                      className="p-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-400 active:scale-90 transition-all">
+                      <Trash2 size={16} />
+                    </button>
+                    <button onClick={() => toggleAvailable(d)}
+                      className={`p-2 rounded-xl active:scale-90 transition-all ${available ? 'bg-green-50 dark:bg-green-900/20 text-green-500' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
+                      {available ? <CheckCircle size={18} /> : <Circle size={18} />}
+                    </button>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-gray-900 dark:text-slate-100">{d.name}</p>
+                    <p className="text-sm text-gray-400 dark:text-slate-500 mt-0.5" dir="ltr">{d.phone}</p>
+                    <span className={`text-xs font-bold mt-1 inline-block px-2 py-0.5 rounded-full ${available ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
+                      {available ? 'متاح' : 'غير متاح'}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900 dark:text-slate-100">{d.name}</p>
-                  <p className="text-sm text-gray-400 dark:text-slate-500 mt-0.5" dir="ltr">{d.phone}</p>
-                  <span className={`text-xs font-bold mt-1 inline-block px-2 py-0.5 rounded-full ${d.is_available ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
-                    {d.is_available ? 'متاح' : 'غير متاح'}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
