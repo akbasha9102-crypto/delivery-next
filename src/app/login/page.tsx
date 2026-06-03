@@ -21,7 +21,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 stagger-0">
-        <h1 className="text-3xl font-bold text-[#4f46e5] mb-1 text-center">CulinaShare</h1>
+        <h1 className="text-3xl font-bold text-[#4f46e5] mb-0.5 text-center">Dasha</h1>
+        <p className="text-xl font-bold text-[#4f46e5] text-center mb-6">داشا</p>
         <p className="text-gray-500 dark:text-slate-400 text-center mb-8 text-sm">تسجيل الدخول لإدارة الطلبات</p>
 
         {error && (
