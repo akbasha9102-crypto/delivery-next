@@ -13,8 +13,15 @@ type Category = { id: string; name: string; color?: string };
 type Extra    = { id: string; name: string; price: number };
 type Item     = {
   id: string; name: string; price: number; description: string;
-  image_url: string | null; category_id: string; is_available: boolean; extras_json?: string;
+  image_url: string | null; category_id: string; is_available: boolean; item_status?: string; extras_json?: string;
 };
+
+function getStatus(item: Item): 'available' | 'unavailable' | 'hidden' {
+  if (item.item_status === 'unavailable') return 'unavailable';
+  if (item.item_status === 'hidden')      return 'hidden';
+  if (item.item_status === 'available')   return 'available';
+  return item.is_available ? 'available' : 'unavailable';
+}
 
 export default function HomePage() {
   const { dark, toggleDark } = useDarkMode();
@@ -106,7 +113,7 @@ export default function HomePage() {
   };
 
   const handleAdd = (item: Item) => {
-    if (!item.is_available) return;
+    if (getStatus(item) !== 'available') return;
     const extras = getExtras(item);
     if (extras.length > 0) { setExtrasItem(item); setSelectedExtras(new Set()); }
     else addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url });
@@ -190,10 +197,13 @@ export default function HomePage() {
                   {/* ── Items Grid ── */}
                   <div className="grid grid-cols-2 gap-3">
                     {catItems.map(item => {
-                      const count = qty(item.id);
+                      const count  = qty(item.id);
+                      const status = getStatus(item);
+                      const isAvailable = status === 'available';
+                      const statusLabel = status === 'unavailable' ? 'غير متوفر حاليا' : status === 'hidden' ? 'انتهى' : '';
                       return (
                         <div key={item.id}
-                          className={`bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col ${!item.is_available ? 'opacity-55' : ''}`}>
+                          className={`bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col ${!isAvailable ? 'opacity-60' : ''}`}>
 
                           {/* Image */}
                           <div className="relative flex-shrink-0 overflow-hidden">
@@ -201,16 +211,16 @@ export default function HomePage() {
                               src={item.image_url || 'https://placehold.co/300x200/f5f5f5/ccc?text='}
                               alt={item.name}
                               width={300} height={180}
-                              className="w-full h-36 object-cover"
-                              style={{
+                              className={`w-full h-36 object-cover ${!isAvailable ? 'grayscale' : ''}`}
+                              style={isAvailable ? {
                                 transform: `scale(${1 + Math.min(count, 10) * 0.08})`,
                                 transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
-                              }}
+                              } : {}}
                               unoptimized
                             />
-                            {!item.is_available && (
-                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                <span className="text-white text-xs font-bold bg-black/60 px-2 py-1 rounded-lg">غير متوفر</span>
+                            {!isAvailable && (
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <span className="text-white text-xs font-bold bg-black/70 px-3 py-1.5 rounded-xl text-center">{statusLabel}</span>
                               </div>
                             )}
                           </div>
@@ -226,10 +236,10 @@ export default function HomePage() {
                               </p>
                             )}
                             <div className="mt-auto pt-1">
-                              <p className="font-extrabold text-sm text-right mb-2" style={{ color: c }}>
+                              <p className="font-extrabold text-sm text-right mb-2" style={{ color: isAvailable ? c : '#9ca3af' }}>
                                 {item.price.toLocaleString()} د.ع
                               </p>
-                              {count > 0 ? (
+                              {isAvailable && count > 0 ? (
                                 <div className="flex items-center justify-between rounded-xl px-2 py-1.5" style={{ backgroundColor: c + '18' }}>
                                   <button
                                     onClick={() => addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url })}
@@ -247,10 +257,12 @@ export default function HomePage() {
                               ) : (
                                 <button
                                   onClick={() => handleAdd(item)}
-                                  disabled={!item.is_available}
-                                  className="w-full text-white font-bold text-sm py-2 rounded-xl transition-all active:scale-95 disabled:opacity-40"
-                                  style={{ backgroundColor: c }}>
-                                  + أضف
+                                  disabled={!isAvailable}
+                                  className="w-full font-bold text-sm py-2 rounded-xl transition-all active:scale-95 disabled:cursor-not-allowed"
+                                  style={isAvailable
+                                    ? { backgroundColor: c, color: '#fff' }
+                                    : { backgroundColor: '#e5e7eb', color: '#9ca3af' }}>
+                                  {isAvailable ? '+ أضف' : statusLabel}
                                 </button>
                               )}
                             </div>
