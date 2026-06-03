@@ -11,10 +11,9 @@ type Extra = { id: string; name: string; price: number };
 type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
 
 const ITEM_STATUSES = [
-  { value: 'available',    label: 'متوفر',      color: 'bg-green-500 text-white border-green-500' },
-  { value: 'unavailable',  label: 'غير متوفر',  color: 'bg-red-500 text-white border-red-500' },
-  { value: 'inaccessible', label: 'ليس متاح',   color: 'bg-amber-500 text-white border-amber-500' },
-  { value: 'hidden',       label: 'مخفي',       color: 'bg-gray-500 text-white border-gray-500' },
+  { value: 'available',   label: 'متوفر',            color: 'bg-green-500 text-white border-green-500' },
+  { value: 'unavailable', label: 'غير متوفر حاليا', color: 'bg-amber-500 text-white border-amber-500' },
+  { value: 'hidden',      label: 'انتهى',            color: 'bg-red-500 text-white border-red-500' },
 ] as const;
 
 function getItemStatus(item: Item) {

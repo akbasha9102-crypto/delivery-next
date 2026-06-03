@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Search, X } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; items: OrderItem[] };
@@ -36,6 +36,7 @@ function StatisticsPage() {
   const [range,      setRange]      = useState<'today' | 'week' | 'month' | 'custom'>('today');
   const [fromDate,   setFromDate]   = useState(today);
   const [toDate,     setToDate]     = useState(today);
+  const [dayView,    setDayView]    = useState(today);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -70,6 +71,28 @@ function StatisticsPage() {
   const handleQuick = (r: 'today' | 'week' | 'month') => {
     const { from, to } = quickRange(r);
     setFromDate(from); setToDate(to); setRange(r);
+    if (r === 'today') setDayView(today);
+  };
+
+  const changeDay = (delta: number) => {
+    const d = new Date(dayView + 'T00:00:00');
+    d.setDate(d.getDate() + delta);
+    const next = localDate(d);
+    if (next <= today) {
+      setDayView(next);
+      setFromDate(next);
+      setToDate(next);
+      setRange('today');
+    }
+  };
+
+  const formatDayLabel = (dateStr: string) => {
+    const d    = new Date(dateStr + 'T00:00:00');
+    const now  = new Date(); now.setHours(0,0,0,0);
+    const yest = new Date(); yest.setDate(yest.getDate()-1); yest.setHours(0,0,0,0);
+    if (d.getTime() === now.getTime())  return 'اليوم';
+    if (d.getTime() === yest.getTime()) return 'أمس';
+    return d.toLocaleDateString('ar-IQ', { weekday:'short', day:'numeric', month:'short' });
   };
 
   const filtered = useMemo(() => orders.filter(o => {
@@ -130,6 +153,30 @@ function StatisticsPage() {
           className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95"
           style={{ backgroundColor: range==='custom' ? '#f97316' : s.surface, borderColor: range==='custom' ? '#f97316' : s.border, color: range==='custom' ? '#fff' : s.sub }}>
           تخصيص
+        </button>
+      </div>
+
+      {/* التنقل بين الأيام */}
+      <div className="flex items-center justify-between mx-4 mb-3 rounded-2xl border px-2 py-1.5" style={{ backgroundColor: s.surface, borderColor: s.border }}>
+        <button onClick={() => changeDay(+1)} disabled={dayView === today}
+          className="p-2 rounded-xl transition-all active:scale-90 disabled:opacity-20"
+          style={{ color: s.sub }}>
+          <ChevronLeft size={20} />
+        </button>
+        <div className="flex items-center gap-2">
+          <p className="font-bold" style={{ color: s.text }}>{formatDayLabel(dayView)}</p>
+          {dayView !== today && (
+            <button onClick={() => { setDayView(today); setFromDate(today); setToDate(today); setRange('today'); }}
+              className="text-xs px-2.5 py-1 rounded-lg font-bold active:scale-95 transition-all"
+              style={{ backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316' }}>
+              اليوم ←
+            </button>
+          )}
+        </div>
+        <button onClick={() => changeDay(-1)}
+          className="p-2 rounded-xl transition-all active:scale-90"
+          style={{ color: s.sub }}>
+          <ChevronRight size={20} />
         </button>
       </div>
 
