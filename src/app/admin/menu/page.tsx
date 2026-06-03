@@ -8,7 +8,18 @@ import { X, Plus, Pencil, Trash2, Search } from 'lucide-react';
 
 type Category = { id: string; name: string; color?: string };
 type Extra = { id: string; name: string; price: number };
-type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; extras_json?: string };
+type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
+
+const ITEM_STATUSES = [
+  { value: 'available',    label: 'متوفر',      color: 'bg-green-500 text-white border-green-500' },
+  { value: 'unavailable',  label: 'غير متوفر',  color: 'bg-red-500 text-white border-red-500' },
+  { value: 'inaccessible', label: 'ليس متاح',   color: 'bg-amber-500 text-white border-amber-500' },
+  { value: 'hidden',       label: 'مخفي',       color: 'bg-gray-500 text-white border-gray-500' },
+] as const;
+
+function getItemStatus(item: Item) {
+  return item.item_status || (item.is_available ? 'available' : 'hidden');
+}
 
 const DEFAULT_IMAGE = 'https://via.placeholder.com/300x200.png?text=Food';
 
@@ -101,9 +112,10 @@ function MenuPage() {
     setExtraName(''); setExtraPrice('');
   };
 
-  const toggleAvailable = async (item: Item) => {
-    await supabase.from('items').update({ is_available: !item.is_available }).eq('id', item.id);
-    setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: !i.is_available } : i));
+  const setItemStatus = async (item: Item, status: string) => {
+    const is_available = status === 'available';
+    await supabase.from('items').update({ item_status: status, is_available }).eq('id', item.id);
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, item_status: status, is_available } : i));
   };
 
   const deleteItem = async (id: string) => {
@@ -305,7 +317,7 @@ function MenuPage() {
                   ) : (
                     <div className="space-y-3">
                       {catItems.map(item => (
-                        <div key={item.id} className={`bg-white dark:bg-slate-800 rounded-2xl border transition-opacity ${item.is_available ? 'border-gray-100 dark:border-slate-700' : 'border-gray-200 dark:border-slate-600 opacity-60'}`}>
+                        <div key={item.id} className={`bg-white dark:bg-slate-800 rounded-2xl border ${getItemStatus(item) === 'hidden' ? 'opacity-50 border-gray-200 dark:border-slate-600' : 'border-gray-100 dark:border-slate-700'}`}>
                           <div className="p-4">
                             {/* Item info + image */}
                             <div className="flex items-start gap-3 mb-3">
@@ -316,34 +328,36 @@ function MenuPage() {
                                 onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_IMAGE; }}
                               />
                               <div className="text-right flex-1">
-                                <p className={`font-bold text-base ${item.is_available ? 'text-gray-900 dark:text-slate-100' : 'text-gray-400 dark:text-slate-500'}`}>{item.name}</p>
+                                <p className="font-bold text-base text-gray-900 dark:text-slate-100">{item.name}</p>
                                 {item.description && <p className="text-xs text-gray-400 dark:text-slate-500 mt-1 line-clamp-2">{item.description}</p>}
-                                <p className={`font-bold text-sm mt-2 ${item.is_available ? 'text-[#f97316]' : 'text-gray-400 dark:text-slate-500'}`}>{item.price.toLocaleString()} د.ع</p>
+                                <p className="font-bold text-sm mt-2 text-[#f97316]">{item.price.toLocaleString()} د.ع</p>
                               </div>
                             </div>
 
-                            {/* Footer: toggle + actions */}
-                            <div className="flex justify-between items-center pt-3 border-t border-gray-50 dark:border-slate-700">
-                              {/* Toggle switch */}
-                              <label className="flex items-center gap-2 cursor-pointer select-none">
-                                <span className={`text-xs font-bold ${item.is_available ? 'text-green-500' : 'text-gray-400 dark:text-slate-500'}`}>
-                                  {item.is_available ? 'متاح' : 'مخفي'}
-                                </span>
-                                <div className="relative" onClick={() => toggleAvailable(item)}>
-                                  <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${item.is_available ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />
-                                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${item.is_available ? 'left-5' : 'left-0.5'}`} />
-                                </div>
-                              </label>
+                            {/* Status buttons */}
+                            <div className="flex gap-1.5 mb-3 flex-row-reverse">
+                              {ITEM_STATUSES.map(s => {
+                                const active = getItemStatus(item) === s.value;
+                                return (
+                                  <button
+                                    key={s.value}
+                                    onClick={() => setItemStatus(item, s.value)}
+                                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${active ? s.color : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-400 dark:text-slate-500'}`}
+                                  >
+                                    {s.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
 
-                              {/* Edit + Delete */}
-                              <div className="flex gap-2">
-                                <button onClick={() => openEdit(item)} className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-500 p-2.5 rounded-xl active:scale-90 transition-all">
-                                  <Pencil size={15} />
-                                </button>
-                                <button onClick={() => deleteItem(item.id)} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-400 p-2.5 rounded-xl active:scale-90 transition-all">
-                                  <Trash2 size={15} />
-                                </button>
-                              </div>
+                            {/* Edit + Delete */}
+                            <div className="flex gap-2 pt-3 border-t border-gray-50 dark:border-slate-700">
+                              <button onClick={() => openEdit(item)} className="flex-1 flex items-center justify-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-500 py-2 rounded-xl active:scale-90 transition-all text-sm font-bold">
+                                <Pencil size={14} /> تعديل
+                              </button>
+                              <button onClick={() => deleteItem(item.id)} className="flex-1 flex items-center justify-center gap-1.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-400 py-2 rounded-xl active:scale-90 transition-all text-sm font-bold">
+                                <Trash2 size={14} /> حذف
+                              </button>
                             </div>
                           </div>
                         </div>

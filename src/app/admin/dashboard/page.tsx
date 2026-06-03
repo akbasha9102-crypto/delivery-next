@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, LogOut } from 'lucide-react';
+import { Moon, Sun, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[] };
@@ -59,12 +59,14 @@ function DashboardPage() {
   const [imageMap,  setImageMap]  = useState<Map<string, string>>(new Map());
   const [loading,   setLoading]   = useState(true);
   const [filter,    setFilter]    = useState<'pending'|'preparing'|'ready'|'completed'>('pending');
+  const [selectedDate, setSelectedDate] = useState(localDate);
   const [newOrderFlash, setNewOrderFlash] = useState(false);
   const [, setTick] = useState(0);
 
   const bellRef          = useRef<HTMLAudioElement | null>(null);
   const initialLoadDone  = useRef(false);
-  const today = localDate();
+  const today   = localDate();
+  const isToday = selectedDate === today;
 
   useEffect(() => {
     const url = makeBellWavUrl(); if (!url) return;
@@ -80,9 +82,16 @@ function DashboardPage() {
     return () => clearInterval(id);
   }, []);
 
+  const changeDate = (delta: number) => {
+    const d = new Date(selectedDate + 'T00:00:00');
+    d.setDate(d.getDate() + delta);
+    const next = localDate(d);
+    if (next <= today) setSelectedDate(next);
+  };
+
   const fetchOrders = useCallback(async () => {
-    const start = new Date(today + 'T00:00:00').toISOString();
-    const end   = new Date(today + 'T23:59:59').toISOString();
+    const start = new Date(selectedDate + 'T00:00:00').toISOString();
+    const end   = new Date(selectedDate + 'T23:59:59').toISOString();
 
     const [ordersRes, itemsRes] = await Promise.all([
       supabase.from('orders').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }).limit(200),
@@ -100,11 +109,12 @@ function DashboardPage() {
     setOrders(withItems);
     setLoading(false);
     initialLoadDone.current = true;
-  }, [today]);
+  }, [selectedDate]);
 
   useEffect(() => { setLoading(true); fetchOrders(); }, [fetchOrders]);
 
   useEffect(() => {
+    if (!isToday) return;
     const ch = supabase.channel('dash-live')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
         if (initialLoadDone.current) {
@@ -117,7 +127,7 @@ function DashboardPage() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, fetchOrders)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [fetchOrders]);
+  }, [fetchOrders, isToday]);
 
   const updateStatus = async (id: string, status: string) => {
     await supabase.from('orders').update({ status }).eq('id', id);
@@ -154,15 +164,34 @@ function DashboardPage() {
         </div>
       )}
 
-      {/* إحصاء */}
+      {/* إحصاء + التنقل بين الأيام */}
       <div className="grid grid-cols-2 gap-2 px-3 pt-3 pb-2">
-        <div className="rounded-2xl p-2.5 text-center border" style={{ backgroundColor: 'rgba(156,163,175,0.08)', borderColor: 'rgba(156,163,175,0.25)' }}>
-          <p className="font-bold text-2xl" style={{ color: '#9ca3af' }}>{counts.completed}</p>
-          <p className="text-xs mt-0.5 opacity-75" style={{ color: '#9ca3af' }}>مكتمل</p>
+        {/* كارت مكتمل مع سهمي التنقل */}
+        <div className="rounded-2xl border flex flex-col" style={{ backgroundColor: 'rgba(156,163,175,0.08)', borderColor: 'rgba(156,163,175,0.25)' }}>
+          <div className="flex items-center justify-between px-2 pt-2 pb-1">
+            <button onClick={() => changeDate(-1)} className="p-1 rounded-lg text-gray-400 active:scale-90 transition-all">
+              <ChevronRight size={16} />
+            </button>
+            <div className="text-center">
+              <p className="font-bold text-2xl" style={{ color: '#9ca3af' }}>{counts.completed}</p>
+              <p className="text-xs opacity-75" style={{ color: '#9ca3af' }}>مكتمل</p>
+            </div>
+            <button onClick={() => changeDate(+1)} disabled={isToday} className="p-1 rounded-lg text-gray-400 disabled:opacity-20 active:scale-90 transition-all">
+              <ChevronLeft size={16} />
+            </button>
+          </div>
+          <p className="text-center text-xs pb-1.5 font-bold" style={{ color: '#9ca3af' }}>
+            {formatDateLabel(selectedDate)}
+            {!isToday && (
+              <button onClick={() => setSelectedDate(localDate())} className="mr-1 text-orange-400 underline active:scale-95">اليوم</button>
+            )}
+          </p>
         </div>
-        <div className="rounded-2xl px-4 py-2.5 text-center border bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800">
+
+        {/* كارت إيراد */}
+        <div className="rounded-2xl px-4 py-2.5 text-center border bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800 flex flex-col justify-center">
           <p className="text-orange-500 font-bold text-xl">{todayRevenue.toLocaleString()} <span className="text-xs font-normal text-orange-400">د.ع</span></p>
-          <p className="text-orange-400 text-xs mt-0.5 font-bold">إجمالي اليوم</p>
+          <p className="text-orange-400 text-xs mt-0.5 font-bold">إجمالي {formatDateLabel(selectedDate)}</p>
         </div>
       </div>
 
