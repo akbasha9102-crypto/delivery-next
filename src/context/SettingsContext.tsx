@@ -16,7 +16,21 @@ const DEFAULTS: Settings = {
   logo_url: null,
 };
 
-const Ctx = createContext<Settings>(DEFAULTS);
+const CACHE_KEY = 'rs_settings_v1';
+
+function readCache(): Settings | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function writeCache(s: Settings) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(s)); } catch {}
+}
+
+type Ctx = Settings & { loaded: boolean };
+const SettingsCtx = createContext<Ctx>({ ...DEFAULTS, loaded: false });
 
 function hexDarken(hex: string, amount = 0.18): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -36,16 +50,27 @@ function hexLighten(hex: string): string {
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
+  const [loaded,   setLoaded]   = useState(false);
 
   useEffect(() => {
+    // استخدم الكاش فوراً إذا موجود
+    const cached = readCache();
+    if (cached) { setSettings(cached); setLoaded(true); }
+
+    // ثم اجلب من السيرفر
     supabase.from('restaurant_settings').select('*').order('updated_at', { ascending: false }).limit(1).then(({ data }) => {
-      if (data?.[0]) setSettings(data[0]);
+      if (data?.[0]) {
+        setSettings(data[0]);
+        writeCache(data[0]);
+      }
+      setLoaded(true);
     });
 
     const channel = supabase
       .channel('settings-live')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'restaurant_settings' }, ({ new: row }) => {
         setSettings(row as Settings);
+        writeCache(row as Settings);
       })
       .subscribe();
 
@@ -60,7 +85,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--primary-light', hexLighten(settings.primary_color));
   }, [settings.primary_color]);
 
-  return <Ctx.Provider value={settings}>{children}</Ctx.Provider>;
+  return <SettingsCtx.Provider value={{ ...settings, loaded }}>{children}</SettingsCtx.Provider>;
 }
 
-export const useSettings = () => useContext(Ctx);
+export const useSettings = () => useContext(SettingsCtx);

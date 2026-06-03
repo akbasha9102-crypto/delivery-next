@@ -26,7 +26,7 @@ function getStatus(item: Item): 'available' | 'unavailable' | 'hidden' {
 export default function HomePage() {
   const { dark, toggleDark } = useDarkMode();
   const { items: cartItems, addItem, decrementItem, removeItem, total } = useCart();
-  const { restaurant_name, primary_color, logo_url } = useSettings();
+  const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded } = useSettings();
   const p = primary_color; // shorthand for inline styles
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -134,6 +134,12 @@ export default function HomePage() {
   };
 
   const qty = (id: string) => cartItems.find(i => i.id === id)?.quantity || 0;
+
+  if (!settingsLoaded) return (
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+      <div className="w-10 h-10 border-4 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-36">
