@@ -11,7 +11,6 @@ const clientTabs = [
 ];
 
 const adminTabs = [
-  { href: '/admin/orders',     icon: ClipboardList,     label: 'الطلبات' },
   { href: '/admin/dashboard',  icon: LayoutDashboard,   label: 'اللوحة' },
   { href: '/admin/menu',       icon: UtensilsCrossed,   label: 'المنيو' },
   { href: '/admin/appearance', icon: Palette,           label: 'المظهر' },
