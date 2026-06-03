@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, LogOut, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Moon, Sun, LogOut } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[] };
@@ -59,14 +59,12 @@ function DashboardPage() {
   const [imageMap,  setImageMap]  = useState<Map<string, string>>(new Map());
   const [loading,   setLoading]   = useState(true);
   const [filter,    setFilter]    = useState<'pending'|'preparing'|'ready'|'completed'>('pending');
-  const [selectedDate, setSelectedDate] = useState(localDate);
   const [newOrderFlash, setNewOrderFlash] = useState(false);
   const [, setTick] = useState(0);
 
   const bellRef          = useRef<HTMLAudioElement | null>(null);
   const initialLoadDone  = useRef(false);
-  const today   = localDate();
-  const isToday = selectedDate === today;
+  const today = localDate();
 
   useEffect(() => {
     const url = makeBellWavUrl(); if (!url) return;
@@ -83,8 +81,8 @@ function DashboardPage() {
   }, []);
 
   const fetchOrders = useCallback(async () => {
-    const start = new Date(selectedDate + 'T00:00:00').toISOString();
-    const end   = new Date(selectedDate + 'T23:59:59').toISOString();
+    const start = new Date(today + 'T00:00:00').toISOString();
+    const end   = new Date(today + 'T23:59:59').toISOString();
 
     const [ordersRes, itemsRes] = await Promise.all([
       supabase.from('orders').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }).limit(200),
@@ -102,12 +100,11 @@ function DashboardPage() {
     setOrders(withItems);
     setLoading(false);
     initialLoadDone.current = true;
-  }, [selectedDate]);
+  }, [today]);
 
   useEffect(() => { setLoading(true); fetchOrders(); }, [fetchOrders]);
 
   useEffect(() => {
-    if (!isToday) return;
     const ch = supabase.channel('dash-live')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
         if (initialLoadDone.current) {
@@ -120,14 +117,7 @@ function DashboardPage() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, fetchOrders)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [fetchOrders, isToday]);
-
-  const changeDate = (delta: number) => {
-    const d = new Date(selectedDate + 'T00:00:00');
-    d.setDate(d.getDate() + delta);
-    const next = localDate(d);
-    if (next <= today) setSelectedDate(next);
-  };
+  }, [fetchOrders]);
 
   const updateStatus = async (id: string, status: string) => {
     await supabase.from('orders').update({ status }).eq('id', id);
@@ -165,45 +155,15 @@ function DashboardPage() {
       )}
 
       {/* إحصاء */}
-      <div className="grid grid-cols-4 gap-2 px-3 pt-3 pb-2">
-        {([
-          { val: counts.pending,   label: 'جديد',   color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)' },
-          { val: counts.preparing, label: 'تجهيز',  color: '#3b82f6', bg: 'rgba(59,130,246,0.08)',  border: 'rgba(59,130,246,0.25)' },
-          { val: counts.ready,     label: 'جاهز',   color: '#22c55e', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.25)' },
-          { val: counts.completed, label: 'مكتمل',  color: '#9ca3af', bg: 'rgba(156,163,175,0.08)', border: 'rgba(156,163,175,0.25)' },
-        ] as const).map(s => (
-          <div key={s.label} className="rounded-2xl p-2.5 text-center border" style={{ backgroundColor: s.bg, borderColor: s.border }}>
-            <p className="font-bold text-2xl" style={{ color: s.color }}>{s.val}</p>
-            <p className="text-xs mt-0.5 opacity-75" style={{ color: s.color }}>{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* إيراد */}
-      <div className="mx-3 mb-3 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-2xl px-4 py-2.5 flex justify-between items-center">
-        <p className="text-orange-500 font-bold text-lg">{todayRevenue.toLocaleString()} <span className="text-xs font-normal text-orange-400">د.ع</span></p>
-        <p className="text-orange-400 text-sm font-bold">إجمالي {formatDateLabel(selectedDate)}</p>
-      </div>
-
-      {/* التنقل بين الأيام */}
-      <div className="flex items-center justify-between mx-3 mb-3 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 px-2 py-1.5">
-        <button onClick={() => changeDate(+1)} disabled={isToday}
-          className="p-2 rounded-xl text-gray-400 disabled:opacity-20 active:scale-90 transition-all">
-          <ChevronLeft size={20} />
-        </button>
-        <div className="flex items-center gap-2">
-          <p className="font-bold text-gray-800 dark:text-slate-100">{formatDateLabel(selectedDate)}</p>
-          {!isToday && (
-            <button onClick={() => setSelectedDate(localDate())}
-              className="text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-500 px-2.5 py-1 rounded-lg font-bold active:scale-95 transition-all">
-              اليوم ←
-            </button>
-          )}
+      <div className="grid grid-cols-2 gap-2 px-3 pt-3 pb-2">
+        <div className="rounded-2xl p-2.5 text-center border" style={{ backgroundColor: 'rgba(156,163,175,0.08)', borderColor: 'rgba(156,163,175,0.25)' }}>
+          <p className="font-bold text-2xl" style={{ color: '#9ca3af' }}>{counts.completed}</p>
+          <p className="text-xs mt-0.5 opacity-75" style={{ color: '#9ca3af' }}>مكتمل</p>
         </div>
-        <button onClick={() => changeDate(-1)}
-          className="p-2 rounded-xl text-gray-400 active:scale-90 transition-all">
-          <ChevronRight size={20} />
-        </button>
+        <div className="rounded-2xl px-4 py-2.5 text-center border bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800">
+          <p className="text-orange-500 font-bold text-xl">{todayRevenue.toLocaleString()} <span className="text-xs font-normal text-orange-400">د.ع</span></p>
+          <p className="text-orange-400 text-xs mt-0.5 font-bold">إجمالي اليوم</p>
+        </div>
       </div>
 
       {/* تابس الفلتر */}
