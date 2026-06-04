@@ -2,6 +2,9 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+export type DaySchedule = { enabled: boolean; open: string; close: string };
+export type WeekSchedule = { auto: boolean; days: Record<string, DaySchedule> };
+
 export type Settings = {
   id: string;
   restaurant_name: string;
@@ -9,6 +12,7 @@ export type Settings = {
   logo_url: string | null;
   is_closed: boolean;
   opens_at: string | null;
+  schedule: WeekSchedule | null;
 };
 
 const DEFAULTS: Settings = {
@@ -18,6 +22,7 @@ const DEFAULTS: Settings = {
   logo_url: null,
   is_closed: false,
   opens_at: null,
+  schedule: null,
 };
 
 const CACHE_KEY = 'rs_settings_v1';

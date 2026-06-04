@@ -5,8 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, LogOut, X, Clock } from 'lucide-react';
-import { useSettings } from '@/context/SettingsContext';
+import { Moon, Sun, LogOut, X, Clock, Calendar } from 'lucide-react';
+import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null };
@@ -18,6 +18,30 @@ const STATUS = {
   ready:     { label: 'جاهز',        next: 'completed'  as const, nextLabel: 'تم التسليم',   color: '#22c55e', dot: 'bg-green-400',  btnColor: '#6b7280' },
   completed: { label: 'مكتمل',       next: null,                  nextLabel: '',              color: '#9ca3af', dot: 'bg-gray-400',   btnColor: '#9ca3af' },
 };
+
+function formatPhoneForWA(phone: string) {
+  const clean = phone.replace(/\D/g, '');
+  if (clean.startsWith('964')) return clean;
+  if (clean.startsWith('0')) return '964' + clean.slice(1);
+  return '964' + clean;
+}
+
+function buildWAMessage(order: Order) {
+  const items = order.items?.map(i => `• ${i.item_name} × ${i.quantity}`).join('\n') ?? '';
+  return [
+    '🛵 طلب جديد',
+    '',
+    `👤 ${order.client_name}`,
+    `📞 ${order.client_phone}`,
+    order.delivery_address ? `📍 ${order.delivery_address}` : null,
+    '',
+    '🧾 الأصناف:',
+    items,
+    '',
+    `💰 ${order.total_amount.toLocaleString()} د.ع`,
+    order.client_note ? `📝 ${order.client_note}` : null,
+  ].filter(l => l !== null).join('\n');
+}
 
 function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -81,10 +105,116 @@ function DriverPickerModal({ drivers, onPick, onClose }: {
   );
 }
 
+const DAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const DEFAULT_WEEK: WeekSchedule = {
+  auto: false,
+  days: Object.fromEntries([0,1,2,3,4,5,6].map(d => [String(d), { enabled: d < 5, open: '10:00', close: '23:00' } as DaySchedule])),
+};
+
+function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose }: {
+  schedule: WeekSchedule | null;
+  settingsId: string;
+  onSaved: (s: WeekSchedule) => void;
+  onClose: () => void;
+}) {
+  const [sched,  setSched]  = useState<WeekSchedule>(initSchedule ?? DEFAULT_WEEK);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setSched(initSchedule ?? DEFAULT_WEEK); }, [initSchedule]);
+
+  const updateDay = (key: string, field: keyof DaySchedule, val: boolean | string) =>
+    setSched(prev => ({ ...prev, days: { ...prev.days, [key]: { ...prev.days[key], [field]: val } } }));
+
+  const handleSave = async () => {
+    if (!settingsId) return;
+    setSaving(true);
+    await supabase.from('restaurant_settings').update({ schedule: sched }).eq('id', settingsId);
+    onSaved(sched);
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-w-lg pb-8 max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+          <button onClick={onClose} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
+            <X size={18} />
+          </button>
+          <p className="font-bold text-gray-900 dark:text-slate-100 text-lg">جدولة الدوام</p>
+          <div className="w-9" />
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-5 pt-4">
+
+          {/* Auto-apply */}
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-2xl px-4 py-3 mb-5">
+            <button
+              onClick={() => setSched(prev => ({ ...prev, auto: !prev.auto }))}
+              dir="ltr"
+              className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${sched.auto ? 'bg-green-400' : 'bg-gray-300 dark:bg-slate-500'}`}
+            >
+              <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${sched.auto ? 'translate-x-6' : ''}`} />
+            </button>
+            <div className="text-right">
+              <p className="font-bold text-sm text-gray-800 dark:text-slate-200">تطبيق تلقائي</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">يفتح ويغلق المطعم حسب الجدول</p>
+            </div>
+          </div>
+
+          {/* Days */}
+          <div className="space-y-3 pb-4">
+            {[0,1,2,3,4,5,6].map(d => {
+              const key = String(d);
+              const day: DaySchedule = sched.days[key] ?? { enabled: false, open: '10:00', close: '23:00' };
+              return (
+                <div key={d} className={`bg-gray-50 dark:bg-slate-700/50 rounded-2xl px-4 py-3 transition-opacity ${!day.enabled ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <button
+                      onClick={() => updateDay(key, 'enabled', !day.enabled)}
+                      dir="ltr"
+                      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${day.enabled ? 'bg-[#f97316]' : 'bg-gray-300 dark:bg-slate-500'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${day.enabled ? 'translate-x-5' : ''}`} />
+                    </button>
+                    <p className="font-bold text-sm text-gray-800 dark:text-slate-200">{DAY_NAMES[d]}</p>
+                  </div>
+                  {day.enabled && (
+                    <div className="flex items-center gap-2">
+                      <input type="time" value={day.close} onChange={e => updateDay(key, 'close', e.target.value)}
+                        className="flex-1 text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
+                      <span className="text-gray-300 dark:text-slate-500 text-sm font-bold">—</span>
+                      <input type="time" value={day.open} onChange={e => updateDay(key, 'open', e.target.value)}
+                        className="flex-1 text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="px-5 pt-3 flex-shrink-0">
+          <button onClick={handleSave} disabled={saving}
+            className="w-full py-4 rounded-2xl bg-[#f97316] text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60">
+            {saving ? 'جاري الحفظ...' : 'حفظ الجدولة'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DashboardPage() {
   const router = useRouter();
   const { dark, toggleDark } = useDarkMode();
-  const { is_closed, opens_at, id: settingsId, refreshSettings } = useSettings();
+  const { is_closed, opens_at, id: settingsId, refreshSettings, schedule: ctxSchedule, loaded } = useSettings();
+  const [scheduleLocal, setScheduleLocal] = useState<WeekSchedule | null>(null);
+  const isClosedRef = useRef(is_closed);
+  useEffect(() => { isClosedRef.current = is_closed; }, [is_closed]);
+  useEffect(() => { setScheduleLocal(ctxSchedule); }, [ctxSchedule]);
   const [orders,    setOrders]    = useState<Order[]>([]);
   const [imageMap,  setImageMap]  = useState<Map<string, string>>(new Map());
   const [loading,   setLoading]   = useState(true);
@@ -92,9 +222,10 @@ function DashboardPage() {
   const [newOrderFlash, setNewOrderFlash] = useState(false);
   const [drivers,   setDrivers]   = useState<Driver[]>([]);
   const [pickerOrderId, setPickerOrderId] = useState<string | null>(null);
-  const [, setTick] = useState(0);
-  const [showClosedModal, setShowClosedModal] = useState(false);
-  const [opensAtInput,    setOpensAtInput]    = useState('');
+  const [tick, setTick] = useState(0);
+  const [showClosedModal,  setShowClosedModal]  = useState(false);
+  const [opensAtInput,     setOpensAtInput]     = useState('');
+  const [showSchedule,     setShowSchedule]     = useState(false);
 
   const handleToggleClosed = async () => {
     if (is_closed) {
@@ -122,6 +253,32 @@ function DashboardPage() {
     const id = setInterval(() => setTick(t => t+1), 60000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!scheduleLocal?.auto || !settingsId || !loaded) return;
+    const now = new Date();
+    const dayKey = String(now.getDay());
+    const day = scheduleLocal.days?.[dayKey];
+
+    let shouldBeOpen: boolean;
+    if (!day?.enabled) {
+      shouldBeOpen = false;
+    } else {
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      const [oh = 0, om = 0] = (day.open  || '00:00').split(':').map(Number);
+      const [ch = 23, cm = 59] = (day.close || '23:59').split(':').map(Number);
+      shouldBeOpen = nowMins >= oh * 60 + om && nowMins < ch * 60 + cm;
+    }
+
+    const currentlyClosed = isClosedRef.current;
+    if (shouldBeOpen && currentlyClosed) {
+      supabase.from('restaurant_settings').update({ is_closed: false, opens_at: null }).eq('id', settingsId).then(() => refreshSettings());
+    } else if (!shouldBeOpen && !currentlyClosed) {
+      const nextOpen = scheduleLocal.days?.[dayKey]?.open ?? null;
+      supabase.from('restaurant_settings').update({ is_closed: true, opens_at: nextOpen }).eq('id', settingsId).then(() => refreshSettings());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tick, scheduleLocal, settingsId, loaded]);
 
   const fetchDrivers = useCallback(async () => {
     const { data } = await supabase.from('drivers').select('*').order('name');
@@ -245,9 +402,9 @@ function DashboardPage() {
       </div>
 
       {/* حالة المطعم */}
-      <div className="px-3 pb-2">
+      <div className="px-3 pb-2 flex gap-2 items-stretch">
         <button onClick={handleToggleClosed}
-          className={`w-full rounded-2xl px-4 py-3 border flex items-center justify-between transition-all active:scale-[0.98] ${is_closed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'}`}>
+          className={`flex-1 rounded-2xl px-4 py-3 border flex items-center justify-between transition-all active:scale-[0.98] ${is_closed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'}`}>
           <div dir="ltr"
             className={`relative w-12 h-6 rounded-full transition-colors duration-300 flex-shrink-0 ${is_closed ? 'bg-red-500' : 'bg-green-400'}`}>
             <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${is_closed ? 'translate-x-0' : 'translate-x-6'}`} />
@@ -262,6 +419,16 @@ function DashboardPage() {
               </p>
             )}
           </div>
+        </button>
+
+        {/* زر جدولة الدوام */}
+        <button onClick={() => setShowSchedule(true)}
+          className="relative flex flex-col items-center justify-center gap-1 px-3 rounded-2xl border bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 active:scale-95 transition-all">
+          <Calendar size={18} className="text-gray-500 dark:text-slate-400" />
+          <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 whitespace-nowrap">جدولة</span>
+          {scheduleLocal?.auto && (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-green-400" />
+          )}
         </button>
       </div>
 
@@ -336,12 +503,25 @@ function DashboardPage() {
 
                     {/* Driver info (shown when assigned) */}
                     {order.driver_name && (
-                      <div className="mt-2 flex items-center justify-end gap-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2">
-                        <div className="text-right">
-                          <p className="text-blue-700 dark:text-blue-300 font-bold text-sm">{order.driver_name}</p>
-                          <p className="text-blue-500 text-xs" dir="ltr">{order.driver_phone}</p>
+                      <div className="mt-2 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2">
+                        <button
+                          onClick={() => {
+                            const phone = formatPhoneForWA(order.driver_phone ?? '');
+                            const msg   = buildWAMessage(order);
+                            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                          }}
+                          className="flex items-center gap-1.5 bg-green-500 active:bg-green-600 text-white text-xs font-bold px-3 py-2 rounded-xl active:scale-95 transition-all"
+                        >
+                          <span>📤</span>
+                          <span>إرسال</span>
+                        </button>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <p className="text-blue-700 dark:text-blue-300 font-bold text-sm">{order.driver_name}</p>
+                            <p className="text-blue-500 text-xs" dir="ltr">{order.driver_phone}</p>
+                          </div>
+                          <span className="text-xl">🏍️</span>
                         </div>
-                        <span className="text-xl">🏍️</span>
                       </div>
                     )}
                   </div>
@@ -363,6 +543,16 @@ function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Schedule modal */}
+      {showSchedule && (
+        <ScheduleModal
+          schedule={scheduleLocal}
+          settingsId={settingsId}
+          onSaved={setScheduleLocal}
+          onClose={() => setShowSchedule(false)}
+        />
+      )}
 
       {/* Driver picker modal */}
       {pickerOrderId && (
