@@ -91,8 +91,6 @@ function PreparingAnimation() {
 }
 
 function MotorcycleAnimation() {
-  // Side view — yellow-shirt courier on a red scooter, riding to the right.
-  // Scooter stays centred while the world scrolls left (parallax = sense of speed).
   const skyline = (
     <svg viewBox="0 0 240 64" preserveAspectRatio="none" className="h-16" style={{ width: '50%' }}>
       <rect x="6"   y="26" width="30" height="38" fill="#9aa6b8" opacity="0.5"/>
@@ -114,10 +112,9 @@ function MotorcycleAnimation() {
 
       {/* Sky */}
       <div className="absolute inset-0 bg-gradient-to-b from-sky-300 via-sky-200 to-orange-50 dark:from-slate-700 dark:via-slate-800 dark:to-slate-900"/>
-      {/* Sun */}
       <div className="absolute top-3 left-6 w-9 h-9 rounded-full bg-yellow-200/80 blur-[1px] dark:bg-yellow-300/20"/>
 
-      {/* Clouds (slow parallax) */}
+      {/* Clouds */}
       <div className="absolute top-0 left-0 flex" style={{ width: '200%', animation: 'pan-x 11s linear infinite' }}>
         {[0, 1].map(k => (
           <div key={k} className="relative h-44" style={{ width: '50%' }}>
@@ -128,7 +125,7 @@ function MotorcycleAnimation() {
         ))}
       </div>
 
-      {/* Buildings (mid parallax) */}
+      {/* Buildings */}
       <div className="absolute bottom-9 left-0 flex" style={{ width: '200%', animation: 'pan-x 3.4s linear infinite' }}>
         {skyline}{skyline}
       </div>
@@ -142,88 +139,103 @@ function MotorcycleAnimation() {
         </div>
       </div>
 
-      {/* Speed lines streaming back behind the courier */}
+      {/* Speed lines */}
       {[{ top: 70, w: 30, d: '0s' }, { top: 84, w: 20, d: '0.15s' }, { top: 98, w: 34, d: '0.3s' }].map((l, i) => (
         <div key={i} className="absolute h-0.5 bg-white/60 rounded-full"
              style={{ top: l.top, left: '6%', width: l.w, animation: `speed-l 0.55s ease-in-out infinite ${l.d}` }}/>
       ))}
 
-      {/* Scooter + courier */}
+      {/* Scooter + Rider */}
       <div className="absolute left-1/2 -translate-x-1/2" style={{ bottom: 2, animation: 'moto-b 0.5s ease-in-out infinite' }}>
-        <svg viewBox="0 0 240 170" className="w-60" fill="none">
-          {/* Ground shadow */}
-          <ellipse cx="130" cy="153" rx="95" ry="7" fill="#000" opacity="0.12"/>
+        <svg viewBox="0 0 240 160" className="w-60" fill="none">
 
-          {/* ===== RED DELIVERY BOX on the rear rack ===== */}
-          <line x1="62" y1="96" x2="74" y2="108" stroke="#374151" strokeWidth="3"/>
-          <rect x="36" y="56" width="42" height="38" rx="4" fill="#ef4444"/>
-          <rect x="36" y="56" width="42" height="10" rx="4" fill="#dc2626"/>
-          <rect x="49" y="71" width="16" height="14" rx="2" fill="#fff" opacity="0.92"/>
-          <path d="M53 78 L56 81 L62 74" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          {/* Shadow */}
+          <ellipse cx="127" cy="153" rx="88" ry="6" fill="#000" opacity="0.13"/>
 
-          {/* ===== WHEELS ===== */}
-          <g style={{ transformOrigin: '74px 132px', animation: 'spin-w 0.4s linear infinite' }}>
-            <circle cx="74" cy="132" r="19" fill="#1f2937"/>
-            <circle cx="74" cy="132" r="10.5" fill="#e5e7eb"/>
-            <circle cx="74" cy="132" r="3" fill="#9ca3af"/>
-            <line x1="74" y1="121" x2="74" y2="143" stroke="#9ca3af" strokeWidth="1.5"/>
-            <line x1="63" y1="132" x2="85" y2="132" stroke="#9ca3af" strokeWidth="1.5"/>
-            <line x1="66" y1="124" x2="82" y2="140" stroke="#9ca3af" strokeWidth="1.5"/>
-            <line x1="82" y1="124" x2="66" y2="140" stroke="#9ca3af" strokeWidth="1.5"/>
-          </g>
-          <g style={{ transformOrigin: '190px 132px', animation: 'spin-w 0.4s linear infinite' }}>
-            <circle cx="190" cy="132" r="19" fill="#1f2937"/>
-            <circle cx="190" cy="132" r="10.5" fill="#e5e7eb"/>
-            <circle cx="190" cy="132" r="3" fill="#9ca3af"/>
-            <line x1="190" y1="121" x2="190" y2="143" stroke="#9ca3af" strokeWidth="1.5"/>
-            <line x1="179" y1="132" x2="201" y2="132" stroke="#9ca3af" strokeWidth="1.5"/>
-            <line x1="182" y1="124" x2="198" y2="140" stroke="#9ca3af" strokeWidth="1.5"/>
-            <line x1="198" y1="124" x2="182" y2="140" stroke="#9ca3af" strokeWidth="1.5"/>
+          {/* ── DELIVERY BOX ── */}
+          <line x1="56" y1="96" x2="66" y2="108" stroke="#4b5563" strokeWidth="2.5" strokeLinecap="round"/>
+          <rect x="22" y="55" width="46" height="40" rx="5" fill="#ef4444"/>
+          <rect x="20" y="52" width="50" height="9" rx="4" fill="#dc2626"/>
+          <rect x="36" y="71" width="19" height="16" rx="2.5" fill="white" opacity="0.9"/>
+          <path d="M40 79 L43 82.5 L51 74" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+
+          {/* ── REAR WHEEL ── */}
+          <g style={{ transformOrigin: '70px 132px', animation: 'spin-w 0.4s linear infinite' }}>
+            <circle cx="70" cy="132" r="20" fill="#1f2937"/>
+            <circle cx="70" cy="132" r="12" fill="#374151"/>
+            <circle cx="70" cy="132" r="4.5" fill="#d1d5db"/>
+            <line x1="70" y1="120" x2="70" y2="144" stroke="#9ca3af" strokeWidth="1.5"/>
+            <line x1="58" y1="132" x2="82" y2="132" stroke="#9ca3af" strokeWidth="1.5"/>
+            <line x1="61.5" y1="123.5" x2="78.5" y2="140.5" stroke="#9ca3af" strokeWidth="1.5"/>
+            <line x1="78.5" y1="123.5" x2="61.5" y2="140.5" stroke="#9ca3af" strokeWidth="1.5"/>
           </g>
 
-          {/* ===== FAR LEG (behind body) ===== */}
-          <path d="M106 100 L128 116 L130 128" stroke="#334155" strokeWidth="9" strokeLinecap="round"/>
-          <path d="M122 128 L140 128 Q144 128 144 131 L122 133 Z" fill="#15803d"/>
+          {/* ── FRONT WHEEL ── */}
+          <g style={{ transformOrigin: '191px 132px', animation: 'spin-w 0.4s linear infinite' }}>
+            <circle cx="191" cy="132" r="20" fill="#1f2937"/>
+            <circle cx="191" cy="132" r="12" fill="#374151"/>
+            <circle cx="191" cy="132" r="4.5" fill="#d1d5db"/>
+            <line x1="191" y1="120" x2="191" y2="144" stroke="#9ca3af" strokeWidth="1.5"/>
+            <line x1="179" y1="132" x2="203" y2="132" stroke="#9ca3af" strokeWidth="1.5"/>
+            <line x1="182.5" y1="123.5" x2="199.5" y2="140.5" stroke="#9ca3af" strokeWidth="1.5"/>
+            <line x1="199.5" y1="123.5" x2="182.5" y2="140.5" stroke="#9ca3af" strokeWidth="1.5"/>
+          </g>
 
-          {/* ===== RED SCOOTER BODY ===== */}
-          <path d="M54 116 Q52 98 74 98 L104 98 Q112 98 112 110 L112 122 Q112 128 104 128 L64 128 Q54 128 54 118 Z" fill="#dc2626"/>
-          <path d="M104 120 L156 120 L156 130 L104 130 Z" fill="#b91c1c"/>
-          <path d="M150 130 L150 120 Q150 96 166 82 Q177 72 190 72 L198 72 Q205 72 205 80 L205 122 Q205 130 196 130 Z" fill="#dc2626"/>
-          <path d="M174 116 Q190 104 206 116 L202 122 Q190 113 178 122 Z" fill="#b91c1c"/>
-          {/* Seat */}
-          <path d="M56 100 Q56 91 68 91 L106 91 Q114 91 114 99 L114 102 L56 102 Z" fill="#111827"/>
-          {/* Headlight */}
-          <ellipse cx="202" cy="88" rx="5" ry="7" fill="#fde68a"/>
-          <ellipse cx="202" cy="88" rx="2.5" ry="4" fill="#fffbeb"/>
-          {/* Handlebar */}
-          <path d="M196 74 L210 58" stroke="#374151" strokeWidth="4" strokeLinecap="round"/>
-          <line x1="205" y1="56" x2="218" y2="60" stroke="#1f2937" strokeWidth="5" strokeLinecap="round"/>
+          {/* ── FAR LEG (behind scooter body) ── */}
+          <path d="M112 91 L103 115 L89 129" stroke="#334155" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <path d="M81 126 L97 125 Q104 125 104 129 L81 130 Z" fill="#1e293b"/>
 
-          {/* ===== NEAR LEG (green shoe) ===== */}
-          <path d="M100 98 L138 112" stroke="#475569" strokeWidth="11" strokeLinecap="round"/>
-          <path d="M138 112 L144 126" stroke="#475569" strokeWidth="10" strokeLinecap="round"/>
-          <path d="M130 126 L152 126 Q158 126 158 130 L130 132 Z" fill="#16a34a"/>
-          <rect x="130" y="123" width="15" height="5" rx="2" fill="#22c55e"/>
+          {/* ── SCOOTER BODY ── */}
+          <path d="M47 110 Q45 93 70 90" stroke="#b91c1c" strokeWidth="3" strokeLinecap="round" fill="none"/>
+          <path d="M50 122 Q48 96 70 92 L110 88 Q125 87 128 97 L128 122 Z" fill="#dc2626"/>
+          <path d="M62 97 Q62 89 74 86 L108 84" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" opacity="0.45" fill="none"/>
+          <rect x="128" y="110" width="40" height="12" rx="1" fill="#b91c1c"/>
+          <path d="M168 122 L168 80 Q168 63 184 60 Q197 57 208 65 L210 122 Z" fill="#dc2626"/>
+          <path d="M175 80 Q176 66 191 62" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" opacity="0.45" fill="none"/>
+          <path d="M191 113 L196 68" stroke="#4b5563" strokeWidth="3.5" strokeLinecap="round"/>
+          <ellipse cx="208" cy="79" rx="5" ry="7.5" fill="#fde68a"/>
+          <ellipse cx="208" cy="79" rx="2.5" ry="4" fill="#fffbeb"/>
+          <path d="M96 89 Q96 81 112 80 L158 78 Q167 78 167 87 L167 91 L96 91 Z" fill="#111827"/>
+          <path d="M105 83 Q116 80 154 79" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" opacity="0.7"/>
+          <path d="M196 68 L210 54" stroke="#374151" strokeWidth="3.5" strokeLinecap="round"/>
+          <line x1="205" y1="51" x2="220" y2="56" stroke="#1f2937" strokeWidth="5" strokeLinecap="round"/>
+          <path d="M76 122 Q66 127 51 125" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+          <circle cx="47" cy="125" r="4" fill="#9ca3af" opacity="0.2" style={{ animation: 'exhaust 0.9s ease-out infinite' }}/>
+          <circle cx="42" cy="124" r="3" fill="#9ca3af" opacity="0.15" style={{ animation: 'exhaust 0.9s ease-out infinite 0.45s' }}/>
 
-          {/* ===== TORSO (yellow short-sleeve shirt) ===== */}
-          <path d="M92 102 C88 80 100 66 122 62 L138 60 C146 62 146 73 137 77 L110 88 C102 92 98 96 100 104 Z" fill="#facc15"/>
-          <path d="M100 100 C97 84 106 74 124 70" stroke="#eab308" strokeWidth="3" strokeLinecap="round" opacity="0.7"/>
-          {/* Short sleeve (yellow) then bare forearm (skin) */}
-          <path d="M132 66 L150 74" stroke="#facc15" strokeWidth="12" strokeLinecap="round"/>
-          <path d="M150 74 L206 60" stroke="#f1c27d" strokeWidth="8" strokeLinecap="round"/>
-          <circle cx="208" cy="59" r="5" fill="#e0a96d"/>
+          {/* ── TORSO (yellow jacket — proper proportions) ── */}
+          <path d="M108 93 C106 76 116 61 134 57 L152 55 C162 53 163 63 154 67 L128 79 C119 83 113 89 112 94 Z" fill="#facc15"/>
+          <path d="M113 89 C116 77 123 68 137 63" stroke="#eab308" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" fill="none"/>
 
-          {/* ===== HEAD + RED HELMET ===== */}
-          <path d="M134 60 L140 50" stroke="#f1c27d" strokeWidth="8" strokeLinecap="round"/>
-          <circle cx="148" cy="46" r="11" fill="#f1c27d"/>
-          <circle cx="143" cy="48" r="2.5" fill="#e0a96d"/>
-          {/* Helmet shell */}
-          <path d="M136 47 A12.5 12.5 0 0 1 161 46 L161 47 Q149 41 137 48 Z" fill="#dc2626"/>
-          {/* Visor peak */}
-          <path d="M160 45 L171 49 L160 50 Z" fill="#b91c1c"/>
-          {/* Highlight + chin strap */}
-          <ellipse cx="145" cy="37" rx="6" ry="3" fill="#f87171" opacity="0.7"/>
-          <path d="M141 54 Q148 60 156 55" stroke="#991b1b" strokeWidth="2" strokeLinecap="round"/>
+          {/* ── FAR ARM ── */}
+          <line x1="134" y1="63" x2="155" y2="69" stroke="#facc15" strokeWidth="11" strokeLinecap="round"/>
+          <line x1="155" y1="69" x2="198" y2="60" stroke="#f1c27d" strokeWidth="7" strokeLinecap="round"/>
+          <circle cx="198" cy="60" r="5" fill="#e0a96d"/>
+
+          {/* ── NEAR LEG ── */}
+          <path d="M120 91 L112 115" stroke="#475569" strokeWidth="11" strokeLinecap="round"/>
+          <path d="M112 115 L100 129" stroke="#475569" strokeWidth="9" strokeLinecap="round"/>
+          <path d="M92 126 L108 125 Q116 125 116 129 L92 130 Z" fill="#1e293b"/>
+          <path d="M94 126 L107 125" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+
+          {/* ── NEAR ARM ── */}
+          <line x1="142" y1="61" x2="163" y2="67" stroke="#facc15" strokeWidth="11" strokeLinecap="round"/>
+          <line x1="163" y1="67" x2="212" y2="56" stroke="#f1c27d" strokeWidth="7" strokeLinecap="round"/>
+          <circle cx="212" cy="56" r="5.5" fill="#e0a96d"/>
+
+          {/* ── NECK + HEAD + HELMET ── */}
+          <line x1="140" y1="58" x2="144" y2="50" stroke="#f1c27d" strokeWidth="7.5" strokeLinecap="round"/>
+          <circle cx="148" cy="46" r="12" fill="#f1c27d"/>
+          <ellipse cx="137" cy="47" rx="3" ry="3.5" fill="#e0a96d"/>
+          {/* full helmet dome */}
+          <path d="M136 47 C134 37 138 29 148 28 C158 27 163 34 161 45 L161 48" fill="#dc2626"/>
+          <path d="M136 47 Q135 52 139 54 L158 52 Q161 50 161 47" fill="#b91c1c"/>
+          {/* tinted visor */}
+          <path d="M137 47 Q148 43 160 46 L160 50 Q148 47 137 51 Z" fill="#1e3a5f" opacity="0.45"/>
+          <path d="M160 46 L170 50 L160 52 Z" fill="#b91c1c"/>
+          <ellipse cx="145" cy="35" rx="5.5" ry="3" fill="#f87171" opacity="0.5"/>
+          <path d="M138 54 Q148 61 157 56" stroke="#991b1b" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+
         </svg>
       </div>
     </div>
