@@ -238,21 +238,31 @@ function DashboardPage() {
           <p className="font-bold text-2xl" style={{ color: '#9ca3af' }}>{counts.completed}</p>
           <p className="text-xs mt-0.5 opacity-75" style={{ color: '#9ca3af' }}>مكتمل</p>
         </div>
-        <div className={`rounded-2xl px-4 py-2.5 border transition-colors duration-300 ${is_closed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800'}`}>
-          <div className="flex items-center justify-between mb-1">
-            <button dir="ltr" onClick={handleToggleClosed}
-              className={`relative w-11 h-6 rounded-full transition-colors duration-300 flex-shrink-0 ${is_closed ? 'bg-red-500' : 'bg-green-400'}`}>
-              <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${is_closed ? 'translate-x-0' : 'translate-x-5'}`} />
-            </button>
-            <span className={`text-xs font-bold ${is_closed ? 'text-red-500' : 'text-green-500'}`}>
-              {is_closed ? 'مغلق' : 'مفتوح'}
-            </span>
-          </div>
-          <p className={`font-bold text-xl text-center ${is_closed ? 'text-red-500' : 'text-orange-500'}`}>
-            {todayRevenue.toLocaleString()} <span className={`text-xs font-normal ${is_closed ? 'text-red-400' : 'text-orange-400'}`}>د.ع</span>
-          </p>
-          <p className={`text-xs mt-0.5 font-bold text-center ${is_closed ? 'text-red-400' : 'text-orange-400'}`}>إجمالي اليوم</p>
+        <div className="rounded-2xl px-4 py-2.5 text-center border bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800">
+          <p className="text-orange-500 font-bold text-xl">{todayRevenue.toLocaleString()} <span className="text-xs font-normal text-orange-400">د.ع</span></p>
+          <p className="text-orange-400 text-xs mt-0.5 font-bold">إجمالي اليوم</p>
         </div>
+      </div>
+
+      {/* حالة المطعم */}
+      <div className="px-3 pb-2">
+        <button onClick={handleToggleClosed}
+          className={`w-full rounded-2xl px-4 py-3 border flex items-center justify-between transition-all active:scale-[0.98] ${is_closed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'}`}>
+          <div dir="ltr"
+            className={`relative w-12 h-6 rounded-full transition-colors duration-300 flex-shrink-0 ${is_closed ? 'bg-red-500' : 'bg-green-400'}`}>
+            <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${is_closed ? 'translate-x-0' : 'translate-x-6'}`} />
+          </div>
+          <div className="text-right">
+            <p className={`font-bold text-sm ${is_closed ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+              {is_closed ? '🔒 المطعم مغلق حاليًا' : '✅ المطعم مفتوح'}
+            </p>
+            {is_closed && opens_at && (
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
+                سيفتح الساعة {opens_at}
+              </p>
+            )}
+          </div>
+        </button>
       </div>
 
       {/* تابس الفلتر */}

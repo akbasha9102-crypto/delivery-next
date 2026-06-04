@@ -167,7 +167,7 @@ export default function HomePage() {
 
       {/* ══ CATEGORY PILLS (sticky) ══ */}
       <div className="sticky top-14 z-30 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-700 px-4 py-2.5">
-        <div ref={pillsRef} className="flex gap-2 overflow-x-auto scrollbar-hide flex-row-reverse">
+        <div ref={pillsRef} className={`flex gap-2 overflow-x-auto scrollbar-hide flex-row-reverse ${is_closed ? 'pointer-events-none opacity-50' : ''}`}>
           {[{ id: 'all', name: 'الكل' } as Category, ...categories].map(cat => (
             <button
               key={cat.id}
@@ -213,8 +213,11 @@ export default function HomePage() {
                     {catItems.map(item => {
                       const count  = qty(item.id);
                       const status = getStatus(item);
-                      const isAvailable = status === 'available';
-                      const statusLabel = status === 'unavailable' ? 'غير متوفر حاليا' : status === 'hidden' ? 'انتهى' : '';
+                      const closedLabel = opens_at ? `سيفتح ${formatOpenTime(opens_at)}` : 'مغلق حاليًا';
+                      const isAvailable = !is_closed && status === 'available';
+                      const statusLabel = is_closed
+                        ? closedLabel
+                        : status === 'unavailable' ? 'غير متوفر حاليا' : status === 'hidden' ? 'انتهى' : '';
                       return (
                         <div key={item.id}
                           className={`bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col ${!isAvailable ? 'opacity-60' : ''}`}>
@@ -233,8 +236,8 @@ export default function HomePage() {
                               unoptimized
                             />
                             {!isAvailable && (
-                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                <span className="text-white text-xs font-bold bg-black/70 px-3 py-1.5 rounded-xl text-center">{statusLabel}</span>
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center px-2">
+                                <span className="text-white text-xs font-bold bg-black/70 px-3 py-1.5 rounded-xl text-center leading-snug">{statusLabel}</span>
                               </div>
                             )}
                           </div>
@@ -361,23 +364,6 @@ export default function HomePage() {
               style={{ backgroundColor: p }}>
               إضافة للسلة
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* ══ CLOSED OVERLAY ══ */}
-      {is_closed && (
-        <div className="fixed inset-0 z-50 bg-gray-900/75 backdrop-blur-sm flex items-center justify-center px-6">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 text-center w-full max-w-sm shadow-2xl">
-            <p className="text-6xl mb-4">🔒</p>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">المطعم مغلق حالياً</h2>
-            {opens_at ? (
-              <p className="text-gray-500 dark:text-slate-400 font-medium">
-                سيفتح الساعة <span className="font-bold text-gray-700 dark:text-slate-200">{formatOpenTime(opens_at)}</span>
-              </p>
-            ) : (
-              <p className="text-gray-400 dark:text-slate-500 text-sm">سنعود قريباً</p>
-            )}
           </div>
         </div>
       )}
