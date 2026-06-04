@@ -35,7 +35,7 @@ function buildWAMessage(order: Order) {
     `📞 ${order.client_phone}`,
     order.delivery_address ? `📍 ${order.delivery_address}` : null,
     '',
-    '🧾 الأصناف:',
+    '🧾 الطلب:',
     items,
     '',
     `💰 ${order.total_amount.toLocaleString()} د.ع`,
