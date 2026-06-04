@@ -220,7 +220,7 @@ export default function HomePage() {
                         : status === 'unavailable' ? 'غير متوفر حاليا' : status === 'hidden' ? 'انتهى' : '';
                       return (
                         <div key={item.id}
-                          className={`bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col ${!isAvailable ? 'opacity-60' : ''}`}>
+                          className={`bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}>
 
                           {/* Image */}
                           <div className="relative flex-shrink-0 overflow-hidden">
@@ -228,14 +228,19 @@ export default function HomePage() {
                               src={item.image_url || 'https://placehold.co/300x200/f5f5f5/ccc?text='}
                               alt={item.name}
                               width={300} height={180}
-                              className={`w-full h-36 object-cover ${!isAvailable ? 'grayscale' : ''}`}
+                              className={`w-full h-36 object-cover ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
                               style={isAvailable ? {
                                 transform: `scale(${1 + Math.min(count, 10) * 0.08})`,
                                 transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
                               } : {}}
                               unoptimized
                             />
-                            {!isAvailable && (
+                            {is_closed && (
+                              <div className="absolute inset-0 flex items-center justify-center px-2" style={{ backgroundColor: 'rgba(156,163,175,0.6)' }}>
+                                <span className="text-white text-xs font-bold bg-black/50 px-3 py-1.5 rounded-xl text-center leading-snug">{statusLabel}</span>
+                              </div>
+                            )}
+                            {!is_closed && !isAvailable && (
                               <div className="absolute inset-0 bg-black/50 flex items-center justify-center px-2">
                                 <span className="text-white text-xs font-bold bg-black/70 px-3 py-1.5 rounded-xl text-center leading-snug">{statusLabel}</span>
                               </div>
