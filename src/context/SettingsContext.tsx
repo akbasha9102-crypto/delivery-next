@@ -33,8 +33,8 @@ function writeCache(s: Settings) {
   try { localStorage.setItem(CACHE_KEY, JSON.stringify(s)); } catch {}
 }
 
-type Ctx = Settings & { loaded: boolean };
-const SettingsCtx = createContext<Ctx>({ ...DEFAULTS, loaded: false });
+type Ctx = Settings & { loaded: boolean; refreshSettings: () => Promise<void> };
+const SettingsCtx = createContext<Ctx>({ ...DEFAULTS, loaded: false, refreshSettings: async () => {} });
 
 function hexDarken(hex: string, amount = 0.18): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -56,19 +56,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [loaded,   setLoaded]   = useState(false);
 
+  const fetchSettings = async () => {
+    const { data } = await supabase.from('restaurant_settings').select('*').order('updated_at', { ascending: false }).limit(1);
+    if (data?.[0]) {
+      setSettings(data[0]);
+      writeCache(data[0]);
+    }
+    setLoaded(true);
+  };
+
   useEffect(() => {
-    // استخدم الكاش فوراً إذا موجود
     const cached = readCache();
     if (cached) { setSettings(cached); setLoaded(true); }
 
-    // ثم اجلب من السيرفر
-    supabase.from('restaurant_settings').select('*').order('updated_at', { ascending: false }).limit(1).then(({ data }) => {
-      if (data?.[0]) {
-        setSettings(data[0]);
-        writeCache(data[0]);
-      }
-      setLoaded(true);
-    });
+    fetchSettings();
 
     const channel = supabase
       .channel('settings-live')
@@ -79,6 +80,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--primary-light', hexLighten(settings.primary_color));
   }, [settings.primary_color]);
 
-  return <SettingsCtx.Provider value={{ ...settings, loaded }}>{children}</SettingsCtx.Provider>;
+  return <SettingsCtx.Provider value={{ ...settings, loaded, refreshSettings: fetchSettings }}>{children}</SettingsCtx.Provider>;
 }
 
 export const useSettings = () => useContext(SettingsCtx);

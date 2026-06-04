@@ -84,7 +84,7 @@ function DriverPickerModal({ drivers, onPick, onClose }: {
 function DashboardPage() {
   const router = useRouter();
   const { dark, toggleDark } = useDarkMode();
-  const { is_closed, opens_at, id: settingsId } = useSettings();
+  const { is_closed, opens_at, id: settingsId, refreshSettings } = useSettings();
   const [orders,    setOrders]    = useState<Order[]>([]);
   const [imageMap,  setImageMap]  = useState<Map<string, string>>(new Map());
   const [loading,   setLoading]   = useState(true);
@@ -96,21 +96,23 @@ function DashboardPage() {
   const [showClosedModal, setShowClosedModal] = useState(false);
   const [opensAtInput,    setOpensAtInput]    = useState('');
 
-  const handleToggleClosed = () => {
+  const handleToggleClosed = async () => {
     if (is_closed) {
-      supabase.from('restaurant_settings').update({ is_closed: false, opens_at: null }).eq('id', settingsId);
+      await supabase.from('restaurant_settings').update({ is_closed: false, opens_at: null }).eq('id', settingsId);
+      await refreshSettings();
     } else {
       setOpensAtInput('');
       setShowClosedModal(true);
     }
   };
 
-  const confirmClose = () => {
-    supabase.from('restaurant_settings').update({
+  const confirmClose = async () => {
+    await supabase.from('restaurant_settings').update({
       is_closed: true,
       opens_at: opensAtInput || null,
     }).eq('id', settingsId);
     setShowClosedModal(false);
+    await refreshSettings();
   };
 
   const initialLoadDone  = useRef(false);
