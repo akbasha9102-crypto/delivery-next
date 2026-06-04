@@ -26,6 +26,11 @@ const CSS = `
   @keyframes pop-in   { 0%{transform:scale(0)} 65%{transform:scale(1.15)} 100%{transform:scale(1)} }
   @keyframes doc-b    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
   @keyframes exhaust  { 0%{opacity:0.7;transform:translateX(0) scale(1)} 100%{opacity:0;transform:translateX(-20px) scale(2)} }
+  @keyframes road-z   { 0%{opacity:0;transform:translateY(0) scale(0.3)} 20%{opacity:1} 100%{opacity:0;transform:translateY(96px) scale(2.7)} }
+  @keyframes wind-l   { 0%{opacity:0;transform:translate(0,0) scaleX(0.5)} 25%{opacity:0.7} 100%{opacity:0;transform:translate(-78px,22px) scaleX(1.8)} }
+  @keyframes wind-r   { 0%{opacity:0;transform:translate(0,0) scaleX(0.5)} 25%{opacity:0.7} 100%{opacity:0;transform:translate(78px,22px) scaleX(1.8)} }
+  @keyframes rider-b  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-2.5px)} }
+  @keyframes glow-p   { 0%,100%{opacity:0.5} 50%{opacity:0.95} }
 `;
 
 function PendingAnimation() {
@@ -89,103 +94,105 @@ function PreparingAnimation() {
 }
 
 function MotorcycleAnimation() {
+  // Front view — the rider is driving straight toward the camera.
+  const dashes = ['0s', '0.18s', '0.36s', '0.54s', '0.72s'];
+  const windL  = [{ top: 66, delay: '0s' }, { top: 80, delay: '0.25s' }, { top: 94, delay: '0.5s' }];
+  const windR  = [{ top: 66, delay: '0.12s' }, { top: 80, delay: '0.37s' }, { top: 94, delay: '0.6s' }];
+
   return (
-    <div className="relative w-64 h-40 mx-auto rounded-2xl overflow-hidden">
+    <div className="relative w-64 h-44 mx-auto rounded-2xl overflow-hidden">
       <style>{CSS}</style>
 
       {/* Sky */}
-      <div className="absolute inset-0 bg-gradient-to-b from-sky-200 to-sky-100 dark:from-slate-700 dark:to-slate-800"/>
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-300 to-sky-100 dark:from-slate-700 dark:to-slate-900"/>
 
-      {/* Speed lines */}
-      {[
-        { top: '28%', w: 28, delay: '0s'   },
-        { top: '38%', w: 18, delay: '0.15s' },
-        { top: '48%', w: 36, delay: '0.3s'  },
-      ].map((l, i) => (
-        <div key={i} className="absolute left-4 h-0.5 bg-white/55 rounded-full"
-             style={{ top: l.top, width: l.w, animation: `speed-l 0.7s ease-in-out infinite ${l.delay}` }}/>
+      {/* Road (perspective, narrow at the back → wide toward the camera) */}
+      <svg viewBox="0 0 200 176" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+        <polygon points="94,58 106,58 240,176 -40,176" fill="#6b7280"/>
+        <polygon points="94,58 106,58 240,176 -40,176" fill="#000" opacity="0.08"/>
+        <line x1="97" y1="58" x2="-30" y2="176" stroke="#e5e7eb" strokeWidth="2" opacity="0.5"/>
+        <line x1="103" y1="58" x2="230" y2="176" stroke="#e5e7eb" strokeWidth="2" opacity="0.5"/>
+      </svg>
+
+      {/* Center-line dashes rushing toward the camera */}
+      {dashes.map((delay, i) => (
+        <div key={i} className="absolute left-1/2 bg-yellow-300 rounded-sm"
+             style={{ top: 62, width: 9, height: 6, marginLeft: -4.5,
+                      animation: `road-z 0.9s linear infinite ${delay}` }}/>
       ))}
 
-      {/* Road */}
-      <div className="absolute bottom-0 left-0 right-0 h-10 bg-gray-500 dark:bg-gray-600 overflow-hidden">
-        <div className="absolute top-1/2 -translate-y-1/2 flex"
-             style={{ animation: 'road-m 0.35s linear infinite', width: '200%' }}>
-          {Array.from({ length: 16 }).map((_, i) => (
-            <div key={i} className="w-9 h-1.5 bg-yellow-300 rounded-full mx-4 flex-shrink-0"/>
-          ))}
-        </div>
-      </div>
+      {/* Headlight glow flooding toward the viewer */}
+      <div className="absolute left-1/2 -translate-x-1/2 rounded-full bg-yellow-200/60 blur-md"
+           style={{ bottom: 18, width: 120, height: 70, animation: 'glow-p 0.9s ease-in-out infinite' }}/>
 
-      {/* Exhaust puffs */}
-      <div className="absolute bottom-12 left-8">
-        <div className="w-3 h-3 rounded-full bg-gray-300/70"
-             style={{ animation: 'exhaust 0.7s ease-out infinite' }}/>
-        <div className="w-2 h-2 rounded-full bg-gray-200/60 mt-1"
-             style={{ animation: 'exhaust 0.7s ease-out infinite 0.22s' }}/>
-      </div>
+      {/* Rider — front view, helmet front and center */}
+      <div className="absolute left-1/2 -translate-x-1/2" style={{ bottom: 6 }}>
+        <svg viewBox="0 0 160 150" className="w-40" fill="none"
+             style={{ animation: 'rider-b 0.5s ease-in-out infinite' }}>
 
-      {/* Motorcycle */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2"
-           style={{ animation: 'moto-b 0.38s ease-in-out infinite' }}>
-        <svg viewBox="0 0 210 82" fill="none" className="w-52">
+          {/* Front wheel (head-on → tall thin ellipse) with motion blur */}
+          <line x1="64" y1="120" x2="64" y2="146" stroke="#9ca3af" strokeWidth="2" opacity="0.4"/>
+          <line x1="96" y1="120" x2="96" y2="146" stroke="#9ca3af" strokeWidth="2" opacity="0.4"/>
+          <ellipse cx="80" cy="133" rx="15" ry="22" fill="#111"/>
+          <ellipse cx="80" cy="133" rx="8"  ry="16" fill="#374151"/>
+          <ellipse cx="80" cy="133" rx="3"  ry="6"  fill="#9ca3af"/>
+          {/* Front fender */}
+          <path d="M64 116 Q80 104 96 116 L92 122 Q80 113 68 122Z" fill="#e67e22"/>
 
-          {/* Rear wheel */}
-          <g style={{ transformOrigin:'38px 66px', animation:'spin-w 0.26s linear infinite' }}>
-            <circle cx="38" cy="66" r="19" stroke="#111" strokeWidth="6"/>
-            <circle cx="38" cy="66" r="7" fill="#2a2a2a"/>
-            <line x1="38" y1="47" x2="38" y2="85" stroke="#444" strokeWidth="1.5"/>
-            <line x1="19" y1="66" x2="57" y2="66" stroke="#444" strokeWidth="1.5"/>
-            <line x1="25" y1="53" x2="51" y2="79" stroke="#444" strokeWidth="1.5"/>
-            <line x1="51" y1="53" x2="25" y2="79" stroke="#444" strokeWidth="1.5"/>
-          </g>
-
-          {/* Front wheel */}
-          <g style={{ transformOrigin:'172px 66px', animation:'spin-w 0.26s linear infinite' }}>
-            <circle cx="172" cy="66" r="19" stroke="#111" strokeWidth="6"/>
-            <circle cx="172" cy="66" r="7" fill="#2a2a2a"/>
-            <line x1="172" y1="47" x2="172" y2="85" stroke="#444" strokeWidth="1.5"/>
-            <line x1="153" y1="66" x2="191" y2="66" stroke="#444" strokeWidth="1.5"/>
-            <line x1="159" y1="53" x2="185" y2="79" stroke="#444" strokeWidth="1.5"/>
-            <line x1="185" y1="53" x2="159" y2="79" stroke="#444" strokeWidth="1.5"/>
-          </g>
-
-          {/* Frame lines */}
-          <line x1="38" y1="66" x2="74" y2="50" stroke="#888" strokeWidth="4.5" strokeLinecap="round"/>
-          <line x1="74" y1="50" x2="158" y2="44" stroke="#888" strokeWidth="3.5" strokeLinecap="round"/>
-          <line x1="161" y1="44" x2="172" y2="50" stroke="#999" strokeWidth="4.5" strokeLinecap="round"/>
-          <line x1="157" y1="45" x2="167" y2="52" stroke="#777" strokeWidth="3" strokeLinecap="round"/>
-
-          {/* Engine block */}
-          <path d="M80 50 L87 45 L148 45 L156 54 L148 64 L83 64Z" fill="#3d3d3d"/>
-
-          {/* Tank */}
-          <path d="M74 50 C80 33 122 27 152 40 L158 48 L148 51 C118 38 87 42 77 52Z" fill="#e67e22"/>
-
-          {/* Seat */}
-          <path d="M68 47 L77 43 L82 50 L74 54Z" fill="#1a1a1a"/>
-
-          {/* Exhaust pipe */}
-          <path d="M80 62 Q60 67 38 66" stroke="#aaa" strokeWidth="3.5" strokeLinecap="round"/>
-
-          {/* Handlebar */}
-          <path d="M153 42 L159 33 L166 36" stroke="#666" strokeWidth="3" strokeLinecap="round"/>
+          {/* Handlebar + grips + mirrors */}
+          <line x1="40" y1="96" x2="120" y2="96" stroke="#4b5563" strokeWidth="5" strokeLinecap="round"/>
+          <circle cx="40" cy="96" r="5" fill="#1f2937"/>
+          <circle cx="120" cy="96" r="5" fill="#1f2937"/>
+          <line x1="46" y1="92" x2="40" y2="80" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="114" y1="92" x2="120" y2="80" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round"/>
+          <circle cx="39" cy="78" r="4" fill="#cbd5e1"/>
+          <circle cx="121" cy="78" r="4" fill="#cbd5e1"/>
 
           {/* Headlight */}
-          <ellipse cx="166" cy="38" rx="5" ry="7" fill="#fffde7" opacity="0.95"/>
-          <ellipse cx="166" cy="38" rx="3" ry="4.5" fill="#fff9c4"/>
+          <ellipse cx="80" cy="104" rx="11" ry="13" fill="#fffde7"/>
+          <ellipse cx="80" cy="104" rx="6"  ry="8"  fill="#fff176"/>
 
-          {/* Rider body */}
-          <path d="M80 48 Q76 32 84 18 Q96 10 110 19 C126 28 143 38 153 43 L147 49 C133 41 118 32 103 26 Q89 22 86 46Z" fill="#1a237e"/>
-          {/* Jacket stripe */}
-          <path d="M96 26 C120 36 140 43 146 46" stroke="#3949ab" strokeWidth="2" strokeLinecap="round" opacity="0.7"/>
+          {/* Jacket / torso (shoulders widening toward camera) */}
+          <path d="M58 100 Q56 78 70 70 L90 70 Q104 78 102 100 Z" fill="#1a237e"/>
+          <path d="M75 72 L85 72 L84 100 L76 100 Z" fill="#283593"/>
+          {/* Reflective chest stripe */}
+          <path d="M64 86 L96 86" stroke="#ffd54f" strokeWidth="2.5" strokeLinecap="round" opacity="0.8"/>
+          {/* Arms reaching to the grips */}
+          <path d="M62 78 Q48 84 42 94" stroke="#1a237e" strokeWidth="9" strokeLinecap="round"/>
+          <path d="M98 78 Q112 84 118 94" stroke="#1a237e" strokeWidth="9" strokeLinecap="round"/>
+          <circle cx="41" cy="95" r="5.5" fill="#111"/>
+          <circle cx="119" cy="95" r="5.5" fill="#111"/>
 
-          {/* Helmet */}
-          <circle cx="86" cy="15" r="11" fill="#e67e22"/>
-          <path d="M76 12 Q86 3 96 12 Q97 23 86 23 Q75 23 76 12Z" fill="#c0392b"/>
-          {/* Visor */}
-          <path d="M77 17 Q86 13 95 17" stroke="#ffd54f" strokeWidth="2.5" strokeLinecap="round"/>
+          {/* ===== HELMET (the focal point — large & clear) ===== */}
+          <ellipse cx="80" cy="74" rx="20" ry="6" fill="#000" opacity="0.12"/>
+          {/* Shell */}
+          <path d="M56 44 Q56 18 80 18 Q104 18 104 44 L104 56 Q104 70 80 70 Q56 70 56 56 Z" fill="#e67e22"/>
+          {/* Top accent band */}
+          <path d="M58 38 Q80 22 102 38 Q92 30 80 30 Q68 30 58 38 Z" fill="#c0392b"/>
+          {/* Chin bar */}
+          <path d="M58 56 Q80 74 102 56 L100 62 Q80 76 60 62 Z" fill="#d35400"/>
+          {/* Visor (tinted face shield) */}
+          <path d="M60 42 Q80 34 100 42 L98 56 Q80 64 62 56 Z" fill="#16202e"/>
+          {/* Visor reflection */}
+          <path d="M66 44 L82 40" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" opacity="0.3"/>
+          {/* Shell highlight + outline */}
+          <ellipse cx="68" cy="34" rx="6" ry="4" fill="#fff" opacity="0.4"/>
+          <path d="M56 44 Q56 18 80 18 Q104 18 104 44 L104 56 Q104 70 80 70 Q56 70 56 56 Z"
+                stroke="#b35e12" strokeWidth="1.5"/>
         </svg>
       </div>
+
+      {/* Wind rushing back past the rider's left & right */}
+      {windL.map((w, i) => (
+        <div key={`l${i}`} className="absolute h-[3px] bg-white/70 rounded-full"
+             style={{ top: w.top, left: '42%', width: 26,
+                      animation: `wind-l 0.6s ease-in infinite ${w.delay}` }}/>
+      ))}
+      {windR.map((w, i) => (
+        <div key={`r${i}`} className="absolute h-[3px] bg-white/70 rounded-full"
+             style={{ top: w.top, left: '58%', width: 26,
+                      animation: `wind-r 0.6s ease-in infinite ${w.delay}` }}/>
+      ))}
     </div>
   );
 }
