@@ -40,7 +40,8 @@ export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [items,      setItems]      = useState<Item[]>([]);
   const [loading,    setLoading]    = useState(true);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory,   setActiveCategory]   = useState('all');
+  const [showClosedToast,  setShowClosedToast]  = useState(false);
   const [showCartPanel,  setShowCartPanel]  = useState(false);
 
   const [extrasItem,     setExtrasItem]     = useState<Item | null>(null);
@@ -213,14 +214,12 @@ export default function HomePage() {
                     {catItems.map(item => {
                       const count  = qty(item.id);
                       const status = getStatus(item);
-                      const closedLabel = opens_at ? `سيفتح ${formatOpenTime(opens_at)}` : 'مغلق حاليًا';
                       const isAvailable = !is_closed && status === 'available';
-                      const statusLabel = is_closed
-                        ? closedLabel
-                        : status === 'unavailable' ? 'غير متوفر حاليا' : status === 'hidden' ? 'انتهى' : '';
+                      const statusLabel = status === 'unavailable' ? 'غير متوفر حاليا' : status === 'hidden' ? 'انتهى' : '';
                       return (
                         <div key={item.id}
-                          className={`bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}>
+                          onClick={() => { if (is_closed) setShowClosedToast(true); }}
+                          className={`bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col ${!isAvailable && !is_closed ? 'opacity-60' : ''} ${is_closed ? 'cursor-pointer' : ''}`}>
 
                           {/* Image */}
                           <div className="relative flex-shrink-0 overflow-hidden">
@@ -237,7 +236,10 @@ export default function HomePage() {
                             />
                             {is_closed && (
                               <div className="absolute inset-0 flex items-center justify-center px-2" style={{ backgroundColor: 'rgba(156,163,175,0.6)' }}>
-                                <span className="text-white text-xs font-bold bg-black/50 px-3 py-1.5 rounded-xl text-center leading-snug">{statusLabel}</span>
+                                <div className="bg-black/50 px-3 py-2 rounded-xl text-center">
+                                  <p className="text-white text-xs font-bold">مغلق</p>
+                                  {opens_at && <p className="text-white/80 text-[10px] mt-0.5">سيفتح في {formatOpenTime(opens_at)}</p>}
+                                </div>
                               </div>
                             )}
                             {!is_closed && !isAvailable && (
@@ -284,7 +286,7 @@ export default function HomePage() {
                                   style={isAvailable
                                     ? { backgroundColor: c, color: '#fff' }
                                     : { backgroundColor: '#e5e7eb', color: '#9ca3af' }}>
-                                  {isAvailable ? '+ أضف' : statusLabel}
+                                  {isAvailable ? '+ أضف' : is_closed ? 'مغلق' : statusLabel}
                                 </button>
                               )}
                             </div>
@@ -368,6 +370,25 @@ export default function HomePage() {
               className="w-full text-white font-bold py-3.5 rounded-xl transition-all active:scale-95"
               style={{ backgroundColor: p }}>
               إضافة للسلة
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ══ CLOSED MODAL ══ */}
+      {showClosedToast && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6" onClick={() => setShowClosedToast(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-7 text-center w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <p className="text-5xl mb-3">🔒</p>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-1">المطعم مغلق حاليًا</h2>
+            {opens_at && (
+              <p className="text-gray-500 dark:text-slate-400 mt-1">
+                سيفتح في <span className="font-bold text-gray-700 dark:text-slate-200">{formatOpenTime(opens_at)}</span>
+              </p>
+            )}
+            <button onClick={() => setShowClosedToast(false)}
+              className="mt-5 w-full py-3 rounded-2xl bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 font-bold active:scale-95 transition-all">
+              حسناً
             </button>
           </div>
         </div>

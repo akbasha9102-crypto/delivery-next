@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ShoppingCart, Truck, UtensilsCrossed, LayoutDashboard, ClipboardList, Palette, BarChart2, Car } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useSettings } from '@/context/SettingsContext';
 
 const clientTabs = [
   { href: '/home',  icon: UtensilsCrossed, label: 'المنيو' },
@@ -21,12 +22,22 @@ const adminTabs = [
 export function ClientBottomNav() {
   const path = usePathname();
   const { items } = useCart();
+  const { is_closed } = useSettings();
   const cartCount = items.reduce((s, i) => s + i.quantity, 0);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex z-50">
       {clientTabs.map(({ href, icon: Icon, label }) => {
         const active = path === href;
+        const disabled = is_closed && (href === '/cart' || href === '/track');
+        if (disabled) {
+          return (
+            <div key={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 opacity-35">
+              <Icon size={22} className="text-gray-400 dark:text-slate-500" />
+              <span className="text-xs font-medium text-gray-400 dark:text-slate-500">{label}</span>
+            </div>
+          );
+        }
         return (
           <Link key={href} href={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all active:scale-90 relative">
             <Icon size={22} className={active ? 'text-[#e67e22]' : 'text-gray-400 dark:text-slate-500'} />
