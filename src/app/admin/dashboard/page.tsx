@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, LogOut, X } from 'lucide-react';
+import { Moon, Sun, LogOut, X, Clock } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null };
@@ -83,6 +84,7 @@ function DriverPickerModal({ drivers, onPick, onClose }: {
 function DashboardPage() {
   const router = useRouter();
   const { dark, toggleDark } = useDarkMode();
+  const { is_closed, opens_at, id: settingsId } = useSettings();
   const [orders,    setOrders]    = useState<Order[]>([]);
   const [imageMap,  setImageMap]  = useState<Map<string, string>>(new Map());
   const [loading,   setLoading]   = useState(true);
@@ -91,6 +93,25 @@ function DashboardPage() {
   const [drivers,   setDrivers]   = useState<Driver[]>([]);
   const [pickerOrderId, setPickerOrderId] = useState<string | null>(null);
   const [, setTick] = useState(0);
+  const [showClosedModal, setShowClosedModal] = useState(false);
+  const [opensAtInput,    setOpensAtInput]    = useState('');
+
+  const handleToggleClosed = () => {
+    if (is_closed) {
+      supabase.from('restaurant_settings').update({ is_closed: false, opens_at: null }).eq('id', settingsId);
+    } else {
+      setOpensAtInput('');
+      setShowClosedModal(true);
+    }
+  };
+
+  const confirmClose = () => {
+    supabase.from('restaurant_settings').update({
+      is_closed: true,
+      opens_at: opensAtInput || null,
+    }).eq('id', settingsId);
+    setShowClosedModal(false);
+  };
 
   const initialLoadDone  = useRef(false);
   const today = localDate();
@@ -215,9 +236,20 @@ function DashboardPage() {
           <p className="font-bold text-2xl" style={{ color: '#9ca3af' }}>{counts.completed}</p>
           <p className="text-xs mt-0.5 opacity-75" style={{ color: '#9ca3af' }}>مكتمل</p>
         </div>
-        <div className="rounded-2xl px-4 py-2.5 text-center border bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800">
-          <p className="text-orange-500 font-bold text-xl">{todayRevenue.toLocaleString()} <span className="text-xs font-normal text-orange-400">د.ع</span></p>
-          <p className="text-orange-400 text-xs mt-0.5 font-bold">إجمالي اليوم</p>
+        <div className={`rounded-2xl px-4 py-2.5 border transition-colors duration-300 ${is_closed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800'}`}>
+          <div className="flex items-center justify-between mb-1">
+            <button dir="ltr" onClick={handleToggleClosed}
+              className={`relative w-11 h-6 rounded-full transition-colors duration-300 flex-shrink-0 ${is_closed ? 'bg-red-500' : 'bg-green-400'}`}>
+              <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${is_closed ? 'translate-x-0' : 'translate-x-5'}`} />
+            </button>
+            <span className={`text-xs font-bold ${is_closed ? 'text-red-500' : 'text-green-500'}`}>
+              {is_closed ? 'مغلق' : 'مفتوح'}
+            </span>
+          </div>
+          <p className={`font-bold text-xl text-center ${is_closed ? 'text-red-500' : 'text-orange-500'}`}>
+            {todayRevenue.toLocaleString()} <span className={`text-xs font-normal ${is_closed ? 'text-red-400' : 'text-orange-400'}`}>د.ع</span>
+          </p>
+          <p className={`text-xs mt-0.5 font-bold text-center ${is_closed ? 'text-red-400' : 'text-orange-400'}`}>إجمالي اليوم</p>
         </div>
       </div>
 
@@ -327,6 +359,38 @@ function DashboardPage() {
           onPick={driver => assignDriverAndStart(pickerOrderId, driver)}
           onClose={() => setPickerOrderId(null)}
         />
+      )}
+
+      {/* Closed modal */}
+      {showClosedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6" onClick={() => setShowClosedModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="text-center mb-5">
+              <p className="text-4xl mb-2">🔒</p>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">إغلاق المطعم</h3>
+              <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">حدد وقت الفتح (اختياري)</p>
+            </div>
+            <div className="flex items-center gap-3 bg-gray-50 dark:bg-slate-700 rounded-2xl px-4 py-3 mb-5">
+              <Clock size={18} className="text-gray-400 flex-shrink-0" />
+              <input
+                type="time"
+                value={opensAtInput}
+                onChange={e => setOpensAtInput(e.target.value)}
+                className="flex-1 bg-transparent text-lg font-bold text-gray-900 dark:text-slate-100 outline-none text-center"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowClosedModal(false)}
+                className="flex-1 py-3 rounded-2xl border border-gray-200 dark:border-slate-600 font-bold text-gray-600 dark:text-slate-400 active:scale-95 transition-all">
+                إلغاء
+              </button>
+              <button onClick={confirmClose}
+                className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-bold active:scale-95 transition-all">
+                تأكيد الإغلاق
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <AdminBottomNav />

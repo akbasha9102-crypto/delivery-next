@@ -16,6 +16,14 @@ type Item     = {
   image_url: string | null; category_id: string; is_available: boolean; item_status?: string; extras_json?: string;
 };
 
+function formatOpenTime(time: string | null): string {
+  if (!time) return '';
+  const [h, m] = time.split(':').map(Number);
+  const period = h >= 12 ? 'م' : 'ص';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
 function getStatus(item: Item): 'available' | 'unavailable' | 'hidden' {
   if (item.item_status === 'unavailable') return 'unavailable';
   if (item.item_status === 'hidden')      return 'hidden';
@@ -26,7 +34,7 @@ function getStatus(item: Item): 'available' | 'unavailable' | 'hidden' {
 export default function HomePage() {
   const { dark, toggleDark } = useDarkMode();
   const { items: cartItems, addItem, decrementItem, removeItem, total } = useCart();
-  const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded } = useSettings();
+  const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded, is_closed, opens_at } = useSettings();
   const p = primary_color; // shorthand for inline styles
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -353,6 +361,23 @@ export default function HomePage() {
               style={{ backgroundColor: p }}>
               إضافة للسلة
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ══ CLOSED OVERLAY ══ */}
+      {is_closed && (
+        <div className="fixed inset-0 z-50 bg-gray-900/75 backdrop-blur-sm flex items-center justify-center px-6">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 text-center w-full max-w-sm shadow-2xl">
+            <p className="text-6xl mb-4">🔒</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">المطعم مغلق حالياً</h2>
+            {opens_at ? (
+              <p className="text-gray-500 dark:text-slate-400 font-medium">
+                سيفتح الساعة <span className="font-bold text-gray-700 dark:text-slate-200">{formatOpenTime(opens_at)}</span>
+              </p>
+            ) : (
+              <p className="text-gray-400 dark:text-slate-500 text-sm">سنعود قريباً</p>
+            )}
           </div>
         </div>
       )}

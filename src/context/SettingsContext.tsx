@@ -7,6 +7,8 @@ export type Settings = {
   restaurant_name: string;
   primary_color: string;
   logo_url: string | null;
+  is_closed: boolean;
+  opens_at: string | null;
 };
 
 const DEFAULTS: Settings = {
@@ -14,6 +16,8 @@ const DEFAULTS: Settings = {
   restaurant_name: 'CulinaShare',
   primary_color: '#e67e22',
   logo_url: null,
+  is_closed: false,
+  opens_at: null,
 };
 
 const CACHE_KEY = 'rs_settings_v1';
