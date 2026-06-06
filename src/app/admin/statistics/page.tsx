@@ -7,7 +7,7 @@ import { AdminBottomNav } from '@/components/BottomNav';
 import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; items: OrderItem[] };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; order_type?: string | null; items: OrderItem[] };
 type Category = { id: string; name: string };
 
 function localDate(d = new Date()) {
@@ -103,8 +103,12 @@ function StatisticsPage() {
     return matchSearch && matchCat;
   }), [orders, search, selectedCat, catMap]);
 
-  const totalRevenue = filtered.reduce((s, o) => s + o.total_amount, 0);
-  const avgOrder     = filtered.length ? Math.round(totalRevenue / filtered.length) : 0;
+  const totalRevenue   = filtered.reduce((s, o) => s + o.total_amount, 0);
+  const avgOrder       = filtered.length ? Math.round(totalRevenue / filtered.length) : 0;
+  const localOrders    = filtered.filter(o => o.order_type === 'local');
+  const deliveryOrders = filtered.filter(o => o.order_type !== 'local');
+  const localRevenue   = localOrders.reduce((s, o) => s + o.total_amount, 0);
+  const deliveryRevenue = deliveryOrders.reduce((s, o) => s + o.total_amount, 0);
 
   const catBreakdown = useMemo(() => {
     const map = new Map<string, { name: string; revenue: number; count: number }>();
@@ -209,6 +213,47 @@ function StatisticsPage() {
             </div>
           ))}
         </div>
+
+        {/* Local vs Delivery revenue breakdown */}
+        {(localOrders.length > 0 || deliveryOrders.length > 0) && (
+          <div className="mx-4 mb-3 rounded-2xl border p-4" style={{ backgroundColor: s.surface, borderColor: s.border }}>
+            <h3 className="font-bold text-right mb-4" style={{ color: s.text }}>الإيراد المحلي مقابل التوصيل</h3>
+            <div className="space-y-4">
+              {/* Local */}
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="font-bold text-sm" style={{ color: '#8b5cf6' }}>{localRevenue.toLocaleString()} د.ع</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs" style={{ color: s.sub }}>{localOrders.length} طلب</span>
+                    <span className="font-bold text-sm" style={{ color: s.text }}>🏪 الإيراد المحلي</span>
+                  </div>
+                </div>
+                <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: s.muted }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: totalRevenue > 0 ? `${(localRevenue / totalRevenue) * 100}%` : '0%', backgroundColor: '#8b5cf6' }} />
+                </div>
+                <p className="text-xs text-left mt-0.5" style={{ color: s.sub }}>
+                  {totalRevenue > 0 ? `${Math.round((localRevenue / totalRevenue) * 100)}%` : '0%'}
+                </p>
+              </div>
+              {/* Delivery */}
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="font-bold text-sm" style={{ color: '#22c55e' }}>{deliveryRevenue.toLocaleString()} د.ع</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs" style={{ color: s.sub }}>{deliveryOrders.length} طلب</span>
+                    <span className="font-bold text-sm" style={{ color: s.text }}>🛵 إيراد التوصيل</span>
+                  </div>
+                </div>
+                <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: s.muted }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: totalRevenue > 0 ? `${(deliveryRevenue / totalRevenue) * 100}%` : '0%', backgroundColor: '#22c55e' }} />
+                </div>
+                <p className="text-xs text-left mt-0.5" style={{ color: s.sub }}>
+                  {totalRevenue > 0 ? `${Math.round((deliveryRevenue / totalRevenue) * 100)}%` : '0%'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Category breakdown */}
         {catBreakdown.length > 0 && (
