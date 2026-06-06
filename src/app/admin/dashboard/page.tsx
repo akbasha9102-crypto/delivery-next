@@ -71,8 +71,8 @@ function DriverPickerModal({ drivers, onPick, onClose }: {
 }) {
   const available = drivers.filter(d => d.status === 'available');
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-w-lg p-5 pb-8" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg p-5 pb-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <button onClick={onClose} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
             <X size={18} />
@@ -136,8 +136,8 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-w-lg pb-8 max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg pb-6 max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
