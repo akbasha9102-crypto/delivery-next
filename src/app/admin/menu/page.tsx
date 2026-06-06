@@ -4,9 +4,9 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { AdminGuard } from '@/components/AdminGuard';
-import { X, Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 
-type Category = { id: string; name: string; color?: string };
+type Category = { id: string; name: string; color?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
 type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
 
@@ -40,10 +40,12 @@ function MenuPage() {
   const [extraPrice, setExtraPrice] = useState('');
   const [search, setSearch] = useState('');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const [showReorder, setShowReorder] = useState(false);
+  const [reorderCats, setReorderCats] = useState<Category[]>([]);
 
   const fetchMenu = async () => {
     setLoading(true);
-    const { data: cats } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
+    const { data: cats } = await supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
     if (!cats?.length) {
       await supabase.from('categories').insert([{ name: 'وجبات سريعة' }, { name: 'مشروبات' }, { name: 'حلويات' }]);
       return fetchMenu();
@@ -124,6 +126,34 @@ function MenuPage() {
     showToast('✓ تم الحذف');
   };
 
+  const openReorder = () => {
+    setReorderCats([...categories]);
+    setShowReorder(true);
+  };
+
+  const moveCategory = (idx: number, dir: -1 | 1) => {
+    const next = idx + dir;
+    if (next < 0 || next >= reorderCats.length) return;
+    setReorderCats(prev => {
+      const arr = [...prev];
+      [arr[idx], arr[next]] = [arr[next], arr[idx]];
+      return arr;
+    });
+  };
+
+  const saveReorder = async () => {
+    setSaving(true);
+    await Promise.all(
+      reorderCats.map((cat, i) =>
+        supabase.from('categories').update({ sort_order: i }).eq('id', cat.id)
+      )
+    );
+    await fetchMenu();
+    setShowReorder(false);
+    setSaving(false);
+    showToast('✓ تم حفظ الترتيب');
+  };
+
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
   return (
@@ -181,6 +211,46 @@ function MenuPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reorder Modal */}
+      {showReorder && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[88vh] flex flex-col">
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
+              <button onClick={saveReorder} disabled={saving} className="bg-[#f97316] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+                {saving ? '...' : 'حفظ'}
+              </button>
+              <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">ترتيب الأقسام</h3>
+              <button onClick={() => setShowReorder(false)} className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 font-bold px-4 py-2 rounded-xl active:scale-95 transition-all">إلغاء</button>
+            </div>
+            <div className="overflow-y-auto p-5 space-y-2">
+              {reorderCats.map((cat, i) => (
+                <div key={cat.id} className="flex items-center justify-between bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 border border-gray-200 dark:border-slate-600">
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => moveCategory(i, -1)}
+                      disabled={i === 0}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 text-gray-500 dark:text-slate-300 disabled:opacity-25 active:scale-90 transition-all">
+                      <ArrowUp size={14} />
+                    </button>
+                    <button
+                      onClick={() => moveCategory(i, 1)}
+                      disabled={i === reorderCats.length - 1}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 text-gray-500 dark:text-slate-300 disabled:opacity-25 active:scale-90 transition-all">
+                      <ArrowDown size={14} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900 dark:text-slate-100">{cat.name}</span>
+                    {cat.color && <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />}
+                  </div>
+                  <span className="text-xs text-gray-400 dark:text-slate-500 w-5 text-center">{i + 1}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -265,24 +335,34 @@ function MenuPage() {
             </div>
 
             {/* Category filter chips */}
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              <button
-                onClick={() => setSelectedCat(null)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${!selectedCat ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
-                الكل ({items.length})
-              </button>
-              {categories.map(cat => {
-                const count = items.filter(i => i.category_id === cat.id).length;
-                const active = selectedCat === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedCat(active ? null : cat.id)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
-                    {cat.name} ({count})
-                  </button>
-                );
-              })}
+            <div className="space-y-2">
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <button
+                  onClick={() => setSelectedCat(null)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${!selectedCat ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                  الكل ({items.length})
+                </button>
+                {categories.map(cat => {
+                  const count = items.filter(i => i.category_id === cat.id).length;
+                  const active = selectedCat === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCat(active ? null : cat.id)}
+                      className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                      {cat.name} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={openReorder}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400 active:scale-95 transition-all">
+                  <ArrowUpDown size={13} />
+                  <span className="text-xs font-bold">ترتيب الأقسام</span>
+                </button>
+              </div>
             </div>
 
             {search && (

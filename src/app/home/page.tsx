@@ -54,7 +54,7 @@ export default function HomePage() {
   // ── Fetch + Realtime ──
   useEffect(() => {
     const fetchData = async () => {
-      const { data: cats } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
+      const { data: cats } = await supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
       const { data: its }  = await supabase.from('items').select('*').order('name');
       setCategories(cats || []);
       setItems(its || []);
