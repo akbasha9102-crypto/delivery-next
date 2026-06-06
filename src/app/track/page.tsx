@@ -28,6 +28,15 @@ const CSS = `
   @keyframes exhaust  { 0%{opacity:0.7;transform:translateX(0) scale(1)} 100%{opacity:0;transform:translateX(-20px) scale(2)} }
   @keyframes pan-x    { from{transform:translateX(0)} to{transform:translateX(-50%)} }
   @keyframes sway     { 0%,100%{transform:rotate(-1deg)} 50%{transform:rotate(1deg)} }
+  @keyframes status-enter {
+    0%   { opacity:0; transform:scale(0.82) translateY(18px) }
+    60%  { transform:scale(1.04) translateY(-3px) }
+    100% { opacity:1; transform:scale(1) translateY(0) }
+  }
+  @keyframes fire-glow {
+    0%,100% { opacity:0.12 }
+    50%     { opacity:0.22 }
+  }
 `;
 
 function PendingAnimation() {
@@ -54,37 +63,53 @@ function PreparingAnimation() {
     <div className="relative w-44 h-44 mx-auto flex items-end justify-center">
       <style>{CSS}</style>
       <svg viewBox="0 0 140 130" className="w-full h-full">
-        {/* Steam */}
-        <path d="M52 74 Q49 62 52 50 Q55 40 52 28" stroke="#b0bec5" strokeWidth="2.5" strokeLinecap="round" fill="none"
+
+        {/* ── FLAMES — drawn first so pan covers their bases ── */}
+        {/* orange glow under pan */}
+        <ellipse cx="70" cy="100" rx="46" ry="14" fill="#ff6b00"
+                 style={{ animation: 'fire-glow 0.8s ease-in-out infinite' }}/>
+        {/* left flame */}
+        <path d="M42 128 C38 116 34 109 38 97 C41 105 46 102 44 113 C48 103 53 98 50 87 C56 96 57 108 52 128Z"
+              fill="#ff6b00" style={{ transformOrigin:'46px 128px', animation:'flame-l 0.55s ease-in-out infinite' }}/>
+        {/* center flame (tallest — tip hidden by pan) */}
+        <path d="M63 126 C59 111 53 102 59 87 C63 98 69 95 66 108 C71 96 77 90 73 76 C81 88 83 104 76 126Z"
+              fill="#ff4500" style={{ transformOrigin:'68px 126px', animation:'flame-m 0.45s ease-in-out infinite' }}/>
+        {/* right flame */}
+        <path d="M88 128 C84 116 81 109 85 97 C87 105 92 102 90 113 C94 103 97 98 95 87 C100 96 102 108 97 128Z"
+              fill="#ff6b00" style={{ transformOrigin:'91px 128px', animation:'flame-r 0.65s ease-in-out infinite' }}/>
+        {/* inner bright yellow flame */}
+        <path d="M57 125 C56 112 62 105 67 98 C69 107 72 104 70 115 C74 106 78 100 75 89 C82 100 82 113 77 125Z"
+              fill="#ffb300" opacity="0.9" style={{ transformOrigin:'68px 125px', animation:'flame-m 0.38s ease-in-out infinite reverse' }}/>
+
+        {/* ── BURNER RING — sits between flames and pan ── */}
+        <ellipse cx="70" cy="85" rx="43" ry="5.5" fill="#37474f"/>
+        <ellipse cx="70" cy="84" rx="36" ry="3.5" fill="#263238"/>
+
+        {/* ── PAN — drawn after flames, covers their upper halves ── */}
+        <ellipse cx="70" cy="77" rx="45" ry="6"  fill="#00000012"/>
+        <ellipse cx="70" cy="71" rx="44" ry="13" fill="#757575"/>
+        <ellipse cx="70" cy="67" rx="44" ry="13" fill="#9e9e9e"/>
+        <ellipse cx="70" cy="65" rx="40" ry="10" fill="#bdbdbd"/>
+        <path d="M112 60 Q130 58 133 64 Q130 70 112 70Z" fill="#616161"/>
+        <path d="M112 61 Q129 59 132 64 Q129 69 112 69Z" fill="#757575"/>
+
+        {/* ── FOOD inside pan ── */}
+        <ellipse cx="52" cy="61" rx="14" ry="7" fill="#ef9a9a"
+                 style={{ transformOrigin:'52px 61px', animation:'sizzle 0.7s ease-in-out infinite' }}/>
+        <ellipse cx="83" cy="60" rx="11" ry="6" fill="#fff9c4"
+                 style={{ transformOrigin:'83px 60px', animation:'sizzle 0.85s ease-in-out infinite 0.2s' }}/>
+        <circle cx="83" cy="60" r="4" fill="#ffcc02"/>
+        <ellipse cx="67" cy="57" rx="7" ry="4" fill="#a5d6a7" opacity="0.9"
+                 style={{ transformOrigin:'67px 57px', animation:'sizzle 0.6s ease-in-out infinite 0.1s' }}/>
+
+        {/* ── STEAM — drawn last, above everything ── */}
+        <path d="M52 52 Q49 40 52 28 Q55 18 52 6" stroke="#b0bec5" strokeWidth="2.5" strokeLinecap="round" fill="none"
               style={{ animation: 'steam 1.6s ease-out infinite' }}/>
-        <path d="M70 71 Q67 57 70 44 Q73 34 70 21" stroke="#b0bec5" strokeWidth="2.5" strokeLinecap="round" fill="none"
+        <path d="M70 49 Q67 35 70 22 Q73 12 70 -1" stroke="#b0bec5" strokeWidth="2.5" strokeLinecap="round" fill="none"
               style={{ animation: 'steam 1.6s ease-out infinite 0.55s' }}/>
-        <path d="M88 74 Q85 63 88 52" stroke="#b0bec5" strokeWidth="2" strokeLinecap="round" fill="none"
+        <path d="M88 52 Q85 41 88 30" stroke="#b0bec5" strokeWidth="2" strokeLinecap="round" fill="none"
               style={{ animation: 'steam 1.6s ease-out infinite 1.1s' }}/>
-        {/* Flames */}
-        <path d="M42 98 C38 86 34 79 38 67 C41 75 46 72 44 83 C48 73 53 68 50 57 C56 66 57 78 52 98Z"
-              fill="#ff6b00" style={{ transformOrigin:'46px 98px', animation:'flame-l 0.55s ease-in-out infinite' }}/>
-        <path d="M63 96 C59 81 53 72 59 57 C63 68 69 65 66 78 C71 66 77 60 73 46 C81 58 83 74 76 96Z"
-              fill="#ff4500" style={{ transformOrigin:'68px 96px', animation:'flame-m 0.45s ease-in-out infinite' }}/>
-        <path d="M88 98 C84 86 81 79 85 67 C87 75 92 72 90 83 C94 73 97 68 95 57 C100 66 102 78 97 98Z"
-              fill="#ff6b00" style={{ transformOrigin:'91px 98px', animation:'flame-r 0.65s ease-in-out infinite' }}/>
-        <path d="M57 95 C56 82 62 75 67 68 C69 77 72 74 70 85 C74 76 78 70 75 59 C82 70 82 83 77 95Z"
-              fill="#ffb300" opacity="0.85" style={{ transformOrigin:'68px 95px', animation:'flame-m 0.38s ease-in-out infinite reverse' }}/>
-        {/* Pan */}
-        <ellipse cx="70" cy="107" rx="45" ry="6" fill="#00000012"/>
-        <ellipse cx="70" cy="101" rx="44" ry="13" fill="#757575"/>
-        <ellipse cx="70" cy="97" rx="44" ry="13" fill="#9e9e9e"/>
-        <ellipse cx="70" cy="95" rx="40" ry="10" fill="#bdbdbd"/>
-        <path d="M112 90 Q130 88 133 94 Q130 100 112 100Z" fill="#616161"/>
-        <path d="M112 91 Q129 89 132 94 Q129 99 112 99Z" fill="#757575"/>
-        {/* Food */}
-        <ellipse cx="52" cy="91" rx="14" ry="7" fill="#ef9a9a"
-                 style={{ transformOrigin:'52px 91px', animation:'sizzle 0.7s ease-in-out infinite' }}/>
-        <ellipse cx="83" cy="90" rx="11" ry="6" fill="#fff9c4"
-                 style={{ transformOrigin:'83px 90px', animation:'sizzle 0.85s ease-in-out infinite 0.2s' }}/>
-        <circle cx="83" cy="90" r="4" fill="#ffcc02"/>
-        <ellipse cx="67" cy="87" rx="7" ry="4" fill="#a5d6a7" opacity="0.9"
-                 style={{ transformOrigin:'67px 87px', animation:'sizzle 0.6s ease-in-out infinite 0.1s' }}/>
+
       </svg>
     </div>
   );
@@ -369,8 +394,10 @@ export default function TrackPage() {
               </div>
             </div>
 
-            {/* Animated Status Card */}
-            <div className="bg-orange-50 dark:bg-orange-900/10 border-2 border-[#e67e22] rounded-2xl p-5 text-center">
+            {/* Animated Status Card — key triggers re-mount + entrance animation on status change */}
+            <div key={order.status}
+                 className="bg-orange-50 dark:bg-orange-900/10 border-2 border-[#e67e22] rounded-2xl p-5 text-center"
+                 style={{ animation: 'status-enter 0.5s ease-out' }}>
               <div className="mb-3">
                 {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{STEPS[current]?.icon}</div>}
               </div>
