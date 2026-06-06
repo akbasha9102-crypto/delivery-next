@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { NewOrdersProvider } from '@/context/NewOrdersContext';
 
 function makeBellWavUrl(): string | null {
   if (typeof window === 'undefined') return null;
@@ -45,5 +46,5 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  return <>{children}</>;
+  return <NewOrdersProvider>{children}</NewOrdersProvider>;
 }

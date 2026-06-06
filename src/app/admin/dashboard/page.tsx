@@ -7,6 +7,7 @@ import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { Moon, Sun, LogOut, X, Clock, Calendar } from 'lucide-react';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
+import { useNewOrders } from '@/context/NewOrdersContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null };
@@ -210,6 +211,8 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose }:
 function DashboardPage() {
   const router = useRouter();
   const { dark, toggleDark } = useDarkMode();
+  const { markSeen } = useNewOrders();
+  useEffect(() => { markSeen(); }, [markSeen]);
   const { is_closed, opens_at, id: settingsId, refreshSettings, schedule: ctxSchedule, loaded } = useSettings();
   const [scheduleLocal, setScheduleLocal] = useState<WeekSchedule | null>(null);
   const isClosedRef = useRef(is_closed);

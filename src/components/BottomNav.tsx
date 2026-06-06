@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { ShoppingCart, Truck, UtensilsCrossed, LayoutDashboard, ClipboardList, Palette, BarChart2, Car, Store } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useSettings } from '@/context/SettingsContext';
+import { useNewOrders } from '@/context/NewOrdersContext';
 
 const clientTabs = [
   { href: '/home',  icon: UtensilsCrossed, label: 'المنيو' },
@@ -55,14 +56,21 @@ export function ClientBottomNav() {
 
 export function AdminBottomNav() {
   const path = usePathname();
+  const { newCount } = useNewOrders();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex z-50">
       {adminTabs.map(({ href, icon: Icon, label }) => {
         const active = path === href;
+        const showBadge = href === '/admin/dashboard' && path !== '/admin/dashboard' && newCount > 0;
         return (
-          <Link key={href} href={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all active:scale-90">
+          <Link key={href} href={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all active:scale-90 relative">
             <Icon size={22} className={active ? 'text-[#2563eb]' : 'text-gray-400 dark:text-slate-500'} />
+            {showBadge && (
+              <span className="absolute top-1.5 right-1/2 translate-x-3.5 bg-red-500 text-white text-[10px] font-bold min-w-[17px] h-[17px] rounded-full flex items-center justify-center px-1 leading-none">
+                {newCount > 99 ? '99+' : newCount}
+              </span>
+            )}
             <span className={`text-xs font-medium ${active ? 'text-[#2563eb]' : 'text-gray-400 dark:text-slate-500'}`}>{label}</span>
           </Link>
         );
