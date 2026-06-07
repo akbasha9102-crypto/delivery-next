@@ -98,10 +98,21 @@ export default function HomePage() {
     return () => observers.forEach(o => o.disconnect());
   }, [categories, items]);
 
-  // ── يمرر الـ pill النشط للمنتصف ──
+  // ── يمرر الـ pill النشط للمنتصف بطريقة آمنة ──
   useEffect(() => {
-    const pill = pillsRef.current?.querySelector<HTMLElement>(`[data-cat="${activeCategory}"]`);
-    pill?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    const container = pillsRef.current;
+    if (!container) return;
+    const pill = container.querySelector<HTMLElement>(`[data-cat="${activeCategory}"]`);
+    if (!pill) return;
+
+    const pillOffset = pill.offsetLeft;
+    const pillWidth  = pill.offsetWidth;
+    const containerWidth = container.offsetWidth;
+
+    container.scrollTo({
+      left: pillOffset - (containerWidth / 2) + (pillWidth / 2),
+      behavior: 'smooth'
+    });
   }, [activeCategory]);
 
   useEffect(() => { setShowCartPanel(cartItems.length > 0); }, [cartItems.length]);
