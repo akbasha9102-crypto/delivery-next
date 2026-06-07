@@ -55,9 +55,8 @@ export default function HomePage() {
 
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const pillsRef    = useRef<HTMLDivElement>(null);
-  const scrolling   = useRef(false); // منع تعارض الـ observer مع الـ scroll المبرمج
+  const scrolling   = useRef(false);
 
-  // ── Fetch + Realtime ──
   useEffect(() => {
     const fetchData = async () => {
       const { data: cats } = await supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
@@ -67,21 +66,16 @@ export default function HomePage() {
       setLoading(false);
     };
     fetchData();
-
     const ch = supabase.channel('menu-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'items' },      fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, fetchData)
       .subscribe();
-
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  // ── IntersectionObserver: يحدّث الـ pill النشط أثناء السكرول ──
   useEffect(() => {
     if (categories.length === 0) return;
-
     const observers: IntersectionObserver[] = [];
-
     categories.forEach(cat => {
       const el = sectionRefs.current[cat.id];
       if (!el) return;
@@ -94,21 +88,17 @@ export default function HomePage() {
       obs.observe(el);
       observers.push(obs);
     });
-
     return () => observers.forEach(o => o.disconnect());
   }, [categories, items]);
 
-  // ── يمرر الـ pill النشط للمنتصف بطريقة آمنة ──
   useEffect(() => {
     const container = pillsRef.current;
     if (!container) return;
     const pill = container.querySelector<HTMLElement>(`[data-cat="${activeCategory}"]`);
     if (!pill) return;
-
     const pillOffset = pill.offsetLeft;
     const pillWidth  = pill.offsetWidth;
     const containerWidth = container.offsetWidth;
-
     container.scrollTo({
       left: pillOffset - (containerWidth / 2) + (pillWidth / 2),
       behavior: 'smooth'
@@ -117,12 +107,10 @@ export default function HomePage() {
 
   useEffect(() => { setShowCartPanel(cartItems.length > 0); }, [cartItems.length]);
 
-  // ── اضغط على الـ pill → انتقل للقسم ──
   const scrollToCategory = (catId: string) => {
     setActiveCategory(catId);
     scrolling.current = true;
     setTimeout(() => { scrolling.current = false; }, 800);
-
     if (catId === 'all') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -179,7 +167,7 @@ export default function HomePage() {
       <motion.header 
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-100/50 dark:border-slate-800/50 px-6 h-16 flex items-center justify-between shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
+        className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-100/50 dark:border-slate-800/50 px-6 h-20 flex items-center justify-between shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
         <motion.button 
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
@@ -187,29 +175,32 @@ export default function HomePage() {
           className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center transition-all border border-gray-100 dark:border-slate-700 shadow-sm">
           {dark ? <Sun size={20} className="text-yellow-400"/> : <Moon size={20} className="text-gray-400"/>}
         </motion.button>
+        
+        <div className="flex flex-col items-center flex-1 mx-4">
+          <h1 className="text-lg font-black tracking-tight text-center leading-tight text-black dark:text-white">{brandName}</h1>
+          <div className="w-8 h-1 bg-black dark:bg-white rounded-full mt-1 opacity-20"/>
+        </div>
+
         {brandLogo ? (
           <motion.div 
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative group">
-            <Image src={brandLogo} alt={brandName} width={120} height={40} className="h-10 w-auto object-contain transition-transform duration-500 group-hover:scale-105" unoptimized/>
+            className="relative">
+            <Image src={brandLogo} alt={brandName} width={60} height={60} className="h-14 w-14 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md" unoptimized/>
           </motion.div>
         ) : (
-          <h1 className="text-xl font-black tracking-tight" style={{ color: p }}>{brandName}</h1>
+          <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center shadow-lg shadow-black/10">
+             <ShoppingBag size={20} className="text-white"/>
+          </div>
         )}
-        <motion.div 
-          whileHover={{ scale: 1.1 }}
-          className="w-10 h-10 rounded-2xl bg-black flex items-center justify-center shadow-lg shadow-black/10">
-           <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"/>
-        </motion.div>
       </motion.header>
 
-      {/* ══ CATEGORY PILLS (Floating Glassmorphism) ══ */}
+      {/* ══ CATEGORY PILLS ══ */}
       <motion.div 
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.2 }}
-        className="sticky top-16 z-40 px-4 py-4">
+        className="sticky top-20 z-40 px-4 py-4">
         <div ref={pillsRef} className={`flex gap-3 overflow-x-auto scrollbar-hide flex-row-reverse pb-2 ${is_closed ? 'pointer-events-none opacity-50' : ''}`}>
           {[{ id: 'all', name: 'الكل' } as Category, ...categories].map((cat, idx) => {
             const isActive = activeCategory === cat.id;
@@ -255,7 +246,6 @@ export default function HomePage() {
                   transition={{ duration: 0.6, delay: catIdx * 0.1 }}
                   ref={el => { sectionRefs.current[cat.id] = el; }}>
 
-                  {/* ── Section Header ── */}
                   <div className="flex items-center gap-4 mb-6 flex-row-reverse px-2">
                     <h2 className="text-xl font-black text-gray-900 dark:text-slate-100 whitespace-nowrap tracking-tight">
                       {cat.name}
@@ -264,7 +254,7 @@ export default function HomePage() {
                   </div>
 
                   {/* ── Items Grid ── */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
                     {catItems.map((item, itemIdx) => {
                       const count  = qty(item.id);
                       const status = getStatus(item);
@@ -276,25 +266,25 @@ export default function HomePage() {
                           whileInView={{ opacity: 1, scale: 1 }}
                           viewport={{ once: true }}
                           transition={{ duration: 0.4, delay: itemIdx * 0.05 }}
-                          whileHover={{ y: -5 }}
+                          whileHover={{ y: -10 }}
                           onClick={() => { if (is_closed) setShowClosedToast(true); }}
-                          className={`group bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-all duration-500 flex flex-col ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}>
+                          className={`group bg-white dark:bg-slate-900 rounded-[3rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_15px_45px_rgba(0,0,0,0.05)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] transition-all duration-500 flex flex-col md:flex-row h-auto md:h-72 ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}>
 
                           {/* Image Wrapper */}
-                          <div className="relative flex-shrink-0 overflow-hidden m-2.5 rounded-[2rem]">
+                          <div className="relative w-full md:w-[45%] flex-shrink-0 overflow-hidden m-4 rounded-[2.5rem]">
                             <motion.div
+                              className="h-full"
                               animate={{ scale: 1 + Math.min(count, 5) * 0.05 }}
                               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
                             >
                               <Image
-                                src={item.image_url || 'https://placehold.co/300x200/f5f5f5/ccc?text='}
+                                src={item.image_url || 'https://placehold.co/400x300/f5f5f5/ccc?text='}
                                 alt={item.name}
-                                width={300} height={180}
-                                className={`w-full h-44 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
+                                width={400} height={300}
+                                className={`w-full h-64 md:h-full object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
                                 unoptimized
                               />
                             </motion.div>
-                            
                             <AnimatePresence>
                               {is_closed && (
                                 <motion.div 
@@ -309,27 +299,26 @@ export default function HomePage() {
                           </div>
 
                           {/* Details */}
-                          <div className="p-5 flex flex-col flex-1">
-                            <p className="font-black text-base text-gray-900 dark:text-slate-100 text-right leading-tight mb-2">
+                          <div className="p-8 md:p-10 flex flex-col flex-1 justify-center">
+                            <p className="font-black text-2xl text-gray-900 dark:text-slate-100 text-right leading-tight mb-4">
                               {item.name}
                             </p>
-                            
                             {item.description && (
-                              <p className="text-[11px] text-gray-400 dark:text-slate-500 text-right mb-5 line-clamp-2 leading-relaxed font-medium">
+                              <p className="text-sm text-gray-400 dark:text-slate-500 text-right mb-8 line-clamp-2 leading-relaxed font-medium">
                                 {item.description}
                               </p>
                             )}
 
                             <div className="mt-auto flex items-center justify-between flex-row-reverse">
                               <div className="text-right">
-                                <p className="font-black text-lg text-black dark:text-white">
+                                <p className="font-black text-2xl text-black dark:text-white">
                                   {item.price.toLocaleString()}
                                 </p>
-                                <p className="text-[9px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>
+                                <p className="text-[10px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>
                               </div>
                               
                               {isAvailable ? (
-                                <div className="relative h-11 flex items-center">
+                                <div className="relative h-12 flex items-center">
                                   <AnimatePresence mode="wait">
                                     {count > 0 ? (
                                       <motion.div 
@@ -337,25 +326,25 @@ export default function HomePage() {
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: 20 }}
-                                        className="flex items-center gap-3 bg-black dark:bg-white p-1 rounded-2xl shadow-xl">
+                                        className="flex items-center gap-4 bg-black dark:bg-white p-1 rounded-2xl shadow-xl">
                                         <motion.button
                                           whileTap={{ scale: 0.8 }}
                                           onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
-                                          className="w-9 h-9 rounded-xl bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
-                                          <Plus size={18} strokeWidth={3}/>
+                                          className="w-10 h-10 rounded-xl bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
+                                          <Plus size={20} strokeWidth={3}/>
                                         </motion.button>
                                         <motion.span 
                                           key={count}
                                           initial={{ scale: 1.5, opacity: 0 }}
                                           animate={{ scale: 1, opacity: 1 }}
-                                          className="font-black text-sm w-4 text-center text-white dark:text-black">
+                                          className="font-black text-lg w-5 text-center text-white dark:text-black">
                                           {count}
                                         </motion.span>
                                         <motion.button
                                           whileTap={{ scale: 0.8 }}
                                           onClick={(e) => { e.stopPropagation(); decrementItem(item.id); }}
-                                          className="w-9 h-9 rounded-xl bg-white/10 text-white dark:text-black flex items-center justify-center">
-                                          <Minus size={18} strokeWidth={3}/>
+                                          className="w-10 h-10 rounded-xl bg-white/10 text-white dark:text-black flex items-center justify-center">
+                                          <Minus size={20} strokeWidth={3}/>
                                         </motion.button>
                                       </motion.div>
                                     ) : (
@@ -367,14 +356,14 @@ export default function HomePage() {
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                         onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-                                        className="h-11 px-6 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-black text-xs shadow-lg shadow-black/10 uppercase tracking-wider">
+                                        className="h-12 px-8 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-black text-sm shadow-lg shadow-black/10 uppercase tracking-wider">
                                         أضف للسلة
                                       </motion.button>
                                     )}
                                   </AnimatePresence>
                                 </div>
                               ) : (
-                                <div className="px-4 py-2 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700">
+                                <div className="px-5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700">
                                   <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{is_closed ? 'مغلق' : 'نفذ'}</span>
                                 </div>
                               )}
@@ -391,7 +380,6 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* ══ CART PANEL (Floating Glass) ══ */}
       <AnimatePresence>
         {showCartPanel && (
           <motion.div 
@@ -413,15 +401,9 @@ export default function HomePage() {
                  إتمام الطلب
                </Link>
             </div>
-            
             <div className="flex gap-2 overflow-x-auto pb-2 flex-row-reverse scrollbar-hide">
               {cartItems.map(item => (
-                <motion.div 
-                  layout
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  key={item.id} 
-                  className="bg-gray-50 dark:bg-slate-800 px-4 py-2 rounded-xl flex items-center gap-2 border border-gray-100 dark:border-slate-700 whitespace-nowrap">
+                <motion.div layout initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} key={item.id} className="bg-gray-50 dark:bg-slate-800 px-4 py-2 rounded-xl flex items-center gap-2 border border-gray-100 dark:border-slate-700 whitespace-nowrap">
                    <span className="font-black text-xs">{item.quantity}×</span>
                    <span className="text-xs font-bold opacity-70">{item.name}</span>
                 </motion.div>
@@ -431,69 +413,30 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      {/* ══ EXTRAS MODAL ══ */}
       <AnimatePresence>
         {extrasItem && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setExtrasItem(null)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
-            />
-            <motion.div 
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden p-8"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setExtrasItem(null)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden p-8">
               <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-8"/>
               <h3 className="text-2xl font-black text-right mb-2">{extrasItem.name}</h3>
               <p className="text-gray-400 text-right text-sm mb-8">اختر الإضافات التي ترغب بها</p>
-              
               <div className="space-y-3 mb-10 max-h-[40vh] overflow-y-auto pr-2">
                 {getExtras(extrasItem).map(e => (
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    key={e.id}
-                    onClick={() => {
-                      const next = new Set(selectedExtras);
-                      next.has(e.id) ? next.delete(e.id) : next.add(e.id);
-                      setSelectedExtras(next);
-                    }}
-                    className={`w-full p-5 rounded-[1.5rem] flex items-center justify-between border-2 transition-all ${
-                      selectedExtras.has(e.id) 
-                      ? 'border-black bg-black text-white shadow-xl' 
-                      : 'border-gray-100 dark:border-slate-800 text-gray-500'
-                    }`}
-                  >
+                  <motion.button whileTap={{ scale: 0.98 }} key={e.id} onClick={() => { const next = new Set(selectedExtras); next.has(e.id) ? next.delete(e.id) : next.add(e.id); setSelectedExtras(next); }} className={`w-full p-5 rounded-[1.5rem] flex items-center justify-between border-2 transition-all ${selectedExtras.has(e.id) ? 'border-black bg-black text-white shadow-xl' : 'border-gray-100 dark:border-slate-800 text-gray-500'}`}>
                     <span className="font-black">+{e.price.toLocaleString()} د.ع</span>
                     <span className="font-black text-lg">{e.name}</span>
                   </motion.button>
                 ))}
               </div>
-
               <div className="flex gap-4">
-                 <motion.button 
-                   whileTap={{ scale: 0.95 }}
-                   onClick={() => setExtrasItem(null)}
-                   className="flex-1 py-5 rounded-2xl font-black text-gray-400 bg-gray-50 dark:bg-slate-800">
-                   إلغاء
-                 </motion.button>
-                 <motion.button 
-                   whileTap={{ scale: 0.95 }}
-                   onClick={confirmExtras}
-                   className="flex-[2] py-5 rounded-2xl font-black bg-black text-white shadow-2xl">
-                   تأكيد الإضافة
-                 </motion.button>
+                 <motion.button whileTap={{ scale: 0.95 }} onClick={() => setExtrasItem(null)} className="flex-1 py-5 rounded-2xl font-black text-gray-400 bg-gray-50 dark:bg-slate-800">إلغاء</motion.button>
+                 <motion.button whileTap={{ scale: 0.95 }} onClick={confirmExtras} className="flex-[2] py-5 rounded-2xl font-black bg-black text-white shadow-2xl">تأكيد الإضافة</motion.button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-
       <ClientBottomNav />
     </div>
   );
