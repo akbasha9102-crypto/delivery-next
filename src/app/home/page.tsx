@@ -254,7 +254,7 @@ export default function HomePage() {
                   </div>
 
                   {/* ── Items Grid ── */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6 md:gap-8 px-1 sm:px-2">
                     {catItems.map((item, itemIdx) => {
                       const count  = qty(item.id);
                       const status = getStatus(item);
@@ -266,14 +266,13 @@ export default function HomePage() {
                           whileInView={{ opacity: 1, scale: 1 }}
                           viewport={{ once: true }}
                           transition={{ duration: 0.4, delay: itemIdx * 0.05 }}
-                          whileHover={{ y: -10 }}
+                          whileHover={{ y: -8 }}
                           onClick={() => { if (is_closed) setShowClosedToast(true); }}
-                          className={`group bg-white dark:bg-slate-900 rounded-[3rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_15px_45px_rgba(0,0,0,0.05)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] transition-all duration-500 flex flex-col md:flex-row h-auto md:h-72 ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}>
+                          className={`group bg-white dark:bg-slate-900 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-all duration-500 flex flex-col ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}>
 
                           {/* Image Wrapper */}
-                          <div className="relative w-full md:w-[45%] flex-shrink-0 overflow-hidden m-4 rounded-[2.5rem]">
+                          <div className="relative flex-shrink-0 overflow-hidden m-2 sm:m-3 rounded-[1.5rem] sm:rounded-[2rem]">
                             <motion.div
-                              className="h-full"
                               animate={{ scale: 1 + Math.min(count, 5) * 0.05 }}
                               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
                             >
@@ -281,7 +280,7 @@ export default function HomePage() {
                                 src={item.image_url || 'https://placehold.co/400x300/f5f5f5/ccc?text='}
                                 alt={item.name}
                                 width={400} height={300}
-                                className={`w-full h-64 md:h-full object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
+                                className={`w-full h-36 sm:h-44 md:h-52 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
                                 unoptimized
                               />
                             </motion.div>
@@ -290,8 +289,8 @@ export default function HomePage() {
                                 <motion.div 
                                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                                   className="absolute inset-0 flex items-center justify-center backdrop-blur-md bg-black/20">
-                                  <div className="bg-white/90 px-5 py-2.5 rounded-2xl shadow-2xl transform -rotate-2">
-                                    <p className="text-black text-xs font-black tracking-widest">مغلق</p>
+                                  <div className="bg-white/90 px-4 py-2 rounded-xl shadow-2xl transform -rotate-2">
+                                    <p className="text-black text-[10px] font-black tracking-widest">مغلق</p>
                                   </div>
                                 </motion.div>
                               )}
@@ -299,26 +298,26 @@ export default function HomePage() {
                           </div>
 
                           {/* Details */}
-                          <div className="p-8 md:p-10 flex flex-col flex-1 justify-center">
-                            <p className="font-black text-2xl text-gray-900 dark:text-slate-100 text-right leading-tight mb-4">
+                          <div className="p-4 sm:p-5 flex flex-col flex-1">
+                            <p className="font-black text-sm sm:text-base md:text-lg text-gray-900 dark:text-slate-100 text-right leading-tight mb-1 sm:mb-2">
                               {item.name}
                             </p>
                             {item.description && (
-                              <p className="text-sm text-gray-400 dark:text-slate-500 text-right mb-8 line-clamp-2 leading-relaxed font-medium">
+                              <p className="text-[10px] sm:text-[11px] text-gray-400 dark:text-slate-500 text-right mb-3 sm:mb-4 md:mb-6 line-clamp-2 leading-relaxed font-medium">
                                 {item.description}
                               </p>
                             )}
 
                             <div className="mt-auto flex items-center justify-between flex-row-reverse">
                               <div className="text-right">
-                                <p className="font-black text-2xl text-black dark:text-white">
+                                <p className="font-black text-base sm:text-lg md:text-xl text-black dark:text-white">
                                   {item.price.toLocaleString()}
                                 </p>
-                                <p className="text-[10px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>
+                                <p className="text-[8px] sm:text-[9px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>
                               </div>
                               
                               {isAvailable ? (
-                                <div className="relative h-12 flex items-center">
+                                <div className="relative h-9 sm:h-11 flex items-center">
                                   <AnimatePresence mode="wait">
                                     {count > 0 ? (
                                       <motion.div 
@@ -326,25 +325,25 @@ export default function HomePage() {
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: 20 }}
-                                        className="flex items-center gap-4 bg-black dark:bg-white p-1 rounded-2xl shadow-xl">
+                                        className="flex items-center gap-2 sm:gap-3 bg-black dark:bg-white p-0.5 sm:p-1 rounded-xl sm:rounded-2xl shadow-xl">
                                         <motion.button
                                           whileTap={{ scale: 0.8 }}
                                           onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
-                                          className="w-10 h-10 rounded-xl bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
-                                          <Plus size={20} strokeWidth={3}/>
+                                          className="w-7 h-7 sm:w-9 h-9 rounded-lg sm:rounded-xl bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
+                                          <Plus size={16} strokeWidth={3}/>
                                         </motion.button>
                                         <motion.span 
                                           key={count}
                                           initial={{ scale: 1.5, opacity: 0 }}
                                           animate={{ scale: 1, opacity: 1 }}
-                                          className="font-black text-lg w-5 text-center text-white dark:text-black">
+                                          className="font-black text-xs sm:text-sm w-3 sm:w-4 text-center text-white dark:text-black">
                                           {count}
                                         </motion.span>
                                         <motion.button
                                           whileTap={{ scale: 0.8 }}
                                           onClick={(e) => { e.stopPropagation(); decrementItem(item.id); }}
-                                          className="w-10 h-10 rounded-xl bg-white/10 text-white dark:text-black flex items-center justify-center">
-                                          <Minus size={20} strokeWidth={3}/>
+                                          className="w-7 h-7 sm:w-9 h-9 rounded-lg sm:rounded-xl bg-white/10 text-white dark:text-black flex items-center justify-center">
+                                          <Minus size={16} strokeWidth={3}/>
                                         </motion.button>
                                       </motion.div>
                                     ) : (
@@ -356,15 +355,15 @@ export default function HomePage() {
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                         onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-                                        className="h-12 px-8 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-black text-sm shadow-lg shadow-black/10 uppercase tracking-wider">
+                                        className="h-8 sm:h-11 px-3 sm:px-6 bg-black dark:bg-white text-white dark:text-black rounded-lg sm:rounded-2xl font-black text-[10px] sm:text-xs shadow-lg shadow-black/10 uppercase tracking-wider">
                                         أضف للسلة
                                       </motion.button>
                                     )}
                                   </AnimatePresence>
                                 </div>
                               ) : (
-                                <div className="px-5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700">
-                                  <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{is_closed ? 'مغلق' : 'نفذ'}</span>
+                                <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-100 dark:border-slate-700">
+                                  <span className="text-[8px] sm:text-[10px] font-black text-gray-300 uppercase tracking-widest">{is_closed ? 'مغلق' : 'نفذ'}</span>
                                 </div>
                               )}
                             </div>
