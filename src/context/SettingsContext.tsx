@@ -17,9 +17,9 @@ export type Settings = {
 
 const DEFAULTS: Settings = {
   id: '',
-  restaurant_name: 'CulinaShare',
-  primary_color: '#e67e22',
-  logo_url: null,
+  restaurant_name: 'مطعم داري - Dari Restaurant',
+  primary_color: '#000000',
+  logo_url: 'https://i.imgur.com/Jh7bzNN.jpeg',
   is_closed: false,
   opens_at: null,
   schedule: null,
