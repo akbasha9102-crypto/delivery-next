@@ -234,13 +234,17 @@ export default function HomePage() {
                           onClick={() => { if (is_closed) setShowClosedToast(true); }}
                           className={`group bg-white dark:bg-slate-800 rounded-[2rem] overflow-hidden border border-gray-100/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-all duration-500 flex flex-col transform hover:-translate-y-2 ${!isAvailable && !is_closed ? 'opacity-60' : ''} ${is_closed ? 'cursor-pointer' : ''}`}>
 
-                          {/* Image with 3D Zoom Effect */}
+                          {/* Image with 3D Zoom Effect + Quantity Zoom */}
                           <div className="relative flex-shrink-0 overflow-hidden m-2 rounded-[1.5rem]">
                             <Image
                               src={item.image_url || 'https://placehold.co/300x200/f5f5f5/ccc?text='}
                               alt={item.name}
                               width={300} height={180}
-                              className={`w-full h-40 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
+                              className={`w-full h-40 object-cover transition-transform duration-700 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
+                              style={isAvailable ? {
+                                transform: `scale(${1 + Math.min(count, 10) * 0.08})`,
+                                transition: 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1)',
+                              } : {}}
                               unoptimized
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
