@@ -17,7 +17,7 @@ const adminTabs = [
   { href: '/admin/menu',        icon: UtensilsCrossed, label: 'المنيو' },
   { href: '/admin/drivers',     icon: Car,             label: 'السواقون' },
   { href: '/admin/statistics',  icon: BarChart2,       label: 'الإحصاء' },
-  { href: '/admin/appearance',  icon: Palette,         label: 'المظهر' },
+
 ];
 
 export function ClientBottomNav() {

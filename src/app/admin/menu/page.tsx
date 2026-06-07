@@ -359,7 +359,10 @@ function MenuPage() {
                 <button
                   onClick={openReorder}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400 active:scale-95 transition-all">
-                  <ArrowUpDown size={13} />
+                  <div className="relative w-4 h-4 rounded-full border border-gray-500 dark:border-slate-400 flex items-center justify-center">
+                    <ArrowUp size={8} className="absolute top-0.5 text-gray-500 dark:text-slate-400" />
+                    <ArrowDown size={8} className="absolute bottom-0.5 text-gray-500 dark:text-slate-400" />
+                  </div>
                   <span className="text-xs font-bold">ترتيب الأقسام</span>
                 </button>
               </div>
