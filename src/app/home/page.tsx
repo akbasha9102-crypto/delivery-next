@@ -35,7 +35,12 @@ export default function HomePage() {
   const { dark, toggleDark } = useDarkMode();
   const { items: cartItems, addItem, decrementItem, removeItem, total } = useCart();
   const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded, is_closed, opens_at } = useSettings();
-  const p = primary_color; // shorthand for inline styles
+  
+  // Force Dari Branding
+  const brandName = "مطعم داري - Dari Restaurant";
+  const brandColor = "#000000";
+  const brandLogo = "https://i.imgur.com/Jh7bzNN.jpeg";
+  const p = brandColor; 
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [items,      setItems]      = useState<Item[]>([]);
@@ -158,10 +163,10 @@ export default function HomePage() {
         <button onClick={toggleDark} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 transition-all active:scale-90">
           {dark ? <Sun size={18} className="text-yellow-400"/> : <Moon size={18} className="text-gray-500"/>}
         </button>
-        {logo_url ? (
-          <Image src={logo_url} alt={restaurant_name} width={120} height={36} className="h-9 w-auto object-contain" unoptimized/>
+        {brandLogo ? (
+          <Image src={brandLogo} alt={brandName} width={120} height={36} className="h-9 w-auto object-contain" unoptimized/>
         ) : (
-          <h1 className="text-xl font-bold" style={{ color: p }}>{restaurant_name}</h1>
+          <h1 className="text-xl font-bold" style={{ color: p }}>{brandName}</h1>
         )}
         <div className="w-9"/>
       </header>
