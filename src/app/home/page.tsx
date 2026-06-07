@@ -159,34 +159,42 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-36">
 
       {/* ══ HEADER ══ */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 h-14 flex items-center justify-between">
-        <button onClick={toggleDark} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 transition-all active:scale-90">
-          {dark ? <Sun size={18} className="text-yellow-400"/> : <Moon size={18} className="text-gray-500"/>}
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-100/50 dark:border-slate-800/50 px-6 h-16 flex items-center justify-between shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
+        <button onClick={toggleDark} className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center transition-all active:scale-90 border border-gray-100 dark:border-slate-700 shadow-sm">
+          {dark ? <Sun size={20} className="text-yellow-400"/> : <Moon size={20} className="text-gray-400"/>}
         </button>
         {brandLogo ? (
-          <Image src={brandLogo} alt={brandName} width={120} height={36} className="h-9 w-auto object-contain" unoptimized/>
+          <div className="relative group">
+            <Image src={brandLogo} alt={brandName} width={120} height={40} className="h-10 w-auto object-contain transition-transform duration-500 group-hover:scale-105" unoptimized/>
+          </div>
         ) : (
-          <h1 className="text-xl font-bold" style={{ color: p }}>{brandName}</h1>
+          <h1 className="text-xl font-black tracking-tight" style={{ color: p }}>{brandName}</h1>
         )}
-        <div className="w-9"/>
+        <div className="w-10 h-10 rounded-2xl bg-black flex items-center justify-center shadow-lg shadow-black/10">
+           <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"/>
+        </div>
       </header>
 
-      {/* ══ CATEGORY PILLS (sticky) ══ */}
-      <div className="sticky top-14 z-30 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-700 px-4 py-2.5">
-        <div ref={pillsRef} className={`flex gap-2 overflow-x-auto scrollbar-hide flex-row-reverse ${is_closed ? 'pointer-events-none opacity-50' : ''}`}>
-          {[{ id: 'all', name: 'الكل' } as Category, ...categories].map(cat => (
-            <button
-              key={cat.id}
-              data-cat={cat.id}
-              onClick={() => scrollToCategory(cat.id)}
-              className="px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all active:scale-95 flex-shrink-0"
-              style={activeCategory === cat.id
-                ? { backgroundColor: cat.color || p, color: '#fff' }
-                : {}}
-            >
-              {cat.name}
-            </button>
-          ))}
+      {/* ══ CATEGORY PILLS (Floating Glassmorphism) ══ */}
+      <div className="sticky top-16 z-30 px-4 py-4">
+        <div ref={pillsRef} className={`flex gap-3 overflow-x-auto scrollbar-hide flex-row-reverse pb-2 ${is_closed ? 'pointer-events-none opacity-50' : ''}`}>
+          {[{ id: 'all', name: 'الكل' } as Category, ...categories].map(cat => {
+            const isActive = activeCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                data-cat={cat.id}
+                onClick={() => scrollToCategory(cat.id)}
+                className={`px-6 py-2.5 rounded-[1.2rem] text-sm font-black whitespace-nowrap transition-all duration-300 flex-shrink-0 border ${
+                  isActive 
+                  ? 'bg-black text-white border-black shadow-[0_10px_20px_rgba(0,0,0,0.15)] scale-105' 
+                  : 'bg-white/70 dark:bg-slate-800/70 backdrop-blur-md text-gray-500 border-gray-100 dark:border-slate-700 hover:bg-gray-50 shadow-sm'
+                }`}
+              >
+                {cat.name}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -224,75 +232,73 @@ export default function HomePage() {
                       return (
                         <div key={item.id}
                           onClick={() => { if (is_closed) setShowClosedToast(true); }}
-                          className={`bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col ${!isAvailable && !is_closed ? 'opacity-60' : ''} ${is_closed ? 'cursor-pointer' : ''}`}>
+                          className={`group bg-white dark:bg-slate-800 rounded-[2rem] overflow-hidden border border-gray-100/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-all duration-500 flex flex-col transform hover:-translate-y-2 ${!isAvailable && !is_closed ? 'opacity-60' : ''} ${is_closed ? 'cursor-pointer' : ''}`}>
 
-                          {/* Image */}
-                          <div className="relative flex-shrink-0 overflow-hidden">
+                          {/* Image with 3D Zoom Effect */}
+                          <div className="relative flex-shrink-0 overflow-hidden m-2 rounded-[1.5rem]">
                             <Image
                               src={item.image_url || 'https://placehold.co/300x200/f5f5f5/ccc?text='}
                               alt={item.name}
                               width={300} height={180}
-                              className={`w-full h-36 object-cover ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
-                              style={isAvailable ? {
-                                transform: `scale(${1 + Math.min(count, 10) * 0.08})`,
-                                transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
-                              } : {}}
+                              className={`w-full h-40 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
                               unoptimized
                             />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+                            
                             {is_closed && (
-                              <div className="absolute inset-0 flex items-center justify-center px-2" style={{ backgroundColor: 'rgba(156,163,175,0.6)' }}>
-                                <div className="bg-black/50 px-3 py-2 rounded-xl text-center">
-                                  <p className="text-white text-xs font-bold">مغلق</p>
-                                  {opens_at && <p className="text-white/80 text-[10px] mt-0.5">سيفتح في {formatOpenTime(opens_at)}</p>}
+                              <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[2px]" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
+                                <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-xl transform -rotate-3">
+                                  <p className="text-black text-xs font-black">مغلق حالياً</p>
                                 </div>
-                              </div>
-                            )}
-                            {!is_closed && !isAvailable && (
-                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center px-2">
-                                <span className="text-white text-xs font-bold bg-black/70 px-3 py-1.5 rounded-xl text-center leading-snug">{statusLabel}</span>
                               </div>
                             )}
                           </div>
 
-                          {/* Info */}
-                          <div className="p-3 flex flex-col flex-1">
-                            <p className="font-bold text-sm text-gray-900 dark:text-slate-100 text-right leading-snug mb-1">
-                              {item.name}
-                            </p>
+                          {/* Info Section with Premium Typography */}
+                          <div className="p-4 flex flex-col flex-1">
+                            <div className="flex justify-between items-start mb-2 flex-row-reverse">
+                              <p className="font-black text-base text-gray-900 dark:text-slate-100 text-right leading-tight">
+                                {item.name}
+                              </p>
+                            </div>
+                            
                             {item.description && (
-                              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2 line-clamp-2 leading-relaxed">
+                              <p className="text-[11px] text-gray-500 dark:text-slate-400 text-right mb-4 line-clamp-2 leading-relaxed font-medium">
                                 {item.description}
                               </p>
                             )}
-                            <div className="mt-auto pt-1">
-                              <p className="font-extrabold text-sm text-right mb-2" style={{ color: isAvailable ? c : '#9ca3af' }}>
-                                {item.price.toLocaleString()} د.ع
+
+                            <div className="mt-auto flex items-center justify-between flex-row-reverse">
+                              <p className="font-black text-lg" style={{ color: isAvailable ? '#000' : '#9ca3af' }}>
+                                {item.price.toLocaleString()} <span className="text-[10px] font-bold opacity-60">د.ع</span>
                               </p>
-                              {isAvailable && count > 0 ? (
-                                <div className="flex items-center justify-between rounded-xl px-2 py-1.5" style={{ backgroundColor: c + '18' }}>
+                              
+                              {isAvailable ? (
+                                count > 0 ? (
+                                  <div className="flex items-center gap-3 bg-gray-50 dark:bg-slate-900 p-1 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-inner">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
+                                      className="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center active:scale-90 transition-transform shadow-lg shadow-black/20">
+                                      <Plus size={16}/>
+                                    </button>
+                                    <span className="font-black text-sm w-4 text-center">{count}</span>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); decrementItem(item.id); }}
+                                      className="w-8 h-8 rounded-xl bg-white border border-gray-200 text-black flex items-center justify-center active:scale-90 transition-transform shadow-sm">
+                                      <Minus size={16}/>
+                                    </button>
+                                  </div>
+                                ) : (
                                   <button
-                                    onClick={() => addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url })}
-                                    className="w-7 h-7 rounded-full text-white flex items-center justify-center active:scale-90"
-                                    style={{ backgroundColor: c }}>
-                                    <Plus size={14}/>
+                                    onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
+                                    className="h-10 px-4 bg-black text-white rounded-2xl font-black text-sm shadow-[0_8px_20px_rgba(0,0,0,0.15)] active:scale-95 active:shadow-none transition-all duration-300">
+                                    إضافة +
                                   </button>
-                                  <span className="font-bold text-sm" style={{ color: c }}>{count}</span>
-                                  <button
-                                    onClick={() => decrementItem(item.id)}
-                                    className="w-7 h-7 rounded-full bg-gray-200 dark:bg-slate-600 text-gray-600 dark:text-slate-300 flex items-center justify-center active:scale-90">
-                                    <Minus size={14}/>
-                                  </button>
-                                </div>
+                                )
                               ) : (
-                                <button
-                                  onClick={() => handleAdd(item)}
-                                  disabled={!isAvailable}
-                                  className="w-full font-bold text-sm py-2 rounded-xl transition-all active:scale-95 disabled:cursor-not-allowed"
-                                  style={isAvailable
-                                    ? { backgroundColor: c, color: '#fff' }
-                                    : { backgroundColor: '#e5e7eb', color: '#9ca3af' }}>
-                                  {isAvailable ? '+ أضف' : is_closed ? 'مغلق' : statusLabel}
-                                </button>
+                                <div className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 rounded-xl">
+                                  <span className="text-[10px] font-bold text-gray-400">{is_closed ? 'مغلق' : 'انتهى'}</span>
+                                </div>
                               )}
                             </div>
                           </div>
