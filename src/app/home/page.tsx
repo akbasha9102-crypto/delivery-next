@@ -6,8 +6,9 @@ import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, Plus, Minus, X } from 'lucide-react';
+import { Moon, Sun, Plus, Minus, X, ShoppingBag } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type Category = { id: string; name: string; color?: string };
 type Extra    = { id: string; name: string; price: number };
@@ -150,40 +151,65 @@ export default function HomePage() {
   const qty = (id: string) => cartItems.find(i => i.id === id)?.quantity || 0;
 
   if (!settingsLoaded) return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
-      <div className="w-10 h-10 border-4 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
+    <div className="min-h-screen bg-white dark:bg-slate-900 flex items-center justify-center">
+      <motion.div 
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ repeat: Infinity, duration: 1, repeatType: 'reverse' }}
+        className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin" 
+      />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-36">
+    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950 pb-36 overflow-x-hidden">
 
       {/* ══ HEADER ══ */}
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-100/50 dark:border-slate-800/50 px-6 h-16 flex items-center justify-between shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
-        <button onClick={toggleDark} className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center transition-all active:scale-90 border border-gray-100 dark:border-slate-700 shadow-sm">
+      <motion.header 
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-100/50 dark:border-slate-800/50 px-6 h-16 flex items-center justify-between shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
+        <motion.button 
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={toggleDark} 
+          className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center transition-all border border-gray-100 dark:border-slate-700 shadow-sm">
           {dark ? <Sun size={20} className="text-yellow-400"/> : <Moon size={20} className="text-gray-400"/>}
-        </button>
+        </motion.button>
         {brandLogo ? (
-          <div className="relative group">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative group">
             <Image src={brandLogo} alt={brandName} width={120} height={40} className="h-10 w-auto object-contain transition-transform duration-500 group-hover:scale-105" unoptimized/>
-          </div>
+          </motion.div>
         ) : (
           <h1 className="text-xl font-black tracking-tight" style={{ color: p }}>{brandName}</h1>
         )}
-        <div className="w-10 h-10 rounded-2xl bg-black flex items-center justify-center shadow-lg shadow-black/10">
+        <motion.div 
+          whileHover={{ scale: 1.1 }}
+          className="w-10 h-10 rounded-2xl bg-black flex items-center justify-center shadow-lg shadow-black/10">
            <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"/>
-        </div>
-      </header>
+        </motion.div>
+      </motion.header>
 
       {/* ══ CATEGORY PILLS (Floating Glassmorphism) ══ */}
-      <div className="sticky top-16 z-30 px-4 py-4">
+      <motion.div 
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.2 }}
+        className="sticky top-16 z-40 px-4 py-4">
         <div ref={pillsRef} className={`flex gap-3 overflow-x-auto scrollbar-hide flex-row-reverse pb-2 ${is_closed ? 'pointer-events-none opacity-50' : ''}`}>
-          {[{ id: 'all', name: 'الكل' } as Category, ...categories].map(cat => {
+          {[{ id: 'all', name: 'الكل' } as Category, ...categories].map((cat, idx) => {
             const isActive = activeCategory === cat.id;
             return (
-              <button
+              <motion.button
                 key={cat.id}
                 data-cat={cat.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + idx * 0.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => scrollToCategory(cat.id)}
                 className={`px-6 py-2.5 rounded-[1.2rem] text-sm font-black whitespace-nowrap transition-all duration-300 flex-shrink-0 border ${
                   isActive 
@@ -192,222 +218,270 @@ export default function HomePage() {
                 }`}
               >
                 {cat.name}
-              </button>
+              </motion.button>
             );
           })}
         </div>
-      </div>
+      </motion.div>
 
       {/* ══ CONTENT ══ */}
-      <div className="px-4 pt-5">
+      <div className="px-4 pt-2">
         {loading ? (
           <div className="flex justify-center mt-24">
-            <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: `${p} transparent transparent transparent` }}/>
+            <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="space-y-10">
-            {categories.map(cat => {
+          <div className="space-y-12">
+            {categories.map((cat, catIdx) => {
               const catItems = items.filter(i => i.category_id === cat.id);
               if (catItems.length === 0) return null;
-              const c = cat.color || p;
               return (
-                <section key={cat.id} ref={el => { sectionRefs.current[cat.id] = el; }}>
+                <motion.section 
+                  key={cat.id} 
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  transition={{ duration: 0.6, delay: catIdx * 0.1 }}
+                  ref={el => { sectionRefs.current[cat.id] = el; }}>
 
                   {/* ── Section Header ── */}
-                  <div className="flex items-center gap-3 mb-4 flex-row-reverse">
-                    <h2 className="text-base font-extrabold text-gray-900 dark:text-slate-100 whitespace-nowrap">
+                  <div className="flex items-center gap-4 mb-6 flex-row-reverse px-2">
+                    <h2 className="text-xl font-black text-gray-900 dark:text-slate-100 whitespace-nowrap tracking-tight">
                       {cat.name}
                     </h2>
-                    <div className="flex-1 h-px bg-gradient-to-l from-gray-200 to-transparent dark:from-slate-700"/>
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c }}/>
+                    <div className="flex-1 h-[2px] bg-gradient-to-l from-black/10 to-transparent dark:from-white/10"/>
                   </div>
 
                   {/* ── Items Grid ── */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {catItems.map(item => {
+                  <div className="grid grid-cols-2 gap-4">
+                    {catItems.map((item, itemIdx) => {
                       const count  = qty(item.id);
                       const status = getStatus(item);
                       const isAvailable = !is_closed && status === 'available';
-                      const statusLabel = status === 'unavailable' ? 'غير متوفر حاليا' : status === 'hidden' ? 'انتهى' : '';
                       return (
-                        <div key={item.id}
+                        <motion.div 
+                          key={item.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.4, delay: itemIdx * 0.05 }}
+                          whileHover={{ y: -5 }}
                           onClick={() => { if (is_closed) setShowClosedToast(true); }}
-                          className={`group bg-white dark:bg-slate-800 rounded-[2rem] overflow-hidden border border-gray-100/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-all duration-500 flex flex-col transform hover:-translate-y-2 ${!isAvailable && !is_closed ? 'opacity-60' : ''} ${is_closed ? 'cursor-pointer' : ''}`}>
+                          className={`group bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-all duration-500 flex flex-col ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}>
 
-                          {/* Image with 3D Zoom Effect + Quantity Zoom */}
-                          <div className="relative flex-shrink-0 overflow-hidden m-2 rounded-[1.5rem]">
-                            <Image
-                              src={item.image_url || 'https://placehold.co/300x200/f5f5f5/ccc?text='}
-                              alt={item.name}
-                              width={300} height={180}
-                              className={`w-full h-40 object-cover transition-transform duration-700 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
-                              style={isAvailable ? {
-                                transform: `scale(${1 + Math.min(count, 10) * 0.08})`,
-                                transition: 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1)',
-                              } : {}}
-                              unoptimized
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+                          {/* Image Wrapper */}
+                          <div className="relative flex-shrink-0 overflow-hidden m-2.5 rounded-[2rem]">
+                            <motion.div
+                              animate={{ scale: 1 + Math.min(count, 5) * 0.05 }}
+                              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                            >
+                              <Image
+                                src={item.image_url || 'https://placehold.co/300x200/f5f5f5/ccc?text='}
+                                alt={item.name}
+                                width={300} height={180}
+                                className={`w-full h-44 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
+                                unoptimized
+                              />
+                            </motion.div>
                             
-                            {is_closed && (
-                              <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[2px]" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
-                                <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-xl transform -rotate-3">
-                                  <p className="text-black text-xs font-black">مغلق حالياً</p>
-                                </div>
-                              </div>
-                            )}
+                            <AnimatePresence>
+                              {is_closed && (
+                                <motion.div 
+                                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                                  className="absolute inset-0 flex items-center justify-center backdrop-blur-md bg-black/20">
+                                  <div className="bg-white/90 px-5 py-2.5 rounded-2xl shadow-2xl transform -rotate-2">
+                                    <p className="text-black text-xs font-black tracking-widest">مغلق</p>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
 
-                          {/* Info Section with Premium Typography */}
-                          <div className="p-4 flex flex-col flex-1">
-                            <div className="flex justify-between items-start mb-2 flex-row-reverse">
-                              <p className="font-black text-base text-gray-900 dark:text-slate-100 text-right leading-tight">
-                                {item.name}
-                              </p>
-                            </div>
+                          {/* Details */}
+                          <div className="p-5 flex flex-col flex-1">
+                            <p className="font-black text-base text-gray-900 dark:text-slate-100 text-right leading-tight mb-2">
+                              {item.name}
+                            </p>
                             
                             {item.description && (
-                              <p className="text-[11px] text-gray-500 dark:text-slate-400 text-right mb-4 line-clamp-2 leading-relaxed font-medium">
+                              <p className="text-[11px] text-gray-400 dark:text-slate-500 text-right mb-5 line-clamp-2 leading-relaxed font-medium">
                                 {item.description}
                               </p>
                             )}
 
                             <div className="mt-auto flex items-center justify-between flex-row-reverse">
-                              <p className="font-black text-lg" style={{ color: isAvailable ? '#000' : '#9ca3af' }}>
-                                {item.price.toLocaleString()} <span className="text-[10px] font-bold opacity-60">د.ع</span>
-                              </p>
+                              <div className="text-right">
+                                <p className="font-black text-lg text-black dark:text-white">
+                                  {item.price.toLocaleString()}
+                                </p>
+                                <p className="text-[9px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>
+                              </div>
                               
                               {isAvailable ? (
-                                count > 0 ? (
-                                  <div className="flex items-center gap-3 bg-gray-50 dark:bg-slate-900 p-1 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-inner">
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
-                                      className="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center active:scale-90 transition-transform shadow-lg shadow-black/20">
-                                      <Plus size={16}/>
-                                    </button>
-                                    <span className="font-black text-sm w-4 text-center">{count}</span>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); decrementItem(item.id); }}
-                                      className="w-8 h-8 rounded-xl bg-white border border-gray-200 text-black flex items-center justify-center active:scale-90 transition-transform shadow-sm">
-                                      <Minus size={16}/>
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-                                    className="h-10 px-4 bg-black text-white rounded-2xl font-black text-sm shadow-[0_8px_20px_rgba(0,0,0,0.15)] active:scale-95 active:shadow-none transition-all duration-300">
-                                    إضافة +
-                                  </button>
-                                )
+                                <div className="relative h-11 flex items-center">
+                                  <AnimatePresence mode="wait">
+                                    {count > 0 ? (
+                                      <motion.div 
+                                        key="counter"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 20 }}
+                                        className="flex items-center gap-3 bg-black dark:bg-white p-1 rounded-2xl shadow-xl">
+                                        <motion.button
+                                          whileTap={{ scale: 0.8 }}
+                                          onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
+                                          className="w-9 h-9 rounded-xl bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
+                                          <Plus size={18} strokeWidth={3}/>
+                                        </motion.button>
+                                        <motion.span 
+                                          key={count}
+                                          initial={{ scale: 1.5, opacity: 0 }}
+                                          animate={{ scale: 1, opacity: 1 }}
+                                          className="font-black text-sm w-4 text-center text-white dark:text-black">
+                                          {count}
+                                        </motion.span>
+                                        <motion.button
+                                          whileTap={{ scale: 0.8 }}
+                                          onClick={(e) => { e.stopPropagation(); decrementItem(item.id); }}
+                                          className="w-9 h-9 rounded-xl bg-white/10 text-white dark:text-black flex items-center justify-center">
+                                          <Minus size={18} strokeWidth={3}/>
+                                        </motion.button>
+                                      </motion.div>
+                                    ) : (
+                                      <motion.button
+                                        key="add-btn"
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.8 }}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
+                                        className="h-11 px-6 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-black text-xs shadow-lg shadow-black/10 uppercase tracking-wider">
+                                        أضف للسلة
+                                      </motion.button>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
                               ) : (
-                                <div className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 rounded-xl">
-                                  <span className="text-[10px] font-bold text-gray-400">{is_closed ? 'مغلق' : 'انتهى'}</span>
+                                <div className="px-4 py-2 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700">
+                                  <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{is_closed ? 'مغلق' : 'نفذ'}</span>
                                 </div>
                               )}
                             </div>
                           </div>
-                        </div>
+                        </motion.div>
                       );
                     })}
                   </div>
-                </section>
+                </motion.section>
               );
             })}
           </div>
         )}
       </div>
 
-      {/* ══ CART PANEL ══ */}
-      {showCartPanel && (
-        <div className="fixed bottom-16 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 shadow-2xl rounded-t-2xl px-4 pt-3 pb-4 z-40">
-          <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mb-3"/>
-          <div className="max-h-28 overflow-y-auto mb-3">
-            {cartItems.map(item => (
-              <div key={item.id} className="flex items-center justify-between py-1.5">
-                <button onClick={() => removeItem(item.id)} className="text-red-400 p-1">
-                  <X size={14}/>
-                </button>
-                <span className="flex-1 text-right text-sm text-gray-700 dark:text-slate-300 mx-2">
-                  {item.quantity}× {item.name}
-                </span>
-                <span className="text-sm font-bold" style={{ color: p }}>
-                  {(item.price * item.quantity).toLocaleString()} د.ع
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-3">
-            <Link href="/cart"
-              className="text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95"
-              style={{ backgroundColor: p }}>
-              تأكيد الطلب
-            </Link>
-            <div className="text-right">
-              <p className="text-xs text-gray-400 dark:text-slate-500">الإجمالي</p>
-              <p className="font-bold text-lg" style={{ color: p }}>{total.toLocaleString()} د.ع</p>
+      {/* ══ CART PANEL (Floating Glass) ══ */}
+      <AnimatePresence>
+        {showCartPanel && (
+          <motion.div 
+            initial={{ y: 200, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 200, opacity: 0 }}
+            className="fixed bottom-20 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-gray-200/50 dark:border-slate-700/50 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] rounded-[2.5rem] p-6 z-40">
+            <div className="flex items-center justify-between mb-6 flex-row-reverse">
+               <div className="flex items-center gap-3">
+                 <div className="text-right">
+                   <p className="text-[10px] font-black opacity-30 uppercase tracking-widest">السلة</p>
+                   <p className="font-black text-xl">{total.toLocaleString()} د.ع</p>
+                 </div>
+                 <div className="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center shadow-xl">
+                   <ShoppingBag size={24} />
+                 </div>
+               </div>
+               <Link href="/cart" className="bg-black text-white px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform">
+                 إتمام الطلب
+               </Link>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══ EXTRAS MODAL ══ */}
-      {extrasItem && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={() => setExtrasItem(null)}>
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl p-5 pb-8" onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full mx-auto mb-4"/>
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-gray-400 text-sm">اختياري</span>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">أضف للطلب 🧂</h3>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-slate-400 text-right mb-4">اختر الإضافات التي تريدها</p>
-            <div className="space-y-2 mb-5 max-h-48 overflow-y-auto">
-              {getExtras(extrasItem).map(e => (
-                <button key={e.id}
-                  onClick={() => setSelectedExtras(prev => {
-                    const n = new Set(prev);
-                    n.has(e.id) ? n.delete(e.id) : n.add(e.id);
-                    return n;
-                  })}
-                  className="w-full flex justify-between items-center px-4 py-3 rounded-xl border transition-all bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600"
-                  style={selectedExtras.has(e.id) ? { borderColor: p, backgroundColor: p + '18' } : {}}>
-                  <span className="font-bold text-sm" style={{ color: selectedExtras.has(e.id) ? p : '#9ca3af' }}>
-                    {selectedExtras.has(e.id) ? '✓' : '○'}
-                  </span>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{e.name}</p>
-                    {e.price > 0 && <p className="text-xs" style={{ color: p }}>+{e.price.toLocaleString()} د.ع</p>}
-                    {e.price === 0 && <p className="text-gray-400 text-xs">مجاني</p>}
-                  </div>
-                </button>
+            
+            <div className="flex gap-2 overflow-x-auto pb-2 flex-row-reverse scrollbar-hide">
+              {cartItems.map(item => (
+                <motion.div 
+                  layout
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  key={item.id} 
+                  className="bg-gray-50 dark:bg-slate-800 px-4 py-2 rounded-xl flex items-center gap-2 border border-gray-100 dark:border-slate-700 whitespace-nowrap">
+                   <span className="font-black text-xs">{item.quantity}×</span>
+                   <span className="text-xs font-bold opacity-70">{item.name}</span>
+                </motion.div>
               ))}
             </div>
-            <button onClick={confirmExtras}
-              className="w-full text-white font-bold py-3.5 rounded-xl transition-all active:scale-95"
-              style={{ backgroundColor: p }}>
-              إضافة للسلة
-            </button>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* ══ CLOSED MODAL ══ */}
-      {showClosedToast && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6" onClick={() => setShowClosedToast(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-7 text-center w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
-            <p className="text-5xl mb-3">🔒</p>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-1">المطعم مغلق حاليًا</h2>
-            {opens_at && (
-              <p className="text-gray-500 dark:text-slate-400 mt-1">
-                سيفتح في <span className="font-bold text-gray-700 dark:text-slate-200">{formatOpenTime(opens_at)}</span>
-              </p>
-            )}
-            <button onClick={() => setShowClosedToast(false)}
-              className="mt-5 w-full py-3 rounded-2xl bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 font-bold active:scale-95 transition-all">
-              حسناً
-            </button>
+      {/* ══ EXTRAS MODAL ══ */}
+      <AnimatePresence>
+        {extrasItem && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setExtrasItem(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden p-8"
+            >
+              <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-8"/>
+              <h3 className="text-2xl font-black text-right mb-2">{extrasItem.name}</h3>
+              <p className="text-gray-400 text-right text-sm mb-8">اختر الإضافات التي ترغب بها</p>
+              
+              <div className="space-y-3 mb-10 max-h-[40vh] overflow-y-auto pr-2">
+                {getExtras(extrasItem).map(e => (
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    key={e.id}
+                    onClick={() => {
+                      const next = new Set(selectedExtras);
+                      next.has(e.id) ? next.delete(e.id) : next.add(e.id);
+                      setSelectedExtras(next);
+                    }}
+                    className={`w-full p-5 rounded-[1.5rem] flex items-center justify-between border-2 transition-all ${
+                      selectedExtras.has(e.id) 
+                      ? 'border-black bg-black text-white shadow-xl' 
+                      : 'border-gray-100 dark:border-slate-800 text-gray-500'
+                    }`}
+                  >
+                    <span className="font-black">+{e.price.toLocaleString()} د.ع</span>
+                    <span className="font-black text-lg">{e.name}</span>
+                  </motion.button>
+                ))}
+              </div>
+
+              <div className="flex gap-4">
+                 <motion.button 
+                   whileTap={{ scale: 0.95 }}
+                   onClick={() => setExtrasItem(null)}
+                   className="flex-1 py-5 rounded-2xl font-black text-gray-400 bg-gray-50 dark:bg-slate-800">
+                   إلغاء
+                 </motion.button>
+                 <motion.button 
+                   whileTap={{ scale: 0.95 }}
+                   onClick={confirmExtras}
+                   className="flex-[2] py-5 rounded-2xl font-black bg-black text-white shadow-2xl">
+                   تأكيد الإضافة
+                 </motion.button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       <ClientBottomNav />
     </div>
