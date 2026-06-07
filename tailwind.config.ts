@@ -6,8 +6,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        brand: '#e67e22',
-        'brand-dark': '#944a00',
+        brand: '#000000',
+        'brand-dark': '#000000',
         admin: '#2563eb',
       },
     },
