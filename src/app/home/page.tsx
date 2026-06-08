@@ -167,7 +167,7 @@ export default function HomePage() {
       <motion.header 
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="sticky top-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-gray-100/50 dark:border-slate-800/50 px-6 h-20 flex items-center justify-between shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
+        className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-gray-100/50 dark:border-slate-800/50 px-6 h-20 flex items-center justify-between shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
         <motion.button 
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
