@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Search } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
+import { useDarkMode } from '@/context/ThemeContext';
 
 const STEPS = [
   { key: 'pending',   label: 'استلام',      icon: '📋', desc: 'تم استلام طلبك وسيبدأ التجهيز' },
