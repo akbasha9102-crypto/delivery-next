@@ -37,9 +37,9 @@ export default function HomePage() {
   const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total } = useCart();
   const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded, is_closed, opens_at } = useSettings();
   
-  const brandName = "مطعم داري - Dari Restaurant";
-  const brandColor = "#000000";
-  const brandLogo = "https://i.imgur.com/Jh7bzNN.jpeg";
+  const brandName  = restaurant_name || "المطعم";
+  const brandColor = primary_color || "#000000";
+  const brandLogo  = logo_url;
   const p = brandColor; 
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -178,7 +178,7 @@ export default function HomePage() {
         
         <div className="flex flex-col items-center flex-1 mx-4">
           <h1 className="text-lg font-black tracking-tight text-center leading-tight text-black dark:text-white">{brandName}</h1>
-          <div className="w-8 h-1 bg-black dark:bg-white rounded-full mt-1 opacity-20"/>
+          <div className="w-8 h-1 rounded-full mt-1 opacity-20" style={{ backgroundColor: brandColor }}/>
         </div>
 
         {brandLogo ? (
@@ -189,7 +189,7 @@ export default function HomePage() {
             <Image src={brandLogo} alt={brandName} width={60} height={60} className="h-14 w-14 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md" unoptimized/>
           </motion.div>
         ) : (
-          <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center shadow-lg shadow-black/10">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-black/10" style={{ backgroundColor: brandColor }}>
              <ShoppingBag size={20} className="text-white"/>
           </div>
         )}
@@ -211,9 +211,10 @@ export default function HomePage() {
                 onClick={() => scrollToCategory(cat.id)}
                 className={`px-6 py-2.5 rounded-[1.2rem] text-sm font-black whitespace-nowrap transition-all duration-300 flex-shrink-0 border ${
                   isActive 
-                  ? 'bg-black text-white border-black shadow-[0_10px_20px_rgba(0,0,0,0.15)] scale-105' 
+                  ? 'text-white shadow-[0_10px_20px_rgba(0,0,0,0.15)] scale-105' 
                   : 'bg-white/70 dark:bg-slate-800/70 backdrop-blur-md text-gray-500 border-gray-100 dark:border-slate-700 hover:bg-gray-50 shadow-sm'
                 }`}
+                style={isActive ? { backgroundColor: brandColor, borderColor: brandColor } : {}}
               >
                 {cat.name}
               </motion.button>
@@ -324,7 +325,8 @@ export default function HomePage() {
                                         initial={{ opacity: 0, scale: 0.8 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.8 }}
-                                        className="flex items-center gap-2 sm:gap-3 bg-black dark:bg-white p-1 rounded-xl sm:rounded-2xl shadow-xl">
+                                        className="flex items-center gap-2 sm:gap-3 p-1 rounded-xl sm:rounded-2xl shadow-xl"
+                                        style={{ backgroundColor: brandColor }}>
                                         <motion.button
                                           whileTap={{ scale: 0.8 }}
                                           onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
@@ -354,7 +356,8 @@ export default function HomePage() {
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                         onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-                                        className="h-8 sm:h-11 px-3 sm:px-6 bg-black dark:bg-white text-white dark:text-black rounded-lg sm:rounded-2xl font-black text-[9px] sm:text-xs shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap">
+                                        className="h-8 sm:h-11 px-3 sm:px-6 text-white dark:text-black rounded-lg sm:rounded-2xl font-black text-[9px] sm:text-xs shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap"
+                                        style={{ backgroundColor: brandColor }}>
                                         إضافة
                                       </motion.button>
                                     )}
@@ -399,11 +402,11 @@ export default function HomePage() {
                    <p className="text-[10px] font-black opacity-30 uppercase tracking-widest">السلة</p>
                    <p className="font-black text-xl">{total.toLocaleString()} د.ع</p>
                  </div>
-                 <div className="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center shadow-xl">
-                   <ShoppingBag size={24} />
+                 <div className="w-12 h-12 text-white rounded-2xl flex items-center justify-center shadow-xl" style={{ backgroundColor: brandColor }}>
+                    <ShoppingBag size={22} />
                  </div>
                </div>
-               <Link href="/cart" className="bg-black text-white px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform">
+               <Link href="/cart" className="text-white px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform" style={{ backgroundColor: brandColor }}>
                  إتمام الطلب
                </Link>
             </div>
@@ -468,7 +471,8 @@ export default function HomePage() {
                       <motion.button 
                         whileTap={{ scale: 0.95 }} 
                         onClick={() => { handleAdd(selectedItem); setSelectedItem(null); }} 
-                        className="w-full py-4 sm:py-6 bg-black text-white rounded-[1.5rem] sm:rounded-[2rem] font-black text-base sm:text-lg shadow-2xl flex items-center justify-center gap-3"
+                        className="w-full py-4 sm:py-6 text-white rounded-[1.5rem] sm:rounded-[2rem] font-black text-base sm:text-lg shadow-2xl flex items-center justify-center gap-3"
+                        style={{ backgroundColor: brandColor }}
                       >
                         <Plus size={20} />
                         إضافة إلى السلة
@@ -485,7 +489,10 @@ export default function HomePage() {
                   <p className="text-gray-400 text-right text-xs sm:text-sm mb-6 sm:mb-8">اختر الإضافات التي ترغب بها</p>
                   <div className="space-y-2 sm:space-y-3 mb-8 sm:mb-10 max-h-[35vh] overflow-y-auto pr-2 scrollbar-hide">
                     {getExtras(extrasItem).map(e => (
-                      <motion.button whileTap={{ scale: 0.98 }} key={e.id} onClick={() => { const next = new Set(selectedExtras); next.has(e.id) ? next.delete(e.id) : next.add(e.id); setSelectedExtras(next); }} className={`w-full p-4 sm:p-5 rounded-[1.2rem] sm:rounded-[1.5rem] flex items-center justify-between border-2 transition-all ${selectedExtras.has(e.id) ? 'border-black bg-black text-white shadow-xl' : 'border-gray-100 dark:border-slate-800 text-gray-500'}`}>
+                      <motion.button whileTap={{ scale: 0.98 }} key={e.id} onClick={() => { const next = new Set(selectedExtras); next.has(e.id) ? next.delete(e.id) : next.add(e.id); setSelectedExtras(next); }} 
+                        className={`w-full p-4 sm:p-5 rounded-[1.2rem] sm:rounded-[1.5rem] flex items-center justify-between border-2 transition-all ${selectedExtras.has(e.id) ? 'text-white shadow-xl' : 'border-gray-100 dark:border-slate-800 text-gray-500'}`}
+                        style={selectedExtras.has(e.id) ? { backgroundColor: brandColor, borderColor: brandColor } : {}}
+                      >
                         <span className="font-black text-sm sm:text-base">+{e.price.toLocaleString()} د.ع</span>
                         <span className="font-black text-base sm:text-lg">{e.name}</span>
                       </motion.button>
@@ -493,7 +500,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex gap-3 sm:gap-4">
                     <motion.button whileTap={{ scale: 0.95 }} onClick={() => setExtrasItem(null)} className="flex-1 py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black text-gray-400 bg-gray-50 dark:bg-slate-800 text-sm sm:text-base">إلغاء</motion.button>
-                    <motion.button whileTap={{ scale: 0.95 }} onClick={confirmExtras} className="flex-[2] py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black bg-black text-white shadow-2xl text-sm sm:text-base">تأكيد الإضافة</motion.button>
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={confirmExtras} className="flex-[2] py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black text-white shadow-2xl text-sm sm:text-base" style={{ backgroundColor: brandColor }}>تأكيد الإضافة</motion.button>
                   </div>
                 </div>
               )}

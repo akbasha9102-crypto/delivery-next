@@ -123,23 +123,64 @@ export default function BrandingPage() {
 
           {/* Preview */}
           <div className="space-y-4">
-             <p className="text-right text-xs font-black opacity-30 uppercase tracking-widest px-2">معاينة مباشرة</p>
-             <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border-4 border-black/5 shadow-2xl space-y-8 flex flex-col items-center justify-center min-h-[400px]">
-                {form.logo ? (
-                  <img src={form.logo} alt="Preview" className="h-24 w-24 object-contain rounded-2xl border-4 border-gray-50" />
-                ) : (
-                  <div className="h-24 w-24 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-300">
-                    <ImageIcon size={40} />
+             <p className="text-right text-xs font-black opacity-30 uppercase tracking-widest px-2">معاينة مباشرة (شاشة الجوال)</p>
+             <div className="bg-gray-50 dark:bg-slate-950 p-4 rounded-[3rem] border-8 border-gray-200 dark:border-slate-800 shadow-2xl min-h-[500px] flex flex-col overflow-hidden relative">
+                
+                {/* Simulated Header */}
+                <div className="bg-white dark:bg-slate-900 px-4 h-16 flex items-center justify-between shadow-sm rounded-t-[1.5rem]">
+                  <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                    <Moon size={14} className="text-gray-400"/>
                   </div>
-                )}
-                <div className="text-center space-y-2">
-                  <h2 className="text-2xl font-black" style={{ color: form.color }}>{form.name || 'اسم المطعم'}</h2>
-                  <div className="w-12 h-1.5 mx-auto rounded-full" style={{ backgroundColor: form.color, opacity: 0.2 }} />
+                  <div className="text-center">
+                    <p className="text-[10px] font-black truncate max-w-[120px]">{form.name || 'اسم المطعم'}</p>
+                    <div className="w-6 h-0.5 mx-auto rounded-full opacity-20" style={{ backgroundColor: form.color }}/>
+                  </div>
+                  {form.logo ? (
+                    <img src={form.logo} alt="Logo" className="h-10 w-10 object-cover rounded-lg border border-gray-100" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: form.color }}>
+                      <ImageIcon size={16} />
+                    </div>
+                  )}
                 </div>
-                <div className="w-full p-6 rounded-3xl text-white font-black text-center shadow-lg" style={{ backgroundColor: form.color }}>
-                  زر تجريبي
+
+                <div className="p-4 space-y-4">
+                  {/* Simulated Category Pills */}
+                  <div className="flex gap-2 overflow-x-hidden flex-row-reverse">
+                    <div className="px-4 py-2 rounded-xl text-[10px] font-black text-white" style={{ backgroundColor: form.color }}>القسم المختار</div>
+                    <div className="px-4 py-2 rounded-xl text-[10px] font-black bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-400">قسم آخر</div>
+                    <div className="px-4 py-2 rounded-xl text-[10px] font-black bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-400">قسم ثالث</div>
+                  </div>
+
+                  {/* Simulated Card */}
+                  <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-3 shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col gap-2">
+                    <div className="h-32 bg-gray-50 dark:bg-slate-800 rounded-[1.5rem] flex items-center justify-center text-gray-200">
+                      <ImageIcon size={32} />
+                    </div>
+                    <div className="flex justify-between items-center flex-row-reverse px-1">
+                      <div className="text-right">
+                        <p className="font-black text-sm">اسم المنتج</p>
+                        <p className="text-xs font-black" style={{ color: form.color }}>15,000 د.ع</p>
+                      </div>
+                      <div className="h-8 px-4 rounded-xl text-white text-[10px] font-black flex items-center justify-center" style={{ backgroundColor: form.color }}>
+                        إضافة
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Bar Info */}
+                <div className="absolute bottom-6 left-6 right-6 p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-gray-100 dark:border-slate-800 flex items-center justify-between flex-row-reverse">
+                   <div className="flex items-center gap-2">
+                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: form.color }}>
+                       <ShoppingBag size={14} />
+                     </div>
+                     <p className="text-[10px] font-black">السلة</p>
+                   </div>
+                   <div className="px-4 py-2 rounded-xl text-white text-[10px] font-black" style={{ backgroundColor: form.color }}>إتمام الطلب</div>
                 </div>
              </div>
+             <p className="text-center text-[10px] text-gray-400 font-medium">الشعار يظهر دائماً في الجهة اليسرى للهيدر</p>
           </div>
         </div>
       </motion.div>
