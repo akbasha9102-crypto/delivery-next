@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useSettings } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function BrandingPage() {
