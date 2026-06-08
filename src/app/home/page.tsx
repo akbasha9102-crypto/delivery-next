@@ -249,7 +249,7 @@ export default function HomePage() {
                     <div className="flex-1 h-[2px] bg-gradient-to-l from-black/10 to-transparent dark:from-white/10"/>
                   </div>
 
-                  {/* ── Items Grid (Slightly larger) ── */}
+                  {/* ── Items Grid ── */}
                   <div className="grid grid-cols-2 gap-5 sm:gap-7 md:gap-10 px-1 sm:px-2">
                     {catItems.map((item, itemIdx) => {
                       const count  = qty(item.id);
@@ -387,8 +387,9 @@ export default function HomePage() {
             className="fixed bottom-20 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-gray-200/50 dark:border-slate-700/50 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] rounded-[2.5rem] p-6 z-40">
             <div className="flex items-center justify-between mb-6 flex-row-reverse">
                <div className="flex items-center gap-3">
+                 {/* زر مسح السلة المضاف */}
                  <button 
-                   onClick={() => { if(confirm('هل تريد إفراغ السلة؟')) clearCart(); }}
+                   onClick={() => { if(confirm('هل تريد إفراغ السلة بالكامل؟')) clearCart(); }}
                    className="w-10 h-10 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl flex items-center justify-center transition-colors hover:bg-red-100 dark:hover:bg-red-900/40"
                    title="إفراغ السلة"
                  >
