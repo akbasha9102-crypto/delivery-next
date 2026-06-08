@@ -195,8 +195,8 @@ export default function HomePage() {
         )}
       </motion.header>
 
-      {/* ══ CATEGORY PILLS (Fixed Z-Index and Sticky) ══ */}
-      <div className="sticky top-20 z-40 px-0 sm:px-4 py-4 bg-gray-50/80 dark:bg-slate-950/80 backdrop-blur-md shadow-sm">
+      {/* ══ CATEGORY PILLS (Sticky at top-0) ══ */}
+      <div className="sticky top-0 z-40 px-0 sm:px-4 py-4 bg-gray-50/95 dark:bg-slate-950/95 backdrop-blur-md shadow-sm border-b border-gray-100 dark:border-slate-800">
         <div ref={pillsRef} className={`flex gap-3 overflow-x-auto scrollbar-hide flex-row-reverse pb-2 px-4 ${is_closed ? 'pointer-events-none opacity-50' : ''}`}>
           {[{ id: 'all', name: 'الكل' } as Category, ...categories].map((cat, idx) => {
             const isActive = activeCategory === cat.id;
