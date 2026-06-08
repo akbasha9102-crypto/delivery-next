@@ -111,8 +111,7 @@ export default function BrandingPage() {
             <button 
               onClick={handleSave}
               disabled={saving}
-              className="w-full py-5 text-white rounded-[1.5rem] font-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all disabled:opacity-50"
-              style={{ backgroundColor: form.color }}
+              className="w-full py-5 bg-black text-white rounded-[1.5rem] font-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all disabled:opacity-50"
             >
               {saving ? <Loader2 className="animate-spin" /> : <Save size={20}/>}
               حفظ التعديلات

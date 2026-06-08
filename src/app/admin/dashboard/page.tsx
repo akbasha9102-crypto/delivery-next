@@ -199,7 +199,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose }:
 
         <div className="px-5 pt-3 flex-shrink-0">
           <button onClick={handleSave} disabled={saving}
-            className="w-full py-4 rounded-2xl bg-[#f97316] text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60">
+            className="w-full py-4 rounded-2xl bg-black text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60">
             {saving ? 'جاري الحفظ...' : 'حفظ الجدولة'}
           </button>
         </div>

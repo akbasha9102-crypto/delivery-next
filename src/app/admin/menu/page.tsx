@@ -4,7 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { AdminGuard } from '@/components/AdminGuard';
-import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, Palette } from 'lucide-react';
+import { BrandingModal } from '@/components/BrandingModal';
 
 type Category = { id: string; name: string; color?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
@@ -42,6 +43,7 @@ function MenuPage() {
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showReorder, setShowReorder] = useState(false);
   const [reorderCats, setReorderCats] = useState<Category[]>([]);
+  const [showBranding, setShowBranding] = useState(false);
 
   const fetchMenu = async () => {
     setLoading(true);
@@ -163,7 +165,7 @@ function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[92vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveEdit} disabled={saving} className="bg-[#f97316] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={saveEdit} disabled={saving} className="bg-black text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">✏️ تعديل الطبق</h3>
@@ -221,7 +223,7 @@ function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[88vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveReorder} disabled={saving} className="bg-[#f97316] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={saveReorder} disabled={saving} className="bg-black text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">ترتيب الأقسام</h3>
@@ -257,9 +259,18 @@ function MenuPage() {
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 text-center stagger-0">
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between stagger-0">
+        <button 
+          onClick={() => setShowBranding(true)}
+          className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-slate-700 text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+        >
+          <Palette size={20} />
+        </button>
         <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">تعديل المنيو</h1>
+        <div className="w-10" />
       </header>
+
+      <BrandingModal isOpen={showBranding} onClose={() => setShowBranding(false)} />
 
       {toast && (
         <div className={`mx-4 mt-3 px-4 py-3 rounded-xl border text-center font-bold text-sm ${toast.ok ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'}`}>

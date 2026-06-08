@@ -15,7 +15,6 @@ const adminTabs = [
   { href: '/admin/dashboard',   icon: LayoutDashboard, label: 'اللوحة' },
   { href: '/admin/local',       icon: Store,           label: 'المحل' },
   { href: '/admin/menu',        icon: UtensilsCrossed, label: 'المنيو' },
-  { href: '/admin/settings',    icon: Palette,         label: 'الهوية' },
   { href: '/admin/drivers',     icon: Car,             label: 'السواقون' },
   { href: '/admin/statistics',  icon: BarChart2,       label: 'الإحصاء' },
 ];
