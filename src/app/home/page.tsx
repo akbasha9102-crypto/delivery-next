@@ -250,7 +250,7 @@ export default function HomePage() {
                   </div>
 
                   {/* ── Items Grid ── */}
-                  <div className="grid grid-cols-2 gap-5 sm:gap-7 md:gap-10 px-1 sm:px-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7 md:gap-10 px-1 sm:px-2">
                     {catItems.map((item, itemIdx) => {
                       const count  = qty(item.id);
                       const status = getStatus(item);
@@ -267,10 +267,10 @@ export default function HomePage() {
                             if (is_closed) setShowClosedToast(true);
                             else setSelectedItem(item);
                           }}
-                          className={`group bg-white dark:bg-slate-900 rounded-[2.2rem] sm:rounded-[2.8rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}>
+                          className={`group bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}>
 
                           {/* Image Wrapper */}
-                          <div className="relative flex-shrink-0 overflow-hidden m-2.5 sm:m-4 rounded-[1.8rem] sm:rounded-[2.2rem]">
+                          <div className="relative flex-shrink-0 overflow-hidden m-3 rounded-[2.2rem]">
                             <motion.div
                               animate={{ scale: 1 + Math.min(count, 5) * 0.05 }}
                               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
@@ -279,7 +279,7 @@ export default function HomePage() {
                                 src={item.image_url || 'https://placehold.co/400x300/f5f5f5/ccc?text='}
                                 alt={item.name}
                                 width={400} height={300}
-                                className={`w-full h-40 sm:h-48 md:h-56 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
+                                className={`w-full h-48 sm:h-56 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
                                 unoptimized
                               />
                             </motion.div>
@@ -297,26 +297,26 @@ export default function HomePage() {
                           </div>
 
                           {/* Details */}
-                          <div className="p-5 sm:p-6 flex flex-col flex-1">
-                            <p className="font-black text-base sm:text-lg md:text-xl text-gray-900 dark:text-slate-100 text-right leading-tight mb-2">
+                          <div className="p-6 flex flex-col flex-1">
+                            <p className="font-black text-lg sm:text-xl text-gray-900 dark:text-slate-100 text-right leading-tight mb-2">
                               {item.name}
                             </p>
                             {item.description && (
-                              <p className="text-[10px] sm:text-[12px] text-gray-400 dark:text-slate-500 text-right mb-4 sm:mb-6 md:mb-8 line-clamp-2 leading-relaxed font-medium">
+                              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-6 line-clamp-2 leading-relaxed font-medium">
                                 {item.description}
                               </p>
                             )}
 
-                            <div className="mt-auto flex items-center justify-between flex-row-reverse">
-                              <div className="text-right">
-                                <p className="font-black text-lg sm:text-xl md:text-2xl text-black dark:text-white">
+                            <div className="mt-auto flex items-center justify-between flex-row-reverse gap-4">
+                              <div className="text-right flex-shrink-0">
+                                <p className="font-black text-xl sm:text-2xl text-black dark:text-white">
                                   {item.price.toLocaleString()}
                                 </p>
-                                <p className="text-[9px] sm:text-[10px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>
+                                <p className="text-[10px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>
                               </div>
                               
                               {isAvailable ? (
-                                <div className="relative h-10 sm:h-12 flex items-center">
+                                <div className="relative h-12 flex items-center">
                                   <AnimatePresence mode="wait">
                                     {count > 0 ? (
                                       <motion.div 
@@ -324,24 +324,24 @@ export default function HomePage() {
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: 20 }}
-                                        className="flex items-center gap-2 sm:gap-4 bg-black dark:bg-white p-1 rounded-xl sm:rounded-2xl shadow-xl">
+                                        className="flex items-center gap-3 bg-black dark:bg-white p-1 rounded-2xl shadow-xl">
                                         <motion.button
                                           whileTap={{ scale: 0.8 }}
                                           onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
-                                          className="w-8 h-8 sm:w-10 h-10 rounded-lg sm:rounded-xl bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
+                                          className="w-10 h-10 rounded-xl bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
                                           <Plus size={18} strokeWidth={3}/>
                                         </motion.button>
                                         <motion.span 
                                           key={count}
                                           initial={{ scale: 1.5, opacity: 0 }}
                                           animate={{ scale: 1, opacity: 1 }}
-                                          className="font-black text-sm sm:text-base w-4 sm:w-5 text-center text-white dark:text-black">
+                                          className="font-black text-base w-5 text-center text-white dark:text-black">
                                           {count}
                                         </motion.span>
                                         <motion.button
                                           whileTap={{ scale: 0.8 }}
                                           onClick={(e) => { e.stopPropagation(); decrementItem(item.id); }}
-                                          className="w-8 h-8 sm:w-10 h-10 rounded-lg sm:rounded-xl bg-white/10 text-white dark:text-black flex items-center justify-center">
+                                          className="w-10 h-10 rounded-xl bg-white/10 text-white dark:text-black flex items-center justify-center">
                                           <Minus size={18} strokeWidth={3}/>
                                         </motion.button>
                                       </motion.div>
@@ -354,7 +354,7 @@ export default function HomePage() {
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                         onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-                                        className="h-9 sm:h-12 px-4 sm:px-8 bg-black dark:bg-white text-white dark:text-black rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-sm shadow-lg shadow-black/10 uppercase tracking-wider">
+                                        className="h-11 px-6 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-black text-xs shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap">
                                         أضف للسلة
                                       </motion.button>
                                     )}
