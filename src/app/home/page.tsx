@@ -38,8 +38,13 @@ export default function HomePage() {
   const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded, is_closed, opens_at } = useSettings();
   
   const brandName  = restaurant_name || "المطعم";
-  const brandColor = primary_color || "#000000";
-  const brandLogo  = logo_url;
+  const rawColor   = primary_color || "#000000";
+  
+  // Smart Color Logic: if dark mode is on and brandColor is pure black, use white
+  const isTooDark = rawColor === '#000000' || rawColor.toLowerCase() === '#121212';
+  const brandColor = (dark && isTooDark) ? '#ffffff' : rawColor;
+  
+  const brandLogo = logo_url;
   const p = brandColor; 
 
   const [categories, setCategories] = useState<Category[]>([]);

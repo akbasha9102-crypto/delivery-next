@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { User, Pencil, Check, MapPin, ChevronDown, Phone, Home as HomeIcon } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
+import { useDarkMode } from '@/context/ThemeContext';
 
 const KEYS = {
   name:     'deliveryName',
@@ -27,19 +29,26 @@ const BASRA_DISTRICTS = [
   { id: 'khor',       name: 'خور الزبير', desc: 'منطقة صناعية وميناء جنوب الزبير' },
 ] as const;
 
-function InfoRow({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+function InfoRow({ label, value, icon, color }: { label: string; value: string; icon: React.ReactNode; color: string }) {
   return (
     <div className="flex justify-between items-center py-3.5 border-b border-gray-50 dark:border-slate-700 last:border-0">
       <span className="text-gray-800 dark:text-slate-200 font-semibold text-sm">{value}</span>
       <div className="flex items-center gap-2">
         <span className="text-gray-400 dark:text-slate-500 text-sm">{label}</span>
-        <span className="text-[#e67e22]">{icon}</span>
+        <span style={{ color }}>{icon}</span>
       </div>
     </div>
   );
 }
 
 export default function ProfilePage() {
+  const { dark } = useDarkMode();
+  const { restaurant_name, primary_color } = useSettings();
+  
+  const rawColor   = primary_color || "#e67e22";
+  const isTooDark  = rawColor === '#000000' || rawColor.toLowerCase() === '#121212';
+  const brandColor = (dark && isTooDark) ? '#ffffff' : rawColor;
+
   const [name,     setName]     = useState('');
   const [phone,    setPhone]    = useState('');
   const [district, setDistrict] = useState('');
@@ -79,15 +88,15 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
-        <h1 className="text-xl font-bold text-[#944a00] text-center">معلوماتي</h1>
+        <h1 className="text-xl font-bold text-center" style={{ color: brandColor }}>معلوماتي</h1>
       </header>
 
       <div className="px-4 pt-5 max-w-lg mx-auto space-y-4">
 
         {/* Avatar */}
         <div className="flex justify-center pt-2 pb-1">
-          <div className="w-20 h-20 rounded-full bg-orange-100 dark:bg-orange-900/30 border-4 border-[#e67e22]/30 flex items-center justify-center">
-            <User size={36} className="text-[#e67e22]"/>
+          <div className="w-20 h-20 rounded-full flex items-center justify-center border-4" style={{ backgroundColor: `${brandColor}15`, borderColor: `${brandColor}40` }}>
+            <User size={36} style={{ color: brandColor }}/>
           </div>
         </div>
 
@@ -97,7 +106,8 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-50 dark:border-slate-700">
               <button
                 onClick={() => setEditing(true)}
-                className="flex items-center gap-1.5 text-[#e67e22] font-semibold text-sm active:scale-95 transition-all"
+                className="flex items-center gap-1.5 font-semibold text-sm active:scale-95 transition-all"
+                style={{ color: brandColor }}
               >
                 <Pencil size={14}/>
                 تعديل
@@ -106,13 +116,13 @@ export default function ProfilePage() {
             </div>
 
             <div className="px-5 pb-2">
-              <InfoRow label="الاسم"    value={name}   icon={<User size={14}/>}/>
-              <InfoRow label="الهاتف"   value={phone}  icon={<Phone size={14}/>}/>
+              <InfoRow label="الاسم"    value={name}   icon={<User size={14}/>} color={brandColor}/>
+              <InfoRow label="الهاتف"   value={phone}  icon={<Phone size={14}/>} color={brandColor}/>
               {selectedDistrict && (
-                <InfoRow label="المنطقة" value={selectedDistrict.name} icon={<MapPin size={14}/>}/>
+                <InfoRow label="المنطقة" value={selectedDistrict.name} icon={<MapPin size={14}/>} color={brandColor}/>
               )}
               {address.trim() && (
-                <InfoRow label="العنوان" value={address} icon={<HomeIcon size={14}/>}/>
+                <InfoRow label="العنوان" value={address} icon={<HomeIcon size={14}/>} color={brandColor}/>
               )}
             </div>
           </div>
@@ -126,19 +136,22 @@ export default function ProfilePage() {
             <input
               type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder="الاسم *" dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22]"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 mb-1"
+              style={{ '--tw-ring-color': brandColor } as any}
             />
 
             <input
               type="tel" value={phone} onChange={e => setPhone(e.target.value)}
               placeholder="رقم الهاتف *" dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22]"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 mb-1"
+              style={{ '--tw-ring-color': brandColor } as any}
             />
 
             <div className="relative">
               <select
                 value={district} onChange={e => setDistrict(e.target.value)} dir="rtl"
-                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#e67e22] appearance-none"
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 appearance-none"
+                style={{ '--tw-ring-color': brandColor } as any}
               >
                 <option value="">اختر منطقة التوصيل</option>
                 {BASRA_DISTRICTS.map(d => (
@@ -149,8 +162,8 @@ export default function ProfilePage() {
             </div>
 
             {selectedDistrict && (
-              <div className="bg-orange-50 dark:bg-orange-900/15 border border-orange-200 dark:border-orange-800/40 rounded-xl px-4 py-2.5 flex items-center gap-2.5">
-                <MapPin size={14} className="text-[#e67e22] flex-shrink-0"/>
+              <div className="border rounded-xl px-4 py-2.5 flex items-center gap-2.5" style={{ backgroundColor: `${brandColor}10`, borderColor: `${brandColor}30` }}>
+                <MapPin size={14} className="flex-shrink-0" style={{ color: brandColor }}/>
                 <p className="text-sm text-gray-600 dark:text-slate-400 text-right flex-1">{selectedDistrict.desc}</p>
               </div>
             )}
@@ -158,12 +171,14 @@ export default function ProfilePage() {
             <input
               type="text" value={address} onChange={e => setAddress(e.target.value)}
               placeholder="تفاصيل العنوان (شارع، زقاق...)" dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22]"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 mb-1"
+              style={{ '--tw-ring-color': brandColor } as any}
             />
 
             <button
               onClick={handleSave}
-              className="w-full bg-[#e67e22] hover:bg-[#d35400] text-white font-bold py-3.5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+              className="w-full text-white font-bold py-3.5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg"
+              style={{ backgroundColor: brandColor }}
             >
               <Check size={18}/>
               حفظ المعلومات

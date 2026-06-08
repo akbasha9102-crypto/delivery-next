@@ -72,23 +72,26 @@ export default function BrandingPage() {
               />
             </div>
 
-            <div className="space-y-2 text-right">
+            <div className="space-y-4 text-right">
               <label className="flex items-center justify-end gap-2 text-sm font-black opacity-50">
                 اللون الأساسي <Palette size={16}/>
               </label>
-              <div className="flex gap-4">
-                 <input 
-                  type="color" 
-                  value={form.color}
-                  onChange={e => setForm({...form, color: e.target.value})}
-                  className="w-20 h-14 bg-transparent cursor-pointer rounded-xl overflow-hidden border-none"
-                />
-                <input 
-                  type="text" 
-                  value={form.color}
-                  onChange={e => setForm({...form, color: e.target.value})}
-                  className="flex-1 p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-2 focus:ring-black font-mono text-center"
-                />
+              <div className="flex flex-col items-center gap-4">
+                 <div 
+                   className="w-full h-32 rounded-[2rem] shadow-inner flex items-center justify-center cursor-pointer relative overflow-hidden group border-4 border-gray-50 dark:border-slate-800"
+                   style={{ backgroundColor: form.color }}
+                 >
+                    <input 
+                      type="color" 
+                      value={form.color}
+                      onChange={e => setForm({...form, color: e.target.value})}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl text-white font-mono text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                      {form.color.toUpperCase()}
+                    </div>
+                 </div>
+                 <p className="text-[10px] text-gray-400 font-bold">انقر على المربع أعلاه لتغيير اللون</p>
               </div>
             </div>
 
@@ -108,7 +111,8 @@ export default function BrandingPage() {
             <button 
               onClick={handleSave}
               disabled={saving}
-              className="w-full py-5 bg-black text-white rounded-[1.5rem] font-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all disabled:opacity-50"
+              className="w-full py-5 text-white rounded-[1.5rem] font-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all disabled:opacity-50"
+              style={{ backgroundColor: form.color }}
             >
               {saving ? <Loader2 className="animate-spin" /> : <Save size={20}/>}
               حفظ التعديلات
