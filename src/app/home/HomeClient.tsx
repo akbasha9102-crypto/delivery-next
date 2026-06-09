@@ -51,15 +51,17 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   const brandLogo = logo_url;
   const p = brandColor;
 
-  const textOnBrand = (() => {
-    const hex = brandColor.replace('#', '');
-    const r = parseInt(hex.slice(0, 2), 16) / 255;
-    const g = parseInt(hex.slice(2, 4), 16) / 255;
-    const b = parseInt(hex.slice(4, 6), 16) / 255;
+  const getTextColor = (hex: string): string => {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16) / 255;
+    const g = parseInt(h.slice(2, 4), 16) / 255;
+    const b = parseInt(h.slice(4, 6), 16) / 255;
     const toLinear = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
     const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
     return L > 0.179 ? '#000000' : '#ffffff';
-  })();
+  };
+
+  const textOnBrand = getTextColor(brandColor);
 
   const [categories,   setCategories]   = useState<Category[]>(initialCategories);
   const [items,        setItems]        = useState<Item[]>(initialItems);
@@ -213,6 +215,8 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
           )}
           {[{ id: 'all', name: 'الكل' } as Category, ...categories].map((cat, idx) => {
             const isActive = activeCategory === cat.id;
+            const catColor = cat.color || brandColor;
+            const catTextColor = getTextColor(catColor);
             return (
               <motion.button
                 key={cat.id}
@@ -227,7 +231,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                   ? 'shadow-[0_10px_20px_rgba(0,0,0,0.15)] scale-105'
                   : 'bg-white/70 dark:bg-slate-800/70 backdrop-blur-md text-gray-500 border-gray-100 dark:border-slate-700 hover:bg-gray-50 shadow-sm'
                 }`}
-                style={isActive ? { backgroundColor: brandColor, borderColor: brandColor, color: textOnBrand } : {}}
+                style={isActive ? { backgroundColor: catColor, borderColor: catColor, color: catTextColor } : {}}
               >
                 {cat.name}
               </motion.button>
@@ -256,6 +260,8 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
           {categories.map((cat) => {
             const catItems = items.filter(i => i.category_id === cat.id);
             if (catItems.length === 0) return null;
+            const catColor = cat.color || brandColor;
+            const catTextColor = getTextColor(catColor);
             return (
               <motion.section
                 key={cat.id}
@@ -343,7 +349,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                                       animate={{ opacity: 1, scale: 1 }}
                                       exit={{ opacity: 0, scale: 0.8 }}
                                       className="flex items-center gap-2 sm:gap-3 p-1 rounded-full shadow-xl"
-                                      style={{ backgroundColor: brandColor }}>
+                                      style={{ backgroundColor: catColor }}>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
@@ -355,14 +361,14 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                                         initial={{ scale: 1.5, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
                                         className="font-black text-xs sm:text-base w-4 sm:w-5 text-center"
-                                        style={{ color: textOnBrand }}>
+                                        style={{ color: catTextColor }}>
                                         {count}
                                       </motion.span>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={(e) => { e.stopPropagation(); decrementItem(item.id); }}
                                         className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white/10 flex items-center justify-center"
-                                        style={{ color: textOnBrand }}>
+                                        style={{ color: catTextColor }}>
                                         <Minus size={14} strokeWidth={3}/>
                                       </motion.button>
                                     </motion.div>
@@ -376,7 +382,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                                       whileTap={{ scale: 0.95 }}
                                       onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
                                       className="h-10 sm:h-12 px-5 sm:px-7 rounded-full font-black text-xs sm:text-sm shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap"
-                                      style={{ backgroundColor: brandColor, color: textOnBrand }}>
+                                      style={{ backgroundColor: catColor, color: catTextColor }}>
                                       إضافة
                                     </motion.button>
                                   )}
@@ -459,7 +465,11 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] sm:rounded-[3.5rem] shadow-2xl overflow-hidden"
             >
-              {selectedItem && !extrasItem && (
+              {selectedItem && !extrasItem && (() => {
+                const modalCat = categories.find(c => c.id === selectedItem.category_id);
+                const modalColor = modalCat?.color || brandColor;
+                const modalTextColor = getTextColor(modalColor);
+                return (
                 <div className="flex flex-col">
                    <div className="relative h-64 sm:h-72 w-full">
                       <Image
@@ -490,16 +500,21 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => { handleAdd(selectedItem); setSelectedItem(null); }}
                         className="w-full py-4 sm:py-6 rounded-[1.5rem] sm:rounded-[2rem] font-black text-base sm:text-lg shadow-2xl flex items-center justify-center gap-3"
-                        style={{ backgroundColor: brandColor, color: textOnBrand }}
+                        style={{ backgroundColor: modalColor, color: modalTextColor }}
                       >
                         <Plus size={20} />
                         إضافة إلى السلة
                       </motion.button>
                    </div>
                 </div>
-              )}
+                );
+              })()}
 
-              {extrasItem && (
+              {extrasItem && (() => {
+                const modalCat = categories.find(c => c.id === extrasItem.category_id);
+                const modalColor = modalCat?.color || brandColor;
+                const modalTextColor = getTextColor(modalColor);
+                return (
                 <div className="p-6 sm:p-10">
                   <div className="w-10 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:mb-8"/>
                   <h3 className="text-xl sm:text-2xl font-black text-right mb-2">{extrasItem.name}</h3>
@@ -508,7 +523,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                     {getExtras(extrasItem).map(e => (
                       <motion.button whileTap={{ scale: 0.98 }} key={e.id} onClick={() => { const next = new Set(selectedExtras); next.has(e.id) ? next.delete(e.id) : next.add(e.id); setSelectedExtras(next); }}
                         className={`w-full p-4 sm:p-5 rounded-[1.2rem] sm:rounded-[1.5rem] flex items-center justify-between border-2 transition-all ${selectedExtras.has(e.id) ? 'shadow-xl' : 'border-gray-100 dark:border-slate-800 text-gray-500'}`}
-                        style={selectedExtras.has(e.id) ? { backgroundColor: brandColor, borderColor: brandColor, color: textOnBrand } : {}}
+                        style={selectedExtras.has(e.id) ? { backgroundColor: modalColor, borderColor: modalColor, color: modalTextColor } : {}}
                       >
                         <span className="font-black text-sm sm:text-base">+{e.price.toLocaleString()} د.ع</span>
                         <span className="font-black text-base sm:text-lg">{e.name}</span>
@@ -517,10 +532,11 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                   </div>
                   <div className="flex gap-3 sm:gap-4">
                     <motion.button whileTap={{ scale: 0.95 }} onClick={() => setExtrasItem(null)} className="flex-1 py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black text-gray-400 bg-gray-50 dark:bg-slate-800 text-sm sm:text-base">إلغاء</motion.button>
-                    <motion.button whileTap={{ scale: 0.95 }} onClick={confirmExtras} className="flex-[2] py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black shadow-2xl text-sm sm:text-base" style={{ backgroundColor: brandColor, color: textOnBrand }}>تأكيد الإضافة</motion.button>
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={confirmExtras} className="flex-[2] py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black shadow-2xl text-sm sm:text-base" style={{ backgroundColor: modalColor, color: modalTextColor }}>تأكيد الإضافة</motion.button>
                   </div>
                 </div>
-              )}
+                );
+              })()}
             </motion.div>
           </div>
         )}
