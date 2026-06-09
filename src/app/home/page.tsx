@@ -231,8 +231,29 @@ export default function HomePage() {
       {/* ══ CONTENT ══ */}
       <div className="px-4 pt-2">
         {loading ? (
-          <div className="flex justify-center mt-24">
-            <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin" />
+          <div className="space-y-12 pt-2">
+            {[0, 1].map(s => (
+              <div key={s}>
+                <div className="h-7 w-28 bg-gray-200 dark:bg-slate-800 rounded-xl mb-6 mr-2 animate-pulse" />
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-7 md:gap-10 px-1 sm:px-2">
+                  {[0, 1, 2, 3].map(i => (
+                    <div key={i} className="bg-white dark:bg-slate-900 rounded-[1.8rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100 dark:border-slate-800 flex flex-col">
+                      <div className="m-2 rounded-[1.4rem] sm:rounded-[2.2rem] h-32 sm:h-56 bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                        <div className="w-8 h-8 border-[3px] rounded-full animate-spin" style={{ borderColor: `${p}40`, borderTopColor: p }} />
+                      </div>
+                      <div className="p-3 sm:p-6 space-y-2">
+                        <div className="h-4 bg-gray-100 dark:bg-slate-800 rounded-lg w-3/4 ml-auto animate-pulse" />
+                        <div className="h-3 bg-gray-100 dark:bg-slate-800 rounded-lg w-1/2 ml-auto animate-pulse" />
+                        <div className="flex justify-between items-center mt-4">
+                          <div className="h-8 w-16 bg-gray-100 dark:bg-slate-800 rounded-xl animate-pulse" />
+                          <div className="h-5 w-12 bg-gray-100 dark:bg-slate-800 rounded-lg animate-pulse" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="space-y-12">
@@ -240,12 +261,8 @@ export default function HomePage() {
               const catItems = items.filter(i => i.category_id === cat.id);
               if (catItems.length === 0) return null;
               return (
-                <motion.section 
-                  key={cat.id} 
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  transition={{ duration: 0.6, delay: catIdx * 0.1 }}
+                <motion.section
+                  key={cat.id}
                   ref={el => { sectionRefs.current[cat.id] = el; }}>
 
                   <div className="flex items-center gap-4 mb-6 flex-row-reverse px-2">
@@ -262,12 +279,8 @@ export default function HomePage() {
                       const status = getStatus(item);
                       const isAvailable = !is_closed && status === 'available';
                       return (
-                        <motion.div 
+                        <motion.div
                           key={item.id}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          whileInView={{ opacity: 1, scale: 1 }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 0.4, delay: itemIdx * 0.05 }}
                           whileHover={{ y: -8 }}
                           onClick={() => { 
                             if (is_closed) setShowClosedToast(true);
