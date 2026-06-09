@@ -303,10 +303,10 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                             {(is_closed || status !== 'available') && (
                               <motion.div
                                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                className="absolute inset-0 flex items-center justify-center backdrop-blur-md bg-black/35">
+                                className="absolute inset-0 flex items-center justify-center bg-black/20">
                                 <div className="bg-white px-5 py-2.5 rounded-2xl shadow-2xl transform -rotate-2">
                                   <p className="text-gray-900 text-sm font-black tracking-widest">
-                                    {is_closed ? 'مغلق' : status === 'unavailable' ? 'نفذ' : 'غير متوفر'}
+                                    {is_closed ? 'مغلق' : status === 'unavailable' ? 'غير متوفر' : 'انتهى'}
                                   </p>
                                 </div>
                               </motion.div>
@@ -385,7 +385,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                             ) : (
                               <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-100 dark:bg-slate-700 rounded-xl text-center">
                                 <span className="text-xs sm:text-sm font-black text-gray-500 dark:text-slate-300">
-                                  {is_closed ? 'مغلق' : status === 'unavailable' ? 'نفذ' : 'غير متوفر'}
+                                  {is_closed ? 'مغلق' : status === 'unavailable' ? 'غير متوفر' : 'انتهى'}
                                 </span>
                               </div>
                             )}
