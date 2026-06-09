@@ -61,8 +61,9 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
     return L > 0.179 ? '#000000' : '#ffffff';
   })();
 
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [items,      setItems]      = useState<Item[]>(initialItems);
+  const [categories,   setCategories]   = useState<Category[]>(initialCategories);
+  const [items,        setItems]        = useState<Item[]>(initialItems);
+  const [dataLoading,  setDataLoading]  = useState(initialItems.length === 0);
   const [activeCategory,   setActiveCategory]   = useState('all');
   const [showClosedToast,  setShowClosedToast]  = useState(false);
   const [showCartPanel,  setShowCartPanel]  = useState(false);
@@ -75,14 +76,15 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   const pillsRef    = useRef<HTMLDivElement>(null);
   const scrolling   = useRef(false);
 
-  // Realtime subscription for live updates only (no initial fetch needed)
   useEffect(() => {
     const fetchData = async () => {
       const { data: cats } = await supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
       const { data: its }  = await supabase.from('items').select('*').order('name');
       setCategories(cats || []);
       setItems(its || []);
+      setDataLoading(false);
     };
+    fetchData();
     const ch = supabase.channel('menu-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'items' },      fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, fetchData)
@@ -166,17 +168,6 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
 
   const qty = (id: string) => cartItems.find(i => i.id === id)?.quantity || 0;
 
-  if (!settingsLoaded) return (
-    <div className="min-h-screen bg-white dark:bg-slate-900 flex items-center justify-center">
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ repeat: Infinity, duration: 1, repeatType: 'reverse' }}
-        className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin"
-      />
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950 pb-36">
 
@@ -215,6 +206,11 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
       {/* ══ CATEGORY PILLS (Sticky at top-0) ══ */}
       <div className="sticky top-0 z-40 px-0 sm:px-4 py-4 bg-gray-50/95 dark:bg-slate-950/95 backdrop-blur-md shadow-sm border-b border-gray-100 dark:border-slate-800">
         <div ref={pillsRef} className={`flex gap-3 overflow-x-auto scrollbar-hide flex-row-reverse pb-2 px-4 ${is_closed ? 'pointer-events-none opacity-50' : ''}`}>
+          {dataLoading && categories.length === 0 && (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-10 w-20 bg-gray-200 dark:bg-slate-700 rounded-[1.2rem] animate-pulse flex-shrink-0"/>
+            ))
+          )}
           {[{ id: 'all', name: 'الكل' } as Category, ...categories].map((cat, idx) => {
             const isActive = activeCategory === cat.id;
             return (
@@ -242,6 +238,20 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
 
       {/* ══ CONTENT ══ */}
       <div className="px-4 pt-2">
+        {dataLoading && categories.length === 0 && (
+          <div className="grid grid-cols-2 gap-3 px-1 pt-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white dark:bg-slate-900 rounded-[1.8rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 animate-pulse">
+                <div className="m-2 rounded-[1.4rem] h-32 sm:h-56 bg-gray-100 dark:bg-slate-800"/>
+                <div className="p-3 sm:p-6 space-y-2">
+                  <div className="h-4 bg-gray-100 dark:bg-slate-800 rounded-full w-3/4 mr-auto"/>
+                  <div className="h-3 bg-gray-50 dark:bg-slate-700 rounded-full w-1/2 mr-auto"/>
+                  <div className="h-8 bg-gray-100 dark:bg-slate-800 rounded-full w-1/3 mt-3"/>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="space-y-12">
           {categories.map((cat) => {
             const catItems = items.filter(i => i.category_id === cat.id);
