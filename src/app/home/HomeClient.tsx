@@ -60,7 +60,6 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   const [extrasItem,     setExtrasItem]     = useState<Item | null>(null);
   const [selectedItem,   setSelectedItem]   = useState<Item | null>(null);
   const [selectedExtras, setSelectedExtras] = useState<Set<string>>(new Set());
-  const [loadedImgs,     setLoadedImgs]     = useState<Set<string>>(new Set());
 
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const pillsRef    = useRef<HTMLDivElement>(null);
@@ -267,11 +266,6 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
 
                         {/* Image Wrapper */}
                         <div className="relative flex-shrink-0 overflow-hidden m-2 rounded-[1.4rem] sm:rounded-[2.2rem]">
-                          {!loadedImgs.has(item.id) && (
-                            <div className="absolute inset-0 z-10 h-32 sm:h-56 bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-                              <div className="w-8 h-8 border-[3px] rounded-full animate-spin" style={{ borderColor: `${p}30`, borderTopColor: p }} />
-                            </div>
-                          )}
                           <motion.div
                             animate={{ scale: 1 + Math.min(count, 5) * 0.05 }}
                             transition={{ type: 'spring', stiffness: 300, damping: 15 }}
@@ -282,7 +276,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                               width={400} height={300}
                               className={`w-full h-32 sm:h-56 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
                               unoptimized
-                              onLoad={() => setLoadedImgs(prev => new Set(prev).add(item.id))}
+
                             />
                           </motion.div>
                           <AnimatePresence>
