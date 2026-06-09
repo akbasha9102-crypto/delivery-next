@@ -51,6 +51,16 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   const brandLogo = logo_url;
   const p = brandColor;
 
+  const textOnBrand = (() => {
+    const hex = brandColor.replace('#', '');
+    const r = parseInt(hex.slice(0, 2), 16) / 255;
+    const g = parseInt(hex.slice(2, 4), 16) / 255;
+    const b = parseInt(hex.slice(4, 6), 16) / 255;
+    const toLinear = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    return L > 0.179 ? '#000000' : '#ffffff';
+  })();
+
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [items,      setItems]      = useState<Item[]>(initialItems);
   const [activeCategory,   setActiveCategory]   = useState('all');
@@ -196,8 +206,8 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
             <Image src={brandLogo} alt={brandName} width={60} height={60} className="h-14 w-14 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md" unoptimized/>
           </motion.div>
         ) : (
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-black/10" style={{ backgroundColor: brandColor }}>
-             <ShoppingBag size={20} className="text-white"/>
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-black/10" style={{ backgroundColor: brandColor, color: textOnBrand }}>
+             <ShoppingBag size={20} />
           </div>
         )}
       </motion.header>
@@ -218,10 +228,10 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                 onClick={() => scrollToCategory(cat.id)}
                 className={`px-6 py-2.5 rounded-[1.2rem] text-sm font-black whitespace-nowrap transition-all duration-300 flex-shrink-0 border ${
                   isActive
-                  ? 'text-white shadow-[0_10px_20px_rgba(0,0,0,0.15)] scale-105'
+                  ? 'shadow-[0_10px_20px_rgba(0,0,0,0.15)] scale-105'
                   : 'bg-white/70 dark:bg-slate-800/70 backdrop-blur-md text-gray-500 border-gray-100 dark:border-slate-700 hover:bg-gray-50 shadow-sm'
                 }`}
-                style={isActive ? { backgroundColor: brandColor, borderColor: brandColor } : {}}
+                style={isActive ? { backgroundColor: brandColor, borderColor: brandColor, color: textOnBrand } : {}}
               >
                 {cat.name}
               </motion.button>
@@ -332,13 +342,15 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                                         key={count}
                                         initial={{ scale: 1.5, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
-                                        className="font-black text-xs sm:text-base w-4 sm:w-5 text-center text-white dark:text-black">
+                                        className="font-black text-xs sm:text-base w-4 sm:w-5 text-center"
+                                      style={{ color: textOnBrand }}>
                                         {count}
                                       </motion.span>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={(e) => { e.stopPropagation(); decrementItem(item.id); }}
-                                        className="w-6 h-6 sm:w-10 h-10 rounded-lg sm:rounded-xl bg-white/10 text-white dark:text-black flex items-center justify-center">
+                                        className="w-6 h-6 sm:w-10 h-10 rounded-lg sm:rounded-xl bg-white/10 flex items-center justify-center"
+                                        style={{ color: textOnBrand }}>
                                         <Minus size={14} strokeWidth={3}/>
                                       </motion.button>
                                     </motion.div>
@@ -351,8 +363,8 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                                       whileHover={{ scale: 1.05 }}
                                       whileTap={{ scale: 0.95 }}
                                       onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-                                      className="h-8 sm:h-11 px-3 sm:px-6 text-white dark:text-black rounded-lg sm:rounded-2xl font-black text-[9px] sm:text-xs shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap"
-                                      style={{ backgroundColor: brandColor }}>
+                                      className="h-8 sm:h-11 px-3 sm:px-6 rounded-lg sm:rounded-2xl font-black text-[9px] sm:text-xs shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap"
+                                      style={{ backgroundColor: brandColor, color: textOnBrand }}>
                                       إضافة
                                     </motion.button>
                                   )}
@@ -395,11 +407,11 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                    <p className="text-[10px] font-black opacity-30 uppercase tracking-widest">السلة</p>
                    <p className="font-black text-xl">{total.toLocaleString()} د.ع</p>
                  </div>
-                 <div className="w-12 h-12 text-white rounded-2xl flex items-center justify-center shadow-xl" style={{ backgroundColor: brandColor }}>
+                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl" style={{ backgroundColor: brandColor, color: textOnBrand }}>
                     <ShoppingBag size={22} />
                  </div>
                </div>
-               <Link href="/cart" className="text-white px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform" style={{ backgroundColor: brandColor }}>
+               <Link href="/cart" className="px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform" style={{ backgroundColor: brandColor, color: textOnBrand }}>
                  إتمام الطلب
                </Link>
             </div>
@@ -463,8 +475,8 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => { handleAdd(selectedItem); setSelectedItem(null); }}
-                        className="w-full py-4 sm:py-6 text-white rounded-[1.5rem] sm:rounded-[2rem] font-black text-base sm:text-lg shadow-2xl flex items-center justify-center gap-3"
-                        style={{ backgroundColor: brandColor }}
+                        className="w-full py-4 sm:py-6 rounded-[1.5rem] sm:rounded-[2rem] font-black text-base sm:text-lg shadow-2xl flex items-center justify-center gap-3"
+                        style={{ backgroundColor: brandColor, color: textOnBrand }}
                       >
                         <Plus size={20} />
                         إضافة إلى السلة
@@ -481,8 +493,8 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                   <div className="space-y-2 sm:space-y-3 mb-8 sm:mb-10 max-h-[35vh] overflow-y-auto pr-2 scrollbar-hide">
                     {getExtras(extrasItem).map(e => (
                       <motion.button whileTap={{ scale: 0.98 }} key={e.id} onClick={() => { const next = new Set(selectedExtras); next.has(e.id) ? next.delete(e.id) : next.add(e.id); setSelectedExtras(next); }}
-                        className={`w-full p-4 sm:p-5 rounded-[1.2rem] sm:rounded-[1.5rem] flex items-center justify-between border-2 transition-all ${selectedExtras.has(e.id) ? 'text-white shadow-xl' : 'border-gray-100 dark:border-slate-800 text-gray-500'}`}
-                        style={selectedExtras.has(e.id) ? { backgroundColor: brandColor, borderColor: brandColor } : {}}
+                        className={`w-full p-4 sm:p-5 rounded-[1.2rem] sm:rounded-[1.5rem] flex items-center justify-between border-2 transition-all ${selectedExtras.has(e.id) ? 'shadow-xl' : 'border-gray-100 dark:border-slate-800 text-gray-500'}`}
+                        style={selectedExtras.has(e.id) ? { backgroundColor: brandColor, borderColor: brandColor, color: textOnBrand } : {}}
                       >
                         <span className="font-black text-sm sm:text-base">+{e.price.toLocaleString()} د.ع</span>
                         <span className="font-black text-base sm:text-lg">{e.name}</span>
@@ -491,7 +503,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                   </div>
                   <div className="flex gap-3 sm:gap-4">
                     <motion.button whileTap={{ scale: 0.95 }} onClick={() => setExtrasItem(null)} className="flex-1 py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black text-gray-400 bg-gray-50 dark:bg-slate-800 text-sm sm:text-base">إلغاء</motion.button>
-                    <motion.button whileTap={{ scale: 0.95 }} onClick={confirmExtras} className="flex-[2] py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black text-white shadow-2xl text-sm sm:text-base" style={{ backgroundColor: brandColor }}>تأكيد الإضافة</motion.button>
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={confirmExtras} className="flex-[2] py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black shadow-2xl text-sm sm:text-base" style={{ backgroundColor: brandColor, color: textOnBrand }}>تأكيد الإضافة</motion.button>
                   </div>
                 </div>
               )}
