@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Trash2, MapPin, ChevronDown, UserCircle, Pencil } from 'lucide-react';
+import { Trash2, MapPin, ChevronDown, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -76,6 +76,27 @@ export default function CartPage() {
   const [loading, setLoading] = useState(false);
   const [done,    setDone]    = useState(false);
 
+  const [clientLat, setClientLat] = useState<number | null>(null);
+  const [clientLng, setClientLng] = useState<number | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  const shareLocation = () => {
+    if (!('geolocation' in navigator)) { alert('المتصفح لا يدعم تحديد الموقع'); return; }
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setClientLat(pos.coords.latitude);
+        setClientLng(pos.coords.longitude);
+        setGpsLoading(false);
+      },
+      () => {
+        alert('تعذّر تحديد موقعك — تأكد من السماح للمتصفح باستخدام الموقع');
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  };
+
   useEffect(() => {
     const saved = loadSaved();
     if (saved) {
@@ -120,6 +141,7 @@ export default function CartPage() {
       client_name: name.trim(), client_phone: phone.trim(),
       delivery_address: fullAddress, client_note: note.trim() || null,
       total_amount: total, status: 'pending',
+      ...(clientLat !== null && clientLng !== null ? { client_lat: clientLat, client_lng: clientLng } : {}),
     }]).select().single();
 
     if (error || !order) { alert('حدث خطأ، حاول مجدداً'); setLoading(false); return; }
@@ -229,6 +251,24 @@ export default function CartPage() {
               className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2"
               style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
+
+            {/* GPS location — optional */}
+            {clientLat !== null ? (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-xl border-2"
+                style={{ backgroundColor: `${brandColor}12`, borderColor: `${brandColor}50` }}>
+                <CheckCircle2 size={18} style={{ color: brandColor }} className="flex-shrink-0" />
+                <span className="font-semibold text-sm" style={{ color: brandColor }}>تم تحديد موقعك على الخارطة</span>
+              </div>
+            ) : (
+              <button type="button" onClick={shareLocation} disabled={gpsLoading}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed font-semibold text-sm transition-all active:scale-95 disabled:opacity-60"
+                style={{ borderColor: `${brandColor}60`, color: brandColor }}>
+                {gpsLoading
+                  ? <><Loader2 size={16} className="animate-spin" /> جاري تحديد موقعك...</>
+                  : <><LocateFixed size={16} /> 📍 شارك موقعك على الخارطة (اختياري)</>
+                }
+              </button>
+            )}
           </div>
         )}
 

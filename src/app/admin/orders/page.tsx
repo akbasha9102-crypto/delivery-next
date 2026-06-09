@@ -3,9 +3,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { AdminGuard } from '@/components/AdminGuard';
+import { Send, ChevronDown } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[] };
+type Driver = { id: string; name: string; phone: string };
 
 const STATUS = {
   pending:   { label: 'واردة',        color: '#f59e0b', next: 'preparing' as const, nextLabel: 'ابدأ التجهيز',  btnColor: '#3b82f6' },
@@ -32,6 +34,9 @@ function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'pending' | 'preparing' | 'ready' | 'completed'>('pending');
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [selectedDriver, setSelectedDriver] = useState<Record<string, string>>({});
+  const [sending, setSending] = useState<Record<string, boolean>>({});
 
   const fetchOrders = useCallback(async () => {
     const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100);
@@ -47,6 +52,10 @@ function OrdersPage() {
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   useEffect(() => {
+    supabase.from('drivers').select('id, name, phone').then(({ data }) => setDrivers(data || []));
+  }, []);
+
+  useEffect(() => {
     const ch = supabase.channel('orders-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchOrders)
       .subscribe();
@@ -57,6 +66,38 @@ function OrdersPage() {
     const next = STATUS[order.status].next;
     if (!next) return;
     await supabase.from('orders').update({ status: next }).eq('id', order.id);
+    fetchOrders();
+  };
+
+  const sendToDriver = async (order: Order) => {
+    const driverId = selectedDriver[order.id];
+    if (!driverId) return;
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+
+    setSending(prev => ({ ...prev, [order.id]: true }));
+
+    await supabase.from('orders').update({
+      driver_name: driver.name,
+      driver_phone: driver.phone,
+    }).eq('id', order.id);
+
+    const link = `${window.location.origin}/delivery/${order.id}`;
+    const msg = [
+      `مرحباً ${driver.name} 🏍️`,
+      `لديك طلب توصيل جديد`,
+      `━━━━━━━━━━━━━━`,
+      `👤 العميل: ${order.client_name}`,
+      order.delivery_address ? `📍 العنوان: ${order.delivery_address}` : '',
+      `💰 المبلغ: ${order.total_amount.toLocaleString()} د.ع`,
+      `━━━━━━━━━━━━━━`,
+      `🗺️ رابط موقع العميل:`,
+      link,
+    ].filter(Boolean).join('\n');
+
+    window.open(`https://wa.me/${driver.phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+
+    setSending(prev => ({ ...prev, [order.id]: false }));
     fetchOrders();
   };
 
@@ -125,6 +166,40 @@ function OrdersPage() {
                     </div>
                     {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                   </div>
+
+                  {/* Driver assignment — only for ready orders */}
+                  {order.status === 'ready' && (
+                    <div className="px-4 pb-3 space-y-2 border-b border-gray-50 dark:border-slate-700">
+                      <p className="text-xs text-gray-400 dark:text-slate-500 text-right font-medium">إرسال للسائق عبر واتساب</p>
+                      <div className="relative">
+                        <select
+                          value={selectedDriver[order.id] || ''}
+                          onChange={e => setSelectedDriver(prev => ({ ...prev, [order.id]: e.target.value }))}
+                          dir="rtl"
+                          className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-right text-sm text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#22c55e] appearance-none"
+                        >
+                          <option value="">اختر سائقاً...</option>
+                          {drivers.map(d => (
+                            <option key={d.id} value={d.id}>{d.name} — {d.phone}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
+                      {selectedDriver[order.id] && (
+                        <button
+                          onClick={() => sendToDriver(order)}
+                          disabled={sending[order.id]}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm active:opacity-80 transition-all disabled:opacity-60"
+                        >
+                          {sending[order.id]
+                            ? 'جاري الإرسال...'
+                            : <><Send size={15} /> إرسال عبر واتساب</>
+                          }
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {/* Full-width action button */}
                   {cfg.next ? (
                     <button onClick={() => advance(order)}
