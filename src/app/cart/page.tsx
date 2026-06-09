@@ -62,6 +62,16 @@ export default function CartPage() {
   const isTooDark  = rawColor === '#000000' || rawColor.toLowerCase() === '#121212';
   const brandColor = (dark && isTooDark) ? '#ffffff' : rawColor;
 
+  const textOnBrand = (() => {
+    const hex = brandColor.replace('#', '');
+    const r = parseInt(hex.slice(0, 2), 16) / 255;
+    const g = parseInt(hex.slice(2, 4), 16) / 255;
+    const b = parseInt(hex.slice(4, 6), 16) / 255;
+    const toLinear = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    return L > 0.179 ? '#000000' : '#ffffff';
+  })();
+
   const [name,     setName]     = useState('');
   const [phone,    setPhone]    = useState('');
   const [district, setDistrict] = useState('');
@@ -164,7 +174,7 @@ export default function CartPage() {
           <div className="text-6xl mb-4">🎉</div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">تم إرسال طلبك!</h2>
           <p className="text-gray-500 dark:text-slate-400 mb-6">سيتم التواصل معك قريباً</p>
-          <Link href="/track" className="text-white font-bold px-6 py-3 rounded-xl inline-block" style={{ backgroundColor: brandColor }}>تتبع طلبك</Link>
+          <Link href="/track" className="font-bold px-6 py-3 rounded-xl inline-block" style={{ backgroundColor: brandColor, color: textOnBrand }}>تتبع طلبك</Link>
         </div>
         <ClientBottomNav />
       </div>
@@ -280,8 +290,8 @@ export default function CartPage() {
           </div>
           {editing && (
             <button onClick={handleConfirmForm} disabled={items.length === 0}
-              className="w-full disabled:opacity-40 text-white font-bold py-4 rounded-xl text-lg transition-all active:scale-95"
-              style={{ backgroundColor: brandColor }}>
+              className="w-full disabled:opacity-40 font-bold py-4 rounded-xl text-lg transition-all active:scale-95"
+              style={{ backgroundColor: brandColor, color: textOnBrand }}>
               تأكيد الطلب
             </button>
           )}
@@ -332,8 +342,8 @@ export default function CartPage() {
             </div>
 
             <button onClick={handleConfirmSaved}
-              className="w-full text-white font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95"
-              style={{ backgroundColor: brandColor }}>
+              className="w-full font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95"
+              style={{ backgroundColor: brandColor, color: textOnBrand }}>
               نعم، أكمل الطلب
             </button>
             <button onClick={handleEditSaved}
@@ -357,8 +367,8 @@ export default function CartPage() {
               <p className="text-2xl font-bold tracking-widest" style={{ color: brandColor }}>{phone}</p>
             </div>
             <button onClick={submitOrder} disabled={loading}
-              className="w-full text-white font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95 disabled:opacity-60"
-              style={{ backgroundColor: brandColor }}>
+              className="w-full font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95 disabled:opacity-60"
+              style={{ backgroundColor: brandColor, color: textOnBrand }}>
               {loading ? 'جاري الإرسال...' : 'نعم، الرقم صحيح — أرسل الطلب'}
             </button>
             <button onClick={() => { setShowConfirm(false); setShowSaved(false); setEditing(true); }}

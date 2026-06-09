@@ -77,6 +77,11 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   const scrolling   = useRef(false);
 
   useEffect(() => {
+    window.scrollTo({ top: 0 });
+    setActiveCategory('all');
+  }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
       const { data: cats } = await supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
       const { data: its }  = await supabase.from('items').select('*').order('name');

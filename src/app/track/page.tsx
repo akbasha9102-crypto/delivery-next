@@ -308,6 +308,16 @@ export default function TrackPage() {
   const isTooDark  = rawColor === '#000000' || rawColor.toLowerCase() === '#121212';
   const brandColor = (dark && isTooDark) ? '#ffffff' : rawColor;
 
+  const textOnBrand = (() => {
+    const hex = brandColor.replace('#', '');
+    const r = parseInt(hex.slice(0, 2), 16) / 255;
+    const g = parseInt(hex.slice(2, 4), 16) / 255;
+    const b = parseInt(hex.slice(4, 6), 16) / 255;
+    const toLinear = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    return L > 0.179 ? '#000000' : '#ffffff';
+  })();
+
   const [order, setOrder] = useState<Order | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [inputPhone, setInputPhone] = useState('');
@@ -363,8 +373,8 @@ export default function TrackPage() {
             <p className="text-gray-500 dark:text-slate-400 mb-6 text-sm">ابحث عن طلبك برقم هاتفك</p>
             <div className="flex gap-2 max-w-sm mx-auto">
               <button onClick={() => fetchOrder(inputPhone)}
-                className="text-white px-4 py-3 rounded-xl font-bold active:scale-95 transition-all"
-                style={{ backgroundColor: brandColor }}>
+                className="px-4 py-3 rounded-xl font-bold active:scale-95 transition-all"
+                style={{ backgroundColor: brandColor, color: textOnBrand }}>
                 <Search size={18}/>
               </button>
               <input value={inputPhone} onChange={e => setInputPhone(e.target.value)}
@@ -385,8 +395,8 @@ export default function TrackPage() {
                   <div key={step.key} className="flex items-center flex-1">
                     <div className="flex flex-col items-center flex-shrink-0">
                       <div className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition-all duration-500 ${
-                        idx <= current ? 'text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-300 dark:text-slate-600'
-                      }`} style={idx <= current ? { backgroundColor: brandColor } : {}}>
+                        idx <= current ? '' : 'bg-gray-100 dark:bg-slate-700 text-gray-300 dark:text-slate-600'
+                      }`} style={idx <= current ? { backgroundColor: brandColor, color: textOnBrand } : {}}>
                         {step.icon}
                       </div>
                       <span className={`text-xs mt-1.5 font-medium text-center leading-tight max-w-[52px] ${
