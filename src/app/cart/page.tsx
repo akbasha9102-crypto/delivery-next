@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Trash2, MapPin, ChevronDown, UserCircle, Pencil } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const KEYS = {
   name:     'deliveryName',
@@ -235,9 +236,19 @@ export default function CartPage() {
       </div>
 
       {/* ── نافذة المعلومات المحفوظة ── */}
+      <AnimatePresence>
       {showSaved && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.85, y: 40 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm">
             <div className="flex items-center justify-center mb-4">
               <UserCircle size={40} className="text-[#e67e22]"/>
             </div>
@@ -276,9 +287,10 @@ export default function CartPage() {
               <Pencil size={15}/>
               تعديل المعلومات
             </button>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* ── نافذة تأكيد الهاتف ── */}
       {showConfirm && (
