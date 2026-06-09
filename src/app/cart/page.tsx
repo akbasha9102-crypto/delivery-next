@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Trash2, MapPin, ChevronDown, UserCircle, Pencil } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useSettings } from '@/context/SettingsContext';
+import { useDarkMode } from '@/context/ThemeContext';
 
 const KEYS = {
   name:     'deliveryName',
@@ -54,6 +56,11 @@ function saveInfo(info: SavedInfo) {
 
 export default function CartPage() {
   const { items, removeItem, clearCart, total } = useCart();
+  const { primary_color } = useSettings();
+  const { dark } = useDarkMode();
+  const rawColor   = primary_color || '#e67e22';
+  const isTooDark  = rawColor === '#000000' || rawColor.toLowerCase() === '#121212';
+  const brandColor = (dark && isTooDark) ? '#ffffff' : rawColor;
 
   const [name,     setName]     = useState('');
   const [phone,    setPhone]    = useState('');
@@ -135,7 +142,7 @@ export default function CartPage() {
           <div className="text-6xl mb-4">🎉</div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">تم إرسال طلبك!</h2>
           <p className="text-gray-500 dark:text-slate-400 mb-6">سيتم التواصل معك قريباً</p>
-          <Link href="/track" className="bg-[#e67e22] text-white font-bold px-6 py-3 rounded-xl inline-block">تتبع طلبك</Link>
+          <Link href="/track" className="text-white font-bold px-6 py-3 rounded-xl inline-block" style={{ backgroundColor: brandColor }}>تتبع طلبك</Link>
         </div>
         <ClientBottomNav />
       </div>
@@ -145,7 +152,7 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
-        <h1 className="text-xl font-bold text-[#944a00] text-center">سلة المشتريات</h1>
+        <h1 className="text-xl font-bold text-center" style={{ color: brandColor }}>سلة المشتريات</h1>
       </header>
 
       <div className="px-4 pt-4 space-y-4">
@@ -163,7 +170,7 @@ export default function CartPage() {
                   <div className="flex items-center gap-3 flex-1 justify-end">
                     <div className="text-right">
                       <p className="font-bold text-gray-900 dark:text-slate-100">{item.name}</p>
-                      <p className="text-[#e67e22] text-sm">{item.price.toLocaleString()} د.ع</p>
+                      <p className="text-sm" style={{ color: brandColor }}>{item.price.toLocaleString()} د.ع</p>
                     </div>
                     <div className="bg-gray-100 dark:bg-slate-700 px-3 py-1.5 rounded-xl">
                       <span className="font-bold text-gray-700 dark:text-slate-300">{item.quantity}×</span>
@@ -182,18 +189,21 @@ export default function CartPage() {
 
             <input type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder="الاسم *" dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22] mb-3"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 mb-3"
+              style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
             <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
               placeholder="رقم الهاتف *" dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22] mb-3"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 mb-3"
+              style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
 
             {/* District picker */}
             <div className="mb-3">
               <div className="relative">
                 <select value={district} onChange={e => setDistrict(e.target.value)} dir="rtl"
-                  className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#e67e22] appearance-none">
+                  className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 appearance-none"
+                  style={{ '--tw-ring-color': brandColor } as React.CSSProperties}>
                   <option value="">اختر منطقة التوصيل</option>
                   {BASRA_DISTRICTS.map(d => (
                     <option key={d.id} value={d.id}>{d.name}</option>
@@ -202,8 +212,8 @@ export default function CartPage() {
                 <ChevronDown size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
               </div>
               {selectedDistrict && (
-                <div className="mt-2 bg-orange-50 dark:bg-orange-900/15 border border-orange-200 dark:border-orange-800/40 rounded-xl px-4 py-2.5 flex items-center gap-2.5">
-                  <MapPin size={14} className="text-[#e67e22] flex-shrink-0"/>
+                <div className="mt-2 rounded-xl px-4 py-2.5 flex items-center gap-2.5" style={{ backgroundColor: `${brandColor}15`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}40` }}>
+                  <MapPin size={14} className="flex-shrink-0" style={{ color: brandColor }}/>
                   <p className="text-sm text-gray-600 dark:text-slate-400 text-right flex-1">{selectedDistrict.desc}</p>
                 </div>
               )}
@@ -211,11 +221,13 @@ export default function CartPage() {
 
             <input type="text" value={address} onChange={e => setAddress(e.target.value)}
               placeholder="تفاصيل العنوان (شارع، زقاق...)" dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22] mb-3"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 mb-3"
+              style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
             <input type="text" value={note} onChange={e => setNote(e.target.value)}
               placeholder="ملاحظات (اختياري)" dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#e67e22]"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2"
+              style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
           </div>
         )}
@@ -223,12 +235,13 @@ export default function CartPage() {
         {/* Total + Button */}
         <div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 flex justify-between items-center mb-4">
-            <span className="text-[#e67e22] font-bold text-xl">{total.toLocaleString()} د.ع</span>
+            <span className="font-bold text-xl" style={{ color: brandColor }}>{total.toLocaleString()} د.ع</span>
             <span className="font-bold text-gray-900 dark:text-slate-100">الإجمالي</span>
           </div>
           {editing && (
             <button onClick={handleConfirmForm} disabled={items.length === 0}
-              className="w-full bg-[#e67e22] hover:bg-[#d35400] disabled:opacity-40 text-white font-bold py-4 rounded-xl text-lg transition-all active:scale-95">
+              className="w-full disabled:opacity-40 text-white font-bold py-4 rounded-xl text-lg transition-all active:scale-95"
+              style={{ backgroundColor: brandColor }}>
               تأكيد الطلب
             </button>
           )}
@@ -250,9 +263,9 @@ export default function CartPage() {
             transition={{ type: 'spring', stiffness: 320, damping: 28 }}
             className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm">
             <div className="flex items-center justify-center mb-4">
-              <UserCircle size={40} className="text-[#e67e22]"/>
+              <UserCircle size={40} style={{ color: brandColor }}/>
             </div>
-            <h3 className="text-lg font-bold text-center text-[#944a00] mb-1">معلوماتك المحفوظة</h3>
+            <h3 className="text-lg font-bold text-center mb-1" style={{ color: brandColor }}>معلوماتك المحفوظة</h3>
             <p className="text-gray-400 dark:text-slate-500 text-center text-sm mb-5">هل تريد استخدام نفس المعلومات؟</p>
 
             <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 space-y-3 mb-5 text-right">
@@ -261,7 +274,7 @@ export default function CartPage() {
                 <span className="text-gray-400 dark:text-slate-500 text-sm">الاسم</span>
               </div>
               <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-600 pt-3">
-                <span className="text-[#e67e22] font-bold tracking-widest">{phone}</span>
+                <span className="font-bold tracking-widest" style={{ color: brandColor }}>{phone}</span>
                 <span className="text-gray-400 dark:text-slate-500 text-sm">الهاتف</span>
               </div>
               {selectedDistrict && (
@@ -279,7 +292,8 @@ export default function CartPage() {
             </div>
 
             <button onClick={handleConfirmSaved}
-              className="w-full bg-[#e67e22] text-white font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95">
+              className="w-full text-white font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95"
+              style={{ backgroundColor: brandColor }}>
               نعم، أكمل الطلب
             </button>
             <button onClick={handleEditSaved}
@@ -296,14 +310,15 @@ export default function CartPage() {
       {showConfirm && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="text-lg font-bold text-center text-[#944a00] mb-2">تأكيد رقم الهاتف</h3>
+            <h3 className="text-lg font-bold text-center mb-2" style={{ color: brandColor }}>تأكيد رقم الهاتف</h3>
             <p className="text-gray-500 dark:text-slate-400 text-center text-sm mb-5">تأكد أن رقمك صحيح قبل الإرسال</p>
-            <div className="bg-orange-50 dark:bg-orange-900/20 border-2 border-[#e67e22] rounded-xl p-4 text-center mb-5">
+            <div className="rounded-xl p-4 text-center mb-5 border-2" style={{ backgroundColor: `${brandColor}15`, borderColor: brandColor }}>
               <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">رقم هاتفك</p>
-              <p className="text-2xl font-bold text-[#e67e22] tracking-widest">{phone}</p>
+              <p className="text-2xl font-bold tracking-widest" style={{ color: brandColor }}>{phone}</p>
             </div>
             <button onClick={submitOrder} disabled={loading}
-              className="w-full bg-[#e67e22] text-white font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95 disabled:opacity-60">
+              className="w-full text-white font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95 disabled:opacity-60"
+              style={{ backgroundColor: brandColor }}>
               {loading ? 'جاري الإرسال...' : 'نعم، الرقم صحيح — أرسل الطلب'}
             </button>
             <button onClick={() => { setShowConfirm(false); setShowSaved(false); setEditing(true); }}
