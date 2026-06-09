@@ -330,12 +330,12 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                                       initial={{ opacity: 0, scale: 0.8 }}
                                       animate={{ opacity: 1, scale: 1 }}
                                       exit={{ opacity: 0, scale: 0.8 }}
-                                      className="flex items-center gap-2 sm:gap-3 p-1 rounded-xl sm:rounded-2xl shadow-xl"
+                                      className="flex items-center gap-2 sm:gap-3 p-1 rounded-full shadow-xl"
                                       style={{ backgroundColor: brandColor }}>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
-                                        className="w-6 h-6 sm:w-10 h-10 rounded-lg sm:rounded-xl bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
+                                        className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
                                         <Plus size={14} strokeWidth={3}/>
                                       </motion.button>
                                       <motion.span
@@ -343,13 +343,13 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                                         initial={{ scale: 1.5, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
                                         className="font-black text-xs sm:text-base w-4 sm:w-5 text-center"
-                                      style={{ color: textOnBrand }}>
+                                        style={{ color: textOnBrand }}>
                                         {count}
                                       </motion.span>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={(e) => { e.stopPropagation(); decrementItem(item.id); }}
-                                        className="w-6 h-6 sm:w-10 h-10 rounded-lg sm:rounded-xl bg-white/10 flex items-center justify-center"
+                                        className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white/10 flex items-center justify-center"
                                         style={{ color: textOnBrand }}>
                                         <Minus size={14} strokeWidth={3}/>
                                       </motion.button>
@@ -363,7 +363,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                                       whileHover={{ scale: 1.05 }}
                                       whileTap={{ scale: 0.95 }}
                                       onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-                                      className="h-8 sm:h-11 px-3 sm:px-6 rounded-lg sm:rounded-2xl font-black text-[9px] sm:text-xs shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap"
+                                      className="h-10 sm:h-12 px-5 sm:px-7 rounded-full font-black text-xs sm:text-sm shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap"
                                       style={{ backgroundColor: brandColor, color: textOnBrand }}>
                                       إضافة
                                     </motion.button>
