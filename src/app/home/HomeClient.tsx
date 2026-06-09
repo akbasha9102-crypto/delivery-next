@@ -10,7 +10,7 @@ import { Moon, Sun, Plus, Minus, X, ShoppingBag, Trash2 } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type Category = { id: string; name: string; color?: string };
+type Category = { id: string; name: string; color?: string; card_color?: string };
 type Extra    = { id: string; name: string; price: number };
 type Item     = {
   id: string; name: string; price: number; description: string;
@@ -288,7 +288,8 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                           if (is_closed) setShowClosedToast(true);
                           else setSelectedItem(item);
                         }}
-                        className={`group bg-white dark:bg-slate-900 rounded-[1.8rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}>
+                        className={`group rounded-[1.8rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${!cat.card_color ? 'bg-white dark:bg-slate-900' : ''} ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}
+                        style={cat.card_color ? { backgroundColor: cat.card_color } : undefined}>
 
                         {/* Image Wrapper */}
                         <div className="relative flex-shrink-0 overflow-hidden m-2 rounded-[1.4rem] sm:rounded-[2.2rem]">

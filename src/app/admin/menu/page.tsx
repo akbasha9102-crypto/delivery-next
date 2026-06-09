@@ -7,7 +7,7 @@ import { AdminGuard } from '@/components/AdminGuard';
 import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, Palette } from 'lucide-react';
 import { BrandingModal } from '@/components/BrandingModal';
 
-type Category = { id: string; name: string; color?: string; sort_order?: number | null };
+type Category = { id: string; name: string; color?: string; card_color?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
 type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
 
@@ -44,6 +44,7 @@ function MenuPage() {
   const [showReorder, setShowReorder] = useState(false);
   const [reorderCats, setReorderCats] = useState<Category[]>([]);
   const [showBranding, setShowBranding] = useState(false);
+  const [colorPopup, setColorPopup] = useState<{ catId: string } | null>(null);
 
   const fetchMenu = async () => {
     setLoading(true);
@@ -73,6 +74,11 @@ function MenuPage() {
   const updateCatColor = async (id: string, color: string) => {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, color } : c));
     await supabase.from('categories').update({ color }).eq('id', id);
+  };
+
+  const updateCatCardColor = async (id: string, card_color: string) => {
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, card_color } : c));
+    await supabase.from('categories').update({ card_color }).eq('id', id);
   };
 
   const addItem = async () => {
@@ -159,7 +165,7 @@ function MenuPage() {
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24" onClick={() => setColorPopup(null)}>
       {/* Edit Modal */}
       {editItem && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
@@ -396,13 +402,41 @@ function MenuPage() {
                 <div key={cat.id}>
                   <div className="flex items-center justify-end gap-2 mb-3">
                     <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">{cat.name}</h3>
-                    <input
-                      type="color"
-                      value={cat.color || '#e67e22'}
-                      onChange={e => updateCatColor(cat.id, e.target.value)}
-                      className="w-7 h-7 rounded-full cursor-pointer border-2 border-gray-200 dark:border-slate-600"
-                      title="لون القسم"
-                    />
+                    <div className="relative" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => setColorPopup(colorPopup?.catId === cat.id ? null : { catId: cat.id })}
+                        className="w-7 h-7 rounded-full border-2 border-gray-200 dark:border-slate-600 cursor-pointer flex-shrink-0 shadow-sm"
+                        style={{ backgroundColor: cat.color || '#e67e22' }}
+                        title="تعديل ألوان القسم"
+                      />
+                      {colorPopup?.catId === cat.id && (
+                        <div className="absolute left-0 top-9 z-50 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-2xl shadow-xl p-3 w-52 flex flex-col gap-2">
+                          <label className="flex items-center justify-between gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                            <input
+                              type="color"
+                              value={cat.color || '#e67e22'}
+                              onChange={e => updateCatColor(cat.id, e.target.value)}
+                              className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0"
+                            />
+                            <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الأزرار</span>
+                          </label>
+                          <label className="flex items-center justify-between gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                            <input
+                              type="color"
+                              value={cat.card_color || '#ffffff'}
+                              onChange={e => updateCatCardColor(cat.id, e.target.value)}
+                              className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0"
+                            />
+                            <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
+                          </label>
+                          <button
+                            onClick={() => setColorPopup(null)}
+                            className="text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 mt-1 text-center">
+                            إغلاق
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     <span className="bg-orange-100 dark:bg-orange-900/20 text-[#f97316] text-xs font-bold px-2.5 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">{catItems.length}</span>
                   </div>
                   {catItems.length === 0 ? (
