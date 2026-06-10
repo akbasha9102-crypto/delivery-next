@@ -244,7 +244,6 @@ export default function CartPage() {
   const handleConfirmSaved = () => {
     if (items.length === 0) { alert('السلة فارغة'); return; }
     setShowSaved(false);
-    setEditing(true);
     pendingSubmitRef.current = true;
     openMap();
   };
@@ -260,7 +259,6 @@ export default function CartPage() {
     if (!locationConfirmed) {
       pendingSubmitRef.current = true;
       openMap();
-      setTimeout(() => locationMapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
       return;
     }
     submitOrder();
@@ -385,9 +383,8 @@ export default function CartPage() {
               style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
 
-            {/* GPS location — optional */}
+            {/* GPS location */}
             {locationConfirmed ? (
-              /* ── تم تأكيد الموقع ── */
               <div className="rounded-xl px-4 py-3 flex items-center justify-between" style={{ backgroundColor: `${brandColor}12`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}40` }}>
                 <button type="button" onClick={() => { setLocationConfirmed(false); openMap(); }}
                   className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
@@ -397,43 +394,7 @@ export default function CartPage() {
                   <CheckCircle2 size={16} /> تم تحديد موقعك
                 </span>
               </div>
-            ) : showMap ? (
-              /* ── الخريطة مفتوحة ── */
-              <div className="rounded-xl overflow-hidden border-2" style={{ borderColor: `${brandColor}50` }}>
-                <div className="flex items-center justify-between px-3 py-2.5" style={{ backgroundColor: `${brandColor}12` }}>
-                  <button type="button" onClick={closeMap} className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
-                    <RefreshCw size={12} /> إلغاء
-                  </button>
-                  <span className="font-semibold text-sm flex items-center gap-1.5" style={{ color: brandColor }}>
-                    {gpsLocating
-                      ? <><Loader2 size={14} className="animate-spin" /> جاري تحديد موقعك...</>
-                      : <><MapPin size={15} /> حرّك الخريطة لضبط موقعك</>
-                    }
-                  </span>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <div ref={locationMapRef} style={{ height: 220 }} />
-                  {/* Center pin overlay */}
-                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -100%)', pointerEvents: 'none', zIndex: 1000 }}>
-                    <div style={{ width: 32, height: 32, background: brandColor, borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)', border: '3px solid white', boxShadow: '0 3px 10px rgba(0,0,0,0.35)' }} />
-                  </div>
-                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, 0)', width: 8, height: 4, background: 'rgba(0,0,0,0.25)', borderRadius: '50%', pointerEvents: 'none', zIndex: 1000 }} />
-                  {/* Locate me button */}
-                  <button type="button" onClick={locateMe}
-                    className="absolute bottom-2.5 left-2.5 z-[1000] bg-white rounded-xl px-3 py-1.5 flex items-center gap-1.5 text-xs font-bold shadow-md active:scale-95 transition-all"
-                    style={{ color: brandColor }}>
-                    {gpsLocating ? <Loader2 size={13} className="animate-spin" /> : <LocateFixed size={13} />}
-                    موقعي
-                  </button>
-                </div>
-                <button type="button" onClick={confirmLocation}
-                  className="w-full py-2.5 font-bold text-sm transition-all active:scale-95"
-                  style={{ backgroundColor: brandColor, color: textOnBrand }}>
-                  تأكيد الموقع
-                </button>
-              </div>
             ) : (
-              /* ── زر فتح الخريطة ── */
               <button type="button" onClick={openMap}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed font-semibold text-sm transition-all active:scale-95"
                 style={{ borderColor: `${brandColor}60`, color: brandColor }}>
@@ -517,6 +478,62 @@ export default function CartPage() {
       )}
       </AnimatePresence>
 
+      {/* ── نافذة الخريطة المنفصلة ── */}
+      <AnimatePresence>
+      {showMap && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex flex-col"
+          style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="flex flex-col flex-1 overflow-hidden rounded-t-3xl mt-12 bg-white dark:bg-slate-800">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100 dark:border-slate-700">
+              <button type="button" onClick={closeMap}
+                className="flex items-center gap-1.5 text-sm font-semibold text-gray-400 active:scale-90 transition-all">
+                <RefreshCw size={14} /> إلغاء
+              </button>
+              <span className="font-bold text-base flex items-center gap-1.5" style={{ color: brandColor }}>
+                {gpsLocating
+                  ? <><Loader2 size={15} className="animate-spin" /> جاري تحديد موقعك...</>
+                  : <><MapPin size={16} /> حرّك الخريطة لضبط موقعك</>
+                }
+              </span>
+              <div style={{ width: 60 }} />
+            </div>
+            {/* Map */}
+            <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+              <div ref={locationMapRef} style={{ position: 'absolute', inset: 0 }} />
+              {/* Center pin */}
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -100%)', pointerEvents: 'none', zIndex: 1000 }}>
+                <div style={{ width: 36, height: 36, background: brandColor, borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)', border: '3px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }} />
+              </div>
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, 2px)', width: 10, height: 5, background: 'rgba(0,0,0,0.2)', borderRadius: '50%', pointerEvents: 'none', zIndex: 1000 }} />
+              {/* Locate me button */}
+              <button type="button" onClick={locateMe}
+                className="absolute bottom-4 left-4 z-[1000] bg-white rounded-2xl px-4 py-2 flex items-center gap-2 text-sm font-bold shadow-lg active:scale-95 transition-all"
+                style={{ color: brandColor }}>
+                {gpsLocating ? <Loader2 size={15} className="animate-spin" /> : <LocateFixed size={15} />}
+                موقعي
+              </button>
+            </div>
+            {/* Confirm button */}
+            <button type="button" onClick={confirmLocation}
+              className="mx-4 mb-6 mt-3 py-4 rounded-2xl font-bold text-base transition-all active:scale-95 shadow-lg"
+              style={{ backgroundColor: brandColor, color: textOnBrand }}>
+              <CheckCircle2 size={18} className="inline ml-2" />
+              تأكيد الموقع
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <ClientBottomNav />
     </div>
