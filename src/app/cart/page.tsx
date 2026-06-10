@@ -170,15 +170,9 @@ export default function CartPage() {
           setGpsLocating(false);
         }
       },
-      () => { setGpsLocating(false); setGpsAccuracy(null); },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+      () => { setGpsLocating(false); },
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
-
-    // وقّف بعد 20 ثانية مهما كانت الدقة
-    gpsStopTimerRef.current = setTimeout(() => {
-      stopGpsWatch();
-      setGpsLocating(false);
-    }, 20000);
   };
 
   const locateMe = () => {
@@ -603,9 +597,11 @@ export default function CartPage() {
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 rounded-full px-4 py-2 shadow-xl text-xs font-bold"
                   style={{ background: 'white', boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                     color: gpsAccuracy !== null && gpsAccuracy <= 50 ? '#16a34a' : gpsAccuracy !== null && gpsAccuracy <= 300 ? '#d97706' : brandColor }}>
-                  {gpsLocating
-                    ? <><Loader2 size={13} className="animate-spin" /> جاري تحسين الدقة...</>
-                    : gpsAccuracy !== null && gpsAccuracy <= 50
+                  {gpsLocating && gpsAccuracy === null
+                    ? <><Loader2 size={13} className="animate-spin" /> جاري تحديد موقعك...</>
+                    : gpsLocating && gpsAccuracy !== null
+                      ? <><Loader2 size={13} className="animate-spin" /> جاري تحسين الدقة... {gpsAccuracy >= 1000 ? `${(gpsAccuracy/1000).toFixed(1)}كم` : `${gpsAccuracy}م`}</>
+                    : gpsAccuracy !== null && gpsAccuracy <= 100
                       ? <><CheckCircle2 size={13} /> دقة ممتازة — {gpsAccuracy}م</>
                       : <><MapPin size={13} /> دقة: {gpsAccuracy !== null && gpsAccuracy >= 1000 ? `${(gpsAccuracy/1000).toFixed(1)}كم` : `${gpsAccuracy}م`}</>
                   }
@@ -631,6 +627,14 @@ export default function CartPage() {
             {/* Bottom bar */}
             <div className="px-4 pt-3 pb-7 flex-shrink-0 bg-white dark:bg-slate-900"
               style={{ boxShadow: '0 -1px 0 rgba(0,0,0,0.06)' }}>
+              {gpsAccuracy !== null && gpsAccuracy > 500 && (
+                <div className="flex items-start gap-2 mb-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-3 py-2.5 text-right">
+                  <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed flex-1">
+                    الدقة ضعيفة — فعّل GPS الجهاز أو تحرك للخارج، أو حرّك الخريطة يدوياً لموقعك الصحيح
+                  </p>
+                  <span className="text-lg">⚠️</span>
+                </div>
+              )}
               <button type="button" onClick={confirmLocation}
                 className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-95 flex items-center justify-center gap-2"
                 style={{
