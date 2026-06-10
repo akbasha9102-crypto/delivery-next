@@ -16,6 +16,8 @@ const KEYS = {
   address:  'deliveryAddress',
 };
 
+const BASRA_CENTER: [number, number] = [30.5085, 47.7804];
+
 const BASRA_DISTRICTS = [
   { id: 'ashar',      name: 'العشار',      desc: 'قلب البصرة التجاري والاقتصادي' },
   { id: 'maqal',      name: 'المعقل',      desc: 'حي راقٍ شمال البصرة على ضفاف شط العرب' },
@@ -88,78 +90,62 @@ export default function CartPage() {
 
   const [clientLat, setClientLat] = useState<number | null>(null);
   const [clientLng, setClientLng] = useState<number | null>(null);
-  const [gpsLoading, setGpsLoading] = useState(false);
-  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [showMap, setShowMap] = useState(false);
+  const [gpsLocating, setGpsLocating] = useState(false);
   const locationMapRef = useRef<HTMLDivElement>(null);
   const locationMapInstanceRef = useRef<any>(null);
-  const locationMarkerRef = useRef<any>(null);
-  const locationCircleRef = useRef<any>(null);
-  const isUserMoveRef = useRef(false);
-  const watchIdRef = useRef<number | null>(null);
-  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const bestPosRef = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
-  const hasShownMapRef = useRef(false);
+  const pendingFlyRef = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
 
-  const stopWatch = () => {
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
+  const closeMap = () => {
+    if (locationMapInstanceRef.current) {
+      locationMapInstanceRef.current.remove();
+      locationMapInstanceRef.current = null;
     }
-    if (fallbackTimerRef.current !== null) {
-      clearTimeout(fallbackTimerRef.current);
-      fallbackTimerRef.current = null;
-    }
+    pendingFlyRef.current = null;
+    setShowMap(false);
+    setClientLat(null);
+    setClientLng(null);
+    setGpsLocating(false);
   };
 
-  const shareLocation = () => {
-    if (!('geolocation' in navigator)) { alert('المتصفح لا يدعم تحديد الموقع'); return; }
-    stopWatch();
-    setGpsLoading(true);
-    setGpsAccuracy(null);
-    isUserMoveRef.current = false;
-    bestPosRef.current = null;
-    hasShownMapRef.current = false;
-
-    // بعد 45 ثانية نعرض أفضل موقع حصلنا عليه حتى لو دقته سيئة
-    fallbackTimerRef.current = setTimeout(() => {
-      stopWatch();
-      if (!hasShownMapRef.current && bestPosRef.current) {
-        setClientLat(bestPosRef.current.lat);
-        setClientLng(bestPosRef.current.lng);
-        setGpsAccuracy(bestPosRef.current.accuracy);
-      }
-      setGpsLoading(false);
-    }, 45000);
-
-    watchIdRef.current = navigator.geolocation.watchPosition(
+  const locateMe = () => {
+    if (!locationMapInstanceRef.current) return;
+    setGpsLocating(true);
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude, accuracy } = pos.coords;
-
-        // نحتفظ دائماً بأفضل قراءة
-        if (!bestPosRef.current || accuracy < bestPosRef.current.accuracy) {
-          bestPosRef.current = { lat: latitude, lng: longitude, accuracy };
+        if (accuracy <= 5000 && locationMapInstanceRef.current) {
+          const zoom = accuracy < 100 ? 17 : accuracy < 500 ? 16 : accuracy < 2000 ? 14 : 13;
+          locationMapInstanceRef.current.flyTo([latitude, longitude], zoom, { animate: true, duration: 1.2 });
         }
-
-        setGpsAccuracy(accuracy);
-
-        // لا نعرض الخريطة إلا عند دقة معقولة (أقل من 2000م)
-        if (!isUserMoveRef.current && accuracy <= 2000) {
-          setClientLat(latitude);
-          setClientLng(longitude);
-          setGpsLoading(false);
-          hasShownMapRef.current = true;
-        }
-
-        if (accuracy <= 50) {
-          stopWatch();
-        }
+        setGpsLocating(false);
       },
-      () => {
-        alert('تعذّر تحديد موقعك — تأكد من السماح للمتصفح باستخدام الموقع');
-        setGpsLoading(false);
-        stopWatch();
+      () => setGpsLocating(false),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+    );
+  };
+
+  const openMap = () => {
+    setShowMap(true);
+    setClientLat(BASRA_CENTER[0]);
+    setClientLng(BASRA_CENTER[1]);
+    setGpsLocating(true);
+    if (!('geolocation' in navigator)) { setGpsLocating(false); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        if (accuracy <= 5000) {
+          if (locationMapInstanceRef.current) {
+            const zoom = accuracy < 100 ? 17 : accuracy < 500 ? 16 : accuracy < 2000 ? 14 : 13;
+            locationMapInstanceRef.current.flyTo([latitude, longitude], zoom, { animate: true, duration: 1.2 });
+          } else {
+            pendingFlyRef.current = { lat: latitude, lng: longitude, accuracy };
+          }
+        }
+        setGpsLocating(false);
       },
-      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+      () => setGpsLocating(false),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
     );
   };
 
@@ -174,90 +160,45 @@ export default function CartPage() {
   }, []);
 
   useEffect(() => {
-    if (clientLat === null || clientLng === null) return;
-
-    const init = () => {
-      if (!locationMapRef.current) return;
-
-      if (locationMapInstanceRef.current) {
-        if (!isUserMoveRef.current) {
-          locationMapInstanceRef.current.flyTo([clientLat, clientLng], locationMapInstanceRef.current.getZoom(), { animate: true, duration: 0.8 });
-          locationMarkerRef.current?.setLatLng([clientLat, clientLng]);
-          if (locationCircleRef.current && gpsAccuracy !== null) {
-            locationCircleRef.current.setLatLng([clientLat, clientLng]);
-            locationCircleRef.current.setRadius(gpsAccuracy);
-          } else if (!locationCircleRef.current && gpsAccuracy !== null) {
-            import('leaflet').then((mod) => {
-              const L = (mod as any).default ?? mod;
-              if (locationMapInstanceRef.current) {
-                locationCircleRef.current = L.circle([clientLat, clientLng], {
-                  radius: gpsAccuracy, color: brandColor, fillColor: brandColor,
-                  fillOpacity: 0.1, weight: 1,
-                }).addTo(locationMapInstanceRef.current);
-              }
-            });
-          }
-        }
-        return;
-      }
-
+    if (!showMap) return;
+    const t = setTimeout(() => {
+      if (!locationMapRef.current || locationMapInstanceRef.current) return;
       import('leaflet').then((mod) => {
         const L = (mod as any).default ?? mod;
         if (!locationMapRef.current || locationMapInstanceRef.current) return;
 
-        const map = L.map(locationMapRef.current, { zoomControl: true }).setView([clientLat, clientLng], 17);
+        const map = L.map(locationMapRef.current, { zoomControl: false }).setView(BASRA_CENTER, 13);
         locationMapInstanceRef.current = map;
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap', maxZoom: 19,
         }).addTo(map);
 
-        // Leaflet needs the container fully painted — call twice to handle slow layout
         setTimeout(() => map.invalidateSize({ pan: false }), 100);
         setTimeout(() => map.invalidateSize({ pan: false }), 500);
 
-        const icon = L.divIcon({
-          html: `<div style="width:34px;height:34px;background:${brandColor};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35)"></div>`,
-          className: '', iconSize: [34, 34], iconAnchor: [17, 34],
+        map.on('moveend', () => {
+          const c = map.getCenter();
+          setClientLat(c.lat);
+          setClientLng(c.lng);
         });
 
-        if (gpsAccuracy !== null) {
-          locationCircleRef.current = L.circle([clientLat, clientLng], {
-            radius: gpsAccuracy, color: brandColor, fillColor: brandColor,
-            fillOpacity: 0.1, weight: 1,
-          }).addTo(map);
+        if (pendingFlyRef.current) {
+          const { lat, lng, accuracy } = pendingFlyRef.current;
+          const zoom = accuracy < 100 ? 17 : accuracy < 500 ? 16 : accuracy < 2000 ? 14 : 13;
+          map.setView([lat, lng], zoom);
+          pendingFlyRef.current = null;
         }
-
-        const marker = L.marker([clientLat, clientLng], { icon, draggable: true }).addTo(map)
-          .bindPopup('<div dir="rtl" style="font-family:sans-serif;font-weight:bold">اسحب البن لتصحيح موقعك</div>', { offset: [0, -16] })
-          .openPopup();
-
-        marker.on('dragend', () => {
-          const { lat, lng } = marker.getLatLng();
-          isUserMoveRef.current = true;
-          stopWatch();
-          setClientLat(lat);
-          setClientLng(lng);
-        });
-
-        map.on('click', (e: any) => {
-          marker.setLatLng(e.latlng);
-          isUserMoveRef.current = true;
-          stopWatch();
-          setClientLat(e.latlng.lat);
-          setClientLng(e.latlng.lng);
-        });
-
-        locationMarkerRef.current = marker;
       });
+    }, 80);
+    return () => {
+      clearTimeout(t);
+      if (locationMapInstanceRef.current) {
+        locationMapInstanceRef.current.remove();
+        locationMapInstanceRef.current = null;
+      }
     };
-
-    // small delay to ensure the div is mounted after state update
-    const t = setTimeout(init, 80);
-    return () => clearTimeout(t);
-  }, [clientLat, clientLng, gpsAccuracy]);
-
-  useEffect(() => () => stopWatch(), []);
+  }, [showMap]);
 
   useEffect(() => {
     const saved = loadSaved();
@@ -415,34 +356,41 @@ export default function CartPage() {
             />
 
             {/* GPS location — optional */}
-            {clientLat !== null ? (
+            {showMap ? (
               <div className="rounded-xl overflow-hidden border-2" style={{ borderColor: `${brandColor}50` }}>
                 <div className="flex items-center justify-between px-3 py-2.5" style={{ backgroundColor: `${brandColor}12` }}>
-                  <button type="button" onClick={() => { stopWatch(); setClientLat(null); setClientLng(null); setGpsAccuracy(null); isUserMoveRef.current = false; if (locationMapInstanceRef.current) { locationMapInstanceRef.current.remove(); locationMapInstanceRef.current = null; locationMarkerRef.current = null; locationCircleRef.current = null; } }} className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
-                    <RefreshCw size={12} /> تغيير
+                  <button type="button" onClick={closeMap} className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
+                    <RefreshCw size={12} /> إلغاء
                   </button>
-                  <span className="font-semibold text-sm flex items-center gap-1.5" style={{ color: gpsAccuracy !== null && !gpsLoading && gpsAccuracy > 50 ? '#f59e0b' : brandColor }}>
-                    {gpsLoading
+                  <span className="font-semibold text-sm flex items-center gap-1.5" style={{ color: brandColor }}>
+                    {gpsLocating
                       ? <><Loader2 size={14} className="animate-spin" /> جاري تحديد موقعك...</>
-                      : gpsAccuracy !== null && watchIdRef.current !== null
-                        ? <><Loader2 size={14} className="animate-spin" /> جاري تحسين الدقة ±{Math.round(gpsAccuracy)}م</>
-                        : gpsAccuracy !== null && gpsAccuracy > 50
-                          ? <><span className="text-amber-500">⚠</span> دقة ±{Math.round(gpsAccuracy)}م — صحّح موقعك بالسحب</>
-                          : <><CheckCircle2 size={16} /> تم تحديد موقعك ±{gpsAccuracy !== null ? Math.round(gpsAccuracy) : ''}م</>
+                      : <><CheckCircle2 size={16} /> حرّك الخريطة لضبط موقعك</>
                     }
                   </span>
                 </div>
-                <div ref={locationMapRef} style={{ height: 200 }} />
-                <p className="text-center text-xs text-gray-400 py-1.5">اسحب البن أو اضغط على الخريطة لتصحيح موقعك</p>
+                <div style={{ position: 'relative' }}>
+                  <div ref={locationMapRef} style={{ height: 220 }} />
+                  {/* Center pin overlay */}
+                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -100%)', pointerEvents: 'none', zIndex: 1000 }}>
+                    <div style={{ width: 32, height: 32, background: brandColor, borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)', border: '3px solid white', boxShadow: '0 3px 10px rgba(0,0,0,0.35)' }} />
+                  </div>
+                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, 0)', width: 8, height: 4, background: 'rgba(0,0,0,0.25)', borderRadius: '50%', pointerEvents: 'none', zIndex: 1000 }} />
+                  {/* Locate me button */}
+                  <button type="button" onClick={locateMe}
+                    className="absolute bottom-2.5 left-2.5 z-[1000] bg-white rounded-xl px-3 py-1.5 flex items-center gap-1.5 text-xs font-bold shadow-md active:scale-95 transition-all"
+                    style={{ color: brandColor }}>
+                    {gpsLocating ? <Loader2 size={13} className="animate-spin" /> : <LocateFixed size={13} />}
+                    موقعي
+                  </button>
+                </div>
+                <p className="text-center text-xs text-gray-400 py-1.5">حرّك الخريطة حتى يصبح البن على موقعك بالضبط</p>
               </div>
             ) : (
-              <button type="button" onClick={shareLocation} disabled={gpsLoading}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed font-semibold text-sm transition-all active:scale-95 disabled:opacity-60"
+              <button type="button" onClick={openMap}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed font-semibold text-sm transition-all active:scale-95"
                 style={{ borderColor: `${brandColor}60`, color: brandColor }}>
-                {gpsLoading
-                  ? <><Loader2 size={16} className="animate-spin" /> جاري تحديد موقعك...</>
-                  : <><LocateFixed size={16} /> 📍 شارك موقعك على الخارطة (اختياري)</>
-                }
+                <LocateFixed size={16} /> 📍 شارك موقعك على الخارطة (اختياري)
               </button>
             )}
           </div>
