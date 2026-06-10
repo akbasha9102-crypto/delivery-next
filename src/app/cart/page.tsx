@@ -93,13 +93,28 @@ export default function CartPage() {
   const [showMap, setShowMap] = useState(false);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [gpsLocating, setGpsLocating] = useState(false);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const locationMapRef = useRef<HTMLDivElement>(null);
   const locationMapInstanceRef = useRef<any>(null);
   const pendingFlyRef = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
   const submitBtnRef = useRef<HTMLButtonElement>(null);
   const pendingSubmitRef = useRef(false);
+  const gpsWatchRef = useRef<number | null>(null);
+  const gpsStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const stopGpsWatch = () => {
+    if (gpsWatchRef.current !== null) {
+      navigator.geolocation.clearWatch(gpsWatchRef.current);
+      gpsWatchRef.current = null;
+    }
+    if (gpsStopTimerRef.current) {
+      clearTimeout(gpsStopTimerRef.current);
+      gpsStopTimerRef.current = null;
+    }
+  };
 
   const closeMap = () => {
+    stopGpsWatch();
     if (locationMapInstanceRef.current) {
       locationMapInstanceRef.current.remove();
       locationMapInstanceRef.current = null;
@@ -111,9 +126,11 @@ export default function CartPage() {
     setClientLat(null);
     setClientLng(null);
     setGpsLocating(false);
+    setGpsAccuracy(null);
   };
 
   const confirmLocation = () => {
+    stopGpsWatch();
     if (locationMapInstanceRef.current) {
       locationMapInstanceRef.current.remove();
       locationMapInstanceRef.current = null;
@@ -122,6 +139,7 @@ export default function CartPage() {
     setShowMap(false);
     setLocationConfirmed(true);
     setGpsLocating(false);
+    setGpsAccuracy(null);
     if (pendingSubmitRef.current) {
       pendingSubmitRef.current = false;
       submitOrder();
@@ -130,45 +148,60 @@ export default function CartPage() {
     }
   };
 
-  const locateMe = () => {
-    if (!locationMapInstanceRef.current) return;
+  const startGpsWatch = (onPosition: (lat: number, lng: number, accuracy: number) => void) => {
+    stopGpsWatch();
     setGpsLocating(true);
-    navigator.geolocation.getCurrentPosition(
+    setGpsAccuracy(null);
+    if (!('geolocation' in navigator)) { setGpsLocating(false); return; }
+
+    let bestAccuracy = Infinity;
+
+    gpsWatchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude, accuracy } = pos.coords;
-        if (accuracy <= 5000 && locationMapInstanceRef.current) {
-          const zoom = accuracy < 100 ? 17 : accuracy < 500 ? 16 : accuracy < 2000 ? 14 : 13;
-          locationMapInstanceRef.current.flyTo([latitude, longitude], zoom, { animate: true, duration: 1.2 });
+        setGpsAccuracy(Math.round(accuracy));
+        if (accuracy < bestAccuracy) {
+          bestAccuracy = accuracy;
+          onPosition(latitude, longitude, accuracy);
         }
-        setGpsLocating(false);
+        // دقة ممتازة — وقّف المتابعة
+        if (accuracy <= 30) {
+          stopGpsWatch();
+          setGpsLocating(false);
+        }
       },
-      () => setGpsLocating(false),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+      () => { setGpsLocating(false); setGpsAccuracy(null); },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
+
+    // وقّف بعد 20 ثانية مهما كانت الدقة
+    gpsStopTimerRef.current = setTimeout(() => {
+      stopGpsWatch();
+      setGpsLocating(false);
+    }, 20000);
+  };
+
+  const locateMe = () => {
+    if (!locationMapInstanceRef.current) return;
+    startGpsWatch((lat, lng, accuracy) => {
+      if (!locationMapInstanceRef.current) return;
+      const zoom = accuracy < 30 ? 18 : accuracy < 100 ? 17 : accuracy < 500 ? 16 : accuracy < 2000 ? 14 : 13;
+      locationMapInstanceRef.current.flyTo([lat, lng], zoom, { animate: true, duration: 0.8 });
+    });
   };
 
   const openMap = () => {
     setShowMap(true);
     setClientLat(BASRA_CENTER[0]);
     setClientLng(BASRA_CENTER[1]);
-    setGpsLocating(true);
-    if (!('geolocation' in navigator)) { setGpsLocating(false); return; }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude, accuracy } = pos.coords;
-        if (accuracy <= 5000) {
-          if (locationMapInstanceRef.current) {
-            const zoom = accuracy < 100 ? 17 : accuracy < 500 ? 16 : accuracy < 2000 ? 14 : 13;
-            locationMapInstanceRef.current.flyTo([latitude, longitude], zoom, { animate: true, duration: 1.2 });
-          } else {
-            pendingFlyRef.current = { lat: latitude, lng: longitude, accuracy };
-          }
-        }
-        setGpsLocating(false);
-      },
-      () => setGpsLocating(false),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
-    );
+    startGpsWatch((lat, lng, accuracy) => {
+      const zoom = accuracy < 30 ? 18 : accuracy < 100 ? 17 : accuracy < 500 ? 16 : accuracy < 2000 ? 14 : 13;
+      if (locationMapInstanceRef.current) {
+        locationMapInstanceRef.current.flyTo([lat, lng], zoom, { animate: true, duration: 0.8 });
+      } else {
+        pendingFlyRef.current = { lat, lng, accuracy };
+      }
+    });
   };
 
   // load Leaflet CSS once — never remove it so tiles don't flash
@@ -566,11 +599,16 @@ export default function CartPage() {
               }} />
 
               {/* GPS status toast */}
-              {gpsLocating && (
+              {(gpsLocating || gpsAccuracy !== null) && (
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 rounded-full px-4 py-2 shadow-xl text-xs font-bold"
-                  style={{ background: 'white', color: brandColor, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
-                  <Loader2 size={13} className="animate-spin" />
-                  جاري تحديد موقعك...
+                  style={{ background: 'white', boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                    color: gpsAccuracy !== null && gpsAccuracy <= 50 ? '#16a34a' : gpsAccuracy !== null && gpsAccuracy <= 300 ? '#d97706' : brandColor }}>
+                  {gpsLocating
+                    ? <><Loader2 size={13} className="animate-spin" /> جاري تحسين الدقة...</>
+                    : gpsAccuracy !== null && gpsAccuracy <= 50
+                      ? <><CheckCircle2 size={13} /> دقة ممتازة — {gpsAccuracy}م</>
+                      : <><MapPin size={13} /> دقة: {gpsAccuracy !== null && gpsAccuracy >= 1000 ? `${(gpsAccuracy/1000).toFixed(1)}كم` : `${gpsAccuracy}م`}</>
+                  }
                 </div>
               )}
 
