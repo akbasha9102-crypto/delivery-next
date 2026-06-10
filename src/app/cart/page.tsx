@@ -95,6 +95,8 @@ export default function CartPage() {
   const [gpsLocating, setGpsLocating] = useState(false);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [showPreciseModal, setShowPreciseModal] = useState(false);
+  const preciseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const locationMapRef = useRef<HTMLDivElement>(null);
   const locationMapInstanceRef = useRef<any>(null);
   const pendingFlyRef = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
@@ -111,6 +113,10 @@ export default function CartPage() {
     if (gpsStopTimerRef.current) {
       clearTimeout(gpsStopTimerRef.current);
       gpsStopTimerRef.current = null;
+    }
+    if (preciseTimerRef.current) {
+      clearTimeout(preciseTimerRef.current);
+      preciseTimerRef.current = null;
     }
   };
 
@@ -156,6 +162,7 @@ export default function CartPage() {
     if (!('geolocation' in navigator)) { setGpsLocating(false); return; }
 
     let bestAccuracy = Infinity;
+    let gotFirstReading = false;
 
     gpsWatchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
@@ -165,6 +172,21 @@ export default function CartPage() {
           bestAccuracy = accuracy;
           onPosition(latitude, longitude, accuracy);
         }
+        // أول قراءة — إذا الدقة سيئة جداً، ابدأ مؤقت لكشف الموقع التقريبي
+        if (!gotFirstReading) {
+          gotFirstReading = true;
+          if (accuracy > 1000) {
+            if (preciseTimerRef.current) clearTimeout(preciseTimerRef.current);
+            preciseTimerRef.current = setTimeout(() => {
+              if (bestAccuracy > 1000) setShowPreciseModal(true);
+            }, 6000);
+          }
+        }
+        // إذا تحسنت الدقة بعدين — ألغِ التحذير
+        if (accuracy <= 500 && preciseTimerRef.current) {
+          clearTimeout(preciseTimerRef.current);
+          preciseTimerRef.current = null;
+        }
         if (accuracy <= 30) {
           stopGpsWatch();
           setGpsLocating(false);
@@ -172,7 +194,7 @@ export default function CartPage() {
       },
       (err) => {
         setGpsLocating(false);
-        if (err.code === 1) { // PERMISSION_DENIED
+        if (err.code === 1) {
           setShowPermissionModal(true);
           setShowMap(false);
         }
@@ -515,6 +537,91 @@ export default function CartPage() {
               className="w-full border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95">
               <Pencil size={15}/>
               تعديل المعلومات
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+      </AnimatePresence>
+
+      {/* ── نافذة الموقع الدقيق ── */}
+      <AnimatePresence>
+      {showPreciseModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[80] flex items-end justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 280, damping: 32 }}
+            className="w-full bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-4 pb-8">
+
+            <div className="flex justify-center mb-4">
+              <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-slate-700" />
+            </div>
+
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-amber-50 dark:bg-amber-900/20">
+                <span className="text-3xl">🎯</span>
+              </div>
+            </div>
+
+            <h3 className="text-center font-bold text-lg text-gray-900 dark:text-slate-100 mb-1">الموقع الدقيق غير مفعّل</h3>
+            <p className="text-center text-sm text-gray-500 dark:text-slate-400 mb-5">
+              جهازك يستخدم <strong>الموقع التقريبي</strong> مما يسبب خطأ كبير في التحديد
+            </p>
+
+            {/* iOS */}
+            <div className="mb-3">
+              <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-2 text-right">iPhone (iOS)</p>
+              <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-4 space-y-2.5 text-right">
+                <div className="flex items-center gap-3">
+                  <span className="text-base">⚙️</span>
+                  <p className="text-sm text-gray-700 dark:text-slate-300">الإعدادات ← الخصوصية والأمان ← خدمات الموقع</p>
+                </div>
+                <div className="flex items-center gap-3 border-t border-gray-200 dark:border-slate-700 pt-2.5">
+                  <span className="text-base">🌐</span>
+                  <p className="text-sm text-gray-700 dark:text-slate-300">اختر Safari أو اسم المتصفح</p>
+                </div>
+                <div className="flex items-center gap-3 border-t border-gray-200 dark:border-slate-700 pt-2.5">
+                  <span className="text-base">🎯</span>
+                  <p className="text-sm text-gray-700 dark:text-slate-300">فعّل <strong>"الموقع الدقيق"</strong></p>
+                </div>
+              </div>
+            </div>
+
+            {/* Android */}
+            <div className="mb-5">
+              <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-2 text-right">Android</p>
+              <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-4 space-y-2.5 text-right">
+                <div className="flex items-center gap-3">
+                  <span className="text-base">⚙️</span>
+                  <p className="text-sm text-gray-700 dark:text-slate-300">الإعدادات ← الموقع ← إذونات التطبيقات</p>
+                </div>
+                <div className="flex items-center gap-3 border-t border-gray-200 dark:border-slate-700 pt-2.5">
+                  <span className="text-base">🌐</span>
+                  <p className="text-sm text-gray-700 dark:text-slate-300">اختر اسم المتصفح</p>
+                </div>
+                <div className="flex items-center gap-3 border-t border-gray-200 dark:border-slate-700 pt-2.5">
+                  <span className="text-base">🎯</span>
+                  <p className="text-sm text-gray-700 dark:text-slate-300">فعّل <strong>"الموقع الدقيق"</strong></p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => { setShowPreciseModal(false); }}
+              className="w-full py-4 rounded-2xl font-bold text-base mb-3 transition-all active:scale-95"
+              style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}cc)`, color: textOnBrand, boxShadow: `0 8px 24px ${brandColor}50` }}>
+              فعّلته — أعد المحاولة
+            </button>
+            <button
+              onClick={() => setShowPreciseModal(false)}
+              className="w-full py-3.5 rounded-2xl font-semibold text-sm border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 transition-all active:scale-95">
+              تحديد موقعي يدوياً على الخريطة
             </button>
           </motion.div>
         </motion.div>
