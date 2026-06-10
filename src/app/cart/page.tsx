@@ -96,11 +96,16 @@ export default function CartPage() {
   const locationCircleRef = useRef<any>(null);
   const isUserMoveRef = useRef(false);
   const watchIdRef = useRef<number | null>(null);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stopWatch = () => {
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
+    }
+    if (fallbackTimerRef.current !== null) {
+      clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
     }
   };
 
@@ -109,23 +114,35 @@ export default function CartPage() {
     stopWatch();
     setGpsLoading(true);
     setGpsAccuracy(null);
+    isUserMoveRef.current = false;
+
+    // إذا ما وصل لدقة جيدة خلال 45 ثانية، نوقف ونعرض أفضل موقع متاح
+    fallbackTimerRef.current = setTimeout(() => {
+      setGpsLoading(false);
+      stopWatch();
+    }, 45000);
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude, accuracy } = pos.coords;
-        if (isUserMoveRef.current) return; // العميل يسحب يدوياً — لا نتدخل
-        setClientLat(latitude);
-        setClientLng(longitude);
+        if (!isUserMoveRef.current) {
+          setClientLat(latitude);
+          setClientLng(longitude);
+        }
         setGpsAccuracy(accuracy);
+        // نعرض الخريطة بمجرد ما نحصل على أي موقع
         setGpsLoading(false);
-        if (accuracy <= 30) stopWatch(); // دقة كافية — نوقف المراقبة
+        // نوقف المراقبة فقط عند دقة ممتازة (15م أو أقل)
+        if (accuracy <= 15) {
+          stopWatch();
+        }
       },
       () => {
         alert('تعذّر تحديد موقعك — تأكد من السماح للمتصفح باستخدام الموقع');
         setGpsLoading(false);
         stopWatch();
       },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
   };
 
@@ -142,14 +159,23 @@ export default function CartPage() {
 
       if (locationMapInstanceRef.current) {
         if (!isUserMoveRef.current) {
-          locationMapInstanceRef.current.panTo([clientLat, clientLng]);
+          locationMapInstanceRef.current.flyTo([clientLat, clientLng], locationMapInstanceRef.current.getZoom(), { animate: true, duration: 0.8 });
           locationMarkerRef.current?.setLatLng([clientLat, clientLng]);
           if (locationCircleRef.current && gpsAccuracy !== null) {
             locationCircleRef.current.setLatLng([clientLat, clientLng]);
             locationCircleRef.current.setRadius(gpsAccuracy);
+          } else if (!locationCircleRef.current && gpsAccuracy !== null) {
+            import('leaflet').then((mod) => {
+              const L = (mod as any).default ?? mod;
+              if (locationMapInstanceRef.current) {
+                locationCircleRef.current = L.circle([clientLat, clientLng], {
+                  radius: gpsAccuracy, color: brandColor, fillColor: brandColor,
+                  fillOpacity: 0.1, weight: 1,
+                }).addTo(locationMapInstanceRef.current);
+              }
+            });
           }
         }
-        isUserMoveRef.current = false;
         return;
       }
 
@@ -369,13 +395,15 @@ export default function CartPage() {
             {clientLat !== null ? (
               <div className="rounded-xl overflow-hidden border-2" style={{ borderColor: `${brandColor}50` }}>
                 <div className="flex items-center justify-between px-3 py-2.5" style={{ backgroundColor: `${brandColor}12` }}>
-                  <button type="button" onClick={() => { stopWatch(); setClientLat(null); setClientLng(null); setGpsAccuracy(null); if (locationMapInstanceRef.current) { locationMapInstanceRef.current.remove(); locationMapInstanceRef.current = null; locationMarkerRef.current = null; locationCircleRef.current = null; } }} className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
+                  <button type="button" onClick={() => { stopWatch(); setClientLat(null); setClientLng(null); setGpsAccuracy(null); isUserMoveRef.current = false; if (locationMapInstanceRef.current) { locationMapInstanceRef.current.remove(); locationMapInstanceRef.current = null; locationMarkerRef.current = null; locationCircleRef.current = null; } }} className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
                     <RefreshCw size={12} /> تغيير
                   </button>
                   <span className="font-semibold text-sm flex items-center gap-1.5" style={{ color: brandColor }}>
                     {gpsLoading
-                      ? <><Loader2 size={14} className="animate-spin" /> جاري تحسين الدقة...</>
-                      : <><CheckCircle2 size={16} /> {gpsAccuracy !== null && gpsAccuracy > 30 ? `دقة ±${Math.round(gpsAccuracy)}م` : 'تم تحديد موقعك'}</>
+                      ? <><Loader2 size={14} className="animate-spin" /> جاري تحديد موقعك...</>
+                      : gpsAccuracy !== null && gpsAccuracy > 15
+                        ? <><Loader2 size={14} className="animate-spin" /> جاري تحسين الدقة ±{Math.round(gpsAccuracy)}م</>
+                        : <><CheckCircle2 size={16} /> تم تحديد موقعك بدقة</>
                     }
                   </span>
                 </div>
