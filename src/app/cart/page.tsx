@@ -192,8 +192,8 @@ export default function CartPage() {
         const map = L.map(locationMapRef.current, { zoomControl: false }).setView(BASRA_CENTER, 13);
         locationMapInstanceRef.current = map;
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap', maxZoom: 19,
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '© OpenStreetMap contributors © CARTO', maxZoom: 19,
         }).addTo(map);
 
         setTimeout(() => map.invalidateSize({ pan: false }), 100);
