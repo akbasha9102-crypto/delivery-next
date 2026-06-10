@@ -97,6 +97,7 @@ export default function CartPage() {
   const locationMapInstanceRef = useRef<any>(null);
   const pendingFlyRef = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
   const submitBtnRef = useRef<HTMLButtonElement>(null);
+  const pendingSubmitRef = useRef(false);
 
   const closeMap = () => {
     if (locationMapInstanceRef.current) {
@@ -104,6 +105,7 @@ export default function CartPage() {
       locationMapInstanceRef.current = null;
     }
     pendingFlyRef.current = null;
+    pendingSubmitRef.current = false;
     setShowMap(false);
     setLocationConfirmed(false);
     setClientLat(null);
@@ -120,7 +122,12 @@ export default function CartPage() {
     setShowMap(false);
     setLocationConfirmed(true);
     setGpsLocating(false);
-    setTimeout(() => submitBtnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+    if (pendingSubmitRef.current) {
+      pendingSubmitRef.current = false;
+      submitOrder();
+    } else {
+      setTimeout(() => submitBtnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+    }
   };
 
   const locateMe = () => {
@@ -237,7 +244,9 @@ export default function CartPage() {
   const handleConfirmSaved = () => {
     if (items.length === 0) { alert('السلة فارغة'); return; }
     setShowSaved(false);
-    submitOrder();
+    setEditing(true);
+    pendingSubmitRef.current = true;
+    openMap();
   };
 
   const handleEditSaved = () => {
@@ -248,6 +257,12 @@ export default function CartPage() {
   const handleConfirmForm = () => {
     if (!name.trim() || !phone.trim()) { alert('الرجاء إدخال الاسم ورقم الهاتف'); return; }
     if (items.length === 0) { alert('السلة فارغة'); return; }
+    if (!locationConfirmed) {
+      pendingSubmitRef.current = true;
+      openMap();
+      setTimeout(() => locationMapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+      return;
+    }
     submitOrder();
   };
 
@@ -422,7 +437,7 @@ export default function CartPage() {
               <button type="button" onClick={openMap}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed font-semibold text-sm transition-all active:scale-95"
                 style={{ borderColor: `${brandColor}60`, color: brandColor }}>
-                <LocateFixed size={16} /> 📍 شارك موقعك على الخارطة (اختياري)
+                <LocateFixed size={16} /> 📍 تحديد موقعك على الخارطة
               </button>
             )}
           </div>
