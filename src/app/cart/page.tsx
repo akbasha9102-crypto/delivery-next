@@ -97,6 +97,8 @@ export default function CartPage() {
   const isUserMoveRef = useRef(false);
   const watchIdRef = useRef<number | null>(null);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bestPosRef = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const hasShownMapRef = useRef(false);
 
   const stopWatch = () => {
     if (watchIdRef.current !== null) {
@@ -115,24 +117,39 @@ export default function CartPage() {
     setGpsLoading(true);
     setGpsAccuracy(null);
     isUserMoveRef.current = false;
+    bestPosRef.current = null;
+    hasShownMapRef.current = false;
 
-    // إذا ما وصل لدقة جيدة خلال 45 ثانية، نوقف ونعرض أفضل موقع متاح
+    // بعد 45 ثانية نعرض أفضل موقع حصلنا عليه حتى لو دقته سيئة
     fallbackTimerRef.current = setTimeout(() => {
-      setGpsLoading(false);
       stopWatch();
+      if (!hasShownMapRef.current && bestPosRef.current) {
+        setClientLat(bestPosRef.current.lat);
+        setClientLng(bestPosRef.current.lng);
+        setGpsAccuracy(bestPosRef.current.accuracy);
+      }
+      setGpsLoading(false);
     }, 45000);
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude, accuracy } = pos.coords;
-        if (!isUserMoveRef.current) {
+
+        // نحتفظ دائماً بأفضل قراءة
+        if (!bestPosRef.current || accuracy < bestPosRef.current.accuracy) {
+          bestPosRef.current = { lat: latitude, lng: longitude, accuracy };
+        }
+
+        setGpsAccuracy(accuracy);
+
+        // لا نعرض الخريطة إلا عند دقة معقولة (أقل من 2000م)
+        if (!isUserMoveRef.current && accuracy <= 2000) {
           setClientLat(latitude);
           setClientLng(longitude);
+          setGpsLoading(false);
+          hasShownMapRef.current = true;
         }
-        setGpsAccuracy(accuracy);
-        // نعرض الخريطة بمجرد ما نحصل على أي موقع
-        setGpsLoading(false);
-        // نوقف المراقبة فقط عند دقة ممتازة (15م أو أقل)
+
         if (accuracy <= 50) {
           stopWatch();
         }
