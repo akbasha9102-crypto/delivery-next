@@ -237,7 +237,7 @@ export default function CartPage() {
   const handleConfirmSaved = () => {
     if (items.length === 0) { alert('السلة فارغة'); return; }
     setShowSaved(false);
-    setShowConfirm(true);
+    submitOrder();
   };
 
   const handleEditSaved = () => {
@@ -248,7 +248,7 @@ export default function CartPage() {
   const handleConfirmForm = () => {
     if (!name.trim() || !phone.trim()) { alert('الرجاء إدخال الاسم ورقم الهاتف'); return; }
     if (items.length === 0) { alert('السلة فارغة'); return; }
-    setShowConfirm(true);
+    submitOrder();
   };
 
   const submitOrder = async () => {
@@ -502,28 +502,6 @@ export default function CartPage() {
       )}
       </AnimatePresence>
 
-      {/* ── نافذة تأكيد الهاتف ── */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="text-lg font-bold text-center mb-2" style={{ color: brandColor }}>تأكيد رقم الهاتف</h3>
-            <p className="text-gray-500 dark:text-slate-400 text-center text-sm mb-5">تأكد أن رقمك صحيح قبل الإرسال</p>
-            <div className="rounded-xl p-4 text-center mb-5 border-2" style={{ backgroundColor: `${brandColor}15`, borderColor: brandColor }}>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">رقم هاتفك</p>
-              <p className="text-2xl font-bold tracking-widest" style={{ color: brandColor }}>{phone}</p>
-            </div>
-            <button onClick={submitOrder} disabled={loading}
-              className="w-full font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95 disabled:opacity-60"
-              style={{ backgroundColor: brandColor, color: textOnBrand }}>
-              {loading ? 'جاري الإرسال...' : 'نعم، الرقم صحيح — أرسل الطلب'}
-            </button>
-            <button onClick={() => { setShowConfirm(false); setShowSaved(false); setEditing(true); }}
-              className="w-full border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 font-semibold py-3 rounded-xl transition-all active:scale-95">
-              تعديل المعلومات
-            </button>
-          </div>
-        </div>
-      )}
 
       <ClientBottomNav />
     </div>
