@@ -92,6 +92,7 @@ export default function CartPage() {
   const locationMapRef = useRef<HTMLDivElement>(null);
   const locationMapInstanceRef = useRef<any>(null);
   const locationMarkerRef = useRef<any>(null);
+  const isUserMoveRef = useRef(false);
 
   const shareLocation = () => {
     if (!('geolocation' in navigator)) { alert('المتصفح لا يدعم تحديد الموقع'); return; }
@@ -122,8 +123,11 @@ export default function CartPage() {
       if (!locationMapRef.current) return;
 
       if (locationMapInstanceRef.current) {
-        locationMapInstanceRef.current.setView([clientLat, clientLng], 17);
-        locationMarkerRef.current?.setLatLng([clientLat, clientLng]);
+        if (!isUserMoveRef.current) {
+          locationMapInstanceRef.current.setView([clientLat, clientLng], 17);
+          locationMarkerRef.current?.setLatLng([clientLat, clientLng]);
+        }
+        isUserMoveRef.current = false;
         return;
       }
 
@@ -143,9 +147,25 @@ export default function CartPage() {
           className: '', iconSize: [34, 34], iconAnchor: [17, 34],
         });
 
-        locationMarkerRef.current = L.marker([clientLat, clientLng], { icon }).addTo(map)
-          .bindPopup('<div dir="rtl" style="font-family:sans-serif;font-weight:bold">موقعك المحدد</div>', { offset: [0, -16] })
+        const marker = L.marker([clientLat, clientLng], { icon, draggable: true }).addTo(map)
+          .bindPopup('<div dir="rtl" style="font-family:sans-serif;font-weight:bold">اسحب البن لتصحيح موقعك</div>', { offset: [0, -16] })
           .openPopup();
+
+        marker.on('dragend', () => {
+          const { lat, lng } = marker.getLatLng();
+          isUserMoveRef.current = true;
+          setClientLat(lat);
+          setClientLng(lng);
+        });
+
+        map.on('click', (e: any) => {
+          marker.setLatLng(e.latlng);
+          isUserMoveRef.current = true;
+          setClientLat(e.latlng.lat);
+          setClientLng(e.latlng.lng);
+        });
+
+        locationMarkerRef.current = marker;
       });
     };
 
@@ -324,6 +344,7 @@ export default function CartPage() {
                   </span>
                 </div>
                 <div ref={locationMapRef} style={{ height: 200 }} />
+                <p className="text-center text-xs text-gray-400 py-1.5">اسحب البن أو اضغط على الخريطة لتصحيح موقعك</p>
               </div>
             ) : (
               <button type="button" onClick={shareLocation} disabled={gpsLoading}
