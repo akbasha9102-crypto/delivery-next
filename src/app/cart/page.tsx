@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Trash2, MapPin, ChevronDown, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2 } from 'lucide-react';
+import { Trash2, MapPin, ChevronDown, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -89,6 +89,9 @@ export default function CartPage() {
   const [clientLat, setClientLat] = useState<number | null>(null);
   const [clientLng, setClientLng] = useState<number | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
+  const locationMapRef = useRef<HTMLDivElement>(null);
+  const locationMapInstanceRef = useRef<any>(null);
+  const locationMarkerRef = useRef<any>(null);
 
   const shareLocation = () => {
     if (!('geolocation' in navigator)) { alert('المتصفح لا يدعم تحديد الموقع'); return; }
@@ -106,6 +109,53 @@ export default function CartPage() {
       { enableHighAccuracy: true, timeout: 12000 }
     );
   };
+
+  useEffect(() => {
+    if (clientLat === null || clientLng === null) return;
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+
+    const init = () => {
+      if (!locationMapRef.current) return;
+
+      if (locationMapInstanceRef.current) {
+        locationMapInstanceRef.current.setView([clientLat, clientLng], 17);
+        locationMarkerRef.current?.setLatLng([clientLat, clientLng]);
+        return;
+      }
+
+      import('leaflet').then((mod) => {
+        const L = (mod as any).default ?? mod;
+        if (!locationMapRef.current || locationMapInstanceRef.current) return;
+
+        const map = L.map(locationMapRef.current, { zoomControl: true }).setView([clientLat, clientLng], 17);
+        locationMapInstanceRef.current = map;
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap', maxZoom: 19,
+        }).addTo(map);
+
+        const icon = L.divIcon({
+          html: `<div style="width:34px;height:34px;background:${brandColor};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35)"></div>`,
+          className: '', iconSize: [34, 34], iconAnchor: [17, 34],
+        });
+
+        locationMarkerRef.current = L.marker([clientLat, clientLng], { icon }).addTo(map)
+          .bindPopup('<div dir="rtl" style="font-family:sans-serif;font-weight:bold">موقعك المحدد</div>', { offset: [0, -16] })
+          .openPopup();
+      });
+    };
+
+    // small delay to ensure the div is mounted after state update
+    const t = setTimeout(init, 80);
+    return () => {
+      clearTimeout(t);
+      if (link.parentNode) link.parentNode.removeChild(link);
+    };
+  }, [clientLat, clientLng]);
 
   useEffect(() => {
     const saved = loadSaved();
@@ -264,10 +314,16 @@ export default function CartPage() {
 
             {/* GPS location — optional */}
             {clientLat !== null ? (
-              <div className="flex items-center gap-2 px-4 py-3 rounded-xl border-2"
-                style={{ backgroundColor: `${brandColor}12`, borderColor: `${brandColor}50` }}>
-                <CheckCircle2 size={18} style={{ color: brandColor }} className="flex-shrink-0" />
-                <span className="font-semibold text-sm" style={{ color: brandColor }}>تم تحديد موقعك على الخارطة</span>
+              <div className="rounded-xl overflow-hidden border-2" style={{ borderColor: `${brandColor}50` }}>
+                <div className="flex items-center justify-between px-3 py-2.5" style={{ backgroundColor: `${brandColor}12` }}>
+                  <button type="button" onClick={() => { setClientLat(null); setClientLng(null); if (locationMapInstanceRef.current) { locationMapInstanceRef.current.remove(); locationMapInstanceRef.current = null; locationMarkerRef.current = null; } }} className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
+                    <RefreshCw size={12} /> تغيير
+                  </button>
+                  <span className="font-semibold text-sm flex items-center gap-1.5" style={{ color: brandColor }}>
+                    <CheckCircle2 size={16} /> تم تحديد موقعك
+                  </span>
+                </div>
+                <div ref={locationMapRef} style={{ height: 200 }} />
               </div>
             ) : (
               <button type="button" onClick={shareLocation} disabled={gpsLoading}
