@@ -446,7 +446,7 @@ export default function CartPage() {
 
       {/* ── نافذة المعلومات المحفوظة ── */}
       <AnimatePresence>
-      {showSaved && (
+      {showSaved && items.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
