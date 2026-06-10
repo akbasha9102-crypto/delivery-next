@@ -133,7 +133,7 @@ export default function CartPage() {
         // نعرض الخريطة بمجرد ما نحصل على أي موقع
         setGpsLoading(false);
         // نوقف المراقبة فقط عند دقة ممتازة (15م أو أقل)
-        if (accuracy <= 15) {
+        if (accuracy <= 50) {
           stopWatch();
         }
       },
@@ -404,12 +404,14 @@ export default function CartPage() {
                   <button type="button" onClick={() => { stopWatch(); setClientLat(null); setClientLng(null); setGpsAccuracy(null); isUserMoveRef.current = false; if (locationMapInstanceRef.current) { locationMapInstanceRef.current.remove(); locationMapInstanceRef.current = null; locationMarkerRef.current = null; locationCircleRef.current = null; } }} className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
                     <RefreshCw size={12} /> تغيير
                   </button>
-                  <span className="font-semibold text-sm flex items-center gap-1.5" style={{ color: brandColor }}>
+                  <span className="font-semibold text-sm flex items-center gap-1.5" style={{ color: gpsAccuracy !== null && !gpsLoading && gpsAccuracy > 50 ? '#f59e0b' : brandColor }}>
                     {gpsLoading
                       ? <><Loader2 size={14} className="animate-spin" /> جاري تحديد موقعك...</>
-                      : gpsAccuracy !== null && gpsAccuracy > 15
+                      : gpsAccuracy !== null && watchIdRef.current !== null
                         ? <><Loader2 size={14} className="animate-spin" /> جاري تحسين الدقة ±{Math.round(gpsAccuracy)}م</>
-                        : <><CheckCircle2 size={16} /> تم تحديد موقعك بدقة</>
+                        : gpsAccuracy !== null && gpsAccuracy > 50
+                          ? <><span className="text-amber-500">⚠</span> دقة ±{Math.round(gpsAccuracy)}م — صحّح موقعك بالسحب</>
+                          : <><CheckCircle2 size={16} /> تم تحديد موقعك ±{gpsAccuracy !== null ? Math.round(gpsAccuracy) : ''}م</>
                     }
                   </span>
                 </div>
