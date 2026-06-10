@@ -146,13 +146,18 @@ export default function CartPage() {
     );
   };
 
+  // load Leaflet CSS once — never remove it so tiles don't flash
   useEffect(() => {
-    if (clientLat === null || clientLng === null) return;
-
+    if (document.querySelector('link[data-leaflet-css]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    link.setAttribute('data-leaflet-css', '1');
     document.head.appendChild(link);
+  }, []);
+
+  useEffect(() => {
+    if (clientLat === null || clientLng === null) return;
 
     const init = () => {
       if (!locationMapRef.current) return;
@@ -189,6 +194,9 @@ export default function CartPage() {
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap', maxZoom: 19,
         }).addTo(map);
+
+        // ensure Leaflet measures the div correctly after CSS/layout settle
+        setTimeout(() => map.invalidateSize(), 150);
 
         const icon = L.divIcon({
           html: `<div style="width:34px;height:34px;background:${brandColor};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35)"></div>`,
@@ -228,10 +236,7 @@ export default function CartPage() {
 
     // small delay to ensure the div is mounted after state update
     const t = setTimeout(init, 80);
-    return () => {
-      clearTimeout(t);
-      if (link.parentNode) link.parentNode.removeChild(link);
-    };
+    return () => clearTimeout(t);
   }, [clientLat, clientLng, gpsAccuracy]);
 
   useEffect(() => () => stopWatch(), []);
