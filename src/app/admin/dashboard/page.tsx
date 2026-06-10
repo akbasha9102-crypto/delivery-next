@@ -10,7 +10,7 @@ import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/Sett
 import { useNewOrders } from '@/context/NewOrdersContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; client_lat?: number | null; client_lng?: number | null };
 type Driver = { id: string; name: string; phone: string; status: string };
 
 const STATUS = {
@@ -29,12 +29,16 @@ function formatPhoneForWA(phone: string) {
 
 function buildWAMessage(order: Order) {
   const items = order.items?.map(i => `• ${i.item_name} × ${i.quantity}`).join('\n') ?? '';
+  const locationLine = order.client_lat && order.client_lng
+    ? `🗺️ الموقع: https://maps.google.com/?q=${order.client_lat},${order.client_lng}`
+    : null;
   return [
     '🛵 طلب جديد',
     '',
     `👤 ${order.client_name}`,
     `📞 ${order.client_phone}`,
     order.delivery_address ? `📍 ${order.delivery_address}` : null,
+    locationLine,
     '',
     '🧾 الطلب:',
     items,
