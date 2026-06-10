@@ -195,8 +195,9 @@ export default function CartPage() {
           attribution: '© OpenStreetMap', maxZoom: 19,
         }).addTo(map);
 
-        // ensure Leaflet measures the div correctly after CSS/layout settle
-        setTimeout(() => map.invalidateSize(), 150);
+        // Leaflet needs the container fully painted — call twice to handle slow layout
+        setTimeout(() => map.invalidateSize({ pan: false }), 100);
+        setTimeout(() => map.invalidateSize({ pan: false }), 500);
 
         const icon = L.divIcon({
           html: `<div style="width:34px;height:34px;background:${brandColor};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35)"></div>`,
