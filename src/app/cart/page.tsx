@@ -96,6 +96,7 @@ export default function CartPage() {
   const locationMapRef = useRef<HTMLDivElement>(null);
   const locationMapInstanceRef = useRef<any>(null);
   const pendingFlyRef = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const submitBtnRef = useRef<HTMLButtonElement>(null);
 
   const closeMap = () => {
     if (locationMapInstanceRef.current) {
@@ -119,6 +120,7 @@ export default function CartPage() {
     setShowMap(false);
     setLocationConfirmed(true);
     setGpsLocating(false);
+    setTimeout(() => submitBtnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
   };
 
   const locateMe = () => {
@@ -433,7 +435,7 @@ export default function CartPage() {
             <span className="font-bold text-gray-900 dark:text-slate-100">الإجمالي</span>
           </div>
           {editing && (
-            <button onClick={handleConfirmForm} disabled={items.length === 0}
+            <button ref={submitBtnRef} onClick={handleConfirmForm} disabled={items.length === 0}
               className="w-full disabled:opacity-40 font-bold py-4 rounded-xl text-lg transition-all active:scale-95"
               style={{ backgroundColor: brandColor, color: textOnBrand }}>
               تأكيد الطلب
