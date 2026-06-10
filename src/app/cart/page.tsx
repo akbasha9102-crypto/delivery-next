@@ -91,6 +91,7 @@ export default function CartPage() {
   const [clientLat, setClientLat] = useState<number | null>(null);
   const [clientLng, setClientLng] = useState<number | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [gpsLocating, setGpsLocating] = useState(false);
   const locationMapRef = useRef<HTMLDivElement>(null);
   const locationMapInstanceRef = useRef<any>(null);
@@ -103,8 +104,20 @@ export default function CartPage() {
     }
     pendingFlyRef.current = null;
     setShowMap(false);
+    setLocationConfirmed(false);
     setClientLat(null);
     setClientLng(null);
+    setGpsLocating(false);
+  };
+
+  const confirmLocation = () => {
+    if (locationMapInstanceRef.current) {
+      locationMapInstanceRef.current.remove();
+      locationMapInstanceRef.current = null;
+    }
+    pendingFlyRef.current = null;
+    setShowMap(false);
+    setLocationConfirmed(true);
     setGpsLocating(false);
   };
 
@@ -356,7 +369,19 @@ export default function CartPage() {
             />
 
             {/* GPS location — optional */}
-            {showMap ? (
+            {locationConfirmed ? (
+              /* ── تم تأكيد الموقع ── */
+              <div className="rounded-xl px-4 py-3 flex items-center justify-between" style={{ backgroundColor: `${brandColor}12`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}40` }}>
+                <button type="button" onClick={() => { setLocationConfirmed(false); openMap(); }}
+                  className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
+                  <RefreshCw size={12} /> تغيير
+                </button>
+                <span className="font-semibold text-sm flex items-center gap-1.5" style={{ color: brandColor }}>
+                  <CheckCircle2 size={16} /> تم تحديد موقعك
+                </span>
+              </div>
+            ) : showMap ? (
+              /* ── الخريطة مفتوحة ── */
               <div className="rounded-xl overflow-hidden border-2" style={{ borderColor: `${brandColor}50` }}>
                 <div className="flex items-center justify-between px-3 py-2.5" style={{ backgroundColor: `${brandColor}12` }}>
                   <button type="button" onClick={closeMap} className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
@@ -365,7 +390,7 @@ export default function CartPage() {
                   <span className="font-semibold text-sm flex items-center gap-1.5" style={{ color: brandColor }}>
                     {gpsLocating
                       ? <><Loader2 size={14} className="animate-spin" /> جاري تحديد موقعك...</>
-                      : <><CheckCircle2 size={16} /> حرّك الخريطة لضبط موقعك</>
+                      : <><MapPin size={15} /> حرّك الخريطة لضبط موقعك</>
                     }
                   </span>
                 </div>
@@ -384,9 +409,14 @@ export default function CartPage() {
                     موقعي
                   </button>
                 </div>
-                <p className="text-center text-xs text-gray-400 py-1.5">حرّك الخريطة حتى يصبح البن على موقعك بالضبط</p>
+                <button type="button" onClick={confirmLocation}
+                  className="w-full py-2.5 font-bold text-sm transition-all active:scale-95"
+                  style={{ backgroundColor: brandColor, color: textOnBrand }}>
+                  تأكيد الموقع
+                </button>
               </div>
             ) : (
+              /* ── زر فتح الخريطة ── */
               <button type="button" onClick={openMap}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed font-semibold text-sm transition-all active:scale-95"
                 style={{ borderColor: `${brandColor}60`, color: brandColor }}>
