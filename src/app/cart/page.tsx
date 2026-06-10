@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Trash2, MapPin, ChevronDown, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { Trash2, MapPin, ChevronDown, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -485,51 +485,126 @@ export default function CartPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex flex-col"
-          style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
+          className="fixed inset-0 z-[60] flex flex-col justify-end"
+          style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+
+          <style>{`
+            @keyframes pin-pulse { 0% { transform:translate(-50%,0) scale(1); opacity:.55; } 100% { transform:translate(-50%,0) scale(3.5); opacity:0; } }
+            @keyframes pin-bounce { 0%,100% { transform:translate(-50%,-100%) translateY(0); } 45% { transform:translate(-50%,-100%) translateY(-8px); } }
+          `}</style>
+
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="flex flex-col flex-1 overflow-hidden rounded-t-3xl mt-12 bg-white dark:bg-slate-800">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100 dark:border-slate-700">
-              <button type="button" onClick={closeMap}
-                className="flex items-center gap-1.5 text-sm font-semibold text-gray-400 active:scale-90 transition-all">
-                <RefreshCw size={14} /> إلغاء
-              </button>
-              <span className="font-bold text-base flex items-center gap-1.5" style={{ color: brandColor }}>
-                {gpsLocating
-                  ? <><Loader2 size={15} className="animate-spin" /> جاري تحديد موقعك...</>
-                  : <><MapPin size={16} /> حرّك الخريطة لضبط موقعك</>
-                }
-              </span>
-              <div style={{ width: 60 }} />
+            transition={{ type: 'spring', stiffness: 280, damping: 32 }}
+            className="flex flex-col overflow-hidden rounded-t-3xl bg-white dark:bg-slate-900"
+            style={{ height: '92vh' }}>
+
+            {/* Drag pill */}
+            <div className="flex justify-center pt-3 pb-0.5 flex-shrink-0">
+              <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-slate-700" />
             </div>
-            {/* Map */}
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 flex-shrink-0">
+              <button type="button" onClick={closeMap}
+                className="w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 active:scale-90 transition-all">
+                <X size={17} />
+              </button>
+              <div className="text-center">
+                <p className="font-bold text-gray-900 dark:text-slate-100" style={{ fontSize: 15 }}>تحديد موقع التوصيل</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
+                  {gpsLocating ? 'جاري تحديد موقعك...' : 'حرّك الخريطة لضبط الدبوس'}
+                </p>
+              </div>
+              <div className="w-9" />
+            </div>
+
+            {/* Map area */}
             <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
               <div ref={locationMapRef} style={{ position: 'absolute', inset: 0 }} />
-              {/* Center pin */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -100%)', pointerEvents: 'none', zIndex: 1000 }}>
-                <div style={{ width: 36, height: 36, background: brandColor, borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)', border: '3px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }} />
+
+              {/* Pulsing ring under pin */}
+              <div style={{
+                position: 'absolute', top: '50%', left: '50%',
+                width: 18, height: 18, borderRadius: '50%',
+                background: brandColor,
+                animation: 'pin-pulse 2s ease-out infinite',
+                zIndex: 999, pointerEvents: 'none',
+              }} />
+
+              {/* Pin */}
+              <div style={{
+                position: 'absolute', top: '50%', left: '50%',
+                animation: 'pin-bounce 2.4s ease-in-out infinite',
+                pointerEvents: 'none', zIndex: 1000,
+                transform: 'translate(-50%, -100%)',
+              }}>
+                <div style={{
+                  width: 42, height: 42,
+                  background: brandColor,
+                  borderRadius: '50% 50% 50% 0',
+                  transform: 'rotate(-45deg)',
+                  border: '3.5px solid white',
+                  boxShadow: `0 6px 20px ${brandColor}70, 0 2px 8px rgba(0,0,0,0.25)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{ width: 11, height: 11, background: 'white', borderRadius: '50%', transform: 'rotate(45deg)', opacity: 0.9 }} />
+                </div>
               </div>
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, 2px)', width: 10, height: 5, background: 'rgba(0,0,0,0.2)', borderRadius: '50%', pointerEvents: 'none', zIndex: 1000 }} />
-              {/* Locate me button */}
+
+              {/* Pin shadow */}
+              <div style={{
+                position: 'absolute', top: '50%', left: '50%',
+                transform: 'translate(-50%, 4px)',
+                width: 14, height: 6,
+                background: 'rgba(0,0,0,0.18)',
+                borderRadius: '50%',
+                pointerEvents: 'none', zIndex: 999,
+                filter: 'blur(2px)',
+              }} />
+
+              {/* GPS status toast */}
+              {gpsLocating && (
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-2 rounded-full px-4 py-2 shadow-xl text-xs font-bold"
+                  style={{ background: 'white', color: brandColor, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+                  <Loader2 size={13} className="animate-spin" />
+                  جاري تحديد موقعك...
+                </div>
+              )}
+
+              {/* GPS FAB */}
               <button type="button" onClick={locateMe}
-                className="absolute bottom-4 left-4 z-[1000] bg-white rounded-2xl px-4 py-2 flex items-center gap-2 text-sm font-bold shadow-lg active:scale-95 transition-all"
-                style={{ color: brandColor }}>
-                {gpsLocating ? <Loader2 size={15} className="animate-spin" /> : <LocateFixed size={15} />}
-                موقعي
+                className="absolute bottom-4 right-4 z-[1000] w-13 h-13 rounded-full flex items-center justify-center active:scale-90 transition-all"
+                style={{
+                  width: 50, height: 50,
+                  background: 'white',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                  border: `2px solid ${brandColor}30`,
+                }}>
+                {gpsLocating
+                  ? <Loader2 size={22} className="animate-spin" style={{ color: brandColor }} />
+                  : <LocateFixed size={22} style={{ color: brandColor }} />
+                }
               </button>
             </div>
-            {/* Confirm button */}
-            <button type="button" onClick={confirmLocation}
-              className="mx-4 mb-6 mt-3 py-4 rounded-2xl font-bold text-base transition-all active:scale-95 shadow-lg"
-              style={{ backgroundColor: brandColor, color: textOnBrand }}>
-              <CheckCircle2 size={18} className="inline ml-2" />
-              تأكيد الموقع
-            </button>
+
+            {/* Bottom bar */}
+            <div className="px-4 pt-3 pb-7 flex-shrink-0 bg-white dark:bg-slate-900"
+              style={{ boxShadow: '0 -1px 0 rgba(0,0,0,0.06)' }}>
+              <button type="button" onClick={confirmLocation}
+                className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-95 flex items-center justify-center gap-2"
+                style={{
+                  background: `linear-gradient(135deg, ${brandColor}, ${brandColor}cc)`,
+                  color: textOnBrand,
+                  boxShadow: `0 8px 24px ${brandColor}50`,
+                }}>
+                <CheckCircle2 size={20} />
+                تأكيد الموقع
+              </button>
+            </div>
+
           </motion.div>
         </motion.div>
       )}
