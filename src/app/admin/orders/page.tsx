@@ -1,12 +1,117 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { AdminGuard } from '@/components/AdminGuard';
-import { Send, ChevronDown } from 'lucide-react';
+import { Send, ChevronDown, MapPin, X, Locate } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[] };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; client_lat: number | null; client_lng: number | null };
+
+function MapModal({ order, onClose }: { order: Order; onClose: () => void }) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const myMarkerRef = useRef<any>(null);
+
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+
+    let watchId: number | null = null;
+
+    import('leaflet').then((mod) => {
+      const L = (mod as any).default ?? mod;
+      if (!mapContainerRef.current || mapRef.current) return;
+
+      const map = L.map(mapContainerRef.current).setView([order.client_lat!, order.client_lng!], 15);
+      mapRef.current = map;
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19,
+      }).addTo(map);
+
+      const customerIcon = L.divIcon({
+        html: `<div style="width:36px;height:36px;background:#ef4444;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35)"></div>`,
+        className: '',
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+      });
+
+      L.marker([order.client_lat!, order.client_lng!], { icon: customerIcon })
+        .addTo(map)
+        .bindPopup(`<div dir="rtl" style="font-family:sans-serif"><b>${order.client_name}</b>${order.delivery_address ? `<br><small style="color:#6b7280">${order.delivery_address}</small>` : ''}</div>`, { offset: [0, -18] })
+        .openPopup();
+
+      if ('geolocation' in navigator) {
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            const meIcon = L.divIcon({
+              html: `<div style="width:38px;height:38px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:18px">📍</div>`,
+              className: '',
+              iconSize: [38, 38],
+              iconAnchor: [19, 19],
+            });
+
+            if (myMarkerRef.current) {
+              myMarkerRef.current.setLatLng([latitude, longitude]);
+            } else {
+              myMarkerRef.current = L.marker([latitude, longitude], { icon: meIcon })
+                .addTo(map)
+                .bindPopup('<div dir="rtl">موقعك الحالي</div>');
+
+              map.fitBounds(
+                L.latLngBounds([order.client_lat!, order.client_lng!], [latitude, longitude]),
+                { padding: [60, 60] }
+              );
+            }
+          },
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 4000, timeout: 12000 }
+        );
+      }
+    });
+
+    return () => {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; myMarkerRef.current = null; }
+      if (link.parentNode) link.parentNode.removeChild(link);
+    };
+  }, [order]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+          <button onClick={onClose} className="p-1.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 active:scale-90 transition-all">
+            <X size={16} />
+          </button>
+          <div className="text-right">
+            <p className="font-bold text-gray-900 dark:text-slate-100">{order.client_name}</p>
+            {order.delivery_address && <p className="text-xs text-gray-400 dark:text-slate-500">{order.delivery_address}</p>}
+          </div>
+          <MapPin size={18} className="text-red-500 flex-shrink-0" />
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900">
+          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
+          <span className="text-blue-700 dark:text-blue-300 text-xs font-medium flex items-center gap-1.5">
+            <Locate size={12} /> يتم تحديد موقعك تلقائياً
+          </span>
+        </div>
+        <div ref={mapContainerRef} style={{ height: 360 }} />
+        <button
+          onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${order.client_lat},${order.client_lng}&travelmode=driving`, '_blank')}
+          className="w-full py-4 bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-2 active:opacity-80 transition-all"
+        >
+          فتح في Google Maps
+        </button>
+      </div>
+    </div>
+  );
+}
 type Driver = { id: string; name: string; phone: string };
 
 const STATUS = {
@@ -37,6 +142,7 @@ function OrdersPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<Record<string, string>>({});
   const [sending, setSending] = useState<Record<string, boolean>>({});
+  const [mapOrder, setMapOrder] = useState<Order | null>(null);
 
   const fetchOrders = useCallback(async () => {
     const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100);
@@ -165,6 +271,14 @@ function OrdersPage() {
                       ))}
                     </div>
                     {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
+                    {order.client_lat && order.client_lng && (
+                      <button
+                        onClick={() => setMapOrder(order)}
+                        className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-red-500 active:scale-95 transition-all"
+                      >
+                        <MapPin size={14} /> عرض موقع العميل على الخريطة
+                      </button>
+                    )}
                   </div>
 
                   {/* Driver assignment — only for ready orders */}
@@ -218,6 +332,7 @@ function OrdersPage() {
       </div>
 
       <AdminBottomNav />
+      {mapOrder && <MapModal order={mapOrder} onClose={() => setMapOrder(null)} />}
     </div>
   );
 }
