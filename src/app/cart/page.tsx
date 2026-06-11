@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChefHat, ChevronLeft } from 'lucide-react';
+import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChefHat, ChevronLeft, Plus, Minus } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -41,7 +41,7 @@ function saveInfo(info: SavedInfo) {
 }
 
 export default function CartPage() {
-  const { items, removeItem, clearCart, total } = useCart();
+  const { items, addItem, decrementItem, removeItem, clearCart, total } = useCart();
   const { primary_color } = useSettings();
   const { dark } = useDarkMode();
   const router = useRouter();
@@ -69,7 +69,9 @@ export default function CartPage() {
 
   // UI state
   const [showOrderReview,  setShowOrderReview]  = useState(false);
-  const [selectedExtras,   setSelectedExtras]   = useState<string[]>([]);
+  const [showOrderSummary, setShowOrderSummary] = useState(false);
+  const [itemExtras,       setItemExtras]       = useState<Record<string, string[]>>({});
+  const [itemNotes,        setItemNotes]        = useState<Record<string, string>>({});
   const [showSaved,        setShowSaved]        = useState(false);
   const [editing,          setEditing]          = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -290,18 +292,33 @@ export default function CartPage() {
     setShowOrderReview(true);
   };
 
-  const toggleExtra = (extra: string) => {
-    setSelectedExtras(prev =>
-      prev.includes(extra) ? prev.filter(e => e !== extra) : [...prev, extra]
-    );
+  const toggleItemExtra = (itemId: string, extra: string) => {
+    setItemExtras(prev => {
+      const cur = prev[itemId] || [];
+      return { ...prev, [itemId]: cur.includes(extra) ? cur.filter(e => e !== extra) : [...cur, extra] };
+    });
   };
 
   const proceedFromReview = () => {
-    if (selectedExtras.length > 0) {
-      const extrasText = selectedExtras.join('، ');
-      setNote(prev => prev.trim() ? `${extrasText}، ${prev.trim()}` : extrasText);
-    }
     setShowOrderReview(false);
+    setShowOrderSummary(true);
+  };
+
+  const proceedFromSummary = () => {
+    // Build combined client note from per-item extras + notes
+    const parts: string[] = [];
+    for (const item of items) {
+      const extras = itemExtras[item.id] || [];
+      const iNote  = (itemNotes[item.id] || '').trim();
+      if (extras.length > 0 || iNote) {
+        let part = item.name;
+        if (extras.length > 0) part += `: ${extras.join('، ')}`;
+        if (iNote) part += ` | ${iNote}`;
+        parts.push(part);
+      }
+    }
+    setNote(parts.join('\n'));
+    setShowOrderSummary(false);
     if (hasSavedInfoRef.current) {
       setShowSaved(true);
     } else {
@@ -340,7 +357,7 @@ export default function CartPage() {
     const { data: order, error } = await supabase.from('orders').insert([{
       client_name: nickname.trim() ? `${name.trim()} (${nickname.trim()})` : name.trim(), client_phone: phone.trim(),
       delivery_address: locationDesc.trim() || null,
-      client_note: note.trim() || null,
+      client_note: note || null,
       total_amount: total, status: 'pending',
       ...(clientLat !== null && clientLng !== null ? { client_lat: clientLat, client_lng: clientLng } : {}),
     }]).select().single();
@@ -490,7 +507,7 @@ export default function CartPage() {
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          نافذة مراجعة الطلب
+          نافذة مراجعة الطلب (مع إضافات + ملاحظات لكل وجبة)
       ══════════════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
       {showOrderReview && (
@@ -498,107 +515,121 @@ export default function CartPage() {
           className="fixed inset-0 z-50 flex items-end justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}>
           <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
             className="w-full bg-white dark:bg-slate-900 rounded-t-3xl overflow-hidden flex flex-col"
-            style={{ maxHeight: '92vh' }}>
+            style={{ maxHeight: '94vh' }}>
 
             {/* Drag pill */}
             <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
               <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-slate-700"/>
             </div>
 
-            {/* Header */}
+            {/* Header sticky */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
               <button onClick={() => setShowOrderReview(false)}
                 className="w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-800 text-gray-500 active:scale-90">
                 <X size={17}/>
               </button>
-              <p className="font-black text-gray-900 dark:text-white">مراجعة طلبك</p>
+              <div className="text-center">
+                <p className="font-black text-gray-900 dark:text-white text-sm">مراجعة طلبك</p>
+                <p className="text-[10px] text-gray-400 dark:text-slate-500">{items.length} وجبة · {total.toLocaleString()} د.ع</p>
+              </div>
               <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#ef444420' }}>
                 <ShoppingBag size={17} style={{ color: '#ef4444' }}/>
               </div>
             </div>
 
-            {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
+            {/* Scrollable body — items first */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+              {items.map(item => {
+                const extras  = itemExtras[item.id] || [];
+                const iNote   = itemNotes[item.id]  || '';
+                return (
+                  <div key={item.id} className="bg-gray-50 dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
 
-              {/* Items list */}
-              <div>
-                <p className="text-[11px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest text-right mb-3">تفاصيل طلبك</p>
-                <div className="space-y-3">
-                  {items.map(item => (
-                    <div key={item.id} className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-3 flex items-center gap-3 border border-gray-100 dark:border-slate-700">
-                      {item.image_url ? (
-                        <img src={item.image_url} alt={item.name}
-                          className="w-16 h-16 rounded-xl object-cover flex-shrink-0 shadow-sm"/>
-                      ) : (
-                        <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                          <ShoppingBag size={22} className="text-gray-400 dark:text-slate-500"/>
-                        </div>
-                      )}
+                    {/* Row: image + name + qty controls + price */}
+                    <div className="p-3 flex items-center gap-3">
+                      {item.image_url
+                        ? <img src={item.image_url} alt={item.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0 shadow-sm"/>
+                        : <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                            <ShoppingBag size={20} className="text-gray-400 dark:text-slate-500"/>
+                          </div>
+                      }
                       <div className="flex-1 text-right min-w-0">
                         <p className="font-black text-gray-900 dark:text-white text-sm leading-snug">{item.name}</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{item.price.toLocaleString()} د.ع × {item.quantity}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{item.price.toLocaleString()} د.ع / وجبة</p>
                       </div>
-                      <div className="text-left flex-shrink-0">
-                        <p className="font-black text-base" style={{ color: '#ef4444' }}>{(item.price * item.quantity).toLocaleString()}</p>
+                      {/* qty controls */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button onClick={() => decrementItem(item.id)}
+                          className="w-8 h-8 rounded-full flex items-center justify-center active:scale-90 transition-all"
+                          style={{ backgroundColor: item.quantity === 1 ? '#fee2e2' : '#f1f5f9' }}>
+                          {item.quantity === 1
+                            ? <Trash2 size={13} style={{ color: '#ef4444' }}/>
+                            : <Minus size={13} className="text-gray-500 dark:text-slate-400"/>}
+                        </button>
+                        <span className="font-black text-sm text-gray-900 dark:text-white w-5 text-center">{item.quantity}</span>
+                        <button onClick={() => addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url })}
+                          className="w-8 h-8 rounded-full flex items-center justify-center active:scale-90 transition-all"
+                          style={{ backgroundColor: '#ef4444' }}>
+                          <Plus size={13} className="text-white"/>
+                        </button>
+                      </div>
+                      {/* item total */}
+                      <div className="text-left flex-shrink-0 ml-1">
+                        <p className="font-black text-sm" style={{ color: '#ef4444' }}>{(item.price * item.quantity).toLocaleString()}</p>
                         <p className="text-[9px] text-gray-400 text-center">د.ع</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+
+                    {/* Suggested extras for this item */}
+                    <div className="px-3 pb-2 border-t border-gray-100 dark:border-slate-700 pt-2">
+                      <div className="flex items-center justify-end gap-1.5 mb-2">
+                        <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 tracking-wide">إضافات مقترحة</p>
+                        <ChefHat size={11} className="text-gray-400 dark:text-slate-500"/>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 justify-end">
+                        {SUGGESTED_EXTRAS.map(extra => {
+                          const active = extras.includes(extra);
+                          return (
+                            <button key={extra} type="button" onClick={() => toggleItemExtra(item.id, extra)}
+                              className="px-2.5 py-1 rounded-full text-[11px] font-black transition-all active:scale-95"
+                              style={active
+                                ? { backgroundColor: '#ef4444', color: '#fff', boxShadow: '0 2px 8px #ef444440' }
+                                : { backgroundColor: dark ? '#1e293b' : '#e2e8f0', color: dark ? '#94a3b8' : '#64748b' }
+                              }>
+                              {active ? '✓ ' : ''}{extra}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Notes for this item */}
+                    <div className="px-3 pb-3 pt-2">
+                      <input type="text" value={iNote}
+                        onChange={e => setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
+                        placeholder="ملاحظة خاصة لهذه الوجبة... (مثل: حار، بدون بصل)" dir="rtl"
+                        className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-right text-xs text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-1"
+                        style={{ '--tw-ring-color': '#ef4444' } as React.CSSProperties}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
 
               {/* Total */}
               <div className="rounded-2xl px-5 py-4 flex items-center justify-between"
-                style={{ background: 'linear-gradient(135deg,#ef444410,#ef444405)', border: '1.5px solid #ef444430' }}>
-                <div className="text-left">
+                style={{ background: 'linear-gradient(135deg,#ef444412,#ef444406)', border: '1.5px solid #ef444435' }}>
+                <div>
                   <p className="font-black text-2xl" style={{ color: '#ef4444' }}>{total.toLocaleString()}</p>
                   <p className="text-[10px] text-gray-400 font-bold">د.ع</p>
                 </div>
-                <p className="font-black text-gray-900 dark:text-white text-base">المجموع الكلي</p>
+                <p className="font-black text-gray-900 dark:text-white">المجموع الكلي</p>
               </div>
 
-              {/* Suggested extras */}
-              <div>
-                <div className="flex items-center justify-end gap-2 mb-3">
-                  <p className="text-[11px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">إضافات مقترحة</p>
-                  <ChefHat size={14} className="text-gray-400 dark:text-slate-500"/>
-                </div>
-                <div className="flex flex-wrap gap-2 justify-end">
-                  {SUGGESTED_EXTRAS.map(extra => {
-                    const active = selectedExtras.includes(extra);
-                    return (
-                      <button key={extra} type="button" onClick={() => toggleExtra(extra)}
-                        className="px-3 py-2 rounded-full text-xs font-black transition-all active:scale-95"
-                        style={active
-                          ? { backgroundColor: '#ef4444', color: '#fff', boxShadow: '0 3px 10px #ef444440' }
-                          : { backgroundColor: dark ? '#1e293b' : '#f1f5f9', color: dark ? '#94a3b8' : '#64748b', border: '1px solid ' + (dark ? '#334155' : '#e2e8f0') }
-                        }>
-                        {active ? '✓ ' : ''}{extra}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Kitchen notes */}
-              <div>
-                <div className="flex items-center justify-end gap-2 mb-2">
-                  <p className="text-[11px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">ملاحظات للمطبخ</p>
-                  <ChefHat size={14} className="text-gray-400 dark:text-slate-500"/>
-                </div>
-                <textarea value={note} onChange={e => setNote(e.target.value)}
-                  placeholder="مثلاً: بدون بصل، حار جداً، زيادة صلصة، طهي جيد، إضافة ليمون..." dir="rtl" rows={3}
-                  className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 resize-none"
-                  style={{ '--tw-ring-color': '#ef4444' } as React.CSSProperties}
-                />
-              </div>
-
-              <div className="h-1"/>
+              <div className="h-2"/>
             </div>
 
             {/* Footer */}
@@ -606,8 +637,87 @@ export default function CartPage() {
               <button onClick={proceedFromReview}
                 className="w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', boxShadow: '0 8px 24px #ef444450' }}>
+                إتمام الطلب
                 <ChevronLeft size={19}/>
-                متابعة — أدخل معلوماتك
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+      </AnimatePresence>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          نافذة ملخص الطلب المنبثقة
+      ══════════════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+      {showOrderSummary && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.82, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.82, y: 30 }}
+            transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+            className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm overflow-hidden"
+            style={{ maxHeight: '82vh' }}>
+
+            {/* Summary header */}
+            <div className="px-5 pt-6 pb-4 text-center border-b border-gray-100 dark:border-slate-700">
+              <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ backgroundColor: '#ef444418' }}>
+                <CheckCircle2 size={30} style={{ color: '#ef4444' }}/>
+              </div>
+              <h3 className="font-black text-gray-900 dark:text-white text-lg">ملخص طلبك</h3>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">تأكد من الطلب قبل إدخال معلوماتك</p>
+            </div>
+
+            {/* Summary body */}
+            <div className="overflow-y-auto px-4 py-4 space-y-3" style={{ maxHeight: '44vh' }}>
+              {items.map(item => {
+                const extras = itemExtras[item.id] || [];
+                const iNote  = (itemNotes[item.id] || '').trim();
+                return (
+                  <div key={item.id} className="bg-gray-50 dark:bg-slate-700 rounded-2xl p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-black text-sm" style={{ color: '#ef4444' }}>
+                        {(item.price * item.quantity).toLocaleString()} د.ع
+                      </span>
+                      <span className="font-black text-gray-900 dark:text-white text-sm text-right">
+                        {item.name} <span className="text-gray-400 font-bold">×{item.quantity}</span>
+                      </span>
+                    </div>
+                    {extras.length > 0 && (
+                      <p className="text-xs text-gray-500 dark:text-slate-400 text-right mt-1 leading-relaxed">
+                        🍽 {extras.join('، ')}
+                      </p>
+                    )}
+                    {iNote && (
+                      <p className="text-xs text-gray-400 dark:text-slate-500 text-right mt-0.5">
+                        📝 {iNote}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Total */}
+              <div className="rounded-xl px-4 py-3 flex items-center justify-between"
+                style={{ background: 'linear-gradient(135deg,#ef444412,#ef444406)', border: '1.5px solid #ef444435' }}>
+                <span className="font-black text-xl" style={{ color: '#ef4444' }}>{total.toLocaleString()} د.ع</span>
+                <span className="font-black text-gray-900 dark:text-white text-sm">المجموع</span>
+              </div>
+            </div>
+
+            {/* Summary footer */}
+            <div className="px-4 pb-5 pt-3 space-y-2 border-t border-gray-100 dark:border-slate-700">
+              <button onClick={proceedFromSummary}
+                className="w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', boxShadow: '0 8px 24px #ef444450' }}>
+                تم ← أدخل معلوماتك
+              </button>
+              <button onClick={() => { setShowOrderSummary(false); setShowOrderReview(true); }}
+                className="w-full py-3 rounded-xl font-bold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all">
+                تعديل الطلب
               </button>
             </div>
           </motion.div>
