@@ -262,7 +262,7 @@ export default function CartPage() {
       import('leaflet').then((mod) => {
         const L = (mod as any).default ?? mod;
         if (!locationMapRef.current || locationMapInstanceRef.current) return;
-        const map = L.map(locationMapRef.current, { zoomControl: false }).setView(BASRA_CENTER, 13);
+        const map = L.map(locationMapRef.current, { zoomControl: false, attributionControl: false }).setView(BASRA_CENTER, 13);
         locationMapInstanceRef.current = map;
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
           attribution: '© OpenStreetMap contributors © CARTO', maxZoom: 19,
@@ -292,7 +292,7 @@ export default function CartPage() {
       import('leaflet').then((mod) => {
         const L = (mod as any).default ?? mod;
         if (!confirmMapRef.current || confirmMapInstanceRef.current) return;
-        const map = L.map(confirmMapRef.current, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false })
+        const map = L.map(confirmMapRef.current, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false, attributionControl: false })
           .setView([clientLat!, clientLng!], 16);
         confirmMapInstanceRef.current = map;
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
