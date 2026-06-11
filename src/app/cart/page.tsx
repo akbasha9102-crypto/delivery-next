@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
@@ -285,8 +285,8 @@ export default function CartPage() {
     }
   }, []);
 
-  // فتح المراجعة تلقائياً عند وجود وجبات
-  useEffect(() => {
+  // فتح المراجعة قبل أي رسم حتى لا يظهر وميض الصفحة
+  useLayoutEffect(() => {
     if (items.length > 0 && !editing) {
       setShowOrderReview(true);
     }
@@ -526,7 +526,7 @@ export default function CartPage() {
             </div>
 
             {/* Scrollable body — items first */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
               {items.map(item => {
                 const extras  = itemExtras[item.id] || [];
                 const iNote   = itemNotes[item.id]  || '';
