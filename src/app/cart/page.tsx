@@ -91,8 +91,10 @@ export default function CartPage() {
   const [editing,          setEditing]          = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [loading,          setLoading]          = useState(false);
-  const [editingName,  setEditingName]  = useState(false);
-  const [editingPhone, setEditingPhone] = useState(false);
+  const [editingName,           setEditingName]           = useState(false);
+  const [editingPhone,          setEditingPhone]          = useState(false);
+  const [editingConfirmAddress, setEditingConfirmAddress] = useState(false);
+  const [editingConfirmPhone,   setEditingConfirmPhone]   = useState(false);
   const hasSavedInfoRef = useRef(false);
 
   // map state
@@ -892,7 +894,20 @@ const proceedFromReview = () => {
                 style={{ backgroundColor: `${brandColor}10`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}30` }}>
                 <div className="flex-1">
                   <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">العنوان</p>
-                  <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-relaxed">{locationDesc || '—'}</p>
+                  {editingConfirmAddress ? (
+                    <input
+                      type="text" value={locationDesc} onChange={e => setLocationDesc(e.target.value)}
+                      onBlur={() => setEditingConfirmAddress(false)} autoFocus dir="rtl"
+                      className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-slate-100 outline-none"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 justify-end">
+                      <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-relaxed flex-1">{locationDesc || '—'}</p>
+                      <button type="button" onClick={() => setEditingConfirmAddress(true)} className="text-gray-400 active:scale-90 transition-all flex-shrink-0">
+                        <Pencil size={13}/>
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <MapPin size={18} className="mt-0.5 flex-shrink-0" style={{ color: brandColor }}/>
               </div>
@@ -901,7 +916,21 @@ const proceedFromReview = () => {
                 style={{ backgroundColor: `${brandColor}10`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}30` }}>
                 <div className="flex-1">
                   <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">رقم الهاتف</p>
-                  <p className="font-bold tracking-widest" style={{ color: brandColor }}>{phone}</p>
+                  {editingConfirmPhone ? (
+                    <input
+                      type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                      onBlur={() => setEditingConfirmPhone(false)} autoFocus dir="rtl"
+                      className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm font-bold outline-none"
+                      style={{ color: brandColor }}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 justify-end">
+                      <p className="font-bold tracking-widest flex-1" style={{ color: brandColor }}>{phone}</p>
+                      <button type="button" onClick={() => setEditingConfirmPhone(true)} className="text-gray-400 active:scale-90 transition-all flex-shrink-0">
+                        <Pencil size={13}/>
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <Phone size={18} className="flex-shrink-0" style={{ color: brandColor }}/>
               </div>
