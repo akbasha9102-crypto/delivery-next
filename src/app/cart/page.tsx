@@ -91,6 +91,8 @@ export default function CartPage() {
   const [editing,          setEditing]          = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [loading,          setLoading]          = useState(false);
+  const [editingName,  setEditingName]  = useState(false);
+  const [editingPhone, setEditingPhone] = useState(false);
   const hasSavedInfoRef = useRef(false);
 
   // map state
@@ -784,11 +786,37 @@ const proceedFromReview = () => {
 
             <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 space-y-3 mb-5 text-right">
               <div className="flex justify-between items-center">
-                <span className="text-gray-900 dark:text-slate-100 font-semibold">{name}</span>
+                <div className="flex items-center gap-2">
+                  {editingName ? (
+                    <input
+                      type="text" value={name} onChange={e => setName(e.target.value)}
+                      onBlur={() => setEditingName(false)} autoFocus dir="rtl"
+                      className="bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-slate-100 outline-none"
+                    />
+                  ) : (
+                    <>
+                      <button onClick={() => setEditingName(true)} className="text-gray-400 active:scale-90 transition-all"><Pencil size={13}/></button>
+                      <span className="text-gray-900 dark:text-slate-100 font-semibold">{name}</span>
+                    </>
+                  )}
+                </div>
                 <span className="text-gray-400 dark:text-slate-500 text-sm">الاسم</span>
               </div>
               <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-600 pt-3">
-                <span className="font-bold tracking-widest" style={{ color: brandColor }}>{phone}</span>
+                <div className="flex items-center gap-2">
+                  {editingPhone ? (
+                    <input
+                      type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                      onBlur={() => setEditingPhone(false)} autoFocus dir="rtl"
+                      className="bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-slate-100 outline-none"
+                    />
+                  ) : (
+                    <>
+                      <button onClick={() => setEditingPhone(true)} className="text-gray-400 active:scale-90 transition-all"><Pencil size={13}/></button>
+                      <span className="font-bold tracking-widest" style={{ color: '#ef4444' }}>{phone}</span>
+                    </>
+                  )}
+                </div>
                 <span className="text-gray-400 dark:text-slate-500 text-sm">الهاتف</span>
               </div>
               {locationDesc && (
