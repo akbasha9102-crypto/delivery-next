@@ -391,7 +391,7 @@ export default function CartPage() {
             ) : (
               <button type="button" onClick={openMap}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
-                style={{ backgroundColor: `${brandColor}15`, color: brandColor, borderWidth: 1.5, borderStyle: 'solid', borderColor: `${brandColor}50` }}>
+                style={{ backgroundColor: '#ef444415', color: '#ef4444', borderWidth: 1.5, borderStyle: 'solid', borderColor: '#ef444450' }}>
                 <MapPin size={17} />
                 اضغط هنا لتحديد الموقع
               </button>
@@ -416,7 +416,7 @@ export default function CartPage() {
 
             {/* ملاحظات */}
             <input type="text" value={note} onChange={e => setNote(e.target.value)}
-              placeholder="ملاحظات (اختياري)" dir="rtl"
+              placeholder="ملاحظات للمطبخ — مثل: بدون بصل، بدون ثوم، حار جداً، إلخ (اختياري)" dir="rtl"
               className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2"
               style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
