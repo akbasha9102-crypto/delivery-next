@@ -722,10 +722,10 @@ export default function CartPage() {
 
               <button type="button" onClick={locateMe}
                 className="absolute bottom-4 right-4 z-[1000] rounded-full flex items-center justify-center active:scale-90 transition-all"
-                style={{ width:50, height:50, background:'white', boxShadow:'0 4px 16px rgba(0,0,0,0.18)', border:`2px solid ${brandColor}30` }}>
+                style={{ width:50, height:50, background:'white', boxShadow:'0 4px 16px rgba(0,0,0,0.18)', border:'2px solid #ef444430' }}>
                 {gpsLocating
-                  ? <Loader2 size={22} className="animate-spin" style={{ color: brandColor }}/>
-                  : <LocateFixed size={22} style={{ color: brandColor }}/>
+                  ? <Loader2 size={22} className="animate-spin" style={{ color: '#ef4444' }}/>
+                  : <LocateFixed size={22} style={{ color: '#ef4444' }}/>
                 }
               </button>
             </div>
