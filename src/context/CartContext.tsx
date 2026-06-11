@@ -1,7 +1,7 @@
 'use client';
 import { createContext, useContext, useState } from 'react';
 
-type CartItem = { id: string; name: string; price: number; image_url: string | null; quantity: number };
+type CartItem = { id: string; name: string; price: number; image_url: string | null; quantity: number; extras_json?: string };
 type Ctx = {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => void;

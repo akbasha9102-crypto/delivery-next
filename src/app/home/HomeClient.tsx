@@ -70,9 +70,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   const [showClosedToast,  setShowClosedToast]  = useState(false);
   const [showCartPanel,  setShowCartPanel]  = useState(false);
 
-  const [extrasItem,     setExtrasItem]     = useState<Item | null>(null);
   const [selectedItem,   setSelectedItem]   = useState<Item | null>(null);
-  const [selectedExtras, setSelectedExtras] = useState<Set<string>>(new Set());
 
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const pillsRef    = useRef<HTMLDivElement>(null);
@@ -149,23 +147,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
 
   const handleAdd = (item: Item) => {
     if (getStatus(item) !== 'available') return;
-    const extras = getExtras(item);
-    if (extras.length > 0) { setExtrasItem(item); setSelectedExtras(new Set()); }
-    else addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url });
-  };
-
-  const confirmExtras = () => {
-    if (!extrasItem) return;
-    const extras    = getExtras(extrasItem);
-    const extraCost = extras.filter(e => selectedExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
-    const extraNames = extras.filter(e => selectedExtras.has(e.id)).map(e => e.name).join('، ');
-    addItem({
-      id: extrasItem.id,
-      name: extraNames ? `${extrasItem.name} (${extraNames})` : extrasItem.name,
-      price: extrasItem.price + extraCost,
-      image_url: extrasItem.image_url,
-    });
-    setExtrasItem(null);
+    addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url, extras_json: item.extras_json });
   };
 
   const qty = (id: string) => cartItems.find(i => i.id === id)?.quantity || 0;
@@ -474,13 +456,13 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
       </AnimatePresence>
 
       <AnimatePresence>
-        {(selectedItem || extrasItem) && (
+        {selectedItem && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => { setSelectedItem(null); setExtrasItem(null); }}
+              onClick={() => setSelectedItem(null)}
               className="absolute inset-0 bg-black/70 backdrop-blur-md"
             />
 
@@ -491,7 +473,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] sm:rounded-[3.5rem] shadow-2xl overflow-hidden"
             >
-              {selectedItem && !extrasItem && (() => {
+              {(() => {
                 const modalCat = categories.find(c => c.id === selectedItem.category_id);
                 const modalColor = (dark && modalCat?.color_dark) ? modalCat.color_dark : (modalCat?.color || brandColor);
                 const modalTextColor = getTextColor(modalColor);
@@ -532,34 +514,6 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                         إضافة إلى السلة
                       </motion.button>
                    </div>
-                </div>
-                );
-              })()}
-
-              {extrasItem && (() => {
-                const modalCat = categories.find(c => c.id === extrasItem.category_id);
-                const modalColor = (dark && modalCat?.color_dark) ? modalCat.color_dark : (modalCat?.color || brandColor);
-                const modalTextColor = getTextColor(modalColor);
-                return (
-                <div className="p-6 sm:p-10">
-                  <div className="w-10 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:mb-8"/>
-                  <h3 className="text-xl sm:text-2xl font-black text-right mb-2">{extrasItem.name}</h3>
-                  <p className="text-gray-400 text-right text-xs sm:text-sm mb-6 sm:mb-8">اختر الإضافات التي ترغب بها</p>
-                  <div className="space-y-2 sm:space-y-3 mb-8 sm:mb-10 max-h-[35vh] overflow-y-auto pr-2 scrollbar-hide">
-                    {getExtras(extrasItem).map(e => (
-                      <motion.button whileTap={{ scale: 0.98 }} key={e.id} onClick={() => { const next = new Set(selectedExtras); next.has(e.id) ? next.delete(e.id) : next.add(e.id); setSelectedExtras(next); }}
-                        className={`w-full p-4 sm:p-5 rounded-[1.2rem] sm:rounded-[1.5rem] flex items-center justify-between border-2 transition-all ${selectedExtras.has(e.id) ? 'shadow-xl' : 'border-gray-100 dark:border-slate-800 text-gray-500'}`}
-                        style={selectedExtras.has(e.id) ? { backgroundColor: modalColor, borderColor: modalColor, color: modalTextColor } : {}}
-                      >
-                        <span className="font-black text-sm sm:text-base">+{e.price.toLocaleString()} د.ع</span>
-                        <span className="font-black text-base sm:text-lg">{e.name}</span>
-                      </motion.button>
-                    ))}
-                  </div>
-                  <div className="flex gap-3 sm:gap-4">
-                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => setExtrasItem(null)} className="flex-1 py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black text-gray-400 bg-gray-50 dark:bg-slate-800 text-sm sm:text-base">إلغاء</motion.button>
-                    <motion.button whileTap={{ scale: 0.95 }} onClick={confirmExtras} className="flex-[2] py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black shadow-2xl text-sm sm:text-base" style={{ backgroundColor: modalColor, color: modalTextColor }}>تأكيد الإضافة</motion.button>
-                  </div>
                 </div>
                 );
               })()}

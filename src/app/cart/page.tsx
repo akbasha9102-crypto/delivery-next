@@ -4,10 +4,12 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChevronLeft, Plus, Minus } from 'lucide-react';
+import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChevronLeft, Plus, Minus, Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
+
+type Extra = { id: string; name: string; price: number };
 
 const KEYS = {
   name:           'deliveryName',
@@ -64,6 +66,22 @@ export default function CartPage() {
   const [locationDesc,    setLocationDesc]    = useState('');
   const [addressDetails,  setAddressDetails]  = useState('');
   const [note,            setNote]            = useState('');
+
+  // extras selection per item in review
+  const [itemSelectedExtras, setItemSelectedExtras] = useState<Record<string, Set<string>>>({});
+
+  const getExtras = (extrasJson?: string): Extra[] => {
+    try { return JSON.parse(extrasJson || '[]'); } catch { return []; }
+  };
+
+  const extrasTotal = items.reduce((sum, item) => {
+    const extras  = getExtras(item.extras_json);
+    const selected = itemSelectedExtras[item.id] || new Set<string>();
+    const cost = extras.filter(e => selected.has(e.id)).reduce((s, e) => s + e.price, 0);
+    return sum + cost * item.quantity;
+  }, 0);
+
+  const grandTotal = total + extrasTotal;
 
   // UI state
   const [showOrderReview,  setShowOrderReview]  = useState(false);
@@ -358,14 +376,26 @@ const proceedFromReview = () => {
       client_name: `${name.trim()} (${nickname.trim()})`, client_phone: phone.trim(),
       delivery_address: addressDetails.trim() ? `${locationDesc.trim()} — ${addressDetails.trim()}` : locationDesc.trim() || null,
       client_note: note || null,
-      total_amount: total, status: 'pending',
+      total_amount: grandTotal, status: 'pending',
       ...(clientLat !== null && clientLng !== null ? { client_lat: clientLat, client_lng: clientLng } : {}),
     }]).select().single();
 
     if (error || !order) { alert('حدث خطأ، حاول مجدداً'); setLoading(false); return; }
 
     await supabase.from('order_items').insert(
-      items.map(i => ({ order_id: order.id, item_name: i.name, quantity: i.quantity, price: i.price }))
+      items.map(i => {
+        const extras = getExtras(i.extras_json);
+        const selected = itemSelectedExtras[i.id] || new Set<string>();
+        const selectedArr = extras.filter(e => selected.has(e.id));
+        const extraCost = selectedArr.reduce((s, e) => s + e.price, 0);
+        const extraNames = selectedArr.map(e => e.name).join('، ');
+        return {
+          order_id: order.id,
+          item_name: extraNames ? `${i.name} (${extraNames})` : i.name,
+          quantity: i.quantity,
+          price: i.price + extraCost,
+        };
+      })
     );
 
     localStorage.setItem('lastOrderId', order.id);
@@ -560,6 +590,41 @@ const proceedFromReview = () => {
                       </div>
                     </div>
 
+                    {/* Extras for this item */}
+                    {(() => {
+                      const extras = getExtras(item.extras_json);
+                      if (extras.length === 0) return null;
+                      const selected = itemSelectedExtras[item.id] || new Set<string>();
+                      return (
+                        <div className="px-3 pb-2 pt-1">
+                          <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right mb-1.5">الإضافات</p>
+                          <div className="flex flex-wrap gap-1.5 justify-end">
+                            {extras.map(e => {
+                              const on = selected.has(e.id);
+                              return (
+                                <button key={e.id}
+                                  onClick={() => setItemSelectedExtras(prev => {
+                                    const next = new Set(prev[item.id] || new Set<string>());
+                                    on ? next.delete(e.id) : next.add(e.id);
+                                    return { ...prev, [item.id]: next };
+                                  })}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 border"
+                                  style={on
+                                    ? { backgroundColor: '#ef4444', borderColor: '#ef4444', color: 'white' }
+                                    : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }
+                                  }
+                                >
+                                  {on ? <Check size={10}/> : <Plus size={10}/>}
+                                  <span>{e.name}</span>
+                                  {e.price > 0 && <span className="opacity-75">+{e.price.toLocaleString()}</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Notes for this item */}
                     <div className="px-3 pb-4 pt-1">
                       <input type="text" value={iNote}
@@ -582,7 +647,7 @@ const proceedFromReview = () => {
                   <span className="font-black text-white text-xs">التالي</span>
                 </div>
                 <div className="text-right">
-                  <p className="font-black text-white text-base leading-tight">{total.toLocaleString()} <span className="text-[10px] font-bold opacity-80">د.ع</span></p>
+                  <p className="font-black text-white text-base leading-tight">{grandTotal.toLocaleString()} <span className="text-[10px] font-bold opacity-80">د.ع</span></p>
                   <p className="text-[9px] text-white/70 font-bold">المجموع الكلي</p>
                 </div>
               </button>
@@ -623,16 +688,26 @@ const proceedFromReview = () => {
             <div className="overflow-y-auto px-4 py-4 space-y-3" style={{ maxHeight: '44vh' }}>
               {items.map(item => {
                 const iNote  = (itemNotes[item.id] || '').trim();
+                const extras  = getExtras(item.extras_json);
+                const selected = itemSelectedExtras[item.id] || new Set<string>();
+                const selectedExtrasArr = extras.filter(e => selected.has(e.id));
+                const extraCost = selectedExtrasArr.reduce((s, e) => s + e.price, 0);
+                const itemTotal = (item.price + extraCost) * item.quantity;
                 return (
                   <div key={item.id} className="bg-gray-50 dark:bg-slate-700 rounded-2xl p-3">
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-black text-sm" style={{ color: '#ef4444' }}>
-                        {(item.price * item.quantity).toLocaleString()} د.ع
+                        {itemTotal.toLocaleString()} د.ع
                       </span>
                       <span className="font-black text-gray-900 dark:text-white text-sm text-right">
                         {item.name} <span className="text-gray-400 font-bold">×{item.quantity}</span>
                       </span>
                     </div>
+                    {selectedExtrasArr.length > 0 && (
+                      <p className="text-xs text-gray-400 dark:text-slate-500 text-right mt-0.5">
+                        ✨ {selectedExtrasArr.map(e => e.name).join('، ')}
+                      </p>
+                    )}
                     {iNote && (
                       <p className="text-xs text-gray-400 dark:text-slate-500 text-right mt-0.5">
                         📝 {iNote}
@@ -645,7 +720,7 @@ const proceedFromReview = () => {
               {/* Total */}
               <div className="rounded-xl px-4 py-3 flex items-center justify-between"
                 style={{ background: 'linear-gradient(135deg,#ef444412,#ef444406)', border: '1.5px solid #ef444435' }}>
-                <span className="font-black text-xl" style={{ color: '#ef4444' }}>{total.toLocaleString()} د.ع</span>
+                <span className="font-black text-xl" style={{ color: '#ef4444' }}>{grandTotal.toLocaleString()} د.ع</span>
                 <span className="font-black text-gray-900 dark:text-white text-sm">المجموع</span>
               </div>
             </div>
