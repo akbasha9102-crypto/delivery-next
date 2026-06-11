@@ -695,10 +695,10 @@ export default function CartPage() {
             <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
               <div ref={locationMapRef} style={{ position: 'absolute', inset: 0 }}/>
 
-              <div style={{ position:'absolute', top:'50%', left:'50%', width:18, height:18, borderRadius:'50%', background:brandColor, animation:'pin-pulse 2s ease-out infinite', zIndex:999, pointerEvents:'none' }}/>
+              <div style={{ position:'absolute', top:'50%', left:'50%', width:18, height:18, borderRadius:'50%', background:'#ef4444', animation:'pin-pulse 2s ease-out infinite', zIndex:999, pointerEvents:'none' }}/>
 
               <div style={{ position:'absolute', top:'50%', left:'50%', animation:'pin-bounce 2.4s ease-in-out infinite', pointerEvents:'none', zIndex:1000, transform:'translate(-50%, -100%)' }}>
-                <div style={{ width:42, height:42, background:brandColor, borderRadius:'50% 50% 50% 0', transform:'rotate(-45deg)', border:'3.5px solid white', boxShadow:`0 6px 20px ${brandColor}70, 0 2px 8px rgba(0,0,0,0.25)`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ width:42, height:42, background:'#ef4444', borderRadius:'50% 50% 50% 0', transform:'rotate(-45deg)', border:'3.5px solid white', boxShadow:'0 6px 20px #ef444470, 0 2px 8px rgba(0,0,0,0.25)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <div style={{ width:11, height:11, background:'white', borderRadius:'50%', transform:'rotate(45deg)', opacity:0.9 }}/>
                 </div>
               </div>
