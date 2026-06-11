@@ -121,133 +121,125 @@ function MotorcycleAnimation() {
   return (
     <div className="relative w-72 h-44 mx-auto rounded-2xl overflow-hidden">
       <style>{`
-        @keyframes moto-wheel  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes moto-bob    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-        @keyframes moto-road   { from{transform:translateX(0)} to{transform:translateX(-36px)} }
-        @keyframes moto-streak { 0%{opacity:0;transform:scaleX(0.4) translateX(14px)} 55%{opacity:0.8} 100%{opacity:0;transform:scaleX(1) translateX(-22px)} }
-        @keyframes moto-puff   { 0%{opacity:0.4;transform:translate(0,0) scale(1)} 100%{opacity:0;transform:translate(-18px,-5px) scale(2.2)} }
-        @keyframes moto-cloud  { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+        @keyframes rd-scroll  { from{transform:translateX(0)} to{transform:translateX(-80px)} }
+        @keyframes cl-scroll  { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+        @keyframes sc-bob     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+        @keyframes streak-in  { 0%{opacity:0;transform:translateX(16px)} 45%{opacity:0.9} 100%{opacity:0;transform:translateX(-24px)} }
+        @keyframes pin-drop   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+        @keyframes pulse-ring { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(2.2);opacity:0} }
+        @keyframes exhaust    { 0%{opacity:0.5;transform:translate(0,0) scale(1)} 100%{opacity:0;transform:translate(-22px,-8px) scale(2.8)} }
       `}</style>
 
       {/* Sky */}
-      <div className="absolute inset-0 bg-gradient-to-b from-sky-400 via-sky-200 to-sky-50 dark:from-slate-700 dark:via-slate-800 dark:to-slate-700" />
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-300 via-sky-100 to-emerald-50 dark:from-slate-800 dark:via-slate-700 dark:to-slate-700" />
+
       {/* Sun */}
-      <div className="absolute top-4 right-8 w-10 h-10 rounded-full bg-amber-200/90 dark:bg-amber-400/20" />
-      <div className="absolute top-2 right-6 w-14 h-14 rounded-full bg-amber-100/40 dark:opacity-0" />
+      <div className="absolute top-3 right-7">
+        <div className="w-8 h-8 rounded-full bg-amber-300 dark:bg-amber-400/30 shadow-lg shadow-amber-200/60" />
+        <div className="absolute inset-0 rounded-full bg-amber-200/50 dark:opacity-0 scale-150" />
+      </div>
 
       {/* Clouds */}
-      <div className="absolute top-0 left-0 overflow-hidden" style={{ width: '100%', height: 56 }}>
-        <div className="absolute top-0 flex" style={{ width: '200%', animation: 'moto-cloud 14s linear infinite' }}>
+      <div className="absolute top-0 left-0 overflow-hidden" style={{ width: '100%', height: 52 }}>
+        <div className="absolute top-0 flex" style={{ width: '200%', animation: 'cl-scroll 16s linear infinite' }}>
           {[0, 1].map(k => (
-            <div key={k} className="relative flex-shrink-0" style={{ width: '50%', height: 56 }}>
-              <div className="absolute top-4 left-[10%]  w-14 h-5  rounded-full bg-white/65" />
-              <div className="absolute top-2 left-[14%]  w-10 h-6  rounded-full bg-white/70" />
-              <div className="absolute top-5 left-[52%]  w-18 h-4  rounded-full bg-white/55" />
-              <div className="absolute top-3 left-[57%]  w-12 h-6  rounded-full bg-white/65" />
+            <div key={k} className="relative flex-shrink-0" style={{ width: '50%', height: 52 }}>
+              <div className="absolute top-5 left-[8%]  w-16 h-5 rounded-full bg-white/80" />
+              <div className="absolute top-3 left-[13%] w-10 h-7 rounded-full bg-white/90" />
+              <div className="absolute top-6 left-[53%] w-20 h-4 rounded-full bg-white/70" />
+              <div className="absolute top-4 left-[58%] w-12 h-6 rounded-full bg-white/85" />
             </div>
           ))}
         </div>
       </div>
 
-      {/* Road */}
-      <div className="absolute bottom-0 left-0 right-0 h-12 bg-slate-600 dark:bg-slate-700 overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-px bg-white/25" />
-        <div className="absolute top-1/2 -translate-y-1/2 flex" style={{ animation: 'moto-road 0.38s linear infinite', width: '200%' }}>
-          {Array.from({ length: 22 }).map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-7 h-1.5 rounded-full bg-amber-300/80 mx-2" />
-          ))}
+      {/* Ground strip */}
+      <div className="absolute bottom-0 left-0 right-0 h-14 bg-slate-500 dark:bg-slate-600">
+        <div className="absolute inset-x-0 top-0 h-px bg-white/20" />
+        {/* Road dashes */}
+        <div className="absolute top-1/2 -translate-y-1/2 overflow-hidden w-full h-2">
+          <div className="flex" style={{ width: '200%', animation: 'rd-scroll 0.45s linear infinite' }}>
+            {Array.from({ length: 24 }).map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-8 h-1.5 rounded-full bg-white/60 mx-3" />
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Scooter */}
-      <div className="absolute left-[48%] -translate-x-1/2" style={{ bottom: 10, animation: 'moto-bob 0.48s ease-in-out infinite' }}>
-        <svg viewBox="0 0 200 116" width="210" fill="none" overflow="visible">
+      {/* Destination pin (right side) */}
+      <div className="absolute right-8 bottom-11" style={{ animation: 'pin-drop 1s ease-in-out infinite' }}>
+        <div className="relative">
+          <div className="w-7 h-7 rounded-full bg-red-500 shadow-lg flex items-center justify-center">
+            <div className="w-2.5 h-2.5 rounded-full bg-white" />
+          </div>
+          <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-0 h-0"
+            style={{ borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '7px solid #ef4444' }} />
+          {/* Pulse rings */}
+          <div className="absolute inset-0 rounded-full bg-red-400 opacity-60"
+            style={{ animation: 'pulse-ring 1.4s ease-out infinite' }} />
+          <div className="absolute inset-0 rounded-full bg-red-400 opacity-40"
+            style={{ animation: 'pulse-ring 1.4s ease-out infinite 0.5s' }} />
+        </div>
+      </div>
 
-          {/* Shadow */}
-          <ellipse cx="98" cy="112" rx="66" ry="4" fill="#000" opacity="0.1" />
+      {/* Scooter + rider (emoji, clean) */}
+      <div className="absolute bottom-11 left-[38%] -translate-x-1/2"
+        style={{ animation: 'sc-bob 0.45s ease-in-out infinite' }}>
+        {/* Exhaust puffs */}
+        <div className="absolute -left-3 top-4 w-3 h-3 rounded-full bg-slate-300/60"
+          style={{ animation: 'exhaust 1s ease-out infinite' }} />
+        <div className="absolute -left-2 top-5 w-2 h-2 rounded-full bg-slate-300/40"
+          style={{ animation: 'exhaust 1s ease-out infinite 0.5s' }} />
 
-          {/* ── REAR WHEEL ── */}
-          <g style={{ transformOrigin: '44px 94px', animation: 'moto-wheel 0.38s linear infinite' }}>
-            <circle cx="44" cy="94" r="16" fill="#1e293b" />
-            <circle cx="44" cy="94" r="9"  fill="#334155" />
-            <circle cx="44" cy="94" r="3"  fill="#94a3b8" />
-            <line x1="44" y1="79"  x2="44" y2="109" stroke="#475569" strokeWidth="1.5" />
-            <line x1="29" y1="94"  x2="59" y2="94"  stroke="#475569" strokeWidth="1.5" />
-            <line x1="33" y1="83"  x2="55" y2="105" stroke="#475569" strokeWidth="1.5" />
-            <line x1="55" y1="83"  x2="33" y2="105" stroke="#475569" strokeWidth="1.5" />
-          </g>
-
-          {/* ── FRONT WHEEL ── */}
-          <g style={{ transformOrigin: '153px 94px', animation: 'moto-wheel 0.38s linear infinite' }}>
-            <circle cx="153" cy="94" r="16" fill="#1e293b" />
-            <circle cx="153" cy="94" r="9"  fill="#334155" />
-            <circle cx="153" cy="94" r="3"  fill="#94a3b8" />
-            <line x1="153" y1="79"  x2="153" y2="109" stroke="#475569" strokeWidth="1.5" />
-            <line x1="138" y1="94"  x2="168" y2="94"  stroke="#475569" strokeWidth="1.5" />
-            <line x1="142" y1="83"  x2="164" y2="105" stroke="#475569" strokeWidth="1.5" />
-            <line x1="164" y1="83"  x2="142" y2="105" stroke="#475569" strokeWidth="1.5" />
-          </g>
-
-          {/* ── DELIVERY BOX ── */}
-          <line x1="58" y1="78" x2="66" y2="88" stroke="#475569" strokeWidth="2" strokeLinecap="round" />
-          <rect x="6"  y="36" width="54" height="44" rx="6" fill="#ef4444" />
-          <rect x="4"  y="30" width="58" height="12" rx="6" fill="#dc2626" />
-          <line x1="33" y1="30" x2="33" y2="80" stroke="#b91c1c" strokeWidth="2" />
-          <path d="M14 56 L22 64 L50 46" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-
-          {/* ── SCOOTER BODY ── */}
-          <rect x="64"  y="82" width="50" height="10" rx="3" fill="#1d4ed8" />
-          <path d="M46 90 Q44 68 66 64 L96 58 Q112 56 120 66 L130 90 Z" fill="#2563eb" />
-          <path d="M120 66 Q122 55 133 51 Q146 47 151 58 L156 90 L130 90 Z" fill="#1d4ed8" />
-          <path d="M68 64 L96 58 Q110 56 118 64 L119 60 Q110 50 94 52 L66 58 Z" fill="#93c5fd" opacity="0.4" />
-          <path d="M80 60 Q96 55 114 57 L118 62 Q98 58 78 66 Z" fill="#0f172a" />
-          <line x1="151" y1="58" x2="154" y2="82" stroke="#64748b" strokeWidth="3" strokeLinecap="round" />
-          <ellipse cx="157" cy="68" rx="7" ry="5"   fill="#fef08a" opacity="0.9" />
-          <ellipse cx="157" cy="68" rx="3.5" ry="2.5" fill="#fffbeb" />
-          <line x1="149" y1="58" x2="166" y2="50" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="163" y1="48" x2="173" y2="52" stroke="#334155" strokeWidth="3.5" strokeLinecap="round" />
-
-          {/* ── RIDER ── */}
-          {/* Leg */}
-          <path d="M94 62 L90 82 L78 90" stroke="#1e293b" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          <path d="M70 87 L86 86 Q92 86 93 90 L70 91 Z" fill="#0f172a" />
-          {/* Torso — forward lean */}
-          <path d="M92 64 C90 48 98 34 112 31 L128 29 C137 28 138 37 130 41 L108 54 C101 58 94 63 95 67 Z" fill="#f97316" />
-          <path d="M96 60 Q104 52 116 46" stroke="#ea580c" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.45" />
-          {/* Far arm */}
-          <line x1="118" y1="33" x2="143" y2="40" stroke="#f97316" strokeWidth="9" strokeLinecap="round" />
-          <line x1="143" y1="40" x2="166" y2="51" stroke="#c2855b" strokeWidth="6" strokeLinecap="round" />
-          <circle cx="167" cy="52" r="4.5" fill="#b07346" />
-          {/* Near arm */}
-          <line x1="124" y1="31" x2="149" y2="38" stroke="#f97316" strokeWidth="9" strokeLinecap="round" />
-          <line x1="149" y1="38" x2="171" y2="49" stroke="#c2855b" strokeWidth="6" strokeLinecap="round" />
-          <circle cx="172" cy="50" r="4.5" fill="#b07346" />
-          {/* Neck */}
-          <line x1="122" y1="33" x2="126" y2="24" stroke="#c2855b" strokeWidth="7" strokeLinecap="round" />
-          {/* Head */}
-          <circle cx="129" cy="20" r="12" fill="#f1c27d" />
-          {/* Helmet */}
-          <path d="M117 20 C115 10 119 2 129 1 C139 0 145 8 143 20" fill="#f97316" />
-          <path d="M117 20 Q116 26 120 28 L138 26 Q141 24 143 20" fill="#ea580c" />
-          <path d="M118 19 Q129 15 142 18 L142 23 Q129 19 118 24 Z" fill="#1e3a5f" opacity="0.55" />
-          <path d="M120 10 Q125 6 131 6" stroke="#fed7aa" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
-
-          {/* ── EXHAUST ── */}
-          <path d="M44 92 Q35 95 24 93" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <circle cx="20" cy="93" r="5"   fill="#94a3b8" opacity="0.3" style={{ animation: 'moto-puff 1.1s ease-out infinite' }} />
-          <circle cx="10" cy="91" r="3.5" fill="#94a3b8" opacity="0.2" style={{ animation: 'moto-puff 1.1s ease-out infinite 0.55s' }} />
-
+        {/* Clean scooter SVG */}
+        <svg viewBox="0 0 96 58" width="110" fill="none">
+          {/* Rear wheel */}
+          <circle cx="18" cy="44" r="11" fill="#1e293b" />
+          <circle cx="18" cy="44" r="5.5" fill="#334155" />
+          <circle cx="18" cy="44" r="2" fill="#94a3b8" />
+          {/* Front wheel */}
+          <circle cx="76" cy="44" r="11" fill="#1e293b" />
+          <circle cx="76" cy="44" r="5.5" fill="#334155" />
+          <circle cx="76" cy="44" r="2" fill="#94a3b8" />
+          {/* Body */}
+          <path d="M22 40 Q20 28 34 24 L58 20 Q70 18 74 28 L80 40 Z" fill="#2563eb" />
+          <path d="M34 24 L58 20 Q68 18 72 26 L74 23 Q68 14 56 16 L32 20 Z" fill="#93c5fd" opacity="0.5" />
+          {/* Seat */}
+          <rect x="30" y="36" width="30" height="6" rx="3" fill="#1d4ed8" />
+          {/* Delivery box */}
+          <rect x="2" y="18" width="28" height="22" rx="4" fill="#ef4444" />
+          <rect x="1" y="14" width="30" height="8" rx="4" fill="#dc2626" />
+          <line x1="16" y1="14" x2="16" y2="40" stroke="#b91c1c" strokeWidth="1.5" />
+          <path d="M8 30 L13 35 L24 24" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="30" y1="36" x2="36" y2="42" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" />
+          {/* Fork */}
+          <line x1="74" y1="28" x2="76" y2="42" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" />
+          {/* Handlebar */}
+          <line x1="72" y1="28" x2="82" y2="23" stroke="#475569" strokeWidth="2" strokeLinecap="round" />
+          <line x1="80" y1="21" x2="86" y2="25" stroke="#334155" strokeWidth="2.5" strokeLinecap="round" />
+          {/* Headlight */}
+          <ellipse cx="80" cy="33" rx="4" ry="3" fill="#fef08a" opacity="0.9" />
+          <ellipse cx="80" cy="33" rx="2" ry="1.5" fill="#fffbeb" />
+          {/* Rider */}
+          <path d="M44 26 C42 16 48 8 56 6 L66 5 C72 4 73 11 67 14 L52 22 C47 26 46 30 47 32 Z" fill="#f97316" />
+          <line x1="58" y1="7" x2="72" y2="18" stroke="#c2855b" strokeWidth="5" strokeLinecap="round" />
+          <circle cx="73" cy="19" r="3" fill="#b07346" />
+          <line x1="56" y1="8" x2="66" y2="2" stroke="#c2855b" strokeWidth="4" strokeLinecap="round" />
+          <circle cx="67" cy="0" r="8" fill="#f1c27d" />
+          <path d="M59 0 C58 -6 62 -11 67 -11 C72 -11 76 -6 75 0" fill="#f97316" />
+          <path d="M59 0 Q59 4 62 5 L72 4 Q74 3 75 0" fill="#ea580c" />
+          <path d="M60 -1 Q67 -4 74 -1 L74 2 Q67 -1 60 2 Z" fill="#1e3a5f" opacity="0.5" />
         </svg>
       </div>
 
-      {/* Speed streaks */}
+      {/* Speed lines */}
       {[
-        { top: 56, w: 26, d: '0s'    },
-        { top: 70, w: 18, d: '0.2s'  },
-        { top: 84, w: 32, d: '0.38s' },
+        { top: 50, w: 24, delay: '0s'    },
+        { top: 64, w: 16, delay: '0.22s' },
+        { top: 78, w: 30, delay: '0.42s' },
       ].map((l, i) => (
-        <div key={i} className="absolute h-0.5 rounded-full bg-white/70"
-          style={{ top: l.top, left: '5%', width: l.w, animation: `moto-streak 0.6s ease-in-out infinite ${l.d}` }}
+        <div key={i} className="absolute h-px rounded-full bg-white/75"
+          style={{ top: l.top, left: '5%', width: l.w, animation: `streak-in 0.65s ease-in-out infinite ${l.delay}` }}
         />
       ))}
     </div>
