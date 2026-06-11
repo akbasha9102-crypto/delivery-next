@@ -32,6 +32,7 @@ function buildWAMessage(order: Order) {
   const locationLine = order.client_lat && order.client_lng
     ? `🗺️ الموقع: https://maps.google.com/?q=${order.client_lat},${order.client_lng}`
     : null;
+  const deliveryLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/delivery/${order.id}`;
   return [
     '🛵 طلب جديد',
     '',
@@ -45,6 +46,9 @@ function buildWAMessage(order: Order) {
     '',
     `💰 ${order.total_amount.toLocaleString()} د.ع`,
     order.client_note ? `📝 ${order.client_note}` : null,
+    '',
+    `✅ رابط إتمام التوصيل:`,
+    deliveryLink,
   ].filter(l => l !== null).join('\n');
 }
 
