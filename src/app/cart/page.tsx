@@ -4,38 +4,20 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Trash2, MapPin, ChevronDown, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X } from 'lucide-react';
+import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
 
 const KEYS = {
-  name:     'deliveryName',
-  phone:    'deliveryPhone',
-  district: 'deliveryDistrict',
-  address:  'deliveryAddress',
+  name:        'deliveryName',
+  phone:       'deliveryPhone',
+  locationDesc: 'deliveryLocationDesc',
 };
 
 const BASRA_CENTER: [number, number] = [30.5085, 47.7804];
 
-const BASRA_DISTRICTS = [
-  { id: 'ashar',      name: 'العشار',      desc: 'قلب البصرة التجاري والاقتصادي' },
-  { id: 'maqal',      name: 'المعقل',      desc: 'حي راقٍ شمال البصرة على ضفاف شط العرب' },
-  { id: 'qibla',      name: 'القبلة',      desc: 'الحي التاريخي العريق وسط المدينة' },
-  { id: 'jazira',     name: 'الجزيرة',     desc: 'منطقة هادئة بين الأنهار قريبة من المركز' },
-  { id: 'asmai',      name: 'الأصمعي',     desc: 'حي سكني شعبي غرب مركز المدينة' },
-  { id: 'jazayer',    name: 'الجزائر',     desc: 'حي شعبي بين العشار والمعقل' },
-  { id: 'haritha',    name: 'الهارثة',     desc: 'شمال البصرة على ضفاف شط العرب' },
-  { id: 'zubayr',     name: 'الزبير',      desc: 'قضاء تاريخي جنوب غرب البصرة' },
-  { id: 'abu_khasib', name: 'أبو الخصيب', desc: 'جنوب البصرة، منطقة النخيل والأنهار الجميلة' },
-  { id: 'tanuma',     name: 'التنومة',     desc: 'حي شرق البصرة بالقرب من أبو الخصيب' },
-  { id: 'qurna',      name: 'القرنة',      desc: 'شمال البصرة عند ملتقى دجلة والفرات' },
-  { id: 'faw',        name: 'الفاو',       desc: 'أقصى جنوب البصرة على الخليج العربي' },
-  { id: 'madina',     name: 'المدينة',     desc: 'المنطقة الإدارية والمركزية في البصرة' },
-  { id: 'khor',       name: 'خور الزبير', desc: 'منطقة صناعية وميناء جنوب الزبير' },
-] as const;
-
-type SavedInfo = { name: string; phone: string; district: string; address: string };
+type SavedInfo = { name: string; phone: string; locationDesc: string };
 
 function loadSaved(): SavedInfo | null {
   const name  = localStorage.getItem(KEYS.name)  || '';
@@ -44,16 +26,14 @@ function loadSaved(): SavedInfo | null {
   return {
     name,
     phone,
-    district: localStorage.getItem(KEYS.district) || '',
-    address:  localStorage.getItem(KEYS.address)  || '',
+    locationDesc: localStorage.getItem(KEYS.locationDesc) || '',
   };
 }
 
 function saveInfo(info: SavedInfo) {
-  localStorage.setItem(KEYS.name,     info.name);
-  localStorage.setItem(KEYS.phone,    info.phone);
-  localStorage.setItem(KEYS.district, info.district);
-  localStorage.setItem(KEYS.address,  info.address);
+  localStorage.setItem(KEYS.name,        info.name);
+  localStorage.setItem(KEYS.phone,       info.phone);
+  localStorage.setItem(KEYS.locationDesc, info.locationDesc);
 }
 
 export default function CartPage() {
@@ -75,11 +55,10 @@ export default function CartPage() {
     return L > 0.179 ? '#000000' : '#ffffff';
   })();
 
-  const [name,     setName]     = useState('');
-  const [phone,    setPhone]    = useState('');
-  const [district, setDistrict] = useState('');
-  const [address,  setAddress]  = useState('');
-  const [note,     setNote]     = useState('');
+  const [name,         setName]         = useState('');
+  const [phone,        setPhone]        = useState('');
+  const [locationDesc, setLocationDesc] = useState('');
+  const [note,         setNote]         = useState('');
 
   // modal states
   const [showSaved,   setShowSaved]   = useState(false); // نافذة المعلومات المحفوظة
@@ -292,19 +271,12 @@ export default function CartPage() {
     if (saved) {
       setName(saved.name);
       setPhone(saved.phone);
-      setDistrict(saved.district);
-      setAddress(saved.address);
-      setShowSaved(true); // فيه معلومات محفوظة → شوّل النافذة
+      setLocationDesc(saved.locationDesc);
+      setShowSaved(true);
     } else {
-      setEditing(true); // أول مرة → شوّل الفورم مباشرة
+      setEditing(true);
     }
   }, []);
-
-  const selectedDistrict = BASRA_DISTRICTS.find(d => d.id === district);
-
-  const fullAddress = selectedDistrict
-    ? `${selectedDistrict.name}${address.trim() ? ' — ' + address.trim() : ''}`
-    : address.trim() || null;
 
   const handleConfirmSaved = () => {
     if (items.length === 0) { alert('السلة فارغة'); return; }
@@ -320,6 +292,7 @@ export default function CartPage() {
 
   const handleConfirmForm = () => {
     if (!name.trim() || !phone.trim()) { alert('الرجاء إدخال الاسم ورقم الهاتف'); return; }
+    if (!locationDesc.trim()) { alert('الرجاء إدخال وصف الموقع'); return; }
     if (items.length === 0) { alert('السلة فارغة'); return; }
     if (!locationConfirmed) {
       pendingSubmitRef.current = true;
@@ -331,11 +304,11 @@ export default function CartPage() {
 
   const submitOrder = async () => {
     setLoading(true);
-    saveInfo({ name: name.trim(), phone: phone.trim(), district, address: address.trim() });
+    saveInfo({ name: name.trim(), phone: phone.trim(), locationDesc: locationDesc.trim() });
 
     const { data: order, error } = await supabase.from('orders').insert([{
       client_name: name.trim(), client_phone: phone.trim(),
-      delivery_address: fullAddress, client_note: note.trim() || null,
+      delivery_address: locationDesc.trim() || null, client_note: note.trim() || null,
       total_amount: total, status: 'pending',
       ...(clientLat !== null && clientLng !== null ? { client_lat: clientLat, client_lng: clientLng } : {}),
     }]).select().single();
@@ -402,32 +375,12 @@ export default function CartPage() {
               style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
 
-            {/* District picker */}
-            <div className="mb-3">
-              <div className="relative">
-                <select value={district} onChange={e => setDistrict(e.target.value)} dir="rtl"
-                  className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 appearance-none"
-                  style={{ '--tw-ring-color': brandColor } as React.CSSProperties}>
-                  <option value="">اختر منطقة التوصيل</option>
-                  {BASRA_DISTRICTS.map(d => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-                <ChevronDown size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
-              </div>
-              {selectedDistrict && (
-                <div className="mt-2 rounded-xl px-4 py-2.5 flex items-center gap-2.5" style={{ backgroundColor: `${brandColor}15`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}40` }}>
-                  <MapPin size={14} className="flex-shrink-0" style={{ color: brandColor }}/>
-                  <p className="text-sm text-gray-600 dark:text-slate-400 text-right flex-1">{selectedDistrict.desc}</p>
-                </div>
-              )}
-            </div>
-
-            <input type="text" value={address} onChange={e => setAddress(e.target.value)}
-              placeholder="تفاصيل العنوان (شارع، زقاق...)" dir="rtl"
+            <input type="text" value={locationDesc} onChange={e => setLocationDesc(e.target.value)}
+              placeholder="وصف الموقع (حي، شارع، علامة مميزة...) *" dir="rtl"
               className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 mb-3"
               style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
+
             <input type="text" value={note} onChange={e => setNote(e.target.value)}
               placeholder="ملاحظات (اختياري)" dir="rtl"
               className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2"
@@ -500,16 +453,10 @@ export default function CartPage() {
                 <span className="font-bold tracking-widest" style={{ color: brandColor }}>{phone}</span>
                 <span className="text-gray-400 dark:text-slate-500 text-sm">الهاتف</span>
               </div>
-              {selectedDistrict && (
+              {locationDesc && (
                 <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-600 pt-3">
-                  <span className="text-gray-900 dark:text-slate-100 font-semibold">{selectedDistrict.name}</span>
-                  <span className="text-gray-400 dark:text-slate-500 text-sm">المنطقة</span>
-                </div>
-              )}
-              {address && (
-                <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-600 pt-3">
-                  <span className="text-gray-900 dark:text-slate-100 font-semibold text-sm">{address}</span>
-                  <span className="text-gray-400 dark:text-slate-500 text-sm">العنوان</span>
+                  <span className="text-gray-900 dark:text-slate-100 font-semibold text-sm">{locationDesc}</span>
+                  <span className="text-gray-400 dark:text-slate-500 text-sm">الموقع</span>
                 </div>
               )}
             </div>
