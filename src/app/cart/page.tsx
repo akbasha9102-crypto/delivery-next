@@ -848,13 +848,51 @@ const proceedFromReview = () => {
                 </div>
                 <Phone size={18} className="flex-shrink-0" style={{ color: brandColor }}/>
               </div>
+
+              {/* الأصناف المطلوبة */}
+              <div className="rounded-xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                <div className="flex items-center justify-between px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800">
+                  <span className="font-black text-sm" style={{ color: '#ef4444' }}>{grandTotal.toLocaleString()} د.ع</span>
+                  <div className="flex items-center gap-1.5">
+                    <ShoppingBag size={13} className="text-gray-400 dark:text-slate-500"/>
+                    <p className="text-xs font-bold text-gray-500 dark:text-slate-400">الأصناف المطلوبة</p>
+                  </div>
+                </div>
+                <div className="divide-y divide-gray-100 dark:divide-slate-700 bg-white dark:bg-slate-900">
+                  {items.map(item => {
+                    const extras = getExtras(item.extras_json);
+                    const selected = itemSelectedExtras[item.id] || new Set<string>();
+                    const selectedExtrasArr = extras.filter(e => selected.has(e.id));
+                    const extraCost = selectedExtrasArr.reduce((s, e) => s + e.price, 0);
+                    const iNote = (itemNotes[item.id] || '').trim();
+                    return (
+                      <div key={item.id} className="px-3.5 py-2.5 text-right">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-gray-400 dark:text-slate-500">
+                            {((item.price + extraCost) * item.quantity).toLocaleString()} د.ع
+                          </span>
+                          <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">
+                            {item.name} <span className="text-gray-400 font-bold text-xs">×{item.quantity}</span>
+                          </p>
+                        </div>
+                        {selectedExtrasArr.length > 0 && (
+                          <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">+ {selectedExtrasArr.map(e => e.name).join('، ')}</p>
+                        )}
+                        {iNote && (
+                          <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">📝 {iNote}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Buttons */}
             <div className="px-5 pt-3 pb-8 space-y-3">
               <button onClick={submitOrder} disabled={loading}
                 className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
-                style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}cc)`, color: textOnBrand, boxShadow: `0 8px 24px ${brandColor}50` }}>
+                style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#ffffff', boxShadow: '0 8px 24px #ef444450' }}>
                 {loading ? <Loader2 size={20} className="animate-spin"/> : <CheckCircle2 size={20}/>}
                 {loading ? 'جاري الإرسال...' : 'تأكيد وإرسال الطلب'}
               </button>
