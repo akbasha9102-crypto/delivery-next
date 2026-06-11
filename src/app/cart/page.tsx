@@ -739,7 +739,7 @@ export default function CartPage() {
               )}
               <button type="button" onClick={confirmLocation}
                 className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-95 flex items-center justify-center gap-2"
-                style={{ background:`linear-gradient(135deg, ${brandColor}, ${brandColor}cc)`, color:textOnBrand, boxShadow:`0 8px 24px ${brandColor}50` }}>
+                style={{ background:'linear-gradient(135deg, #ef4444, #dc2626)', color:'#ffffff', boxShadow:'0 8px 24px #ef444450' }}>
                 <CheckCircle2 size={20}/> تأكيد الموقع
               </button>
             </div>
