@@ -10,10 +10,11 @@ import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
 
 const KEYS = {
-  name:         'deliveryName',
-  nickname:     'deliveryNickname',
-  phone:        'deliveryPhone',
-  locationDesc: 'deliveryLocationDesc',
+  name:           'deliveryName',
+  nickname:       'deliveryNickname',
+  phone:          'deliveryPhone',
+  locationDesc:   'deliveryLocationDesc',
+  addressDetails: 'deliveryAddressDetails',
 };
 
 const BASRA_CENTER: [number, number] = [30.5085, 47.7804];
@@ -24,20 +25,21 @@ const SUGGESTED_EXTRAS = [
   'حار خفيف', 'بدون مايونيز', 'إضافة زبدة', 'تحميص زيادة',
 ];
 
-type SavedInfo = { name: string; nickname: string; phone: string; locationDesc: string };
+type SavedInfo = { name: string; nickname: string; phone: string; locationDesc: string; addressDetails: string };
 
 function loadSaved(): SavedInfo | null {
   const name  = localStorage.getItem(KEYS.name)  || '';
   const phone = localStorage.getItem(KEYS.phone) || '';
   if (!name || !phone) return null;
-  return { name, nickname: localStorage.getItem(KEYS.nickname) || '', phone, locationDesc: localStorage.getItem(KEYS.locationDesc) || '' };
+  return { name, nickname: localStorage.getItem(KEYS.nickname) || '', phone, locationDesc: localStorage.getItem(KEYS.locationDesc) || '', addressDetails: localStorage.getItem(KEYS.addressDetails) || '' };
 }
 
 function saveInfo(info: SavedInfo) {
-  localStorage.setItem(KEYS.name,         info.name);
-  localStorage.setItem(KEYS.nickname,     info.nickname);
-  localStorage.setItem(KEYS.phone,        info.phone);
-  localStorage.setItem(KEYS.locationDesc, info.locationDesc);
+  localStorage.setItem(KEYS.name,           info.name);
+  localStorage.setItem(KEYS.nickname,       info.nickname);
+  localStorage.setItem(KEYS.phone,          info.phone);
+  localStorage.setItem(KEYS.locationDesc,   info.locationDesc);
+  localStorage.setItem(KEYS.addressDetails, info.addressDetails);
 }
 
 export default function CartPage() {
@@ -64,8 +66,9 @@ export default function CartPage() {
   const [name,         setName]         = useState('');
   const [nickname,     setNickname]     = useState('');
   const [phone,        setPhone]        = useState('');
-  const [locationDesc, setLocationDesc] = useState('');
-  const [note,         setNote]         = useState('');
+  const [locationDesc,    setLocationDesc]    = useState('');
+  const [addressDetails,  setAddressDetails]  = useState('');
+  const [note,            setNote]            = useState('');
 
   // UI state
   const [showOrderReview,  setShowOrderReview]  = useState(false);
@@ -281,6 +284,7 @@ export default function CartPage() {
       setNickname(saved.nickname);
       setPhone(saved.phone);
       setLocationDesc(saved.locationDesc);
+      setAddressDetails(saved.addressDetails);
       hasSavedInfoRef.current = true;
     }
   }, []);
@@ -354,6 +358,8 @@ export default function CartPage() {
 
   const handleSubmitPress = () => {
     if (!name.trim() || !phone.trim()) { alert('الرجاء إدخال الاسم ورقم الهاتف'); return; }
+    if (!nickname.trim()) { alert('الرجاء إدخال اللقب'); return; }
+    if (!addressDetails.trim()) { alert('الرجاء إدخال تفاصيل العنوان'); return; }
     if (items.length === 0) { alert('السلة فارغة'); return; }
     if (!locationConfirmed) {
       pendingConfirmRef.current = true;
@@ -366,11 +372,11 @@ export default function CartPage() {
 
   const submitOrder = async () => {
     setLoading(true);
-    saveInfo({ name: name.trim(), nickname: nickname.trim(), phone: phone.trim(), locationDesc: locationDesc.trim() });
+    saveInfo({ name: name.trim(), nickname: nickname.trim(), phone: phone.trim(), locationDesc: locationDesc.trim(), addressDetails: addressDetails.trim() });
 
     const { data: order, error } = await supabase.from('orders').insert([{
-      client_name: nickname.trim() ? `${name.trim()} (${nickname.trim()})` : name.trim(), client_phone: phone.trim(),
-      delivery_address: locationDesc.trim() || null,
+      client_name: `${name.trim()} (${nickname.trim()})`, client_phone: phone.trim(),
+      delivery_address: addressDetails.trim() ? `${locationDesc.trim()} — ${addressDetails.trim()}` : locationDesc.trim() || null,
       client_note: note || null,
       total_amount: total, status: 'pending',
       ...(clientLat !== null && clientLng !== null ? { client_lat: clientLat, client_lng: clientLng } : {}),
@@ -415,7 +421,7 @@ export default function CartPage() {
 
             {/* اللقب */}
             <input type="text" value={nickname} onChange={e => setNickname(e.target.value)}
-              placeholder="اللقب (اختياري) — مثل: أبو علي، أم سارة..." dir="rtl"
+              placeholder="اللقب *" dir="rtl"
               className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2"
               style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
@@ -465,9 +471,9 @@ export default function CartPage() {
             )}
             </AnimatePresence>
 
-            {/* ملاحظات */}
-            <input type="text" value={note} onChange={e => setNote(e.target.value)}
-              placeholder="ملاحظات للمطبخ — مثل: بدون بصل، بدون ثوم، حار جداً، إلخ (اختياري)" dir="rtl"
+            {/* تفاصيل العنوان */}
+            <input type="text" value={addressDetails} onChange={e => setAddressDetails(e.target.value)}
+              placeholder="تفاصيل العنوان — أقرب دالة *" dir="rtl"
               className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2"
               style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
