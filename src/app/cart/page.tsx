@@ -245,7 +245,7 @@ export default function CartPage() {
           attribution: '© OpenStreetMap contributors © CARTO', maxZoom: 19,
         }).addTo(map);
         const icon = L.divIcon({
-          html: `<div style="width:36px;height:36px;background:${brandColor};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px ${brandColor}80;display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;background:white;border-radius:50%;transform:rotate(45deg)"></div></div>`,
+          html: `<div style="width:36px;height:36px;background:#ef4444;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px #ef444480;display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;background:white;border-radius:50%;transform:rotate(45deg)"></div></div>`,
           className: '', iconSize: [36, 36], iconAnchor: [18, 36],
         });
         L.marker([clientLat!, clientLng!], { icon }).addTo(map);

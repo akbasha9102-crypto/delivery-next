@@ -253,7 +253,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                 className={`px-6 py-2.5 rounded-[1.2rem] text-sm font-black whitespace-nowrap transition-all duration-300 flex-shrink-0 border ${
                   isActive
                   ? 'shadow-[0_10px_20px_rgba(0,0,0,0.15)] scale-105'
-                  : 'bg-white/70 dark:bg-slate-800/70 backdrop-blur-md text-gray-500 border-gray-100 dark:border-slate-700 hover:bg-gray-50 shadow-sm'
+                  : 'bg-white/70 dark:bg-slate-800/70 backdrop-blur-md text-gray-500 dark:text-white border-gray-100 dark:border-slate-700 hover:bg-gray-50 shadow-sm'
                 }`}
                 style={isActive ? { backgroundColor: catColor, borderColor: catColor, color: catTextColor } : {}}
               >
@@ -293,7 +293,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                 ref={el => { sectionRefs.current[cat.id] = el; }}>
 
                 <div className="flex items-center gap-4 mb-6 flex-row-reverse px-2">
-                  <h2 className="text-xl font-black text-gray-900 dark:text-slate-100 whitespace-nowrap tracking-tight">
+                  <h2 className="text-xl font-black text-gray-900 dark:text-white whitespace-nowrap tracking-tight">
                     {cat.name}
                   </h2>
                   <div className="flex-1 h-[2px] bg-gradient-to-l from-black/10 to-transparent dark:from-white/10"/>
