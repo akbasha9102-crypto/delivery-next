@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChefHat, ChevronLeft, Plus, Minus } from 'lucide-react';
+import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChevronLeft, Plus, Minus } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -19,11 +19,6 @@ const KEYS = {
 
 const BASRA_CENTER: [number, number] = [30.5085, 47.7804];
 
-const SUGGESTED_EXTRAS = [
-  'بدون بصل', 'بدون ثوم', 'حار جداً', 'بدون فلفل',
-  'زيادة صلصة', 'بدون توابل', 'إضافة جبن', 'بدون خيار',
-  'حار خفيف', 'بدون مايونيز', 'إضافة زبدة', 'تحميص زيادة',
-];
 
 type SavedInfo = { name: string; nickname: string; phone: string; locationDesc: string; addressDetails: string };
 
@@ -73,7 +68,6 @@ export default function CartPage() {
   // UI state
   const [showOrderReview,  setShowOrderReview]  = useState(false);
   const [showOrderSummary, setShowOrderSummary] = useState(false);
-  const [itemExtras,       setItemExtras]       = useState<Record<string, string[]>>({});
   const [itemNotes,        setItemNotes]        = useState<Record<string, string>>({});
   const [showSaved,        setShowSaved]        = useState(false);
   const [editing,          setEditing]          = useState(false);
@@ -310,30 +304,16 @@ export default function CartPage() {
     setShowOrderReview(true);
   };
 
-  const toggleItemExtra = (itemId: string, extra: string) => {
-    setItemExtras(prev => {
-      const cur = prev[itemId] || [];
-      return { ...prev, [itemId]: cur.includes(extra) ? cur.filter(e => e !== extra) : [...cur, extra] };
-    });
-  };
-
-  const proceedFromReview = () => {
+const proceedFromReview = () => {
     setShowOrderReview(false);
     setShowOrderSummary(true);
   };
 
   const proceedFromSummary = () => {
-    // Build combined client note from per-item extras + notes
     const parts: string[] = [];
     for (const item of items) {
-      const extras = itemExtras[item.id] || [];
-      const iNote  = (itemNotes[item.id] || '').trim();
-      if (extras.length > 0 || iNote) {
-        let part = item.name;
-        if (extras.length > 0) part += `: ${extras.join('، ')}`;
-        if (iNote) part += ` | ${iNote}`;
-        parts.push(part);
-      }
+      const iNote = (itemNotes[item.id] || '').trim();
+      if (iNote) parts.push(`${item.name}: ${iNote}`);
     }
     setNote(parts.join('\n'));
     setShowOrderSummary(false);
@@ -541,7 +521,6 @@ export default function CartPage() {
             {/* Scrollable body — items first */}
             <div className="px-4 py-4 space-y-4" style={{ flex: '1 1 0', overflowY: 'auto', overflowX: 'hidden', minHeight: 0, WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
               {items.map(item => {
-                const extras  = itemExtras[item.id] || [];
                 const iNote   = itemNotes[item.id]  || '';
                 return (
                   <div key={item.id} className="bg-gray-50 dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
@@ -578,29 +557,6 @@ export default function CartPage() {
                       <div className="text-left flex-shrink-0 ml-1">
                         <p className="font-black text-sm" style={{ color: '#ef4444' }}>{(item.price * item.quantity).toLocaleString()}</p>
                         <p className="text-[9px] text-gray-400 text-center">د.ع</p>
-                      </div>
-                    </div>
-
-                    {/* Suggested extras for this item */}
-                    <div className="px-3 pb-3 border-t border-gray-100 dark:border-slate-700 pt-3">
-                      <div className="flex items-center justify-end gap-1.5 mb-2.5">
-                        <p className="text-xs font-black text-gray-500 dark:text-slate-400">إضافات مقترحة</p>
-                        <ChefHat size={13} className="text-gray-400 dark:text-slate-500"/>
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-end">
-                        {SUGGESTED_EXTRAS.map(extra => {
-                          const active = extras.includes(extra);
-                          return (
-                            <button key={extra} type="button" onClick={() => toggleItemExtra(item.id, extra)}
-                              className="px-3 py-1.5 rounded-full text-xs font-black transition-all active:scale-95"
-                              style={active
-                                ? { backgroundColor: '#ef4444', color: '#fff', boxShadow: '0 2px 8px #ef444440' }
-                                : { backgroundColor: dark ? '#1e293b' : '#e2e8f0', color: dark ? '#94a3b8' : '#64748b' }
-                              }>
-                              {active ? '✓ ' : ''}{extra}
-                            </button>
-                          );
-                        })}
                       </div>
                     </div>
 
@@ -666,7 +622,6 @@ export default function CartPage() {
             {/* Summary body */}
             <div className="overflow-y-auto px-4 py-4 space-y-3" style={{ maxHeight: '44vh' }}>
               {items.map(item => {
-                const extras = itemExtras[item.id] || [];
                 const iNote  = (itemNotes[item.id] || '').trim();
                 return (
                   <div key={item.id} className="bg-gray-50 dark:bg-slate-700 rounded-2xl p-3">
@@ -678,11 +633,6 @@ export default function CartPage() {
                         {item.name} <span className="text-gray-400 font-bold">×{item.quantity}</span>
                       </span>
                     </div>
-                    {extras.length > 0 && (
-                      <p className="text-xs text-gray-500 dark:text-slate-400 text-right mt-1 leading-relaxed">
-                        🍽 {extras.join('، ')}
-                      </p>
-                    )}
                     {iNote && (
                       <p className="text-xs text-gray-400 dark:text-slate-500 text-right mt-0.5">
                         📝 {iNote}
