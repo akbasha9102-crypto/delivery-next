@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, Plus, Minus, X, ShoppingBag, Trash2 } from 'lucide-react';
+import { Moon, Sun, Plus, Minus, X, ShoppingBag, Trash2, MapPin, MessageCircle } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -40,7 +40,7 @@ type Props = {
 export default function HomeClient({ initialCategories, initialItems }: Props) {
   const { dark, toggleDark } = useDarkMode();
   const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total } = useCart();
-  const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded, is_closed, opens_at } = useSettings();
+  const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded, is_closed, opens_at, whatsapp_number, location_url } = useSettings();
 
   const brandName  = restaurant_name || "المطعم";
   const rawColor   = primary_color || "#000000";
@@ -191,18 +191,42 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
           <div className="w-8 h-1 rounded-full mt-1 opacity-20" style={{ backgroundColor: brandColor }}/>
         </div>
 
-        {brandLogo ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative">
-            <Image src={brandLogo} alt={brandName} width={60} height={60} className="h-14 w-14 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md" unoptimized/>
-          </motion.div>
-        ) : (
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-black/10" style={{ backgroundColor: brandColor, color: textOnBrand }}>
-             <ShoppingBag size={20} />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {location_url && (
+            <motion.a
+              href={location_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center border border-gray-100 dark:border-slate-700 shadow-sm">
+              <MapPin size={18} className="text-red-500"/>
+            </motion.a>
+          )}
+          {whatsapp_number && (
+            <motion.a
+              href={`https://wa.me/${whatsapp_number.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center border border-gray-100 dark:border-slate-700 shadow-sm">
+              <MessageCircle size={18} className="text-green-500"/>
+            </motion.a>
+          )}
+          {brandLogo ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative">
+              <Image src={brandLogo} alt={brandName} width={60} height={60} className="h-14 w-14 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md" unoptimized/>
+            </motion.div>
+          ) : (
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-black/10" style={{ backgroundColor: brandColor, color: textOnBrand }}>
+               <ShoppingBag size={20} />
+            </div>
+          )}
+        </div>
       </motion.header>
 
       {/* ══ CATEGORY PILLS (Sticky at top-0) ══ */}

@@ -13,6 +13,8 @@ export type Settings = {
   is_closed: boolean;
   opens_at: string | null;
   schedule: WeekSchedule | null;
+  whatsapp_number: string | null;
+  location_url: string | null;
 };
 
 const DEFAULTS: Settings = {
@@ -23,6 +25,8 @@ const DEFAULTS: Settings = {
   is_closed: false,
   opens_at: null,
   schedule: null,
+  whatsapp_number: null,
+  location_url: null,
 };
 
 const CACHE_KEY = 'rs_settings_v1';

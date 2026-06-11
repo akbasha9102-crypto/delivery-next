@@ -2,15 +2,17 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useSettings } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag } from 'lucide-react';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function BrandingPage() {
-  const { restaurant_name, primary_color, logo_url, refreshSettings, loaded } = useSettings();
+  const { restaurant_name, primary_color, logo_url, whatsapp_number, location_url, refreshSettings, loaded } = useSettings();
   const [form, setForm] = useState({
     name: '',
     color: '#000000',
-    logo: ''
+    logo: '',
+    whatsapp: '',
+    location: ''
   });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState({ text: '', error: false });
@@ -20,10 +22,12 @@ export default function BrandingPage() {
       setForm({
         name: restaurant_name || '',
         color: primary_color || '#000000',
-        logo: logo_url || ''
+        logo: logo_url || '',
+        whatsapp: whatsapp_number || '',
+        location: location_url || ''
       });
     }
-  }, [loaded, restaurant_name, primary_color, logo_url]);
+  }, [loaded, restaurant_name, primary_color, logo_url, whatsapp_number, location_url]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -35,6 +39,8 @@ export default function BrandingPage() {
         restaurant_name: form.name,
         primary_color: form.color,
         logo_url: form.logo,
+        whatsapp_number: form.whatsapp || null,
+        location_url: form.location || null,
         updated_at: new Date().toISOString()
       })
       .eq('id', (await supabase.from('restaurant_settings').select('id').limit(1)).data?.[0]?.id);
@@ -99,13 +105,43 @@ export default function BrandingPage() {
               <label className="flex items-center justify-end gap-2 text-sm font-black opacity-50">
                 رابط الشعار (URL) <ImageIcon size={16}/>
               </label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={form.logo}
                 onChange={e => setForm({...form, logo: e.target.value})}
                 className="w-full p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-2 focus:ring-black text-left font-medium"
                 placeholder="https://image-url.com/logo.png"
               />
+            </div>
+
+            <div className="space-y-2 text-right">
+              <label className="flex items-center justify-end gap-2 text-sm font-black opacity-50">
+                رقم الواتساب <MessageCircle size={16}/>
+              </label>
+              <input
+                type="text"
+                value={form.whatsapp}
+                onChange={e => setForm({...form, whatsapp: e.target.value})}
+                className="w-full p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-2 focus:ring-black text-left font-medium"
+                placeholder="9647801234567"
+                dir="ltr"
+              />
+              <p className="text-xs text-gray-400 font-medium">أدخل الرقم مع رمز البلد بدون + مثال: 9647801234567</p>
+            </div>
+
+            <div className="space-y-2 text-right">
+              <label className="flex items-center justify-end gap-2 text-sm font-black opacity-50">
+                رابط الموقع (خرائط) <MapPin size={16}/>
+              </label>
+              <input
+                type="text"
+                value={form.location}
+                onChange={e => setForm({...form, location: e.target.value})}
+                className="w-full p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-2 focus:ring-black text-left font-medium"
+                placeholder="https://maps.google.com/..."
+                dir="ltr"
+              />
+              <p className="text-xs text-gray-400 font-medium">افتح موقع المطعم في خرائط قوقل ثم انسخ الرابط</p>
             </div>
 
             <button 
