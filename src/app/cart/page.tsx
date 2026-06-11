@@ -285,6 +285,13 @@ export default function CartPage() {
     }
   }, []);
 
+  // فتح المراجعة تلقائياً عند وجود وجبات
+  useEffect(() => {
+    if (items.length > 0 && !editing) {
+      setShowOrderReview(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const openOrderReview = () => {
@@ -383,31 +390,9 @@ export default function CartPage() {
       </header>
 
       <div className="px-4 pt-4 space-y-4">
-        {/* ── عناصر السلة ── */}
-        <div>
-          {items.length === 0 ? (
-            <p className="text-center text-gray-400 dark:text-slate-500 mt-16">السلة فارغة</p>
-          ) : (
-            <div className="space-y-3">
-              {items.map(item => (
-                <div key={item.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 flex items-center justify-between">
-                  <button onClick={() => removeItem(item.id)} className="p-2 bg-red-50 dark:bg-red-900/20 rounded-full text-red-400 active:scale-90">
-                    <Trash2 size={16}/>
-                  </button>
-                  <div className="flex items-center gap-3 flex-1 justify-end">
-                    <div className="text-right">
-                      <p className="font-bold text-gray-900 dark:text-slate-100">{item.name}</p>
-                      <p className="text-sm" style={{ color: brandColor }}>{item.price.toLocaleString()} د.ع</p>
-                    </div>
-                    <div className="bg-gray-100 dark:bg-slate-700 px-3 py-1.5 rounded-xl">
-                      <span className="font-bold text-gray-700 dark:text-slate-300">{item.quantity}×</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {items.length === 0 && (
+          <p className="text-center text-gray-400 dark:text-slate-500 mt-24 text-base">السلة فارغة</p>
+        )}
 
         {/* ── فورم معلومات الطلب ── */}
         {editing && (
