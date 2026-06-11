@@ -298,6 +298,7 @@ type Order = {
   delivery_address: string | null; total_amount: number;
   status: string; created_at: string;
   driver_name?: string | null; driver_phone?: string | null;
+  driver_arrived?: boolean | null;
 };
 
 export default function TrackPage() {
@@ -412,6 +413,16 @@ export default function TrackPage() {
                 ))}
               </div>
             </div>
+
+            {/* Driver Arrived Banner */}
+            {order.driver_arrived && order.status === 'ready' && (
+              <div className="rounded-2xl p-5 text-center border-2 border-orange-300 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-700"
+                   style={{ animation: 'status-enter 0.5s ease-out' }}>
+                <div className="text-4xl mb-2">🏍️</div>
+                <p className="font-black text-orange-800 dark:text-orange-300 text-lg mb-1">السائق وصل!</p>
+                <p className="text-orange-600 dark:text-orange-400 text-sm">الرجاء الاستعداد لاستلام طلبك</p>
+              </div>
+            )}
 
             {/* Animated Status Card */}
             <div key={order.status}
