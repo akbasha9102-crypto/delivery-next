@@ -604,27 +604,21 @@ export default function CartPage() {
                 );
               })}
 
-              {/* Total */}
-              <div className="rounded-2xl px-5 py-4 flex items-center justify-between"
-                style={{ background: 'linear-gradient(135deg,#ef444412,#ef444406)', border: '1.5px solid #ef444435' }}>
-                <div>
-                  <p className="font-black text-2xl" style={{ color: '#ef4444' }}>{total.toLocaleString()}</p>
-                  <p className="text-[10px] text-gray-400 font-bold">د.ع</p>
+              {/* Total + زر التالي */}
+              <button onClick={proceedFromReview}
+                className="w-full rounded-2xl px-5 py-4 flex items-center justify-between transition-all active:scale-95"
+                style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 6px 20px #ef444450' }}>
+                <div className="flex items-center gap-1.5">
+                  <ChevronLeft size={18} className="text-white"/>
+                  <span className="font-black text-white text-sm">التالي</span>
                 </div>
-                <p className="font-black text-gray-900 dark:text-white">المجموع الكلي</p>
-              </div>
+                <div className="text-right">
+                  <p className="font-black text-white text-xl">{total.toLocaleString()}</p>
+                  <p className="text-[10px] text-white/70 font-bold">المجموع الكلي · د.ع</p>
+                </div>
+              </button>
 
               <div className="h-2"/>
-            </div>
-
-            {/* Footer */}
-            <div className="px-4 pb-4 pt-2 flex-shrink-0 border-t border-gray-100 dark:border-slate-800">
-              <button onClick={proceedFromReview}
-                className="w-full py-3 rounded-xl font-black text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
-                style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', boxShadow: '0 4px 14px #ef444450' }}>
-                إتمام الطلب
-                <ChevronLeft size={16}/>
-              </button>
             </div>
           </motion.div>
         </motion.div>
