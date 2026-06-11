@@ -14,6 +14,7 @@ type Order = {
   total_amount: number;
   status: string;
   driver_arrived: boolean | null;
+  driver_id: string | null;
 };
 
 function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -46,7 +47,7 @@ export default function DeliveryPage() {
     if (!orderId) return;
     supabase
       .from('orders')
-      .select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, status, driver_arrived')
+      .select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, status, driver_arrived, driver_id')
       .eq('id', orderId)
       .single()
       .then(({ data }) => {
@@ -144,6 +145,9 @@ export default function DeliveryPage() {
   const completeDelivery = async () => {
     setDelivering(true);
     await supabase.from('orders').update({ status: 'completed', driver_arrived: true }).eq('id', orderId);
+    if (order?.driver_id) {
+      await supabase.from('drivers').update({ status: 'available' }).eq('id', order.driver_id);
+    }
     setDelivered(true);
     setDelivering(false);
   };

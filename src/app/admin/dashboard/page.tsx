@@ -10,7 +10,7 @@ import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/Sett
 import { useNewOrders } from '@/context/NewOrdersContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; client_lat?: number | null; client_lng?: number | null };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null };
 type Driver = { id: string; name: string; phone: string; status: string };
 
 const STATUS = {
@@ -348,14 +348,19 @@ function DashboardPage() {
   };
 
   const assignDriverAndStart = async (orderId: string, driver: Driver) => {
-    await supabase.from('orders').update({
-      status: 'preparing',
-      driver_name: driver.name,
-      driver_phone: driver.phone,
-    }).eq('id', orderId);
+    await Promise.all([
+      supabase.from('orders').update({
+        status: 'preparing',
+        driver_name: driver.name,
+        driver_phone: driver.phone,
+        driver_id: driver.id,
+      }).eq('id', orderId),
+      supabase.from('drivers').update({ status: 'unavailable' }).eq('id', driver.id),
+    ]);
     setOrders(prev => prev.map(o =>
-      o.id === orderId ? { ...o, status: 'preparing', driver_name: driver.name, driver_phone: driver.phone } : o
+      o.id === orderId ? { ...o, status: 'preparing', driver_name: driver.name, driver_phone: driver.phone, driver_id: driver.id } : o
     ));
+    setDrivers(prev => prev.map(d => d.id === driver.id ? { ...d, status: 'unavailable' } : d));
     setPickerOrderId(null);
   };
 
