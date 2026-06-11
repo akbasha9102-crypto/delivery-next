@@ -33,15 +33,15 @@ export function ClientBottomNav() {
         if (disabled) {
           return (
             <div key={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 opacity-35">
-              <Icon size={22} className="text-gray-400 dark:text-white" />
-              <span className="text-xs font-medium text-gray-400 dark:text-white">{label}</span>
+              <Icon size={22} className="text-gray-400" />
+              <span className="text-xs font-medium text-gray-400">{label}</span>
             </div>
           );
         }
         return (
           <Link key={href} href={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all active:scale-90 relative">
-            <Icon size={22} style={{ color: active ? activeColor : undefined }} className={!active ? 'text-gray-400 dark:text-white' : ''} />
-            <span className={`text-xs font-medium ${!active ? 'text-gray-400 dark:text-white' : ''}`} style={{ color: active ? activeColor : undefined }}>{label}</span>
+            <Icon size={22} style={{ color: active ? activeColor : undefined }} className={!active ? 'text-gray-400' : ''} />
+            <span className={`text-xs font-medium ${!active ? 'text-gray-400' : ''}`} style={{ color: active ? activeColor : undefined }}>{label}</span>
           </Link>
         );
       })}
