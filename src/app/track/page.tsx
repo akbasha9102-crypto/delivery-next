@@ -280,6 +280,15 @@ type Order = {
   client_lat?: number | null; client_lng?: number | null;
 };
 
+function getBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const phi1 = lat1 * Math.PI / 180;
+  const phi2 = lat2 * Math.PI / 180;
+  return (Math.atan2(Math.sin(dLng) * Math.cos(phi2), Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLng)) * 180 / Math.PI + 360) % 360;
+}
+
+const MOTO_ICON_HTML = `<div style="width:46px;height:46px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 4px 16px rgba(37,99,235,0.45);display:flex;align-items:center;justify-content:center;"><div class="driver-moto" style="transform:rotate(-90deg);transition:transform 0.5s ease;line-height:0;"><svg viewBox="0 0 60 30" width="36" height="18" fill="none"><circle cx="10" cy="22" r="7" fill="white" opacity="0.9"/><circle cx="10" cy="22" r="3.5" fill="#bfdbfe"/><circle cx="50" cy="22" r="7" fill="white" opacity="0.9"/><circle cx="50" cy="22" r="3.5" fill="#bfdbfe"/><path d="M14 18 Q20 6 32 5 L44 4 Q53 4 55 15 L57 22 L6 22 Z" fill="white" opacity="0.95"/><rect x="22" y="13" width="17" height="4" rx="2" fill="#93c5fd"/><circle cx="33" cy="3" r="3.5" fill="#fde68a"/><ellipse cx="55" cy="17" rx="3" ry="2.5" fill="#fef08a" opacity="0.85"/></svg></div></div>`;
+
 export default function TrackPage() {
   const { dark } = useDarkMode();
   const { primary_color } = useSettings();
@@ -307,6 +316,7 @@ export default function TrackPage() {
   const trackMapInstance   = useRef<any>(null);
   const trackDriverMarker  = useRef<any>(null);
   const trackLeafletCss    = useRef<HTMLLinkElement | null>(null);
+  const prevDriverPos      = useRef<[number, number] | null>(null);
 
   const fetchOrder = useCallback(async (phone: string) => {
     if (!phone) { setLoading(false); setNotFound(true); return; }
@@ -363,19 +373,31 @@ export default function TrackPage() {
     if (trackMapInstance.current) {
       if (hasDriver) {
         if (trackDriverMarker.current) {
-          trackDriverMarker.current.setLatLng([order.driver_lat!, order.driver_lng!]);
+          const newLat = order.driver_lat!;
+          const newLng = order.driver_lng!;
+          if (prevDriverPos.current) {
+            const bearing = getBearing(prevDriverPos.current[0], prevDriverPos.current[1], newLat, newLng);
+            const el = trackDriverMarker.current.getElement();
+            if (el) {
+              const moto = el.querySelector('.driver-moto') as HTMLElement | null;
+              if (moto) moto.style.transform = `rotate(${Math.round(bearing - 90)}deg)`;
+            }
+          }
+          prevDriverPos.current = [newLat, newLng];
+          trackDriverMarker.current.setLatLng([newLat, newLng]);
         } else {
           // First driver location arrived — add marker to existing map
           import('leaflet').then((mod) => {
             const L = (mod as any).default ?? mod;
             if (!trackMapInstance.current) return;
             const icon = L.divIcon({
-              html: `<div style="width:40px;height:40px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:20px">🏍️</div>`,
-              className: '', iconSize: [40, 40], iconAnchor: [20, 20],
+              html: MOTO_ICON_HTML,
+              className: '', iconSize: [46, 46], iconAnchor: [23, 23],
             });
             trackDriverMarker.current = L.marker([order.driver_lat!, order.driver_lng!], { icon })
               .addTo(trackMapInstance.current)
               .bindPopup(`<div dir="rtl" style="font-family:sans-serif"><b>السائق في الطريق إليك</b></div>`);
+            prevDriverPos.current = [order.driver_lat!, order.driver_lng!];
             if (order.client_lat && order.client_lng) {
               try { trackMapInstance.current.fitBounds(L.latLngBounds([order.client_lat, order.client_lng], [order.driver_lat!, order.driver_lng!]), { padding: [50, 50] }); } catch (_) {}
             }
@@ -417,12 +439,13 @@ export default function TrackPage() {
 
       if (hasDriver) {
         const driverIcon = L.divIcon({
-          html: `<div style="width:40px;height:40px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:20px">🏍️</div>`,
-          className: '', iconSize: [40, 40], iconAnchor: [20, 20],
+          html: MOTO_ICON_HTML,
+          className: '', iconSize: [46, 46], iconAnchor: [23, 23],
         });
         trackDriverMarker.current = L.marker([order.driver_lat!, order.driver_lng!], { icon: driverIcon })
           .addTo(map)
           .bindPopup(`<div dir="rtl" style="font-family:sans-serif"><b>السائق في الطريق إليك</b></div>`);
+        prevDriverPos.current = [order.driver_lat!, order.driver_lng!];
         if (order.client_lat && order.client_lng) {
           try { map.fitBounds(L.latLngBounds([order.client_lat, order.client_lng], [order.driver_lat!, order.driver_lng!]), { padding: [50, 50] }); } catch (_) {}
         }
