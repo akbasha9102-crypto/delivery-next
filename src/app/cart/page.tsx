@@ -97,6 +97,7 @@ export default function CartPage() {
   const [clientLat, setClientLat] = useState<number | null>(null);
   const [clientLng, setClientLng] = useState<number | null>(null);
   const [showMap,           setShowMap]           = useState(false);
+  const [editingFromConfirm, setEditingFromConfirm] = useState(false);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [gpsLocating,       setGpsLocating]       = useState(false);
   const [gpsAccuracy,       setGpsAccuracy]       = useState<number | null>(null);
@@ -193,6 +194,7 @@ export default function CartPage() {
     if (locationMapInstanceRef.current) { locationMapInstanceRef.current.remove(); locationMapInstanceRef.current = null; }
     pendingFlyRef.current   = null;
     pendingConfirmRef.current = false;
+    setEditingFromConfirm(false);
     setShowMap(false);
     setLocationConfirmed(false);
     setClientLat(null);
@@ -209,12 +211,31 @@ export default function CartPage() {
     setLocationConfirmed(true);
     setGpsLocating(false);
     setGpsAccuracy(null);
+    setEditingFromConfirm(false);
     if (pendingConfirmRef.current) {
       pendingConfirmRef.current = false;
       setShowConfirmModal(true);
     } else {
       setTimeout(() => submitBtnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
     }
+  };
+
+  const editLocationFromConfirm = () => {
+    setShowConfirmModal(false);
+    setEditingFromConfirm(true);
+    pendingConfirmRef.current = true;
+    if (clientLat && clientLng) {
+      pendingFlyRef.current = { lat: clientLat, lng: clientLng, accuracy: 50 };
+    }
+    setShowMap(true);
+    startGpsWatch((lat, lng, accuracy) => {
+      const zoom = accuracy < 30 ? 18 : accuracy < 100 ? 17 : accuracy < 500 ? 16 : accuracy < 2000 ? 14 : 13;
+      if (locationMapInstanceRef.current) {
+        locationMapInstanceRef.current.flyTo([lat, lng], zoom, { animate: true, duration: 0.8 });
+      } else {
+        pendingFlyRef.current = { lat, lng, accuracy };
+      }
+    });
   };
 
   // ── Leaflet CSS ───────────────────────────────────────────────────────────
@@ -818,7 +839,7 @@ const proceedFromReview = () => {
                 className="w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-800 text-gray-500 active:scale-90">
                 <X size={17}/>
               </button>
-              <p className="font-bold text-gray-900 dark:text-slate-100">تأكيد طلبك</p>
+              <p className="font-bold" style={{ color: '#ef4444' }}>موقعك:</p>
               <div className="w-9"/>
             </div>
 
@@ -826,6 +847,14 @@ const proceedFromReview = () => {
             {clientLat && clientLng && (
               <div style={{ height: 200, position: 'relative' }}>
                 <div ref={confirmMapRef} style={{ position: 'absolute', inset: 0 }} />
+                <button
+                  type="button"
+                  onClick={editLocationFromConfirm}
+                  className="absolute bottom-3 left-3 z-[1000] flex items-center gap-1.5 rounded-full px-3 py-2 active:scale-90 transition-all"
+                  style={{ background: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.22)', border: '2px solid #ef444430' }}>
+                  <Pencil size={14} style={{ color: '#ef4444' }}/>
+                  <span className="text-xs font-bold" style={{ color: '#ef4444' }}>تعديل</span>
+                </button>
               </div>
             )}
 
@@ -1073,7 +1102,7 @@ const proceedFromReview = () => {
               <button type="button" onClick={confirmLocation}
                 className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-95 flex items-center justify-center gap-2"
                 style={{ background:'linear-gradient(135deg, #ef4444, #dc2626)', color:'#ffffff', boxShadow:'0 8px 24px #ef444450' }}>
-                <CheckCircle2 size={20}/> تأكيد الموقع
+                <CheckCircle2 size={20}/> {editingFromConfirm ? 'تم' : 'تأكيد الموقع'}
               </button>
             </div>
           </motion.div>
