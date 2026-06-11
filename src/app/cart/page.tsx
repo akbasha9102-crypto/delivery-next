@@ -502,8 +502,8 @@ export default function CartPage() {
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className="w-full bg-white dark:bg-slate-900 rounded-t-3xl overflow-hidden flex flex-col"
-            style={{ maxHeight: '94vh' }}>
+            className="w-full bg-white dark:bg-slate-900 rounded-t-3xl flex flex-col"
+            style={{ height: '94svh', maxHeight: '94svh' }}>
 
             {/* Drag pill */}
             <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
@@ -526,7 +526,7 @@ export default function CartPage() {
             </div>
 
             {/* Scrollable body — items first */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
+            <div className="px-4 py-4 space-y-4" style={{ flex: '1 1 0', overflowY: 'auto', overflowX: 'hidden', minHeight: 0, WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
               {items.map(item => {
                 const extras  = itemExtras[item.id] || [];
                 const iNote   = itemNotes[item.id]  || '';
