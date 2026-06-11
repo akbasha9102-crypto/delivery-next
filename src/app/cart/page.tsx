@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone } from 'lucide-react';
+import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChefHat, ChevronLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -17,6 +17,12 @@ const KEYS = {
 };
 
 const BASRA_CENTER: [number, number] = [30.5085, 47.7804];
+
+const SUGGESTED_EXTRAS = [
+  'بدون بصل', 'بدون ثوم', 'حار جداً', 'بدون فلفل',
+  'زيادة صلصة', 'بدون توابل', 'إضافة جبن', 'بدون خيار',
+  'حار خفيف', 'بدون مايونيز', 'إضافة زبدة', 'تحميص زيادة',
+];
 
 type SavedInfo = { name: string; nickname: string; phone: string; locationDesc: string };
 
@@ -62,10 +68,13 @@ export default function CartPage() {
   const [note,         setNote]         = useState('');
 
   // UI state
+  const [showOrderReview,  setShowOrderReview]  = useState(false);
+  const [selectedExtras,   setSelectedExtras]   = useState<string[]>([]);
   const [showSaved,        setShowSaved]        = useState(false);
   const [editing,          setEditing]          = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [loading,          setLoading]          = useState(false);
+  const hasSavedInfoRef = useRef(false);
 
   // map state
   const [clientLat, setClientLat] = useState<number | null>(null);
@@ -270,13 +279,35 @@ export default function CartPage() {
       setNickname(saved.nickname);
       setPhone(saved.phone);
       setLocationDesc(saved.locationDesc);
-      setShowSaved(true);
-    } else {
-      setEditing(true);
+      hasSavedInfoRef.current = true;
     }
   }, []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const openOrderReview = () => {
+    if (items.length === 0) { alert('السلة فارغة'); return; }
+    setShowOrderReview(true);
+  };
+
+  const toggleExtra = (extra: string) => {
+    setSelectedExtras(prev =>
+      prev.includes(extra) ? prev.filter(e => e !== extra) : [...prev, extra]
+    );
+  };
+
+  const proceedFromReview = () => {
+    if (selectedExtras.length > 0) {
+      const extrasText = selectedExtras.join('، ');
+      setNote(prev => prev.trim() ? `${extrasText}، ${prev.trim()}` : extrasText);
+    }
+    setShowOrderReview(false);
+    if (hasSavedInfoRef.current) {
+      setShowSaved(true);
+    } else {
+      setEditing(true);
+    }
+  };
 
   const handleConfirmSaved = () => {
     if (items.length === 0) { alert('السلة فارغة'); return; }
@@ -440,15 +471,149 @@ export default function CartPage() {
             <span className="font-bold text-xl" style={{ color: brandColor }}>{total.toLocaleString()} د.ع</span>
             <span className="font-bold text-gray-900 dark:text-slate-100">الإجمالي</span>
           </div>
-          {editing && (
+          {editing ? (
             <button ref={submitBtnRef} onClick={handleSubmitPress} disabled={items.length === 0}
               className="w-full disabled:opacity-40 font-bold py-4 rounded-xl text-lg transition-all active:scale-95"
               style={{ backgroundColor: brandColor, color: textOnBrand }}>
               إرسال الطلب
             </button>
+          ) : (
+            <button onClick={openOrderReview} disabled={items.length === 0}
+              className="w-full disabled:opacity-40 font-black py-4 rounded-2xl text-lg transition-all active:scale-95 flex items-center justify-center gap-3"
+              style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff', boxShadow: '0 8px 28px #ef444445' }}>
+              <ShoppingBag size={20}/>
+              مراجعة وإتمام الطلب
+              <ChevronLeft size={20}/>
+            </button>
           )}
         </div>
       </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          نافذة مراجعة الطلب
+      ══════════════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+      {showOrderReview && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}>
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 280, damping: 32 }}
+            className="w-full bg-white dark:bg-slate-900 rounded-t-3xl overflow-hidden flex flex-col"
+            style={{ maxHeight: '92vh' }}>
+
+            {/* Drag pill */}
+            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-slate-700"/>
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+              <button onClick={() => setShowOrderReview(false)}
+                className="w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-800 text-gray-500 active:scale-90">
+                <X size={17}/>
+              </button>
+              <p className="font-black text-gray-900 dark:text-white">مراجعة طلبك</p>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#ef444420' }}>
+                <ShoppingBag size={17} style={{ color: '#ef4444' }}/>
+              </div>
+            </div>
+
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
+
+              {/* Items list */}
+              <div>
+                <p className="text-[11px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest text-right mb-3">تفاصيل طلبك</p>
+                <div className="space-y-3">
+                  {items.map(item => (
+                    <div key={item.id} className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-3 flex items-center gap-3 border border-gray-100 dark:border-slate-700">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt={item.name}
+                          className="w-16 h-16 rounded-xl object-cover flex-shrink-0 shadow-sm"/>
+                      ) : (
+                        <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                          <ShoppingBag size={22} className="text-gray-400 dark:text-slate-500"/>
+                        </div>
+                      )}
+                      <div className="flex-1 text-right min-w-0">
+                        <p className="font-black text-gray-900 dark:text-white text-sm leading-snug">{item.name}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{item.price.toLocaleString()} د.ع × {item.quantity}</p>
+                      </div>
+                      <div className="text-left flex-shrink-0">
+                        <p className="font-black text-base" style={{ color: '#ef4444' }}>{(item.price * item.quantity).toLocaleString()}</p>
+                        <p className="text-[9px] text-gray-400 text-center">د.ع</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Total */}
+              <div className="rounded-2xl px-5 py-4 flex items-center justify-between"
+                style={{ background: 'linear-gradient(135deg,#ef444410,#ef444405)', border: '1.5px solid #ef444430' }}>
+                <div className="text-left">
+                  <p className="font-black text-2xl" style={{ color: '#ef4444' }}>{total.toLocaleString()}</p>
+                  <p className="text-[10px] text-gray-400 font-bold">د.ع</p>
+                </div>
+                <p className="font-black text-gray-900 dark:text-white text-base">المجموع الكلي</p>
+              </div>
+
+              {/* Suggested extras */}
+              <div>
+                <div className="flex items-center justify-end gap-2 mb-3">
+                  <p className="text-[11px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">إضافات مقترحة</p>
+                  <ChefHat size={14} className="text-gray-400 dark:text-slate-500"/>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-end">
+                  {SUGGESTED_EXTRAS.map(extra => {
+                    const active = selectedExtras.includes(extra);
+                    return (
+                      <button key={extra} type="button" onClick={() => toggleExtra(extra)}
+                        className="px-3 py-2 rounded-full text-xs font-black transition-all active:scale-95"
+                        style={active
+                          ? { backgroundColor: '#ef4444', color: '#fff', boxShadow: '0 3px 10px #ef444440' }
+                          : { backgroundColor: dark ? '#1e293b' : '#f1f5f9', color: dark ? '#94a3b8' : '#64748b', border: '1px solid ' + (dark ? '#334155' : '#e2e8f0') }
+                        }>
+                        {active ? '✓ ' : ''}{extra}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Kitchen notes */}
+              <div>
+                <div className="flex items-center justify-end gap-2 mb-2">
+                  <p className="text-[11px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">ملاحظات للمطبخ</p>
+                  <ChefHat size={14} className="text-gray-400 dark:text-slate-500"/>
+                </div>
+                <textarea value={note} onChange={e => setNote(e.target.value)}
+                  placeholder="مثلاً: بدون بصل، حار جداً، زيادة صلصة، طهي جيد، إضافة ليمون..." dir="rtl" rows={3}
+                  className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 resize-none"
+                  style={{ '--tw-ring-color': '#ef4444' } as React.CSSProperties}
+                />
+              </div>
+
+              <div className="h-1"/>
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 pb-8 pt-3 flex-shrink-0 border-t border-gray-100 dark:border-slate-800">
+              <button onClick={proceedFromReview}
+                className="w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', boxShadow: '0 8px 24px #ef444450' }}>
+                <ChevronLeft size={19}/>
+                متابعة — أدخل معلوماتك
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       {/* ══════════════════════════════════════════════════════════════════════
           نافذة المعلومات المحفوظة
