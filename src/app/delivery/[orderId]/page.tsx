@@ -33,6 +33,7 @@ export default function DeliveryPage() {
   const driverMarkerRef = useRef<any>(null);
   const watchIdRef      = useRef<number | null>(null);
   const arrivedSentRef  = useRef(false);
+  const lastSaveRef     = useRef<number>(0);
 
   const [order,         setOrder]         = useState<Order | null>(null);
   const [loading,       setLoading]       = useState(true);
@@ -112,6 +113,13 @@ export default function DeliveryPage() {
               L.latLngBounds([order.client_lat!, order.client_lng!], [latitude, longitude]),
               { padding: [50, 50] }
             );
+          }
+
+          // Save driver location every 5s for customer tracking
+          const now = Date.now();
+          if (now - lastSaveRef.current > 5000) {
+            lastSaveRef.current = now;
+            supabase.from('orders').update({ driver_lat: latitude, driver_lng: longitude }).eq('id', orderId);
           }
 
           const dist = getDistanceMeters(latitude, longitude, order.client_lat!, order.client_lng!);

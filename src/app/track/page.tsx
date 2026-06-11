@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Search } from 'lucide-react';
@@ -299,6 +299,8 @@ type Order = {
   status: string; created_at: string;
   driver_name?: string | null; driver_phone?: string | null;
   driver_arrived?: boolean | null;
+  driver_lat?: number | null; driver_lng?: number | null;
+  client_lat?: number | null; client_lng?: number | null;
 };
 
 export default function TrackPage() {
@@ -323,6 +325,11 @@ export default function TrackPage() {
   const [notFound, setNotFound] = useState(false);
   const [inputPhone, setInputPhone] = useState('');
   const [loading, setLoading] = useState(true);
+
+  const trackMapRef        = useRef<HTMLDivElement>(null);
+  const trackMapInstance   = useRef<any>(null);
+  const trackDriverMarker  = useRef<any>(null);
+  const trackLeafletCss    = useRef<HTMLLinkElement | null>(null);
 
   const fetchOrder = useCallback(async (phone: string) => {
     if (!phone) { setLoading(false); setNotFound(true); return; }
@@ -352,6 +359,90 @@ export default function TrackPage() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [order?.id]);
+
+  // Cleanup map when status leaves 'ready' or component unmounts
+  useEffect(() => {
+    if (order?.status === 'ready') return;
+    if (trackMapInstance.current) {
+      trackMapInstance.current.remove();
+      trackMapInstance.current = null;
+      trackDriverMarker.current = null;
+    }
+    if (trackLeafletCss.current?.parentNode) {
+      trackLeafletCss.current.parentNode.removeChild(trackLeafletCss.current);
+      trackLeafletCss.current = null;
+    }
+    return () => {
+      if (trackMapInstance.current) {
+        trackMapInstance.current.remove();
+        trackMapInstance.current = null;
+        trackDriverMarker.current = null;
+      }
+      if (trackLeafletCss.current?.parentNode) {
+        trackLeafletCss.current.parentNode.removeChild(trackLeafletCss.current);
+        trackLeafletCss.current = null;
+      }
+    };
+  }, [order?.status]);
+
+  // Initialize map or update driver marker when driver location changes
+  useEffect(() => {
+    if (order?.status !== 'ready') return;
+    if (!order.driver_lat || !order.driver_lng) return;
+    if (!trackMapRef.current) return;
+
+    if (trackMapInstance.current) {
+      trackDriverMarker.current?.setLatLng([order.driver_lat, order.driver_lng]);
+      return;
+    }
+
+    if (!trackLeafletCss.current) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+      trackLeafletCss.current = link;
+    }
+
+    import('leaflet').then((mod) => {
+      const L = (mod as any).default ?? mod;
+      if (!trackMapRef.current || trackMapInstance.current) return;
+
+      const map = L.map(trackMapRef.current).setView([order.driver_lat!, order.driver_lng!], 15);
+      trackMapInstance.current = map;
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap', maxZoom: 19,
+      }).addTo(map);
+
+      if (order.client_lat && order.client_lng) {
+        const homeIcon = L.divIcon({
+          html: `<div style="width:34px;height:34px;background:#ef4444;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:18px">🏠</div>`,
+          className: '', iconSize: [34, 34], iconAnchor: [17, 17],
+        });
+        L.marker([order.client_lat, order.client_lng], { icon: homeIcon })
+          .addTo(map)
+          .bindPopup(`<div dir="rtl" style="font-family:sans-serif"><b>موقعك</b></div>`);
+      }
+
+      const driverIcon = L.divIcon({
+        html: `<div style="width:40px;height:40px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:20px">🏍️</div>`,
+        className: '', iconSize: [40, 40], iconAnchor: [20, 20],
+      });
+      trackDriverMarker.current = L.marker([order.driver_lat!, order.driver_lng!], { icon: driverIcon })
+        .addTo(map)
+        .bindPopup(`<div dir="rtl" style="font-family:sans-serif"><b>السائق في الطريق إليك</b></div>`);
+
+      if (order.client_lat && order.client_lng) {
+        try {
+          map.fitBounds(
+            L.latLngBounds([order.client_lat, order.client_lng], [order.driver_lat!, order.driver_lng!]),
+            { padding: [50, 50] }
+          );
+        } catch (_) {}
+      }
+    });
+  }, [order?.status, order?.driver_lat, order?.driver_lng]);
 
   const stepIndex = (s: string) => STEPS.findIndex(x => x.key === s);
   const current = order ? stepIndex(order.status) : -1;
@@ -413,6 +504,30 @@ export default function TrackPage() {
                 ))}
               </div>
             </div>
+
+            {/* Live Driver Map */}
+            {order.status === 'ready' && (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${order.driver_lat ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-500'}`} />
+                    <span className="text-xs font-medium text-gray-500 dark:text-slate-400">
+                      {order.driver_lat ? 'مباشر' : 'في انتظار السائق'}
+                    </span>
+                  </div>
+                  <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">تتبع السائق 🏍️</p>
+                </div>
+                <div style={{ position: 'relative', height: 280 }}>
+                  <div ref={trackMapRef} style={{ height: 280 }} />
+                  {!order.driver_lat && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-50 dark:bg-slate-700">
+                      <div className="text-4xl">🏍️</div>
+                      <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">جاري تحديد موقع السائق...</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Driver Arrived Banner */}
             {order.driver_arrived && order.status === 'ready' && (
