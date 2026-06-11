@@ -618,12 +618,12 @@ export default function CartPage() {
             </div>
 
             {/* Footer */}
-            <div className="px-4 pb-8 pt-3 flex-shrink-0 border-t border-gray-100 dark:border-slate-800">
+            <div className="px-4 pb-4 pt-2 flex-shrink-0 border-t border-gray-100 dark:border-slate-800">
               <button onClick={proceedFromReview}
-                className="w-full py-4 rounded-2xl font-black text-base transition-all active:scale-95 flex items-center justify-center gap-2"
-                style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', boxShadow: '0 8px 24px #ef444450' }}>
+                className="w-full py-3 rounded-xl font-black text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', boxShadow: '0 4px 14px #ef444450' }}>
                 إتمام الطلب
-                <ChevronLeft size={19}/>
+                <ChevronLeft size={16}/>
               </button>
             </div>
           </motion.div>
