@@ -504,13 +504,13 @@ export default function CartPage() {
       <AnimatePresence>
       {showOrderReview && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end justify-center"
+          className="fixed inset-0 z-[70] flex items-end justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}>
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
             className="w-full bg-white dark:bg-slate-900 rounded-t-3xl flex flex-col"
-            style={{ height: '94svh', maxHeight: '94svh' }}>
+            style={{ height: 'calc(100svh - 12px)', maxHeight: 'calc(100svh - 12px)' }}>
 
             {/* Drag pill */}
             <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
@@ -576,17 +576,17 @@ export default function CartPage() {
                     </div>
 
                     {/* Suggested extras for this item */}
-                    <div className="px-3 pb-2 border-t border-gray-100 dark:border-slate-700 pt-2">
-                      <div className="flex items-center justify-end gap-1.5 mb-2">
-                        <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 tracking-wide">إضافات مقترحة</p>
-                        <ChefHat size={11} className="text-gray-400 dark:text-slate-500"/>
+                    <div className="px-3 pb-3 border-t border-gray-100 dark:border-slate-700 pt-3">
+                      <div className="flex items-center justify-end gap-1.5 mb-2.5">
+                        <p className="text-xs font-black text-gray-500 dark:text-slate-400">إضافات مقترحة</p>
+                        <ChefHat size={13} className="text-gray-400 dark:text-slate-500"/>
                       </div>
-                      <div className="flex flex-wrap gap-1.5 justify-end">
+                      <div className="flex flex-wrap gap-2 justify-end">
                         {SUGGESTED_EXTRAS.map(extra => {
                           const active = extras.includes(extra);
                           return (
                             <button key={extra} type="button" onClick={() => toggleItemExtra(item.id, extra)}
-                              className="px-2.5 py-1 rounded-full text-[11px] font-black transition-all active:scale-95"
+                              className="px-3 py-1.5 rounded-full text-xs font-black transition-all active:scale-95"
                               style={active
                                 ? { backgroundColor: '#ef4444', color: '#fff', boxShadow: '0 2px 8px #ef444440' }
                                 : { backgroundColor: dark ? '#1e293b' : '#e2e8f0', color: dark ? '#94a3b8' : '#64748b' }
@@ -599,11 +599,11 @@ export default function CartPage() {
                     </div>
 
                     {/* Notes for this item */}
-                    <div className="px-3 pb-3 pt-2">
+                    <div className="px-3 pb-4 pt-1">
                       <input type="text" value={iNote}
                         onChange={e => setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
                         placeholder="ملاحظة خاصة لهذه الوجبة... (مثل: حار، بدون بصل)" dir="rtl"
-                        className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-right text-xs text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-1"
+                        className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-1"
                         style={{ '--tw-ring-color': '#ef4444' } as React.CSSProperties}
                       />
                     </div>
