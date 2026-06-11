@@ -292,6 +292,13 @@ export default function CartPage() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // تجميد الصفحة الخلفية عند فتح أي نافذة
+  useEffect(() => {
+    const anyModal = showOrderReview || showOrderSummary || showSaved || showMap || showConfirmModal;
+    document.body.style.overflow = anyModal ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [showOrderReview, showOrderSummary, showSaved, showMap, showConfirmModal]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const openOrderReview = () => {
@@ -606,15 +613,15 @@ export default function CartPage() {
 
               {/* Total + زر التالي */}
               <button onClick={proceedFromReview}
-                className="w-full rounded-2xl px-5 py-4 flex items-center justify-between transition-all active:scale-95"
-                style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 6px 20px #ef444450' }}>
-                <div className="flex items-center gap-1.5">
-                  <ChevronLeft size={18} className="text-white"/>
-                  <span className="font-black text-white text-sm">التالي</span>
+                className="w-full rounded-xl px-4 py-2.5 flex items-center justify-between transition-all active:scale-95"
+                style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 12px #ef444440' }}>
+                <div className="flex items-center gap-1">
+                  <ChevronLeft size={15} className="text-white"/>
+                  <span className="font-black text-white text-xs">التالي</span>
                 </div>
                 <div className="text-right">
-                  <p className="font-black text-white text-xl">{total.toLocaleString()}</p>
-                  <p className="text-[10px] text-white/70 font-bold">المجموع الكلي · د.ع</p>
+                  <p className="font-black text-white text-base leading-tight">{total.toLocaleString()} <span className="text-[10px] font-bold opacity-80">د.ع</span></p>
+                  <p className="text-[9px] text-white/70 font-bold">المجموع الكلي</p>
                 </div>
               </button>
 
