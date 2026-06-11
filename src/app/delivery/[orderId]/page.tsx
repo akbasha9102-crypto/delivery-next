@@ -218,22 +218,23 @@ export default function DeliveryPage() {
           )}
         </div>
 
-        {/* Arrived banner + Done button */}
+        {/* Arrived banner */}
         {nearCustomer && (
-          <div className="bg-green-50 dark:bg-green-950/30 border-2 border-green-400 rounded-2xl p-5 text-center space-y-3">
-            <p className="text-3xl">📍</p>
-            <p className="font-black text-green-800 dark:text-green-300 text-lg">وصلت لموقع العميل</p>
-            <p className="text-green-600 dark:text-green-400 text-sm">بعد تسليم الطلب اضغط الزر أدناه</p>
-            <button
-              onClick={completeDelivery}
-              disabled={delivering}
-              className="w-full py-4 bg-green-500 hover:bg-green-600 text-white font-black text-lg rounded-2xl active:scale-95 transition-all shadow-lg shadow-green-200 dark:shadow-green-900 flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {delivering ? <Loader2 size={22} className="animate-spin" /> : <CheckCircle2 size={22} />}
-              تم التوصيل
-            </button>
+          <div className="bg-green-50 dark:bg-green-950/30 border-2 border-green-400 rounded-2xl p-4 text-center">
+            <p className="text-2xl mb-1">📍</p>
+            <p className="font-black text-green-800 dark:text-green-300">وصلت لموقع العميل</p>
           </div>
         )}
+
+        {/* Done button — always visible */}
+        <button
+          onClick={completeDelivery}
+          disabled={delivering}
+          className="w-full py-4 bg-green-500 hover:bg-green-600 text-white font-black text-lg rounded-2xl active:scale-95 transition-all shadow-lg shadow-green-200 dark:shadow-green-900 flex items-center justify-center gap-2 disabled:opacity-60"
+        >
+          {delivering ? <Loader2 size={22} className="animate-spin" /> : <CheckCircle2 size={22} />}
+          تم التوصيل
+        </button>
 
         {/* Map */}
         {order.client_lat && order.client_lng ? (
@@ -272,15 +273,6 @@ export default function DeliveryPage() {
                 <Navigation size={16} /> ابحث عن العنوان في Google Maps
               </a>
             )}
-            {/* Show done button even without location */}
-            <button
-              onClick={completeDelivery}
-              disabled={delivering}
-              className="mt-3 w-full py-4 bg-green-500 text-white font-black text-lg rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {delivering ? <Loader2 size={22} className="animate-spin" /> : <CheckCircle2 size={22} />}
-              تم التوصيل
-            </button>
           </div>
         )}
       </div>
