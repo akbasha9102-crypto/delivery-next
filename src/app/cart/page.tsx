@@ -855,7 +855,7 @@ const proceedFromReview = () => {
                   <span className="font-black text-sm" style={{ color: '#ef4444' }}>{grandTotal.toLocaleString()} د.ع</span>
                   <div className="flex items-center gap-1.5">
                     <ShoppingBag size={13} className="text-gray-400 dark:text-slate-500"/>
-                    <p className="text-xs font-bold text-gray-500 dark:text-slate-400">الأصناف المطلوبة</p>
+                    <p className="text-xs font-bold text-gray-500 dark:text-slate-400">طلبك :</p>
                   </div>
                 </div>
                 <div className="divide-y divide-gray-100 dark:divide-slate-700 bg-white dark:bg-slate-900">
@@ -867,17 +867,9 @@ const proceedFromReview = () => {
                     const iNote = (itemNotes[item.id] || '').trim();
                     return (
                       <div key={item.id} className="px-3.5 py-2.5 text-right">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-black text-gray-400 dark:text-slate-500">
-                            {((item.price + extraCost) * item.quantity).toLocaleString()} د.ع
-                          </span>
-                          <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">
-                            {item.name} <span className="text-gray-400 font-bold text-xs">×{item.quantity}</span>
-                          </p>
-                        </div>
-                        {selectedExtrasArr.length > 0 && (
-                          <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">+ {selectedExtrasArr.map(e => e.name).join('، ')}</p>
-                        )}
+                        <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">
+                          {item.name} <span className="text-gray-400 font-bold text-xs">×{item.quantity}</span>
+                        </p>
                         {iNote && (
                           <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">📝 {iNote}</p>
                         )}
