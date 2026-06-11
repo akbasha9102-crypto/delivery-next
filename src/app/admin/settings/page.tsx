@@ -1,11 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle } from 'lucide-react';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle, X } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { AdminBottomNav } from '@/components/BottomNav';
 
 export default function BrandingPage() {
+  const router = useRouter();
   const { restaurant_name, primary_color, logo_url, whatsapp_number, location_url, refreshSettings, loaded } = useSettings();
   const [form, setForm] = useState({
     name: '',
@@ -59,7 +62,15 @@ export default function BrandingPage() {
   return (
     <div className="max-w-4xl mx-auto p-6 pb-32">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-black mb-8 text-right">إعدادات الهوية البصرية</h1>
+        <div className="flex items-center justify-between mb-8">
+          <button
+            onClick={() => router.back()}
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors active:scale-95">
+            <X size={20} />
+          </button>
+          <h1 className="text-2xl font-black text-right">إعدادات الهوية البصرية</h1>
+          <div className="w-10" />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Controls */}
@@ -223,6 +234,7 @@ export default function BrandingPage() {
           </div>
         </div>
       </motion.div>
+      <AdminBottomNav />
     </div>
   );
 }
