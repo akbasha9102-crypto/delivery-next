@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
@@ -60,6 +60,7 @@ export default function CartPage() {
   const { items, removeItem, clearCart, total } = useCart();
   const { primary_color } = useSettings();
   const { dark } = useDarkMode();
+  const router = useRouter();
   const rawColor   = primary_color || '#e67e22';
   const isTooDark  = rawColor === '#000000' || rawColor.toLowerCase() === '#121212';
   const brandColor = (dark && isTooDark) ? '#ffffff' : rawColor;
@@ -86,7 +87,6 @@ export default function CartPage() {
   const [editing,     setEditing]     = useState(false); // وضع التعديل
 
   const [loading, setLoading] = useState(false);
-  const [done,    setDone]    = useState(false);
 
   const [clientLat, setClientLat] = useState<number | null>(null);
   const [clientLng, setClientLng] = useState<number | null>(null);
@@ -349,23 +349,9 @@ export default function CartPage() {
     localStorage.setItem('lastOrderId', order.id);
     clearCart();
     setShowConfirm(false);
-    setDone(true);
     setLoading(false);
+    router.push('/track');
   };
-
-  if (done) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center pb-24">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🎉</div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">تم إرسال طلبك!</h2>
-          <p className="text-gray-500 dark:text-slate-400 mb-6">سيتم التواصل معك قريباً</p>
-          <Link href="/track" className="font-bold px-6 py-3 rounded-xl inline-block" style={{ backgroundColor: brandColor, color: textOnBrand }}>تتبع طلبك</Link>
-        </div>
-        <ClientBottomNav />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
