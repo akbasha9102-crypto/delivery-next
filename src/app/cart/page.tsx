@@ -11,23 +11,25 @@ import { useDarkMode } from '@/context/ThemeContext';
 
 const KEYS = {
   name:         'deliveryName',
+  nickname:     'deliveryNickname',
   phone:        'deliveryPhone',
   locationDesc: 'deliveryLocationDesc',
 };
 
 const BASRA_CENTER: [number, number] = [30.5085, 47.7804];
 
-type SavedInfo = { name: string; phone: string; locationDesc: string };
+type SavedInfo = { name: string; nickname: string; phone: string; locationDesc: string };
 
 function loadSaved(): SavedInfo | null {
   const name  = localStorage.getItem(KEYS.name)  || '';
   const phone = localStorage.getItem(KEYS.phone) || '';
   if (!name || !phone) return null;
-  return { name, phone, locationDesc: localStorage.getItem(KEYS.locationDesc) || '' };
+  return { name, nickname: localStorage.getItem(KEYS.nickname) || '', phone, locationDesc: localStorage.getItem(KEYS.locationDesc) || '' };
 }
 
 function saveInfo(info: SavedInfo) {
   localStorage.setItem(KEYS.name,         info.name);
+  localStorage.setItem(KEYS.nickname,     info.nickname);
   localStorage.setItem(KEYS.phone,        info.phone);
   localStorage.setItem(KEYS.locationDesc, info.locationDesc);
 }
@@ -54,6 +56,7 @@ export default function CartPage() {
 
   // form fields
   const [name,         setName]         = useState('');
+  const [nickname,     setNickname]     = useState('');
   const [phone,        setPhone]        = useState('');
   const [locationDesc, setLocationDesc] = useState('');
   const [note,         setNote]         = useState('');
@@ -264,6 +267,7 @@ export default function CartPage() {
     const saved = loadSaved();
     if (saved) {
       setName(saved.name);
+      setNickname(saved.nickname);
       setPhone(saved.phone);
       setLocationDesc(saved.locationDesc);
       setShowSaved(true);
@@ -300,10 +304,10 @@ export default function CartPage() {
 
   const submitOrder = async () => {
     setLoading(true);
-    saveInfo({ name: name.trim(), phone: phone.trim(), locationDesc: locationDesc.trim() });
+    saveInfo({ name: name.trim(), nickname: nickname.trim(), phone: phone.trim(), locationDesc: locationDesc.trim() });
 
     const { data: order, error } = await supabase.from('orders').insert([{
-      client_name: name.trim(), client_phone: phone.trim(),
+      client_name: nickname.trim() ? `${name.trim()} (${nickname.trim()})` : name.trim(), client_phone: phone.trim(),
       delivery_address: locationDesc.trim() || null,
       client_note: note.trim() || null,
       total_amount: total, status: 'pending',
@@ -369,6 +373,13 @@ export default function CartPage() {
               style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
 
+            {/* اللقب */}
+            <input type="text" value={nickname} onChange={e => setNickname(e.target.value)}
+              placeholder="اللقب (اختياري) — مثل: أبو علي، أم سارة..." dir="rtl"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2"
+              style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
+            />
+
             {/* رقم الهاتف */}
             <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
               placeholder="رقم الهاتف *" dir="rtl"
@@ -391,7 +402,7 @@ export default function CartPage() {
             ) : (
               <button type="button" onClick={openMap}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
-                style={{ backgroundColor: '#ef444415', color: '#ef4444', borderWidth: 1.5, borderStyle: 'solid', borderColor: '#ef444450' }}>
+                style={{ backgroundColor: '#ef4444', color: '#ffffff', boxShadow: '0 4px 14px #ef444450' }}>
                 <MapPin size={17} />
                 اضغط هنا لتحديد الموقع
               </button>
