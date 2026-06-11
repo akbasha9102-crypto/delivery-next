@@ -10,7 +10,7 @@ import { Moon, Sun, Plus, Minus, X, ShoppingBag, Trash2, MapPin, MessageCircle }
 import { useSettings } from '@/context/SettingsContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type Category = { id: string; name: string; color?: string; card_color?: string };
+type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string };
 type Extra    = { id: string; name: string; price: number };
 type Item     = {
   id: string; name: string; price: number; description: string;
@@ -239,7 +239,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
           )}
           {[{ id: 'all', name: 'الكل' } as Category, ...categories].map((cat, idx) => {
             const isActive = activeCategory === cat.id;
-            const catColor = cat.color || brandColor;
+            const catColor = (dark && cat.color_dark) ? cat.color_dark : (cat.color || brandColor);
             const catTextColor = getTextColor(catColor);
             return (
               <motion.button
@@ -284,7 +284,8 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
           {categories.map((cat) => {
             const catItems = items.filter(i => i.category_id === cat.id);
             if (catItems.length === 0) return null;
-            const catColor = cat.color || brandColor;
+            const catColor = (dark && cat.color_dark) ? cat.color_dark : (cat.color || brandColor);
+            const catCardColor = dark ? (cat.card_color_dark || null) : (cat.card_color || null);
             const catTextColor = getTextColor(catColor);
             return (
               <motion.section
@@ -312,8 +313,8 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
                           if (is_closed) setShowClosedToast(true);
                           else setSelectedItem(item);
                         }}
-                        className={`group rounded-[1.8rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${!cat.card_color ? 'bg-white dark:bg-slate-900' : ''} ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}
-                        style={cat.card_color ? { backgroundColor: cat.card_color } : undefined}>
+                        className={`group rounded-[1.8rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${!catCardColor ? 'bg-white dark:bg-slate-900' : ''} ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}
+                        style={catCardColor ? { backgroundColor: catCardColor } : undefined}>
 
                         {/* Image Wrapper */}
                         <div className="relative flex-shrink-0 overflow-hidden m-2 rounded-[1.4rem] sm:rounded-[2.2rem]">
@@ -492,7 +493,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
             >
               {selectedItem && !extrasItem && (() => {
                 const modalCat = categories.find(c => c.id === selectedItem.category_id);
-                const modalColor = modalCat?.color || brandColor;
+                const modalColor = (dark && modalCat?.color_dark) ? modalCat.color_dark : (modalCat?.color || brandColor);
                 const modalTextColor = getTextColor(modalColor);
                 return (
                 <div className="flex flex-col">
@@ -537,7 +538,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
 
               {extrasItem && (() => {
                 const modalCat = categories.find(c => c.id === extrasItem.category_id);
-                const modalColor = modalCat?.color || brandColor;
+                const modalColor = (dark && modalCat?.color_dark) ? modalCat.color_dark : (modalCat?.color || brandColor);
                 const modalTextColor = getTextColor(modalColor);
                 return (
                 <div className="p-6 sm:p-10">

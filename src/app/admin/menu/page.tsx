@@ -7,7 +7,7 @@ import { AdminGuard } from '@/components/AdminGuard';
 import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, Palette } from 'lucide-react';
 import { BrandingModal } from '@/components/BrandingModal';
 
-type Category = { id: string; name: string; color?: string; card_color?: string; sort_order?: number | null };
+type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
 type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
 
@@ -79,6 +79,33 @@ function MenuPage() {
   const updateCatCardColor = async (id: string, card_color: string) => {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, card_color } : c));
     await supabase.from('categories').update({ card_color }).eq('id', id);
+  };
+
+  const updateCatColorDark = async (id: string, color_dark: string) => {
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, color_dark } : c));
+    await supabase.from('categories').update({ color_dark }).eq('id', id);
+  };
+
+  const updateCatCardColorDark = async (id: string, card_color_dark: string) => {
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, card_color_dark } : c));
+    await supabase.from('categories').update({ card_color_dark }).eq('id', id);
+  };
+
+  const deleteCategory = async (cat: Category) => {
+    const itemCount = items.filter(i => i.category_id === cat.id).length;
+    const msg = itemCount > 0
+      ? `هل أنت متأكد من حذف قسم "${cat.name}"؟\nسيتم حذف ${itemCount} طبق داخله أيضاً.`
+      : `هل أنت متأكد من حذف قسم "${cat.name}"؟`;
+    if (!confirm(msg)) return;
+    setSaving(true);
+    if (itemCount > 0) {
+      await supabase.from('items').delete().eq('category_id', cat.id);
+    }
+    await supabase.from('categories').delete().eq('id', cat.id);
+    if (selectedCat === cat.id) setSelectedCat(null);
+    await fetchMenu();
+    showToast('✓ تم حذف القسم');
+    setSaving(false);
   };
 
   const addItem = async () => {
@@ -363,12 +390,19 @@ function MenuPage() {
                   const count = items.filter(i => i.category_id === cat.id).length;
                   const active = selectedCat === cat.id;
                   return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedCat(active ? null : cat.id)}
-                      className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
-                      {cat.name} ({count})
-                    </button>
+                    <div key={cat.id} className="flex-shrink-0 flex items-center gap-1">
+                      <button
+                        onClick={() => setSelectedCat(active ? null : cat.id)}
+                        className={`px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                        {cat.name} ({count})
+                      </button>
+                      <button
+                        onClick={() => deleteCategory(cat)}
+                        className="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-400 active:scale-90 transition-all"
+                        title="حذف القسم">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -410,7 +444,8 @@ function MenuPage() {
                         title="تعديل ألوان القسم"
                       />
                       {colorPopup?.catId === cat.id && (
-                        <div className="absolute left-0 top-9 z-50 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-2xl shadow-xl p-3 w-52 flex flex-col gap-2">
+                        <div className="absolute left-0 top-9 z-50 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-2xl shadow-xl p-3 w-56 flex flex-col gap-1">
+                          <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right pb-1 border-b border-gray-100 dark:border-slate-700 mb-1">☀️ الوضع النهاري</p>
                           <label className="flex items-center justify-between gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                             <input
                               type="color"
@@ -429,6 +464,25 @@ function MenuPage() {
                             />
                             <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
                           </label>
+                          <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right pb-1 border-b border-gray-100 dark:border-slate-700 mt-1 mb-1">🌙 الوضع الليلي</p>
+                          <label className="flex items-center justify-between gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                            <input
+                              type="color"
+                              value={cat.color_dark || cat.color || '#e67e22'}
+                              onChange={e => updateCatColorDark(cat.id, e.target.value)}
+                              className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0"
+                            />
+                            <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الأزرار</span>
+                          </label>
+                          <label className="flex items-center justify-between gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                            <input
+                              type="color"
+                              value={cat.card_color_dark || '#1e293b'}
+                              onChange={e => updateCatCardColorDark(cat.id, e.target.value)}
+                              className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0"
+                            />
+                            <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
+                          </label>
                           <button
                             onClick={() => setColorPopup(null)}
                             className="text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 mt-1 text-center">
@@ -438,6 +492,12 @@ function MenuPage() {
                       )}
                     </div>
                     <span className="bg-orange-100 dark:bg-orange-900/20 text-[#f97316] text-xs font-bold px-2.5 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">{catItems.length}</span>
+                    <button
+                      onClick={() => deleteCategory(cat)}
+                      className="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-400 active:scale-90 transition-all flex-shrink-0"
+                      title="حذف القسم">
+                      <Trash2 size={13} />
+                    </button>
                   </div>
                   {catItems.length === 0 ? (
                     <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-dashed border-gray-200 dark:border-slate-600 text-center text-gray-400 dark:text-slate-500 text-sm">لا توجد أطباق</div>
