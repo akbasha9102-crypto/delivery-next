@@ -929,7 +929,7 @@ const proceedFromReview = () => {
                     />
                   ) : (
                     <div className="flex items-center gap-2 justify-end">
-                      <p className="font-bold tracking-widest flex-1" style={{ color: brandColor }}>{phone}</p>
+                      <p className="font-bold tracking-widest flex-1" style={{ color: '#ef4444' }}>{phone}</p>
                       <button type="button" onClick={() => setEditingConfirmPhone(true)} className="text-gray-400 active:scale-90 transition-all flex-shrink-0">
                         <Pencil size={13}/>
                       </button>
