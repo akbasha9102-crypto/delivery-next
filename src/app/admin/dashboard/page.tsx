@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, LogOut, X, Clock, Calendar } from 'lucide-react';
+import { Moon, Sun, LogOut, X, Clock, Calendar, ClipboardList } from 'lucide-react';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 
@@ -409,7 +409,10 @@ function DashboardPage() {
             <LogOut size={14} /> خروج
           </button>
         </div>
-        <p className="font-bold text-gray-900 dark:text-slate-100">اللوحة</p>
+        <div className="flex items-center gap-1.5">
+          <ClipboardList size={18} className="text-[#f97316]" />
+          <p className="font-bold text-gray-900 dark:text-slate-100">الطلبات</p>
+        </div>
         <div className="w-20" />
       </header>
 
