@@ -706,7 +706,7 @@ const proceedFromReview = () => {
                 <CheckCircle2 size={30} style={{ color: '#ef4444' }}/>
               </div>
               <h3 className="font-black text-gray-900 dark:text-white text-lg">ملخص طلبك</h3>
-              <p className="text-xs font-bold mt-1 px-2 py-0.5 rounded-md inline-block" style={{ color: '#ef4444', backgroundColor: '#ef444418' }}>تأكد من الطلب قبل إدخال معلوماتك</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">تأكد من الطلب قبل إدخال معلوماتك</p>
             </div>
 
             {/* Summary body */}
