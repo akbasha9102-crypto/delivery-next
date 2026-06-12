@@ -177,11 +177,13 @@ export default function TrackPage() {
   const [inputPhone, setInputPhone] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const trackMapRef        = useRef<HTMLDivElement>(null);
-  const trackMapInstance   = useRef<any>(null);
-  const trackDriverMarker  = useRef<any>(null);
-  const trackLeafletCss    = useRef<HTMLLinkElement | null>(null);
-  const orderIdRef         = useRef<string | null>(null);
+  const trackMapRef          = useRef<HTMLDivElement>(null);
+  const trackMapInstance     = useRef<any>(null);
+  const trackDriverMarker    = useRef<any>(null);
+  const trackLeafletCss      = useRef<HTMLLinkElement | null>(null);
+  const orderIdRef           = useRef<string | null>(null);
+  const trackRouteLineRef    = useRef<any>(null);
+  const trackRouteLastFetch  = useRef<number>(0);
 
   const fetchOrder = useCallback(async (phone: string) => {
     if (!phone) { setLoading(false); setNotFound(true); return; }
@@ -223,6 +225,7 @@ export default function TrackPage() {
       trackMapInstance.current.remove();
       trackMapInstance.current = null;
       trackDriverMarker.current = null;
+      trackRouteLineRef.current = null;
     }
     if (trackLeafletCss.current?.parentNode) {
       trackLeafletCss.current.parentNode.removeChild(trackLeafletCss.current);
@@ -312,6 +315,32 @@ export default function TrackPage() {
               { padding: [50, 50] }
             );
           } catch (_) {}
+        }
+      }
+
+      // رسم مسار الطريق من موقع السائق إلى العميل
+      if (order.client_lat && order.client_lng) {
+        const shouldFetch = !trackRouteLineRef.current || (Date.now() - trackRouteLastFetch.current > 30_000);
+        if (shouldFetch) {
+          trackRouteLastFetch.current = Date.now();
+          const cLat = order.client_lat, cLng = order.client_lng;
+          fetch(`https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${cLng},${cLat}?overview=full&geometries=geojson`)
+            .then(r => r.json())
+            .then(json => {
+              const coords = json.routes?.[0]?.geometry?.coordinates?.map(
+                ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+              );
+              if (!coords?.length || !trackMapInstance.current) return;
+              if (trackRouteLineRef.current) {
+                trackRouteLineRef.current.setLatLngs(coords);
+              } else {
+                trackRouteLineRef.current = L.polyline(coords, {
+                  color: '#2563eb', weight: 4, opacity: 0.8, dashArray: '8, 5',
+                }).addTo(trackMapInstance.current);
+                trackRouteLineRef.current.bringToBack();
+              }
+            })
+            .catch(() => {});
         }
       }
     });

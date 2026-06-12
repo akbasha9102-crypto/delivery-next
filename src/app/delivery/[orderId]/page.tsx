@@ -35,6 +35,8 @@ export default function DeliveryPage() {
   const watchIdRef         = useRef<number | null>(null);
   const arrivedSentRef     = useRef(false);
   const lastSaveRef        = useRef<number>(0);
+  const routeLineRef       = useRef<any>(null);
+  const lastRouteFetchRef  = useRef<number>(0);
   const leafletLinkRef     = useRef<HTMLLinkElement | null>(null);
   const driverIconHtmlRef  = useRef<string>(
     `<div style="width:40px;height:40px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:20px">🏍️</div>`
@@ -116,6 +118,37 @@ export default function DeliveryPage() {
             });
           }
 
+          // رسم مسار الطريق إلى موقع الزبون
+          if (order?.client_lat && order?.client_lng && mapInstanceRef.current) {
+            const shouldFetch = !routeLineRef.current || (Date.now() - lastRouteFetchRef.current > 30_000);
+            if (shouldFetch) {
+              lastRouteFetchRef.current = Date.now();
+              const rLat = latitude, rLng = longitude;
+              const cLat = order.client_lat, cLng = order.client_lng;
+              fetch(`https://router.project-osrm.org/route/v1/driving/${rLng},${rLat};${cLng},${cLat}?overview=full&geometries=geojson`)
+                .then(r => r.json())
+                .then(json => {
+                  const coords = json.routes?.[0]?.geometry?.coordinates?.map(
+                    ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+                  );
+                  if (!coords?.length || !mapInstanceRef.current) return;
+                  import('leaflet').then(mod => {
+                    const L = (mod as any).default ?? mod;
+                    if (!mapInstanceRef.current) return;
+                    if (routeLineRef.current) {
+                      routeLineRef.current.setLatLngs(coords);
+                    } else {
+                      routeLineRef.current = L.polyline(coords, {
+                        color: '#2563eb', weight: 4, opacity: 0.8, dashArray: '8, 5',
+                      }).addTo(mapInstanceRef.current);
+                      routeLineRef.current.bringToBack();
+                    }
+                  });
+                })
+                .catch(() => {});
+            }
+          }
+
           // كشف الوصول (100 متر)
           if (order?.client_lat && order?.client_lng) {
             const dist = getDistanceMeters(latitude, longitude, order.client_lat, order.client_lng);
@@ -175,6 +208,7 @@ export default function DeliveryPage() {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
         driverMarkerRef.current = null;
+        routeLineRef.current = null;
       }
     };
   }, [order, orderId, started]);
