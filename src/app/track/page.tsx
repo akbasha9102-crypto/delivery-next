@@ -435,13 +435,17 @@ export default function TrackPage() {
             <div key={order.status}
                  className="border-2 rounded-2xl p-5 text-center border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                  style={{ animation: 'status-enter 0.5s ease-out' }}>
-              <div className="mb-3">
-                {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{STEPS[current]?.icon}</div>}
-              </div>
-              <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{STEPS[current]?.label}</p>
-              <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
+              {order.status !== 'ready' && (
+                <>
+                  <div className="mb-3">
+                    {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{STEPS[current]?.icon}</div>}
+                  </div>
+                  <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{STEPS[current]?.label}</p>
+                  <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
+                </>
+              )}
               {order.status === 'ready' && order.driver_name && (
-                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
+                <div>
                   <p className="text-xs text-gray-400 dark:text-slate-500 mb-1">السائق</p>
                   <p className="font-bold text-gray-900 dark:text-slate-100 text-base">{order.driver_name}</p>
                   <div className="flex items-center justify-center gap-2 mt-0.5" dir="ltr">
