@@ -29,13 +29,16 @@ export default function DeliveryPage() {
   const params  = useParams<{ orderId: string }>();
   const orderId = params.orderId;
 
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef  = useRef<any>(null);
-  const driverMarkerRef = useRef<any>(null);
-  const watchIdRef      = useRef<number | null>(null);
-  const arrivedSentRef  = useRef(false);
-  const lastSaveRef     = useRef<number>(0);
-  const leafletLinkRef  = useRef<HTMLLinkElement | null>(null);
+  const mapContainerRef    = useRef<HTMLDivElement>(null);
+  const mapInstanceRef     = useRef<any>(null);
+  const driverMarkerRef    = useRef<any>(null);
+  const watchIdRef         = useRef<number | null>(null);
+  const arrivedSentRef     = useRef(false);
+  const lastSaveRef        = useRef<number>(0);
+  const leafletLinkRef     = useRef<HTMLLinkElement | null>(null);
+  const driverIconHtmlRef  = useRef<string>(
+    `<div style="width:40px;height:40px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:20px">🏍️</div>`
+  );
 
   const [order,          setOrder]          = useState<Order | null>(null);
   const [loading,        setLoading]        = useState(true);
@@ -64,9 +67,66 @@ export default function DeliveryPage() {
       });
   }, [orderId]);
 
-  // تشغيل الخريطة و GPS بعد الضغط على البدء فقط
+  // تشغيل GPS والخريطة بعد الضغط على البدء
   useEffect(() => {
     if (!started) return;
+
+    // ── GPS يبدأ فوراً مستقلاً عن تحميل Leaflet ──
+    if (!('geolocation' in navigator)) {
+      setLocationStatus('denied');
+    } else {
+      setLocationStatus('tracking');
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          setLocationStatus('tracking');
+
+          // حفظ الموقع في Supabase فوراً (بدون انتظار الخريطة)
+          const now = Date.now();
+          if (now - lastSaveRef.current > 5000) {
+            lastSaveRef.current = now;
+            supabase.from('orders').update({ driver_lat: latitude, driver_lng: longitude }).eq('id', orderId);
+          }
+
+          // تحديث ماركر السائق على الخريطة إذا كانت جاهزة
+          if (mapInstanceRef.current && driverIconHtmlRef.current) {
+            import('leaflet').then((mod) => {
+              const L = (mod as any).default ?? mod;
+              if (!mapInstanceRef.current) return;
+              const icon = L.divIcon({
+                html: driverIconHtmlRef.current!,
+                className: '', iconSize: [40, 40], iconAnchor: [20, 20],
+              });
+              if (driverMarkerRef.current) {
+                driverMarkerRef.current.setLatLng([latitude, longitude]);
+              } else if (order?.client_lat && order?.client_lng) {
+                driverMarkerRef.current = L.marker([latitude, longitude], { icon })
+                  .addTo(mapInstanceRef.current)
+                  .bindPopup('<div dir="rtl">موقعك الحالي</div>');
+                mapInstanceRef.current.fitBounds(
+                  L.latLngBounds([order.client_lat, order.client_lng], [latitude, longitude]),
+                  { padding: [50, 50] }
+                );
+              }
+            });
+          }
+
+          // كشف الوصول (100 متر)
+          if (order?.client_lat && order?.client_lng) {
+            const dist = getDistanceMeters(latitude, longitude, order.client_lat, order.client_lng);
+            if (dist <= 100 && !arrivedSentRef.current) {
+              arrivedSentRef.current = true;
+              setNearCustomer(true);
+              supabase.from('orders').update({ driver_arrived: true }).eq('id', orderId);
+            }
+          }
+        },
+        () => setLocationStatus('denied'),
+        { enableHighAccuracy: true, maximumAge: 4000, timeout: 12000 }
+      );
+    }
+
+    // ── الخريطة تتحمل بشكل منفصل (فقط إذا الزبون شارك موقعه) ──
     if (!order?.client_lat || !order?.client_lng) return;
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -99,50 +159,6 @@ export default function DeliveryPage() {
           { offset: [0, -18] }
         )
         .openPopup();
-
-      if (!('geolocation' in navigator)) { setLocationStatus('denied'); return; }
-
-      setLocationStatus('tracking');
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setLocationStatus('tracking');
-
-          const driverIcon = L.divIcon({
-            html: `<div style="width:40px;height:40px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:20px">🏍️</div>`,
-            className: '', iconSize: [40, 40], iconAnchor: [20, 20],
-          });
-
-          if (driverMarkerRef.current) {
-            driverMarkerRef.current.setLatLng([latitude, longitude]);
-          } else {
-            driverMarkerRef.current = L.marker([latitude, longitude], { icon: driverIcon })
-              .addTo(map)
-              .bindPopup('<div dir="rtl">موقعك الحالي</div>');
-            map.fitBounds(
-              L.latLngBounds([order.client_lat!, order.client_lng!], [latitude, longitude]),
-              { padding: [50, 50] }
-            );
-          }
-
-          // حفظ موقع السائق كل 5 ثوان لخريطة الزبون
-          const now = Date.now();
-          if (now - lastSaveRef.current > 5000) {
-            lastSaveRef.current = now;
-            supabase.from('orders').update({ driver_lat: latitude, driver_lng: longitude }).eq('id', orderId);
-          }
-
-          // كشف الوصول (100 متر)
-          const dist = getDistanceMeters(latitude, longitude, order.client_lat!, order.client_lng!);
-          if (dist <= 100 && !arrivedSentRef.current) {
-            arrivedSentRef.current = true;
-            setNearCustomer(true);
-            supabase.from('orders').update({ driver_arrived: true }).eq('id', orderId);
-          }
-        },
-        () => setLocationStatus('denied'),
-        { enableHighAccuracy: true, maximumAge: 4000, timeout: 12000 }
-      );
     });
 
     return () => {
