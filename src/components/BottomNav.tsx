@@ -22,8 +22,7 @@ const adminTabs = [
 
 export function ClientBottomNav() {
   const path = usePathname();
-  const { is_closed, primary_color } = useSettings();
-  const activeColor = primary_color || '#e67e22';
+  const { is_closed } = useSettings();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex z-50">
@@ -33,15 +32,15 @@ export function ClientBottomNav() {
         if (disabled) {
           return (
             <div key={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 opacity-35">
-              <Icon size={22} className="text-gray-400" />
-              <span className="text-xs font-medium text-gray-400">{label}</span>
+              <Icon size={22} className="text-gray-400 dark:text-gray-500" />
+              <span className="text-xs font-medium text-gray-400 dark:text-gray-500">{label}</span>
             </div>
           );
         }
         return (
           <Link key={href} href={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all active:scale-90 relative">
-            <Icon size={22} style={{ color: active ? activeColor : undefined }} className={!active ? 'text-gray-400' : ''} />
-            <span className={`text-xs font-medium ${!active ? 'text-gray-400' : ''}`} style={{ color: active ? activeColor : undefined }}>{label}</span>
+            <Icon size={22} className={active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'} />
+            <span className={`text-xs font-medium ${active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>{label}</span>
           </Link>
         );
       })}

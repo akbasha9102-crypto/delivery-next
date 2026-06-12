@@ -103,7 +103,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
-        <h1 className="text-xl font-bold text-center" style={{ color: brandColor }}>معلوماتي</h1>
+        <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">معلوماتي</h1>
       </header>
 
       <div className="px-4 pt-5 max-w-lg mx-auto space-y-4">

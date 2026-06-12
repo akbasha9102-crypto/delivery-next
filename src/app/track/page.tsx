@@ -461,7 +461,7 @@ export default function TrackPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
-        <h1 className="text-xl font-bold text-center" style={{ color: brandColor }}>تتبع طلبك</h1>
+        <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">تتبع طلبك</h1>
       </header>
 
       <div className="px-4 pt-5">
@@ -498,18 +498,20 @@ export default function TrackPage() {
                   <div key={step.key} className="flex items-center flex-1">
                     <div className="flex flex-col items-center flex-shrink-0">
                       <div className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition-all duration-500 ${
-                        idx <= current ? '' : 'bg-gray-100 dark:bg-slate-700 text-gray-300 dark:text-slate-600'
-                      }`} style={idx <= current ? { backgroundColor: brandColor, color: textOnBrand } : {}}>
+                        idx <= current
+                          ? 'bg-gray-900 dark:bg-white'
+                          : 'bg-gray-100 dark:bg-slate-700 text-gray-300 dark:text-slate-600'
+                      }`}>
                         {step.icon}
                       </div>
                       <span className={`text-xs mt-1.5 font-medium text-center leading-tight max-w-[52px] ${
-                        idx <= current ? '' : 'text-gray-400 dark:text-slate-500'
-                      }`} style={idx <= current ? { color: brandColor } : {}}>{step.label}</span>
+                        idx <= current ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-slate-500'
+                      }`}>{step.label}</span>
                     </div>
                     {idx < STEPS.length - 1 && (
                       <div className={`flex-1 h-1 rounded mx-1 mb-5 transition-all duration-700 ${
-                        idx < current ? '' : 'bg-gray-100 dark:bg-slate-700'
-                      }`} style={idx < current ? { backgroundColor: brandColor } : {}}/>
+                        idx < current ? 'bg-gray-900 dark:bg-white' : 'bg-gray-100 dark:bg-slate-700'
+                      }`}/>
                     )}
                   </div>
                 ))}
@@ -560,19 +562,19 @@ export default function TrackPage() {
 
             {/* Animated Status Card */}
             <div key={order.status}
-                 className="border-2 rounded-2xl p-5 text-center"
-                 style={{ backgroundColor: `${brandColor}10`, borderColor: `${brandColor}40`, animation: 'status-enter 0.5s ease-out' }}>
+                 className="border-2 rounded-2xl p-5 text-center border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                 style={{ animation: 'status-enter 0.5s ease-out' }}>
               <div className="mb-3">
                 {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{STEPS[current]?.icon}</div>}
               </div>
-              <p className="font-bold text-lg mb-1" style={{ color: brandColor }}>{STEPS[current]?.label}</p>
+              <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{STEPS[current]?.label}</p>
               <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
               {order.status === 'ready' && order.driver_name && (
-                <div className="mt-4 pt-4 border-t" style={{ borderColor: `${brandColor}20` }}>
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
                   <p className="text-xs text-gray-400 dark:text-slate-500 mb-1">السائق</p>
                   <p className="font-bold text-gray-900 dark:text-slate-100 text-base">{order.driver_name}</p>
                   <div className="flex items-center justify-center gap-2 mt-0.5" dir="ltr">
-                    <span className="font-bold text-sm" style={{ color: brandColor }}>{order.driver_phone}</span>
+                    <span className="font-bold text-sm text-gray-900 dark:text-white">{order.driver_phone}</span>
                     {order.driver_phone && (
                       <a
                         href={`https://wa.me/${order.driver_phone.replace(/\D/g, '')}`}
@@ -600,7 +602,7 @@ export default function TrackPage() {
                 { label: 'الإجمالي', value: `${order.total_amount.toLocaleString()} د.ع` },
               ].map(row => (
                 <div key={row.label} className="flex justify-between items-center py-3 border-b border-gray-50 dark:border-slate-700 last:border-0">
-                  <span className="font-semibold" style={{ color: brandColor }}>{row.value}</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{row.value}</span>
                   <span className="text-gray-500 dark:text-slate-400 text-sm">{row.label}</span>
                 </div>
               ))}
