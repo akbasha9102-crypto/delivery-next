@@ -109,8 +109,7 @@ export default function ProfilePage() {
       <div className="px-4 pt-5 max-w-lg mx-auto space-y-4">
 
         <div className="flex justify-center pt-2 pb-1">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center border-4"
-            style={{ backgroundColor: `${brandColor}15`, borderColor: `${brandColor}40` }}>
+          <div className="w-20 h-20 rounded-full flex items-center justify-center border-4 bg-gray-900/10 border-gray-900/40 dark:bg-white/10 dark:border-white/40">
             <User size={36} className="text-gray-900 dark:text-white" />
           </div>
         </div>
