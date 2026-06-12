@@ -205,10 +205,9 @@ export default function TrackPage() {
 
   useEffect(() => {
     if (!order) return;
-    const channel = supabase.channel('track-order')
+    const channel = supabase.channel(`track-order-${order.id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${order.id}` },
         async () => {
-          // نعيد جلب البيانات كاملة لأن payload.new قد لا يحتوي driver_lat/driver_lng
           const { data } = await supabase.from('orders').select('*').eq('id', order.id).single();
           if (data) setOrder(data as Order);
         })
@@ -252,6 +251,7 @@ export default function TrackPage() {
       const map = L.map(trackMapRef.current, { attributionControl: false })
         .setView([order.client_lat!, order.client_lng!], 15);
       trackMapInstance.current = map;
+      setTimeout(() => map.invalidateSize(), 100);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap', maxZoom: 19,
       }).addTo(map);
@@ -287,6 +287,7 @@ export default function TrackPage() {
         }
         const map = L.map(trackMapRef.current, { attributionControl: false }).setView([dLat, dLng], 15);
         trackMapInstance.current = map;
+        setTimeout(() => map.invalidateSize(), 100);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap', maxZoom: 19,
         }).addTo(map);
@@ -325,7 +326,7 @@ export default function TrackPage() {
       if (!currentId) return;
       const { data } = await supabase.from('orders').select('*').eq('id', currentId).single();
       if (data) setOrder(data as Order);
-    }, 8000);
+    }, 4000);
     return () => clearInterval(id);
   }, [order?.status]);
 

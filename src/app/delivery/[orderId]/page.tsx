@@ -85,7 +85,12 @@ export default function DeliveryPage() {
           const now = Date.now();
           if (now - lastSaveRef.current > 5000) {
             lastSaveRef.current = now;
-            supabase.from('orders').update({ driver_lat: latitude, driver_lng: longitude }).eq('id', orderId);
+            supabase.from('orders')
+              .update({ driver_lat: latitude, driver_lng: longitude })
+              .eq('id', orderId)
+              .then(({ error }) => {
+                if (error) console.error('[driver-location] فشل حفظ الموقع:', error.message);
+              });
           }
 
           // تحديث ماركر السائق على الخريطة إذا كانت جاهزة
