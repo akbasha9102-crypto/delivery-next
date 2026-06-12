@@ -780,11 +780,15 @@ const proceedFromReview = () => {
             exit={{ opacity: 0, scale: 0.85, y: 40 }}
             transition={{ type: 'spring', stiffness: 320, damping: 28 }}
             className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm">
-            <div className="flex items-center justify-center mb-4">
-              <UserCircle size={40} style={{ color: brandColor }}/>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${brandColor}18` }}>
+                <UserCircle size={30} style={{ color: brandColor }}/>
+              </div>
+              <div className="flex-1 text-right">
+                <h3 className="font-black text-gray-900 dark:text-slate-100 text-base leading-snug">هل تريد استخدام نفس المعلومات؟</h3>
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">معلوماتك المحفوظة</p>
+              </div>
             </div>
-            <h3 className="text-lg font-bold text-center mb-1" style={{ color: brandColor }}>معلوماتك المحفوظة</h3>
-            <p className="text-gray-400 dark:text-slate-500 text-center text-sm mb-5">هل تريد استخدام نفس المعلومات؟</p>
 
             <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 space-y-3 mb-5 text-right">
               <div className="flex justify-between items-center">
