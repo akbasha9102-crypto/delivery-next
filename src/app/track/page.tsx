@@ -291,7 +291,7 @@ export default function TrackPage() {
       const L = (mod as any).default ?? mod;
       if (!trackMapRef.current || trackMapInstance.current) return;
 
-      const map = L.map(trackMapRef.current).setView([centerLat!, centerLng!], 15);
+      const map = L.map(trackMapRef.current, { attributionControl: false }).setView([centerLat!, centerLng!], 15);
       trackMapInstance.current = map;
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
