@@ -188,6 +188,7 @@ export default function TrackPage() {
   const trackDriverMarker  = useRef<any>(null);
   const trackLeafletCss    = useRef<HTMLLinkElement | null>(null);
   const prevDriverPos      = useRef<[number, number] | null>(null);
+  const orderIdRef         = useRef<string | null>(null);
 
   const fetchOrder = useCallback(async (phone: string) => {
     if (!phone) { setLoading(false); setNotFound(true); return; }
@@ -222,67 +223,30 @@ export default function TrackPage() {
     return () => { supabase.removeChannel(channel); };
   }, [order?.id]);
 
-  // Map: initialize, update, or cleanup based on status + location data
-  useEffect(() => {
-    const destroyMap = () => {
-      if (trackMapInstance.current) {
-        trackMapInstance.current.remove();
-        trackMapInstance.current = null;
-        trackDriverMarker.current = null;
-      }
-      if (trackLeafletCss.current?.parentNode) {
-        trackLeafletCss.current.parentNode.removeChild(trackLeafletCss.current);
-        trackLeafletCss.current = null;
-      }
-    };
+  // keep a stable ref to the current order id so polling closures don't go stale
+  orderIdRef.current = order?.id ?? null;
 
-    if (order?.status !== 'ready') { destroyMap(); return destroyMap; }
-
-    const centerLat = order.driver_lat || order.client_lat;
-    const centerLng = order.driver_lng || order.client_lng;
-    if (!centerLat || !centerLng || !trackMapRef.current) return destroyMap;
-
-    const hasDriver = !!(order.driver_lat && order.driver_lng);
-
-    // Map already exists — just update the driver marker
+  const destroyMap = useCallback(() => {
     if (trackMapInstance.current) {
-      if (hasDriver) {
-        if (trackDriverMarker.current) {
-          const newLat = order.driver_lat!;
-          const newLng = order.driver_lng!;
-          if (prevDriverPos.current) {
-            const bearing = getBearing(prevDriverPos.current[0], prevDriverPos.current[1], newLat, newLng);
-            const el = trackDriverMarker.current.getElement();
-            if (el) {
-              const moto = el.querySelector('.driver-moto') as HTMLElement | null;
-              if (moto) moto.style.transform = `rotate(${Math.round(bearing - 90)}deg)`;
-            }
-          }
-          prevDriverPos.current = [newLat, newLng];
-          trackDriverMarker.current.setLatLng([newLat, newLng]);
-        } else {
-          // First driver location arrived — add marker to existing map
-          import('leaflet').then((mod) => {
-            const L = (mod as any).default ?? mod;
-            if (!trackMapInstance.current) return;
-            const icon = L.divIcon({
-              html: MOTO_ICON_HTML,
-              className: '', iconSize: [46, 46], iconAnchor: [23, 23],
-            });
-            trackDriverMarker.current = L.marker([order.driver_lat!, order.driver_lng!], { icon })
-              .addTo(trackMapInstance.current)
-              .bindPopup(`<div dir="rtl" style="font-family:sans-serif"><b>السائق في الطريق إليك</b></div>`);
-            prevDriverPos.current = [order.driver_lat!, order.driver_lng!];
-            if (order.client_lat && order.client_lng) {
-              try { trackMapInstance.current.fitBounds(L.latLngBounds([order.client_lat, order.client_lng], [order.driver_lat!, order.driver_lng!]), { padding: [50, 50] }); } catch (_) {}
-            }
-          });
-        }
-      }
-      return destroyMap;
+      trackMapInstance.current.remove();
+      trackMapInstance.current = null;
+      trackDriverMarker.current = null;
+      prevDriverPos.current = null;
     }
+    if (trackLeafletCss.current?.parentNode) {
+      trackLeafletCss.current.parentNode.removeChild(trackLeafletCss.current);
+      trackLeafletCss.current = null;
+    }
+  }, []);
 
-    // Initialize the map for the first time
+  // Effect A: map lifecycle — depends only on status + client location.
+  // This effect NEVER re-runs due to driver position changes, so the map
+  // is not torn down every time the driver moves.
+  useEffect(() => {
+    if (order?.status !== 'ready') { destroyMap(); return destroyMap; }
+    if (trackMapInstance.current) return; // already initialized by a previous run
+    if (!order.client_lat || !order.client_lng || !trackMapRef.current) return;
+    // client location available — create the base map with home marker
     if (!trackLeafletCss.current) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -290,45 +254,100 @@ export default function TrackPage() {
       document.head.appendChild(link);
       trackLeafletCss.current = link;
     }
-
     import('leaflet').then((mod) => {
       const L = (mod as any).default ?? mod;
       if (!trackMapRef.current || trackMapInstance.current) return;
-
-      const map = L.map(trackMapRef.current, { attributionControl: false }).setView([centerLat!, centerLng!], 15);
+      const map = L.map(trackMapRef.current, { attributionControl: false })
+        .setView([order.client_lat!, order.client_lng!], 15);
       trackMapInstance.current = map;
-
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap', maxZoom: 19,
       }).addTo(map);
+      const homeIcon = L.divIcon({
+        html: `<div style="width:34px;height:34px;background:#ef4444;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:18px">🏠</div>`,
+        className: '', iconSize: [34, 34], iconAnchor: [17, 17],
+      });
+      L.marker([order.client_lat!, order.client_lng!], { icon: homeIcon })
+        .addTo(map)
+        .bindPopup(`<div dir="rtl" style="font-family:sans-serif"><b>موقعك</b></div>`);
+    });
+    return destroyMap;
+  }, [order?.status, order?.client_lat, order?.client_lng, destroyMap]);
 
-      if (order.client_lat && order.client_lng) {
-        const homeIcon = L.divIcon({
-          html: `<div style="width:34px;height:34px;background:#ef4444;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:18px">🏠</div>`,
-          className: '', iconSize: [34, 34], iconAnchor: [17, 17],
-        });
-        L.marker([order.client_lat, order.client_lng], { icon: homeIcon })
-          .addTo(map)
-          .bindPopup(`<div dir="rtl" style="font-family:sans-serif"><b>موقعك</b></div>`);
+  // Effect B: driver marker — runs on every position update but NEVER destroys the map.
+  // Also handles the case where client_lat is null (initialises the map on first driver fix).
+  useEffect(() => {
+    if (order?.status !== 'ready' || !order.driver_lat || !order.driver_lng) return;
+    const dLat = order.driver_lat;
+    const dLng = order.driver_lng;
+
+    import('leaflet').then((mod) => {
+      const L = (mod as any).default ?? mod;
+
+      // If no map yet (client never shared location), create one centred on driver
+      if (!trackMapInstance.current && trackMapRef.current) {
+        if (!trackLeafletCss.current) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(link);
+          trackLeafletCss.current = link;
+        }
+        const map = L.map(trackMapRef.current, { attributionControl: false }).setView([dLat, dLng], 15);
+        trackMapInstance.current = map;
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap', maxZoom: 19,
+        }).addTo(map);
       }
 
-      if (hasDriver) {
-        const driverIcon = L.divIcon({
+      if (!trackMapInstance.current) return;
+
+      if (trackDriverMarker.current) {
+        // Smooth update: rotate icon to face direction of travel then move
+        if (prevDriverPos.current) {
+          const bearing = getBearing(prevDriverPos.current[0], prevDriverPos.current[1], dLat, dLng);
+          const el = trackDriverMarker.current.getElement();
+          if (el) {
+            const moto = el.querySelector('.driver-moto') as HTMLElement | null;
+            if (moto) moto.style.transform = `rotate(${Math.round(bearing - 90)}deg)`;
+          }
+        }
+        prevDriverPos.current = [dLat, dLng];
+        trackDriverMarker.current.setLatLng([dLat, dLng]);
+      } else {
+        // First driver fix — add the motorcycle marker
+        const icon = L.divIcon({
           html: MOTO_ICON_HTML,
           className: '', iconSize: [46, 46], iconAnchor: [23, 23],
         });
-        trackDriverMarker.current = L.marker([order.driver_lat!, order.driver_lng!], { icon: driverIcon })
-          .addTo(map)
+        trackDriverMarker.current = L.marker([dLat, dLng], { icon })
+          .addTo(trackMapInstance.current)
           .bindPopup(`<div dir="rtl" style="font-family:sans-serif"><b>السائق في الطريق إليك</b></div>`);
-        prevDriverPos.current = [order.driver_lat!, order.driver_lng!];
+        prevDriverPos.current = [dLat, dLng];
         if (order.client_lat && order.client_lng) {
-          try { map.fitBounds(L.latLngBounds([order.client_lat, order.client_lng], [order.driver_lat!, order.driver_lng!]), { padding: [50, 50] }); } catch (_) {}
+          try {
+            trackMapInstance.current.fitBounds(
+              L.latLngBounds([order.client_lat, order.client_lng], [dLat, dLng]),
+              { padding: [50, 50] }
+            );
+          } catch (_) {}
         }
       }
     });
+  }, [order?.status, order?.driver_lat, order?.driver_lng]);
 
-    return destroyMap;
-  }, [order?.status, order?.driver_lat, order?.driver_lng, order?.client_lat, order?.client_lng]);
+  // Polling fallback: re-fetch the order every 8 s while in transit so the
+  // driver marker updates even if the Supabase Realtime subscription lags.
+  useEffect(() => {
+    if (order?.status !== 'ready') return;
+    const id = setInterval(async () => {
+      const currentId = orderIdRef.current;
+      if (!currentId) return;
+      const { data } = await supabase.from('orders').select('*').eq('id', currentId).single();
+      if (data) setOrder(data as Order);
+    }, 8000);
+    return () => clearInterval(id);
+  }, [order?.status]);
 
   const stepIndex = (s: string) => STEPS.findIndex(x => x.key === s);
   const current = order ? stepIndex(order.status) : -1;
