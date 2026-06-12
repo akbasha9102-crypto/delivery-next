@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Search } from 'lucide-react';
+import { Search, MessageSquare, AlertCircle } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
 
@@ -177,6 +177,13 @@ export default function TrackPage() {
   const [inputPhone, setInputPhone] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<'feedback' | 'complaint'>('feedback');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackSending, setFeedbackSending] = useState(false);
+  const [feedbackDone, setFeedbackDone] = useState(false);
+  const [alreadySentFeedback, setAlreadySentFeedback] = useState(false);
+
   const trackMapRef          = useRef<HTMLDivElement>(null);
   const trackMapInstance     = useRef<any>(null);
   const trackDriverMarker    = useRef<any>(null);
@@ -188,14 +195,31 @@ export default function TrackPage() {
   const fetchOrder = useCallback(async (phone: string) => {
     if (!phone) { setLoading(false); setNotFound(true); return; }
     setLoading(true);
-    const { data } = await supabase
+    const { data: active } = await supabase
       .from('orders').select('*')
       .eq('client_phone', phone)
       .neq('status', 'completed')
       .order('created_at', { ascending: false })
       .limit(1).maybeSingle();
-    if (data) { setOrder(data); setNotFound(false); }
-    else { setOrder(null); setNotFound(true); }
+    if (active) {
+      setOrder(active); setNotFound(false);
+      setAlreadySentFeedback(false);
+    } else {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: completed } = await supabase
+        .from('orders').select('*')
+        .eq('client_phone', phone)
+        .eq('status', 'completed')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(1).maybeSingle();
+      if (completed) {
+        setOrder(completed); setNotFound(false);
+        setAlreadySentFeedback(!!localStorage.getItem(`fb_sent_${completed.id}`));
+      } else {
+        setOrder(null); setNotFound(true);
+      }
+    }
     setLoading(false);
   }, []);
 
@@ -359,6 +383,22 @@ export default function TrackPage() {
     return () => clearInterval(id);
   }, [order?.status]);
 
+  const submitFeedback = async () => {
+    if (!feedbackText.trim() || !order) return;
+    setFeedbackSending(true);
+    await supabase.from('order_feedback').insert({
+      order_id: order.id,
+      client_name: order.client_name,
+      client_phone: order.client_phone,
+      type: feedbackType,
+      message: feedbackText.trim(),
+    });
+    setFeedbackSending(false);
+    setFeedbackDone(true);
+    localStorage.setItem(`fb_sent_${order.id}`, '1');
+    setAlreadySentFeedback(true);
+  };
+
   const stepIndex = (s: string) => STEPS.findIndex(x => x.key === s);
   const current = order ? stepIndex(order.status) : -1;
 
@@ -475,6 +515,21 @@ export default function TrackPage() {
                   </div>
                   <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{STEPS[current]?.label}</p>
                   <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
+                  {order.status === 'completed' && !alreadySentFeedback && (
+                    <button
+                      onClick={() => { setShowFeedbackModal(true); setFeedbackDone(false); setFeedbackText(''); }}
+                      className="mt-4 flex items-center gap-2 mx-auto px-5 py-2.5 rounded-2xl border-2 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
+                    >
+                      <MessageSquare size={16} />
+                      <span>تقديم ملاحظة أو شكوى</span>
+                    </button>
+                  )}
+                  {order.status === 'completed' && alreadySentFeedback && (
+                    <p className="mt-4 text-xs text-gray-400 dark:text-slate-500 flex items-center justify-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                      تم إرسال ملاحظتك، شكراً!
+                    </p>
+                  )}
                 </>
               )}
               {order.status === 'ready' && order.driver_name && (
@@ -518,6 +573,55 @@ export default function TrackPage() {
           </div>
         )}
       </div>
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50"
+             onClick={() => !feedbackSending && setShowFeedbackModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg p-6 pb-10"
+               onClick={e => e.stopPropagation()}>
+            {feedbackDone ? (
+              <div className="text-center py-4">
+                <div className="text-5xl mb-3">🙏</div>
+                <p className="font-bold text-xl text-gray-900 dark:text-white mb-1">شكراً!</p>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">تم استلام ملاحظتك وسنعمل على تحسين خدمتنا</p>
+                <button onClick={() => setShowFeedbackModal(false)}
+                  className="mt-6 px-8 py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold active:scale-95 transition-all">
+                  إغلاق
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="font-bold text-xl text-gray-900 dark:text-white text-right mb-5">ملاحظاتك تهمنا 💬</p>
+                <div className="flex gap-2 mb-4" dir="rtl">
+                  <button onClick={() => setFeedbackType('feedback')}
+                    className={`flex-1 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 border-2 ${feedbackType === 'feedback' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-400 text-blue-500' : 'bg-gray-50 dark:bg-slate-700/50 border-transparent text-gray-400 dark:text-slate-500'}`}>
+                    💡 ملاحظة
+                  </button>
+                  <button onClick={() => setFeedbackType('complaint')}
+                    className={`flex-1 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 border-2 ${feedbackType === 'complaint' ? 'bg-red-50 dark:bg-red-900/20 border-red-400 text-red-500' : 'bg-gray-50 dark:bg-slate-700/50 border-transparent text-gray-400 dark:text-slate-500'}`}>
+                    <AlertCircle size={13} className="inline-block ml-1" />شكوى
+                  </button>
+                </div>
+                <textarea
+                  value={feedbackText}
+                  onChange={e => setFeedbackText(e.target.value)}
+                  placeholder="اكتب ملاحظتك هنا..."
+                  dir="rtl"
+                  rows={4}
+                  className="w-full bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-2xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none text-sm resize-none mb-4"
+                />
+                <button
+                  onClick={submitFeedback}
+                  disabled={!feedbackText.trim() || feedbackSending}
+                  className="w-full py-4 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-base active:scale-95 transition-all disabled:opacity-50">
+                  {feedbackSending ? 'جاري الإرسال...' : 'إرسال'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <ClientBottomNav />
     </div>
