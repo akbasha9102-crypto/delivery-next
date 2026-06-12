@@ -577,9 +577,9 @@ export default function TrackPage() {
 
       {/* Feedback Modal */}
       {showFeedbackModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
              onClick={() => !feedbackSending && setShowFeedbackModal(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg p-6 pb-10"
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg p-6 pb-8"
                onClick={e => e.stopPropagation()}>
             {feedbackDone ? (
               <div className="text-center py-6">
