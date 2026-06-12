@@ -213,7 +213,11 @@ export default function TrackPage() {
     if (!order) return;
     const channel = supabase.channel('track-order')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${order.id}` },
-        payload => setOrder(payload.new as Order))
+        async () => {
+          // نعيد جلب البيانات كاملة لأن payload.new قد لا يحتوي driver_lat/driver_lng
+          const { data } = await supabase.from('orders').select('*').eq('id', order.id).single();
+          if (data) setOrder(data as Order);
+        })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [order?.id]);
