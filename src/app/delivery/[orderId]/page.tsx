@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Phone, Navigation, MapPin, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { Phone, Navigation, MapPin, AlertCircle, Loader2, CheckCircle2, Play } from 'lucide-react';
 
 type Order = {
   id: string;
@@ -26,7 +26,7 @@ function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: numbe
 }
 
 export default function DeliveryPage() {
-  const params = useParams<{ orderId: string }>();
+  const params  = useParams<{ orderId: string }>();
   const orderId = params.orderId;
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -35,14 +35,18 @@ export default function DeliveryPage() {
   const watchIdRef      = useRef<number | null>(null);
   const arrivedSentRef  = useRef(false);
   const lastSaveRef     = useRef<number>(0);
+  const leafletLinkRef  = useRef<HTMLLinkElement | null>(null);
 
-  const [order,         setOrder]         = useState<Order | null>(null);
-  const [loading,       setLoading]       = useState(true);
+  const [order,          setOrder]          = useState<Order | null>(null);
+  const [loading,        setLoading]        = useState(true);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'tracking' | 'denied'>('idle');
-  const [nearCustomer,  setNearCustomer]  = useState(false);
-  const [delivering,    setDelivering]    = useState(false);
-  const [delivered,     setDelivered]     = useState(false);
+  const [nearCustomer,   setNearCustomer]   = useState(false);
+  const [delivering,     setDelivering]     = useState(false);
+  const [delivered,      setDelivered]      = useState(false);
+  const [started,        setStarted]        = useState(false);
+  const [starting,       setStarting]       = useState(false);
 
+  // جلب بيانات الطلب
   useEffect(() => {
     if (!orderId) return;
     supabase
@@ -54,35 +58,40 @@ export default function DeliveryPage() {
         setOrder(data);
         if (data?.driver_arrived) { setNearCustomer(true); arrivedSentRef.current = true; }
         if (data?.status === 'completed') setDelivered(true);
+        // إذا بدأ السائق مسبقاً (أعاد فتح الرابط)
+        if (data?.status === 'ready' || data?.status === 'completed') setStarted(true);
         setLoading(false);
       });
   }, [orderId]);
 
+  // تشغيل الخريطة و GPS بعد الضغط على البدء فقط
   useEffect(() => {
+    if (!started) return;
     if (!order?.client_lat || !order?.client_lng) return;
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
+    if (!leafletLinkRef.current) {
+      const link = document.createElement('link');
+      link.rel  = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+      leafletLinkRef.current = link;
+    }
 
     import('leaflet').then((mod) => {
       const L = (mod as any).default ?? mod;
       if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-      const map = L.map(mapContainerRef.current).setView([order.client_lat!, order.client_lng!], 15);
+      const map = L.map(mapContainerRef.current, { attributionControl: false })
+        .setView([order.client_lat!, order.client_lng!], 15);
       mapInstanceRef.current = map;
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap', maxZoom: 19,
-      }).addTo(map);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
       const customerIcon = L.divIcon({
         html: `<div style="width:36px;height:36px;background:#ef4444;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35)"></div>`,
         className: '', iconSize: [36, 36], iconAnchor: [18, 36],
       });
-
       L.marker([order.client_lat!, order.client_lng!], { icon: customerIcon })
         .addTo(map)
         .bindPopup(
@@ -116,13 +125,14 @@ export default function DeliveryPage() {
             );
           }
 
-          // Save driver location every 5s for customer tracking
+          // حفظ موقع السائق كل 5 ثوان لخريطة الزبون
           const now = Date.now();
           if (now - lastSaveRef.current > 5000) {
             lastSaveRef.current = now;
             supabase.from('orders').update({ driver_lat: latitude, driver_lng: longitude }).eq('id', orderId);
           }
 
+          // كشف الوصول (100 متر)
           const dist = getDistanceMeters(latitude, longitude, order.client_lat!, order.client_lng!);
           if (dist <= 100 && !arrivedSentRef.current) {
             arrivedSentRef.current = true;
@@ -136,11 +146,25 @@ export default function DeliveryPage() {
     });
 
     return () => {
-      if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
-      if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; driverMarkerRef.current = null; }
-      if (link.parentNode) link.parentNode.removeChild(link);
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        driverMarkerRef.current = null;
+      }
     };
-  }, [order, orderId]);
+  }, [order, orderId, started]);
+
+  // زر البدء: يغير الحالة إلى ready ويشغّل التتبع
+  const handleStart = async () => {
+    setStarting(true);
+    await supabase.from('orders').update({ status: 'ready' }).eq('id', orderId);
+    setStarting(false);
+    setStarted(true);
+  };
 
   const completeDelivery = async () => {
     setDelivering(true);
@@ -157,6 +181,7 @@ export default function DeliveryPage() {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${order.client_lat},${order.client_lng}&travelmode=driving`, '_blank');
   };
 
+  // ── شاشة التحميل ──
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
@@ -165,6 +190,7 @@ export default function DeliveryPage() {
     );
   }
 
+  // ── طلب غير موجود ──
   if (!order) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
@@ -176,6 +202,7 @@ export default function DeliveryPage() {
     );
   }
 
+  // ── تم التوصيل ──
   if (delivered) {
     return (
       <div className="min-h-screen bg-green-50 dark:bg-slate-900 flex items-center justify-center">
@@ -188,6 +215,58 @@ export default function DeliveryPage() {
     );
   }
 
+  // ── شاشة البدء ──
+  if (!started) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-6">
+        <header className="bg-blue-600 text-white px-4 py-4 sticky top-0 z-[999]">
+          <h1 className="text-xl font-bold text-center">🏍️ طلب جديد</h1>
+        </header>
+
+        <div className="p-4 pt-6 space-y-4 max-w-lg mx-auto">
+          {/* ملخص الطلب */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 shadow-sm space-y-4">
+            <div className="text-right">
+              <p className="font-bold text-gray-900 dark:text-slate-100 text-xl">{order.client_name}</p>
+              {order.delivery_address && (
+                <p className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-1 justify-end mt-1">
+                  <span>{order.delivery_address}</span>
+                  <MapPin size={12} className="flex-shrink-0" />
+                </p>
+              )}
+            </div>
+            <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 rounded-xl px-4 py-3">
+              <span className="text-green-600 font-bold text-xl">
+                {order.total_amount.toLocaleString()} <span className="text-xs font-normal text-green-500">د.ع</span>
+              </span>
+              <span className="text-green-700 dark:text-green-400 font-bold text-sm">المبلغ</span>
+            </div>
+            {order.client_phone && (
+              <a href={`tel:${order.client_phone}`}
+                className="flex items-center justify-center gap-2 w-full py-3 bg-green-500 text-white font-bold rounded-xl active:scale-95 transition-all">
+                <Phone size={18} /> اتصال بالعميل
+              </a>
+            )}
+          </div>
+
+          {/* زر البدء */}
+          <button
+            onClick={handleStart}
+            disabled={starting}
+            className="w-full py-6 bg-blue-600 text-white font-black text-2xl rounded-2xl active:scale-95 transition-all shadow-lg shadow-blue-200 dark:shadow-blue-900 flex items-center justify-center gap-3 disabled:opacity-60"
+          >
+            {starting
+              ? <Loader2 size={28} className="animate-spin" />
+              : <Play size={28} fill="white" />
+            }
+            البدء
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── شاشة التوصيل (بعد البدء) ──
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-6">
       <header className="bg-blue-600 text-white px-4 py-4 sticky top-0 z-[999]">
@@ -195,7 +274,7 @@ export default function DeliveryPage() {
       </header>
 
       <div className="p-4 space-y-3 max-w-lg mx-auto">
-        {/* Order summary */}
+        {/* ملخص */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 shadow-sm">
           <div className="flex justify-between items-start mb-3">
             <span className="text-green-600 font-bold text-lg">
@@ -212,13 +291,14 @@ export default function DeliveryPage() {
             </div>
           </div>
           {order.client_phone && (
-            <a href={`tel:${order.client_phone}`} className="flex items-center justify-center gap-2 w-full py-3 bg-green-500 text-white font-bold rounded-xl active:scale-95 transition-all">
+            <a href={`tel:${order.client_phone}`}
+              className="flex items-center justify-center gap-2 w-full py-3 bg-green-500 text-white font-bold rounded-xl active:scale-95 transition-all">
               <Phone size={18} /> اتصال بالعميل
             </a>
           )}
         </div>
 
-        {/* Arrived banner */}
+        {/* بانر الوصول */}
         {nearCustomer && (
           <div className="bg-green-50 dark:bg-green-950/30 border-2 border-green-400 rounded-2xl p-4 text-center">
             <p className="text-2xl mb-1">📍</p>
@@ -226,7 +306,7 @@ export default function DeliveryPage() {
           </div>
         )}
 
-        {/* Done button — always visible */}
+        {/* زر تم التوصيل */}
         <button
           onClick={completeDelivery}
           disabled={delivering}
@@ -236,7 +316,7 @@ export default function DeliveryPage() {
           تم التوصيل
         </button>
 
-        {/* Map */}
+        {/* الخريطة */}
         {order.client_lat && order.client_lng ? (
           <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm">
             {locationStatus === 'tracking' && (
@@ -258,7 +338,8 @@ export default function DeliveryPage() {
               </div>
             )}
             <div ref={mapContainerRef} style={{ height: 380 }} />
-            <button onClick={openGoogleMaps} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center justify-center gap-2 transition-colors">
+            <button onClick={openGoogleMaps}
+              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center justify-center gap-2 transition-colors">
               <Navigation size={18} /> فتح في Google Maps
             </button>
           </div>
@@ -268,7 +349,8 @@ export default function DeliveryPage() {
             <p className="text-amber-800 dark:text-amber-300 font-bold">الزبون لم يشارك موقعه</p>
             <p className="text-amber-600 dark:text-amber-400 text-sm mt-1">{order.delivery_address || 'لا يوجد عنوان محدد'}</p>
             {order.delivery_address && (
-              <a href={`https://www.google.com/maps/search/${encodeURIComponent(order.delivery_address)}`} target="_blank" rel="noopener noreferrer"
+              <a href={`https://www.google.com/maps/search/${encodeURIComponent(order.delivery_address)}`}
+                target="_blank" rel="noopener noreferrer"
                 className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm active:scale-95 transition-all">
                 <Navigation size={16} /> ابحث عن العنوان في Google Maps
               </a>
