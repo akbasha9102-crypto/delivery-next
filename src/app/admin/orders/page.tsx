@@ -186,22 +186,15 @@ function OrdersPage() {
     await supabase.from('orders').update({
       driver_name: driver.name,
       driver_phone: driver.phone,
+      driver_id: driverId,
     }).eq('id', order.id);
 
     const link = `${window.location.origin}/delivery/${order.id}`;
-    const msg = [
-      `مرحباً ${driver.name} 🏍️`,
-      `لديك طلب توصيل جديد`,
-      `━━━━━━━━━━━━━━`,
-      `👤 العميل: ${order.client_name}`,
-      order.delivery_address ? `📍 العنوان: ${order.delivery_address}` : '',
-      `💰 المبلغ: ${order.total_amount.toLocaleString()} د.ع`,
-      `━━━━━━━━━━━━━━`,
-      `🗺️ رابط موقع العميل:`,
-      link,
-    ].filter(Boolean).join('\n');
-
-    window.open(`https://wa.me/${driver.phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+    fetch('/api/push/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driver_id: driverId, title: '🛵 طلب جديد!', body: `طلب جديد من ${order.client_name}`, url: link, tag: 'new-order' }),
+    }).catch(() => {});
 
     setSending(prev => ({ ...prev, [order.id]: false }));
     fetchOrders();

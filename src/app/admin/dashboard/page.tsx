@@ -18,37 +18,6 @@ const STATUS = {
   completed: { label: 'مكتمل',       next: null,                  nextLabel: '',              color: '#9ca3af', dot: 'bg-gray-400',   btnColor: '#9ca3af' },
 };
 
-function formatPhoneForWA(phone: string) {
-  const clean = phone.replace(/\D/g, '');
-  if (clean.startsWith('964')) return clean;
-  if (clean.startsWith('0')) return '964' + clean.slice(1);
-  return '964' + clean;
-}
-
-function buildWAMessage(order: Order) {
-  const items = order.items?.map(i => `• ${i.item_name} × ${i.quantity}`).join('\n') ?? '';
-  const locationLine = order.client_lat && order.client_lng
-    ? `🗺️ الموقع: https://maps.google.com/?q=${order.client_lat},${order.client_lng}`
-    : null;
-  const deliveryLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/delivery/${order.id}`;
-  return [
-    '🛵 طلب جديد',
-    '',
-    `👤 ${order.client_name}`,
-    `📞 ${order.client_phone}`,
-    order.delivery_address ? `📍 ${order.delivery_address}` : null,
-    locationLine,
-    '',
-    '🧾 الطلب:',
-    items,
-    '',
-    `💰 ${order.total_amount.toLocaleString()} د.ع`,
-    order.client_note ? `📝 ${order.client_note}` : null,
-    '',
-    `✅ رابط إتمام التوصيل:`,
-    deliveryLink,
-  ].filter(l => l !== null).join('\n');
-}
 
 function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -258,13 +227,7 @@ function DashboardPage() {
   };
 
   const assignDriverAndStart = async (orderId: string, driver: Driver) => {
-    // افتح الواتس فوراً قبل أي await لضمان عدم الحجب من المتصفح
     const order = orders.find(o => o.id === orderId);
-    if (order) {
-      const phone = formatPhoneForWA(driver.phone);
-      const msg   = buildWAMessage({ ...order, driver_name: driver.name, driver_phone: driver.phone });
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-    }
 
     await Promise.all([
       supabase.from('orders').update({
@@ -292,15 +255,9 @@ function DashboardPage() {
     if (order.status === 'pending') {
       fetchDrivers().then(() => setPickerOrderId(order.id));
     } else {
-      if (order.status === 'preparing' && order.driver_phone) {
-        const phone = formatPhoneForWA(order.driver_phone);
+      if (order.status === 'preparing' && order.driver_id) {
         const deliveryLink = `${window.location.origin}/delivery/${order.id}`;
-        const msg = `✅ الطلب جاهز للاستلام!\nتفضل على المطعم لاخذ الطلب 🏍️\n\n🔗 رابط إتمام التوصيل:\n${deliveryLink}`;
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-        // إشعار push للسائق أيضاً
-        if (order.driver_id) {
-          sendPushToDriver(order.driver_id, '✅ الطلب جاهز!', 'تفضل للمطعم لاستلام الطلب 🏍️', deliveryLink, 'order-ready');
-        }
+        sendPushToDriver(order.driver_id, '✅ الطلب جاهز!', 'تفضل للمطعم لاستلام الطلب 🏍️', deliveryLink, 'order-ready');
       }
       updateStatus(order.id, next);
     }
@@ -419,10 +376,9 @@ function DashboardPage() {
                       {order.driver_name ? (
                         <button
                           onClick={() => {
-                            const phone = formatPhoneForWA(order.driver_phone ?? '');
+                            if (!order.driver_id) return;
                             const deliveryLink = `${window.location.origin}/delivery/${order.id}`;
-                            const msg = `🔔 تذكير\nتعال اخذ الطلب من المطعم، جاهز ينتظرك! 🏍️\n\n✅ رابط إتمام التوصيل:\n${deliveryLink}`;
-                            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                            sendPushToDriver(order.driver_id, '🔔 تذكير', 'تعال اخذ الطلب من المطعم، جاهز ينتظرك! 🏍️', deliveryLink, 'reminder');
                           }}
                           className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2 active:scale-95 transition-all">
                           <span className="text-lg">🏍️</span>
@@ -497,10 +453,9 @@ function DashboardPage() {
                     {order.driver_name && (
                       <button
                         onClick={() => {
-                          const phone = formatPhoneForWA(order.driver_phone ?? '');
+                          if (!order.driver_id) return;
                           const deliveryLink = `${window.location.origin}/delivery/${order.id}`;
-                          const msg = `🔔 تذكير\nتعال اخذ الطلب من المطعم، جاهز ينتظرك! 🏍️\n\n✅ رابط إتمام التوصيل:\n${deliveryLink}`;
-                          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                          sendPushToDriver(order.driver_id, '🔔 تذكير', 'تعال اخذ الطلب من المطعم، جاهز ينتظرك! 🏍️', deliveryLink, 'reminder');
                         }}
                         className="mt-2 w-full flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2 active:scale-[0.98] transition-all">
                         <span className="text-xs text-blue-400 dark:text-blue-500 font-medium">اضغط لإرسال تذكير</span>
