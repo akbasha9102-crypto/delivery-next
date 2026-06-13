@@ -322,20 +322,17 @@ function DashboardPage() {
                     {order.delivery_address && <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">📍 {order.delivery_address}</p>}
                     {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
 
-                    {/* Driver info (shown when assigned) */}
+                    {/* Driver info — اضغط لإرسال تذكير */}
                     {order.driver_name && (
-                      <div className="mt-2 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2">
-                        <button
-                          onClick={() => {
-                            const phone = formatPhoneForWA(order.driver_phone ?? '');
-                            const msg   = buildWAMessage(order);
-                            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-                          }}
-                          className="flex items-center gap-1.5 bg-green-500 active:bg-green-600 text-white text-xs font-bold px-3 py-2 rounded-xl active:scale-95 transition-all"
-                        >
-                          <span>📤</span>
-                          <span>إرسال</span>
-                        </button>
+                      <button
+                        onClick={() => {
+                          const phone = formatPhoneForWA(order.driver_phone ?? '');
+                          const deliveryLink = `${window.location.origin}/delivery/${order.id}`;
+                          const msg = `🔔 تذكير\nتعال اخذ الطلب من المطعم، جاهز ينتظرك! 🏍️\n\n✅ رابط إتمام التوصيل:\n${deliveryLink}`;
+                          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                        }}
+                        className="mt-2 w-full flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2 active:scale-[0.98] transition-all">
+                        <span className="text-xs text-blue-400 dark:text-blue-500 font-medium">اضغط لإرسال تذكير</span>
                         <div className="flex items-center gap-2">
                           <div className="text-right">
                             <p className="text-blue-700 dark:text-blue-300 font-bold text-sm">{order.driver_name}</p>
@@ -343,7 +340,7 @@ function DashboardPage() {
                           </div>
                           <span className="text-xl">🏍️</span>
                         </div>
-                      </div>
+                      </button>
                     )}
                   </div>
 
