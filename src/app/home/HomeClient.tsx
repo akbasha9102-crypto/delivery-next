@@ -40,7 +40,7 @@ type Props = {
 export default function HomeClient({ initialCategories, initialItems }: Props) {
   const { dark, toggleDark } = useDarkMode();
   const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total } = useCart();
-  const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded, is_closed, opens_at, whatsapp_number, location_url } = useSettings();
+  const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded, is_closed, opens_at, whatsapp_number, location_url, schedule } = useSettings();
 
   const brandName  = restaurant_name || "المطعم";
   const rawColor   = primary_color || "#000000";
@@ -62,6 +62,13 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   };
 
   const textOnBrand = getTextColor(brandColor);
+
+  const todayHours = (() => {
+    if (!schedule?.days) return null;
+    const day = schedule.days[String(new Date().getDay())];
+    if (!day?.enabled) return null;
+    return { open: day.open, close: day.close };
+  })();
 
   const [categories,   setCategories]   = useState<Category[]>(initialCategories);
   const [items,        setItems]        = useState<Item[]>(initialItems);
@@ -210,6 +217,18 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
           )}
         </div>
       </motion.header>
+
+      {/* ══ شريط الحالة والوقت ══ */}
+      {settingsLoaded && (
+        <div className={`flex items-center justify-center gap-2 py-1.5 text-xs font-bold ${is_closed ? 'bg-red-50 dark:bg-red-900/20 text-red-500' : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'}`}>
+          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${is_closed ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`} />
+          {is_closed ? (
+            <span>مغلق{opens_at ? ` • يفتح ${opens_at}` : ''}</span>
+          ) : (
+            <span>مفتوح{todayHours ? ` • يغلق ${todayHours.close}` : ''}</span>
+          )}
+        </div>
+      )}
 
       {/* ══ CATEGORY PILLS (Sticky at top-0) ══ */}
       <div className="sticky top-0 z-40 px-0 sm:px-4 py-4 bg-gray-50/95 dark:bg-slate-950/95 backdrop-blur-md shadow-sm border-b border-gray-100 dark:border-slate-800">

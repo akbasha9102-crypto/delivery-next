@@ -4,7 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, X, ClipboardList } from 'lucide-react';
+import { Moon, Sun, X, ClipboardList, Clock } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
@@ -167,6 +168,16 @@ function DashboardPage() {
   const { markSeen } = useNewOrders();
   useEffect(() => { markSeen(); }, [markSeen]);
 
+  const { is_closed, opens_at, schedule } = useSettings();
+
+  const todayHours = useMemo(() => {
+    if (!schedule?.days) return null;
+    const dayKey = String(new Date().getDay());
+    const day = schedule.days[dayKey];
+    if (!day?.enabled) return null;
+    return { open: day.open, close: day.close };
+  }, [schedule]);
+
   const [orders,        setOrders]        = useState<Order[]>([]);
   const [imageMap,      setImageMap]      = useState<Map<string, string>>(new Map());
   const [loading,       setLoading]       = useState(true);
@@ -310,6 +321,21 @@ function DashboardPage() {
         </div>
         <div className="w-10" />
       </header>
+
+      {/* شريط الحالة والوقت */}
+      <div className={`flex items-center justify-between px-4 py-2 text-xs font-bold ${is_closed ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'}`}>
+        <div className="flex items-center gap-1.5">
+          <Clock size={12} />
+          {todayHours
+            ? <span>{todayHours.open} – {todayHours.close}</span>
+            : opens_at ? <span>يفتح {opens_at}</span> : <span>—</span>
+          }
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-full ${is_closed ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`} />
+          <span>{is_closed ? 'المطعم مغلق' : 'المطعم مفتوح'}</span>
+        </div>
+      </div>
 
       {/* إشعار طلب جديد */}
       {newOrderFlash && (
