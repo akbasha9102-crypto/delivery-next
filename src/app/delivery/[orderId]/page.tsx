@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Phone, Navigation, MapPin, AlertCircle, Loader2, CheckCircle2, Play, Bell } from 'lucide-react';
+import { MessageCircle, Navigation, MapPin, AlertCircle, Loader2, CheckCircle2, Play, Bell, Home } from 'lucide-react';
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
@@ -68,7 +68,7 @@ export default function DeliveryPage() {
   const lastRouteFetchRef  = useRef<number>(0);
   const leafletLinkRef     = useRef<HTMLLinkElement | null>(null);
   const driverIconHtmlRef  = useRef<string>(
-    `<div style="width:40px;height:40px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:20px">🏍️</div>`
+    `<div style="width:44px;height:44px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 3px 14px rgba(37,99,235,0.5);display:flex;align-items:center;justify-content:center;font-size:22px">🏍️</div>`
   );
 
   const [order,          setOrder]          = useState<Order | null>(null);
@@ -81,7 +81,6 @@ export default function DeliveryPage() {
   const [starting,       setStarting]       = useState(false);
   const [notifStatus,    setNotifStatus]    = useState<'idle' | 'granted' | 'denied'>('idle');
 
-  // جلب بيانات الطلب
   useEffect(() => {
     if (!orderId) return;
     supabase
@@ -93,13 +92,11 @@ export default function DeliveryPage() {
         setOrder(data);
         if (data?.driver_arrived) { setNearCustomer(true); arrivedSentRef.current = true; }
         if (data?.status === 'completed') setDelivered(true);
-        // إذا بدأ السائق مسبقاً (أعاد فتح الرابط)
         if (data?.status === 'ready' || data?.status === 'completed') setStarted(true);
         setLoading(false);
       });
   }, [orderId]);
 
-  // تسجيل الـ service worker وطلب إذن الإشعارات
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -107,7 +104,6 @@ export default function DeliveryPage() {
     if (Notification.permission === 'denied')  setNotifStatus('denied');
   }, []);
 
-  // بعد تحميل الطلب: إذا السائق معروف واشتراك الإشعارات لم يتم بعد
   useEffect(() => {
     if (!order?.driver_id) return;
     if (Notification.permission === 'granted') {
@@ -116,11 +112,9 @@ export default function DeliveryPage() {
     }
   }, [order?.driver_id]);
 
-  // تشغيل GPS والخريطة بعد الضغط على البدء
   useEffect(() => {
     if (!started) return;
 
-    // ── GPS يبدأ فوراً مستقلاً عن تحميل Leaflet ──
     if (!('geolocation' in navigator)) {
       setLocationStatus('denied');
     } else {
@@ -130,7 +124,6 @@ export default function DeliveryPage() {
           const { latitude, longitude } = pos.coords;
           setLocationStatus('tracking');
 
-          // حفظ الموقع في Supabase فوراً (بدون انتظار الخريطة)
           const now = Date.now();
           if (now - lastSaveRef.current > 5000) {
             lastSaveRef.current = now;
@@ -142,14 +135,13 @@ export default function DeliveryPage() {
               });
           }
 
-          // تحديث ماركر السائق على الخريطة إذا كانت جاهزة
           if (mapInstanceRef.current && driverIconHtmlRef.current) {
             import('leaflet').then((mod) => {
               const L = (mod as any).default ?? mod;
               if (!mapInstanceRef.current) return;
               const icon = L.divIcon({
                 html: driverIconHtmlRef.current!,
-                className: '', iconSize: [40, 40], iconAnchor: [20, 20],
+                className: '', iconSize: [44, 44], iconAnchor: [22, 22],
               });
               if (driverMarkerRef.current) {
                 driverMarkerRef.current.setLatLng([latitude, longitude]);
@@ -159,13 +151,12 @@ export default function DeliveryPage() {
                   .bindPopup('<div dir="rtl">موقعك الحالي</div>');
                 mapInstanceRef.current.fitBounds(
                   L.latLngBounds([order.client_lat, order.client_lng], [latitude, longitude]),
-                  { padding: [50, 50] }
+                  { padding: [60, 60] }
                 );
               }
             });
           }
 
-          // رسم مسار الطريق إلى موقع الزبون
           if (order?.client_lat && order?.client_lng && mapInstanceRef.current) {
             const shouldFetch = !routeLineRef.current || (Date.now() - lastRouteFetchRef.current > 30_000);
             if (shouldFetch) {
@@ -186,7 +177,7 @@ export default function DeliveryPage() {
                       routeLineRef.current.setLatLngs(coords);
                     } else {
                       routeLineRef.current = L.polyline(coords, {
-                        color: '#2563eb', weight: 4, opacity: 0.8, dashArray: '8, 5',
+                        color: '#2563eb', weight: 5, opacity: 0.85, dashArray: '10, 6',
                       }).addTo(mapInstanceRef.current);
                       routeLineRef.current.bringToBack();
                     }
@@ -196,7 +187,6 @@ export default function DeliveryPage() {
             }
           }
 
-          // كشف الوصول (100 متر)
           if (order?.client_lat && order?.client_lng) {
             const dist = getDistanceMeters(latitude, longitude, order.client_lat, order.client_lng);
             if (dist <= 100 && !arrivedSentRef.current) {
@@ -211,7 +201,6 @@ export default function DeliveryPage() {
       );
     }
 
-    // ── الخريطة تتحمل بشكل منفصل (فقط إذا الزبون شارك موقعه) ──
     if (!order?.client_lat || !order?.client_lng) return;
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -227,21 +216,21 @@ export default function DeliveryPage() {
       const L = (mod as any).default ?? mod;
       if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-      const map = L.map(mapContainerRef.current, { attributionControl: false })
+      const map = L.map(mapContainerRef.current, { attributionControl: false, zoomControl: false })
         .setView([order.client_lat!, order.client_lng!], 15);
       mapInstanceRef.current = map;
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
       const customerIcon = L.divIcon({
-        html: `<div style="width:36px;height:36px;background:#ef4444;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.35)"></div>`,
-        className: '', iconSize: [36, 36], iconAnchor: [18, 36],
+        html: `<div style="width:38px;height:38px;background:#ef4444;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px rgba(239,68,68,0.5)"></div>`,
+        className: '', iconSize: [38, 38], iconAnchor: [19, 38],
       });
       L.marker([order.client_lat!, order.client_lng!], { icon: customerIcon })
         .addTo(map)
         .bindPopup(
-          `<div dir="rtl" style="font-family:sans-serif;min-width:120px"><b>${order.client_name}</b>${order.delivery_address ? `<br><small style="color:#6b7280">${order.delivery_address}</small>` : ''}</div>`,
-          { offset: [0, -18] }
+          `<div dir="rtl" style="font-family:sans-serif;min-width:130px"><b>${order.client_name}</b>${order.delivery_address ? `<br><small style="color:#6b7280">${order.delivery_address}</small>` : ''}</div>`,
+          { offset: [0, -20] }
         )
         .openPopup();
     });
@@ -260,7 +249,6 @@ export default function DeliveryPage() {
     };
   }, [order, orderId, started]);
 
-  // زر البدء: يغير الحالة إلى ready ويشغّل التتبع
   const handleStart = async () => {
     setStarting(true);
     await supabase.from('orders').update({ status: 'ready' }).eq('id', orderId);
@@ -283,11 +271,11 @@ export default function DeliveryPage() {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${order.client_lat},${order.client_lng}&travelmode=driving`, '_blank');
   };
 
-  // ── شاشة التحميل ──
+  // ── تحميل ──
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -295,10 +283,10 @@ export default function DeliveryPage() {
   // ── طلب غير موجود ──
   if (!order) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center p-8">
-          <div className="text-5xl mb-4">❌</div>
-          <p className="text-gray-600 dark:text-slate-300 font-bold text-lg">الطلب غير موجود</p>
+          <div className="text-6xl mb-4">❌</div>
+          <p className="text-white font-bold text-xl">الطلب غير موجود</p>
         </div>
       </div>
     );
@@ -307,16 +295,23 @@ export default function DeliveryPage() {
   // ── تم التوصيل ──
   if (delivered) {
     return (
-      <div className="min-h-screen bg-green-50 dark:bg-slate-900 flex items-center justify-center relative">
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center relative px-6">
         <button
           onClick={() => router.push('/driver/dashboard')}
-          className="absolute top-4 right-4 flex items-center gap-1.5 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 font-bold text-sm px-4 py-2 rounded-xl shadow active:scale-95 transition-all">
-          الرئيسية ←
+          className="absolute top-5 right-5 flex items-center gap-2 bg-slate-800 text-slate-300 font-bold text-sm px-4 py-2.5 rounded-2xl border border-slate-700 active:scale-95 transition-all">
+          <Home size={16} /> الرئيسية
         </button>
-        <div className="text-center p-8">
-          <CheckCircle2 size={80} className="text-green-500 mx-auto mb-4" strokeWidth={1.5} />
-          <h2 className="text-2xl font-black text-gray-900 dark:text-slate-100 mb-2">تم التوصيل!</h2>
-          <p className="text-gray-500 dark:text-slate-400">تم إغلاق الطلب بنجاح</p>
+        <div className="text-center">
+          <div className="w-32 h-32 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-green-500/30">
+            <CheckCircle2 size={70} className="text-green-400" strokeWidth={1.5} />
+          </div>
+          <h2 className="text-3xl font-black text-white mb-2">تم التوصيل!</h2>
+          <p className="text-slate-400 text-lg">أحسنت، تم إغلاق الطلب بنجاح</p>
+          <button
+            onClick={() => router.push('/driver/dashboard')}
+            className="mt-10 w-full py-4 bg-blue-600 text-white font-black text-lg rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2">
+            <Home size={20} /> العودة للرئيسية
+          </button>
         </div>
       </div>
     );
@@ -325,53 +320,59 @@ export default function DeliveryPage() {
   // ── شاشة البدء ──
   if (!started) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-6">
-        <header className="bg-blue-600 text-white px-4 py-4 sticky top-0 z-[999]">
-          <h1 className="text-xl font-bold text-center">🏍️ طلب جديد</h1>
-        </header>
+      <div className="min-h-screen bg-slate-900 flex flex-col">
+        {/* هيدر */}
+        <div className="px-5 pt-12 pb-6 text-center">
+          <div className="text-5xl mb-3">🏍️</div>
+          <h1 className="text-white font-black text-2xl">طلب جديد</h1>
+          <p className="text-slate-400 text-sm mt-1">راجع التفاصيل ثم ابدأ التوصيل</p>
+        </div>
 
-        <div className="p-4 pt-6 space-y-4 max-w-lg mx-auto">
-          {/* ملخص الطلب */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 shadow-sm space-y-4">
+        {/* بطاقة الطلب */}
+        <div className="flex-1 bg-white rounded-t-3xl px-5 pt-6 pb-8 space-y-4">
+          {/* اسم العميل والمبلغ */}
+          <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+            <div className="bg-green-50 rounded-2xl px-4 py-3 text-center">
+              <p className="text-green-600 font-black text-2xl">{order.total_amount.toLocaleString()}</p>
+              <p className="text-green-500 text-xs font-medium">دينار عراقي</p>
+            </div>
             <div className="text-right">
-              <p className="font-bold text-gray-900 dark:text-slate-100 text-xl">{order.client_name}</p>
-              {order.delivery_address && (
-                <p className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-1 justify-end mt-1">
-                  <span>{order.delivery_address}</span>
-                  <MapPin size={12} className="flex-shrink-0" />
-                </p>
-              )}
+              <p className="font-black text-gray-900 text-xl">{order.client_name}</p>
+              <p className="text-gray-400 text-sm mt-0.5">العميل</p>
             </div>
-            <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 rounded-xl px-4 py-3">
-              <span className="text-green-600 font-bold text-xl">
-                {order.total_amount.toLocaleString()} <span className="text-xs font-normal text-green-500">د.ع</span>
-              </span>
-              <span className="text-green-700 dark:text-green-400 font-bold text-sm">المبلغ</span>
-            </div>
-            {order.client_phone && (
-              <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-3 bg-green-500 text-white font-bold rounded-xl active:scale-95 transition-all">
-                <Phone size={18} /> واتساب العميل
-              </a>
-            )}
           </div>
 
-          {/* تفعيل الإشعارات */}
-          {notifStatus !== 'granted' && notifStatus !== 'denied' && order?.driver_id && (
+          {/* العنوان */}
+          {order.delivery_address && (
+            <div className="flex items-start gap-3 py-1">
+              <MapPin size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-gray-700 font-medium text-right flex-1">{order.delivery_address}</p>
+            </div>
+          )}
+
+          {/* واتساب */}
+          {order.client_phone && (
+            <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#25D366] text-white font-bold rounded-2xl active:scale-95 transition-all text-base">
+              <MessageCircle size={20} /> واتساب العميل
+            </a>
+          )}
+
+          {/* الإشعارات */}
+          {notifStatus === 'idle' && order?.driver_id && (
             <button
               onClick={async () => {
                 await subscribeDriver(order.driver_id!);
                 setNotifStatus(Notification.permission === 'granted' ? 'granted' : 'denied');
               }}
-              className="w-full py-3 bg-amber-500 text-white font-bold rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              <Bell size={18} /> فعّل إشعارات الطلبات
+              className="w-full py-3.5 bg-amber-500 text-white font-bold rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2 text-base">
+              <Bell size={20} /> فعّل إشعارات الطلبات
             </button>
           )}
           {notifStatus === 'granted' && (
-            <div className="flex items-center justify-center gap-2 py-2 text-green-600 dark:text-green-400 text-sm font-medium">
-              <Bell size={15} /> الإشعارات مفعّلة
+            <div className="flex items-center justify-center gap-2 py-2 text-green-600 text-sm font-bold">
+              <Bell size={15} className="fill-green-500" /> الإشعارات مفعّلة ✓
             </div>
           )}
 
@@ -379,13 +380,12 @@ export default function DeliveryPage() {
           <button
             onClick={handleStart}
             disabled={starting}
-            className="w-full py-6 bg-blue-600 text-white font-black text-2xl rounded-2xl active:scale-95 transition-all shadow-lg shadow-blue-200 dark:shadow-blue-900 flex items-center justify-center gap-3 disabled:opacity-60"
-          >
+            className="w-full py-5 bg-blue-600 text-white font-black text-xl rounded-2xl active:scale-95 transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-3 disabled:opacity-60 mt-2">
             {starting
-              ? <Loader2 size={28} className="animate-spin" />
-              : <Play size={28} fill="white" />
+              ? <Loader2 size={26} className="animate-spin" />
+              : <Play size={26} fill="white" />
             }
-            البدء
+            ابدأ التوصيل
           </button>
         </div>
       </div>
@@ -394,96 +394,111 @@ export default function DeliveryPage() {
 
   // ── شاشة التوصيل (بعد البدء) ──
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-6">
-      <header className="bg-blue-600 text-white px-4 py-4 sticky top-0 z-[999]">
-        <h1 className="text-xl font-bold text-center">🏍️ توصيل طلب</h1>
-      </header>
+    <div className="min-h-screen bg-slate-900 flex flex-col">
 
-      <div className="p-4 space-y-3 max-w-lg mx-auto">
-        {/* ملخص */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 shadow-sm">
-          <div className="flex justify-between items-start mb-3">
-            <span className="text-green-600 font-bold text-lg">
-              {order.total_amount.toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span>
-            </span>
-            <div className="text-right">
-              <p className="font-bold text-gray-900 dark:text-slate-100 text-lg">{order.client_name}</p>
-              {order.delivery_address && (
-                <p className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-1 justify-end mt-0.5">
-                  <span>{order.delivery_address}</span>
-                  <MapPin size={12} className="flex-shrink-0" />
-                </p>
-              )}
-            </div>
+      {/* هيدر */}
+      <div className="flex items-center justify-between px-5 pt-10 pb-4">
+        <div className="flex items-center gap-2">
+          {locationStatus === 'tracking' && (
+            <>
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse" />
+              <span className="text-blue-300 text-xs font-medium">جاري التتبع</span>
+            </>
+          )}
+          {locationStatus === 'denied' && (
+            <>
+              <AlertCircle size={14} className="text-amber-400" />
+              <span className="text-amber-300 text-xs">الموقع معطّل</span>
+            </>
+          )}
+          {locationStatus === 'idle' && (
+            <>
+              <Loader2 size={14} className="text-slate-400 animate-spin" />
+              <span className="text-slate-400 text-xs">يحدد موقعك...</span>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">🏍️</span>
+          <h1 className="text-white font-black text-lg">جاري التوصيل</h1>
+        </div>
+      </div>
+
+      {/* بانر الوصول */}
+      {nearCustomer && (
+        <div className="mx-4 mb-3 bg-green-500 rounded-2xl px-4 py-3 flex items-center gap-3">
+          <span className="text-2xl">📍</span>
+          <div>
+            <p className="text-white font-black text-base">وصلت لموقع العميل!</p>
+            <p className="text-green-100 text-xs">اضغط "تم التوصيل" بعد تسليم الطلب</p>
           </div>
+        </div>
+      )}
+
+      {/* الخريطة أو تنبيه لا موقع */}
+      <div className="mx-4 rounded-3xl overflow-hidden flex-1 min-h-0" style={{ minHeight: 300 }}>
+        {order.client_lat && order.client_lng ? (
+          <div ref={mapContainerRef} style={{ height: 340 }} className="w-full" />
+        ) : (
+          <div className="h-full bg-slate-800 flex flex-col items-center justify-center p-6 text-center rounded-3xl border border-slate-700" style={{ minHeight: 220 }}>
+            <AlertCircle size={36} className="text-amber-400 mb-3" />
+            <p className="text-white font-bold text-lg">العميل لم يشارك موقعه</p>
+            <p className="text-slate-400 text-sm mt-1 mb-4">{order.delivery_address || 'لا يوجد عنوان'}</p>
+            {order.delivery_address && (
+              <a href={`https://www.google.com/maps/search/${encodeURIComponent(order.delivery_address)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm active:scale-95 transition-all">
+                <Navigation size={16} /> ابحث في خرائط Google
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* لوحة التحكم السفلية */}
+      <div className="bg-white rounded-t-3xl mt-4 px-5 pt-5 pb-8 space-y-3">
+
+        {/* معلومات العميل */}
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+          <span className="bg-green-50 text-green-600 font-black text-lg px-3 py-1.5 rounded-xl">
+            {order.total_amount.toLocaleString()} <span className="text-xs font-medium">د.ع</span>
+          </span>
+          <div className="text-right">
+            <p className="font-black text-gray-900 text-lg">{order.client_name}</p>
+            {order.delivery_address && (
+              <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1 justify-end">
+                <MapPin size={10} /> {order.delivery_address}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* أزرار التنقل والواتساب */}
+        <div className="grid grid-cols-2 gap-3">
+          {order.client_lat && order.client_lng && (
+            <button onClick={openGoogleMaps}
+              className="flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white font-bold rounded-2xl active:scale-95 transition-all text-sm">
+              <Navigation size={18} /> خرائط Google
+            </button>
+          )}
           {order.client_phone && (
             <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
               target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 bg-green-500 text-white font-bold rounded-xl active:scale-95 transition-all">
-              <Phone size={18} /> واتساب العميل
+              className={`flex items-center justify-center gap-2 py-3.5 bg-[#25D366] text-white font-bold rounded-2xl active:scale-95 transition-all text-sm ${!order.client_lat ? 'col-span-2' : ''}`}>
+              <MessageCircle size={18} /> واتساب العميل
             </a>
           )}
+          {!order.client_lat && !order.client_phone && <div />}
         </div>
-
-        {/* بانر الوصول */}
-        {nearCustomer && (
-          <div className="bg-green-50 dark:bg-green-950/30 border-2 border-green-400 rounded-2xl p-4 text-center">
-            <p className="text-2xl mb-1">📍</p>
-            <p className="font-black text-green-800 dark:text-green-300">وصلت لموقع العميل</p>
-          </div>
-        )}
 
         {/* زر تم التوصيل */}
         <button
           onClick={completeDelivery}
           disabled={delivering}
-          className="w-full py-4 bg-green-500 hover:bg-green-600 text-white font-black text-lg rounded-2xl active:scale-95 transition-all shadow-lg shadow-green-200 dark:shadow-green-900 flex items-center justify-center gap-2 disabled:opacity-60"
-        >
-          {delivering ? <Loader2 size={22} className="animate-spin" /> : <CheckCircle2 size={22} />}
-          تم التوصيل
+          className="w-full py-5 bg-green-500 text-white font-black text-xl rounded-2xl active:scale-95 transition-all shadow-lg shadow-green-200 flex items-center justify-center gap-2 disabled:opacity-60">
+          {delivering ? <Loader2 size={24} className="animate-spin" /> : <CheckCircle2 size={24} />}
+          تم التوصيل ✓
         </button>
-
-        {/* الخريطة */}
-        {order.client_lat && order.client_lng ? (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm">
-            {locationStatus === 'tracking' && (
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-950/40 border-b border-blue-100 dark:border-blue-900">
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
-                <span className="text-blue-700 dark:text-blue-300 text-sm font-medium">يتم تتبع موقعك لحظة بلحظة</span>
-              </div>
-            )}
-            {locationStatus === 'denied' && (
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-100 dark:border-amber-900">
-                <AlertCircle size={14} className="text-amber-600 flex-shrink-0" />
-                <span className="text-amber-700 dark:text-amber-300 text-sm">اسمح بالموقع لتتبع مسارك</span>
-              </div>
-            )}
-            {locationStatus === 'idle' && (
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-slate-700/50 border-b border-gray-100 dark:border-slate-600">
-                <Loader2 size={14} className="text-gray-400 animate-spin" />
-                <span className="text-gray-500 dark:text-slate-400 text-sm">جاري تحديد موقعك...</span>
-              </div>
-            )}
-            <div ref={mapContainerRef} style={{ height: 380 }} />
-            <button onClick={openGoogleMaps}
-              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center justify-center gap-2 transition-colors">
-              <Navigation size={18} /> فتح في Google Maps
-            </button>
-          </div>
-        ) : (
-          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 text-center">
-            <AlertCircle size={32} className="text-amber-500 mx-auto mb-2" />
-            <p className="text-amber-800 dark:text-amber-300 font-bold">الزبون لم يشارك موقعه</p>
-            <p className="text-amber-600 dark:text-amber-400 text-sm mt-1">{order.delivery_address || 'لا يوجد عنوان محدد'}</p>
-            {order.delivery_address && (
-              <a href={`https://www.google.com/maps/search/${encodeURIComponent(order.delivery_address)}`}
-                target="_blank" rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm active:scale-95 transition-all">
-                <Navigation size={16} /> ابحث عن العنوان في Google Maps
-              </a>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
