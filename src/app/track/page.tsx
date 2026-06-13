@@ -14,6 +14,7 @@ const STEPS = [
 ];
 
 const CSS = `
+  @keyframes line-fill { 0%{width:0%} 100%{width:100%} }
   @keyframes spin-w   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
   @keyframes road-m   { from{transform:translateX(0)} to{transform:translateX(-52px)} }
   @keyframes moto-b   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
@@ -537,10 +538,13 @@ export default function TrackPage() {
                       <div className="flex-1 h-1 rounded mx-1 mb-5 relative overflow-hidden bg-gray-100 dark:bg-slate-700">
                         <div
                           className="absolute inset-y-0 left-0 rounded bg-gray-900 dark:bg-white"
-                          style={{
-                            width: idx < current ? '100%' : '0%',
-                            transition: 'width 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                          }}
+                          style={
+                            idx < current
+                              ? { width: '100%' }
+                              : idx === current
+                              ? { animation: 'line-fill 2s ease-in-out infinite' }
+                              : { width: '0%' }
+                          }
                         />
                       </div>
                     )}
