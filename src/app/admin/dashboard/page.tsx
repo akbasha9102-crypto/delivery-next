@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminGuard } from '@/components/AdminGuard';
@@ -19,6 +19,21 @@ const STATUS = {
   rejected:  { label: 'مرفوضة',      next: null,                  nextLabel: '',              color: '#ef4444', dot: 'bg-red-400',    btnColor: '#ef4444' },
 };
 
+
+const EXPIRE_SECS = 5 * 60; // 5 دقائق
+
+function getCountdown(createdAt: string): { secs: number; pct: number; urgent: boolean } {
+  const elapsed = Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000);
+  const secs    = Math.max(0, EXPIRE_SECS - elapsed);
+  const pct     = Math.max(0, secs / EXPIRE_SECS);
+  return { secs, pct, urgent: secs <= 60 };
+}
+
+function fmtCountdown(secs: number) {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0');
+  const s = (secs % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
 
 function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -159,8 +174,15 @@ function DashboardPage() {
   const [newOrderFlash, setNewOrderFlash] = useState(false);
   const [drivers,       setDrivers]       = useState<Driver[]>([]);
   const [pickerOrderId, setPickerOrderId] = useState<string | null>(null);
+  const [tick,          setTick]          = useState(0);
 
   const initialLoadDone = useRef(false);
+
+  // تحديث كل ثانية لعرض العداد التنازلي
+  useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
   const today = localDate();
 
   const fetchDrivers = useCallback(async () => {
@@ -412,15 +434,37 @@ function DashboardPage() {
           /* ═══ عرض الطلبات العادي ═══ */
           <div className="space-y-3">
             {filtered.map(order => {
-              const cfg  = STATUS[order.status];
-              const wait = order.status !== 'completed' ? waitInfo(order.created_at) : null;
+              const cfg      = STATUS[order.status];
+              const wait     = order.status !== 'completed' ? waitInfo(order.created_at) : null;
+              const countdown = order.status === 'pending' ? getCountdown(order.created_at) : null;
+              void tick; // force re-render on tick
               return (
                 <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
-                  <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
+                  {/* شريط العداد للطلبات الواردة */}
+                  {countdown ? (
+                    <div className="relative h-2 bg-gray-100 dark:bg-slate-700">
+                      <div
+                        className="absolute inset-y-0 right-0 transition-all duration-1000"
+                        style={{
+                          width: `${countdown.pct * 100}%`,
+                          backgroundColor: countdown.urgent ? '#ef4444' : countdown.pct > 0.5 ? '#22c55e' : '#f59e0b',
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
+                  )}
                   <div className="p-4">
                     <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
                       <div className="flex flex-col gap-1">
-                        {wait && (
+                        {countdown && (
+                          <div className={`flex items-center gap-1.5 ${countdown.urgent ? 'animate-pulse' : ''}`}>
+                            <span className="text-xs font-black" style={{ color: countdown.urgent ? '#ef4444' : '#f59e0b' }}>
+                              ⏱ {fmtCountdown(countdown.secs)}
+                            </span>
+                          </div>
+                        )}
+                        {!countdown && wait && (
                           <div className="flex items-center gap-1.5">
                             <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: wait.color }} />
                             <span className="text-xs font-bold" style={{ color: wait.color }}>{wait.text}</span>
