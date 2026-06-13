@@ -343,9 +343,10 @@ export default function DeliveryPage() {
               <span className="text-green-700 dark:text-green-400 font-bold text-sm">المبلغ</span>
             </div>
             {order.client_phone && (
-              <a href={`tel:${order.client_phone}`}
+              <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
+                target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 w-full py-3 bg-green-500 text-white font-bold rounded-xl active:scale-95 transition-all">
-                <Phone size={18} /> اتصال بالعميل
+                <Phone size={18} /> واتساب العميل
               </a>
             )}
           </div>
@@ -410,9 +411,10 @@ export default function DeliveryPage() {
             </div>
           </div>
           {order.client_phone && (
-            <a href={`tel:${order.client_phone}`}
+            <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
+              target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-3 bg-green-500 text-white font-bold rounded-xl active:scale-95 transition-all">
-              <Phone size={18} /> اتصال بالعميل
+              <Phone size={18} /> واتساب العميل
             </a>
           )}
         </div>
