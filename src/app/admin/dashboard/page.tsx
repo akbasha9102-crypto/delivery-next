@@ -484,11 +484,7 @@ function DashboardPage() {
               const countdown = order.status === 'pending' ? getCountdown(order.created_at) : null;
               void tick; // force re-render on tick
               return (
-                <div key={order.id}
-                  className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700"
-                  onClick={order.status === 'ready' ? () => setTrackOrder(order) : undefined}
-                  style={order.status === 'ready' ? { cursor: 'pointer' } : undefined}
-                >
+                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
                   {/* شريط/هيدر العداد للطلبات الواردة */}
                   {countdown ? (
                     <>
@@ -554,7 +550,8 @@ function DashboardPage() {
 
                     {order.driver_name && (
                       <button
-                        onClick={() => {
+                        onClick={e => {
+                          e.stopPropagation();
                           if (!order.driver_id) return;
                           const deliveryLink = `${window.location.origin}/delivery/${order.id}`;
                           sendPushToDriver(order.driver_id, '🔔 تذكير', 'تعال اخذ الطلب من المطعم، جاهز ينتظرك! 🏍️', deliveryLink, 'reminder');
@@ -568,6 +565,16 @@ function DashboardPage() {
                           </div>
                           <span className="text-xl">🏍️</span>
                         </div>
+                      </button>
+                    )}
+
+                    {/* زر تتبع الموقع — فقط لطلبات جار التوصيل */}
+                    {order.status === 'ready' && (
+                      <button
+                        onClick={() => setTrackOrder(order)}
+                        className="mt-2 w-full flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-3 py-2.5 active:scale-[0.98] transition-all">
+                        <span className="text-base">🗺️</span>
+                        <span className="text-sm font-bold text-green-700 dark:text-green-400">تتبع السائق على الخريطة</span>
                       </button>
                     )}
                   </div>
