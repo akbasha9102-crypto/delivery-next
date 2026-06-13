@@ -66,6 +66,8 @@ function DriverPickerModal({ drivers, onPick, onClose }: {
   onPick: (driver: Driver) => void;
   onClose: () => void;
 }) {
+  const available = drivers.filter(d => d.status === 'available');
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg p-5 pb-6" onClick={e => e.stopPropagation()}>
@@ -77,40 +79,27 @@ function DriverPickerModal({ drivers, onPick, onClose }: {
           <div className="w-9" />
         </div>
 
-        {drivers.length === 0 ? (
+        {available.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-4xl mb-3">🏍️</p>
-            <p className="text-gray-500 dark:text-slate-400 font-medium">لا يوجد سواقون</p>
-            <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">أضف سواقين من صفحة السواقون</p>
+            <p className="text-gray-500 dark:text-slate-400 font-medium">لا يوجد سواقون متاحون</p>
+            <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">جميع السواقين مشغولون حالياً</p>
           </div>
         ) : (
           <div className="space-y-3 max-h-72 overflow-y-auto">
-            {drivers.map(d => {
-              const available = d.status === 'available';
-              return (
-                <button key={d.id} onClick={() => available && onPick(d)} disabled={!available}
-                  className={`w-full flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all ${
-                    available
-                      ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 active:scale-95'
-                      : 'bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 opacity-60 cursor-not-allowed'
-                  }`}>
-                  <div className="flex items-center gap-2">
-                    {available ? (
-                      <span className="w-2.5 h-2.5 rounded-full bg-green-400 flex-shrink-0" />
-                    ) : (
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0" />
-                    )}
-                    <span className={`font-bold text-sm ${available ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-slate-500'}`}>
-                      {available ? 'تعيين' : 'مشغول'}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-gray-900 dark:text-slate-100">{d.name}</p>
-                    <p className="text-sm text-gray-400 dark:text-slate-500 mt-0.5" dir="ltr">{d.phone}</p>
-                  </div>
-                </button>
-              );
-            })}
+            {available.map(d => (
+              <button key={d.id} onClick={() => onPick(d)}
+                className="w-full flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 active:scale-95">
+                <span className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-400 flex-shrink-0" />
+                  <span className="font-bold text-sm text-blue-600 dark:text-blue-400">تعيين وإرسال</span>
+                </span>
+                <div className="text-right">
+                  <p className="font-bold text-gray-900 dark:text-slate-100">{d.name}</p>
+                  <p className="text-sm text-gray-400 dark:text-slate-500 mt-0.5" dir="ltr">{d.phone}</p>
+                </div>
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -191,6 +180,14 @@ function DashboardPage() {
   };
 
   const assignDriverAndStart = async (orderId: string, driver: Driver) => {
+    // افتح الواتس فوراً قبل أي await لضمان عدم الحجب من المتصفح
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+      const phone = formatPhoneForWA(driver.phone);
+      const msg   = buildWAMessage({ ...order, driver_name: driver.name, driver_phone: driver.phone });
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
     await Promise.all([
       supabase.from('orders').update({
         status: 'preparing',
