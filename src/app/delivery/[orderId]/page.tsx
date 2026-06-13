@@ -2,7 +2,35 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Phone, Navigation, MapPin, AlertCircle, Loader2, CheckCircle2, Play } from 'lucide-react';
+import { Phone, Navigation, MapPin, AlertCircle, Loader2, CheckCircle2, Play, Bell } from 'lucide-react';
+
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function subscribeDriver(driverId: string) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') return;
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+  }
+  await fetch('/api/push/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ driver_id: driverId, subscription: sub.toJSON() }),
+  });
+}
 
 type Order = {
   id: string;
@@ -50,6 +78,7 @@ export default function DeliveryPage() {
   const [delivered,      setDelivered]      = useState(false);
   const [started,        setStarted]        = useState(false);
   const [starting,       setStarting]       = useState(false);
+  const [notifStatus,    setNotifStatus]    = useState<'idle' | 'granted' | 'denied'>('idle');
 
   // جلب بيانات الطلب
   useEffect(() => {
@@ -68,6 +97,23 @@ export default function DeliveryPage() {
         setLoading(false);
       });
   }, [orderId]);
+
+  // تسجيل الـ service worker وطلب إذن الإشعارات
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    if (Notification.permission === 'granted') setNotifStatus('granted');
+    if (Notification.permission === 'denied')  setNotifStatus('denied');
+  }, []);
+
+  // بعد تحميل الطلب: إذا السائق معروف واشتراك الإشعارات لم يتم بعد
+  useEffect(() => {
+    if (!order?.driver_id) return;
+    if (Notification.permission === 'granted') {
+      setNotifStatus('granted');
+      subscribeDriver(order.driver_id);
+    }
+  }, [order?.driver_id]);
 
   // تشغيل GPS والخريطة بعد الضغط على البدء
   useEffect(() => {
@@ -303,6 +349,24 @@ export default function DeliveryPage() {
               </a>
             )}
           </div>
+
+          {/* تفعيل الإشعارات */}
+          {notifStatus !== 'granted' && notifStatus !== 'denied' && order?.driver_id && (
+            <button
+              onClick={async () => {
+                await subscribeDriver(order.driver_id!);
+                setNotifStatus(Notification.permission === 'granted' ? 'granted' : 'denied');
+              }}
+              className="w-full py-3 bg-amber-500 text-white font-bold rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <Bell size={18} /> فعّل إشعارات الطلبات
+            </button>
+          )}
+          {notifStatus === 'granted' && (
+            <div className="flex items-center justify-center gap-2 py-2 text-green-600 dark:text-green-400 text-sm font-medium">
+              <Bell size={15} /> الإشعارات مفعّلة
+            </div>
+          )}
 
           {/* زر البدء */}
           <button

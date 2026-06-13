@@ -249,6 +249,14 @@ function DashboardPage() {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: status as Order['status'] } : o));
   };
 
+  const sendPushToDriver = (driverId: string, title: string, body: string, url: string, tag: string) => {
+    fetch('/api/push/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driver_id: driverId, title, body, url, tag }),
+    }).catch(() => {});
+  };
+
   const assignDriverAndStart = async (orderId: string, driver: Driver) => {
     // افتح الواتس فوراً قبل أي await لضمان عدم الحجب من المتصفح
     const order = orders.find(o => o.id === orderId);
@@ -272,6 +280,10 @@ function DashboardPage() {
     ));
     setDrivers(prev => prev.map(d => d.id === driver.id ? { ...d, status: 'unavailable' } : d));
     setPickerOrderId(null);
+
+    // إشعار فوري للسائق
+    const deliveryLink = `${window.location.origin}/delivery/${orderId}`;
+    sendPushToDriver(driver.id, '🛵 طلب جديد!', `طلب جديد من ${order?.client_name ?? ''}`, deliveryLink, 'new-order');
   };
 
   const handleAction = (order: Order) => {
@@ -285,6 +297,10 @@ function DashboardPage() {
         const deliveryLink = `${window.location.origin}/delivery/${order.id}`;
         const msg = `✅ الطلب جاهز للاستلام!\nتفضل على المطعم لاخذ الطلب 🏍️\n\n🔗 رابط إتمام التوصيل:\n${deliveryLink}`;
         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        // إشعار push للسائق أيضاً
+        if (order.driver_id) {
+          sendPushToDriver(order.driver_id, '✅ الطلب جاهز!', 'تفضل للمطعم لاستلام الطلب 🏍️', deliveryLink, 'order-ready');
+        }
       }
       updateStatus(order.id, next);
     }
