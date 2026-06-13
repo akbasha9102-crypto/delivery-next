@@ -6,13 +6,13 @@ const supabase = createClient(
   'sb_publishable_DB8lKUjdnAah-jNbpFV22w_7Id2Eggr'
 );
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
-
 export async function POST(request: Request) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
+
   const { driver_id, title, body, url, tag } = await request.json();
   if (!driver_id || !title) {
     return Response.json({ error: 'missing fields' }, { status: 400 });
