@@ -54,32 +54,34 @@ function OrderTrackModal({ order, imageMap, onClose, onComplete }: {
   onClose: () => void;
   onComplete: () => void;
 }) {
+  const [showMap,   setShowMap]   = useState(false);
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(
     order.driver_lat && order.driver_lng ? { lat: order.driver_lat, lng: order.driver_lng } : null
   );
-  const mapRef         = useRef<HTMLDivElement>(null);
-  const mapInstance    = useRef<any>(null);
-  const driverMarker   = useRef<any>(null);
-  const leafletCssRef  = useRef<HTMLLinkElement | null>(null);
+  const mapRef        = useRef<HTMLDivElement>(null);
+  const mapInstance   = useRef<any>(null);
+  const driverMarker  = useRef<any>(null);
+  const leafletCssRef = useRef<HTMLLinkElement | null>(null);
 
-  // polling موقع السائق كل 4 ثواني
+  // polling موقع السائق كل 4 ثواني (فقط لما الخريطة مفتوحة)
   useEffect(() => {
+    if (!showMap) return;
     const id = setInterval(async () => {
       const { data } = await supabase.from('orders').select('driver_lat,driver_lng').eq('id', order.id).single();
       if (data?.driver_lat && data?.driver_lng) setDriverPos({ lat: data.driver_lat, lng: data.driver_lng });
     }, 4000);
     return () => clearInterval(id);
-  }, [order.id]);
+  }, [showMap, order.id]);
 
-  // تحديث ماركر السائق عند تغيّر موقعه
+  // تحديث ماركر السائق
   useEffect(() => {
     if (!driverMarker.current || !driverPos) return;
     driverMarker.current.setLatLng([driverPos.lat, driverPos.lng]);
   }, [driverPos]);
 
-  // إنشاء الخريطة عند الفتح
+  // إنشاء الخريطة عند فتحها
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!showMap || !mapRef.current) return;
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -98,14 +100,13 @@ function OrderTrackModal({ order, imageMap, onClose, onComplete }: {
       const map = L.map(mapRef.current, { attributionControl: false }).setView(center, 14);
       mapInstance.current = map;
       setTimeout(() => map.invalidateSize(), 100);
-
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
       const bounds: [number, number][] = [];
 
       if (order.client_lat && order.client_lng) {
         bounds.push([order.client_lat, order.client_lng]);
-        L.divIcon && L.marker([order.client_lat, order.client_lng], {
+        L.marker([order.client_lat, order.client_lng], {
           icon: L.divIcon({
             html: `<div style="width:34px;height:34px;background:#ef4444;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:18px">🏠</div>`,
             className: '', iconSize: [34, 34], iconAnchor: [17, 17],
@@ -133,7 +134,7 @@ function OrderTrackModal({ order, imageMap, onClose, onComplete }: {
       if (leafletCssRef.current?.parentNode) { leafletCssRef.current.parentNode.removeChild(leafletCssRef.current); leafletCssRef.current = null; }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [showMap]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60" onClick={onClose}>
@@ -151,23 +152,6 @@ function OrderTrackModal({ order, imageMap, onClose, onComplete }: {
           <div className="w-9" />
         </div>
 
-        {/* خريطة التتبع */}
-        <div className="relative">
-          <div ref={mapRef} style={{ height: 280 }} className="w-full" />
-          {!order.client_lat && !driverPos && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-100 dark:bg-slate-700">
-              <p className="text-4xl">🏍️</p>
-              <p className="text-sm text-gray-500 dark:text-slate-400">لا يوجد موقع متاح</p>
-            </div>
-          )}
-          {driverPos && (
-            <div className="absolute top-2 right-2 bg-white/90 dark:bg-slate-800/90 text-xs font-bold text-green-600 px-2.5 py-1.5 rounded-full shadow flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              مباشر
-            </div>
-          )}
-        </div>
-
         <div className="p-5 space-y-4 pb-8">
           {/* اسم + مبلغ */}
           <div className="flex justify-between items-start">
@@ -178,9 +162,7 @@ function OrderTrackModal({ order, imageMap, onClose, onComplete }: {
             </div>
           </div>
 
-          {/* عنوان */}
           {order.delivery_address && <p className="text-xs text-gray-400 dark:text-slate-500 text-right">📍 {order.delivery_address}</p>}
-          {/* ملاحظة */}
           {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
 
           {/* الأصناف */}
@@ -200,18 +182,32 @@ function OrderTrackModal({ order, imageMap, onClose, onComplete }: {
             })}
           </div>
 
-          {/* السائق */}
+          {/* السائق + زر الخريطة */}
           {order.driver_name && (
             <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2.5">
-              <div className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${driverPos ? 'bg-green-400 animate-pulse' : 'bg-gray-300 dark:bg-slate-500'}`} />
-                <span className="text-xs text-blue-400">{driverPos ? 'موقع مباشر' : 'في انتظار الموقع'}</span>
-              </div>
+              <button
+                onClick={() => setShowMap(v => !v)}
+                className="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-500 text-white active:opacity-80 transition-all flex-shrink-0">
+                {showMap ? 'إخفاء الخريطة' : '🗺️ تتبع السائق'}
+              </button>
               <div className="text-right">
                 <p className="text-blue-700 dark:text-blue-300 font-bold text-sm">{order.driver_name}</p>
                 <p className="text-xs text-blue-400 dark:text-blue-500" dir="ltr">{order.driver_phone}</p>
               </div>
               <span className="text-xl">🏍️</span>
+            </div>
+          )}
+
+          {/* الخريطة — تظهر فقط لما يضغط تتبع السائق */}
+          {showMap && (
+            <div className="relative rounded-2xl overflow-hidden">
+              <div ref={mapRef} style={{ height: 280 }} className="w-full" />
+              {driverPos && (
+                <div className="absolute top-2 right-2 bg-white/90 dark:bg-slate-800/90 text-xs font-bold text-green-600 px-2.5 py-1.5 rounded-full shadow flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  مباشر
+                </div>
+              )}
             </div>
           )}
 
