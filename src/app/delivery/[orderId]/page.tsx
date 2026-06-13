@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Phone, Navigation, MapPin, AlertCircle, Loader2, CheckCircle2, Play, Bell } from 'lucide-react';
 
@@ -56,6 +56,7 @@ function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: numbe
 export default function DeliveryPage() {
   const params  = useParams<{ orderId: string }>();
   const orderId = params.orderId;
+  const router  = useRouter();
 
   const mapContainerRef    = useRef<HTMLDivElement>(null);
   const mapInstanceRef     = useRef<any>(null);
@@ -306,7 +307,12 @@ export default function DeliveryPage() {
   // ── تم التوصيل ──
   if (delivered) {
     return (
-      <div className="min-h-screen bg-green-50 dark:bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-green-50 dark:bg-slate-900 flex items-center justify-center relative">
+        <button
+          onClick={() => router.push('/driver/dashboard')}
+          className="absolute top-4 right-4 flex items-center gap-1.5 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 font-bold text-sm px-4 py-2 rounded-xl shadow active:scale-95 transition-all">
+          الرئيسية ←
+        </button>
         <div className="text-center p-8">
           <CheckCircle2 size={80} className="text-green-500 mx-auto mb-4" strokeWidth={1.5} />
           <h2 className="text-2xl font-black text-gray-900 dark:text-slate-100 mb-2">تم التوصيل!</h2>
