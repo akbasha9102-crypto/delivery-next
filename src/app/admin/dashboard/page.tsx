@@ -210,6 +210,12 @@ function DashboardPage() {
     if (order.status === 'pending') {
       fetchDrivers().then(() => setPickerOrderId(order.id));
     } else {
+      if (order.status === 'preparing' && order.driver_phone) {
+        const phone = formatPhoneForWA(order.driver_phone);
+        const deliveryLink = `${window.location.origin}/delivery/${order.id}`;
+        const msg = `✅ الطلب جاهز للاستلام!\nتفضل على المطعم لاخذ الطلب 🏍️\n\n🔗 رابط إتمام التوصيل:\n${deliveryLink}`;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+      }
       updateStatus(order.id, next);
     }
   };
