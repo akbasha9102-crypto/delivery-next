@@ -29,7 +29,7 @@ export default function DriverLoginPage() {
       .single();
     setLoading(false);
     if (!data) { setError('رقم الهاتف أو كلمة المرور غير صحيحة'); return; }
-    localStorage.setItem('driver_session', JSON.stringify({ id: data.id, name: data.name }));
+    localStorage.setItem('driver_session', JSON.stringify({ id: data.id, name: data.name, phone: data.phone }));
     router.replace('/driver/dashboard');
   };
 

@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Bell, BellOff, LogOut, MessageCircle, MapPin, ChevronLeft, Loader2, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import { Bell, BellOff, LogOut, MessageCircle, MapPin, ChevronLeft, Loader2, CheckCircle2, Clock, TrendingUp, X, Check, Package } from 'lucide-react';
 
 type Order = {
   id: string;
@@ -10,11 +10,11 @@ type Order = {
   client_phone: string;
   delivery_address: string | null;
   total_amount: number;
-  status: 'preparing' | 'ready' | 'completed';
+  status: 'pending' | 'preparing' | 'ready' | 'completed';
   created_at: string;
 };
 
-type Session = { id: string; name: string };
+type Session = { id: string; name: string; phone: string };
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
@@ -26,7 +26,7 @@ function urlBase64ToUint8Array(b64: string) {
 
 function timeAgo(dateStr: string) {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60)  return `${diff} ث`;
+  if (diff < 60)   return `${diff} ث`;
   if (diff < 3600) return `${Math.floor(diff / 60)} د`;
   return `${Math.floor(diff / 3600)} س`;
 }
@@ -37,46 +37,72 @@ function todayStart() {
   return d.toISOString();
 }
 
+function getRejected(driverId: string): string[] {
+  try { return JSON.parse(localStorage.getItem(`rejected_${driverId}`) || '[]'); }
+  catch { return []; }
+}
+function addRejected(driverId: string, orderId: string) {
+  const list = getRejected(driverId);
+  if (!list.includes(orderId)) {
+    localStorage.setItem(`rejected_${driverId}`, JSON.stringify([...list, orderId]));
+  }
+}
+
 export default function DriverDashboard() {
   const router = useRouter();
   const [session,     setSession]     = useState<Session | null>(null);
+  const [incoming,    setIncoming]    = useState<Order[]>([]);
   const [active,      setActive]      = useState<Order[]>([]);
   const [completed,   setCompleted]   = useState<Order[]>([]);
   const [notifStatus, setNotifStatus] = useState<NotificationPermission>('default');
   const [subscribing, setSubscribing] = useState(false);
-  const [tick,        setTick]        = useState(0);
+  const [accepting,   setAccepting]   = useState<string | null>(null);
+  const [flashId,     setFlashId]     = useState<string | null>(null);
+  const sessionRef = useRef<Session | null>(null);
 
-  // تحديث المؤقت كل دقيقة
-  useEffect(() => {
-    const t = setInterval(() => setTick(n => n + 1), 60_000);
-    return () => clearInterval(t);
-  }, []);
+  useEffect(() => { setInterval(() => {}, 60_000); }, []);
 
-  // تحميل الجلسة
   useEffect(() => {
     const raw = typeof window !== 'undefined' ? localStorage.getItem('driver_session') : null;
     if (!raw) { router.replace('/driver'); return; }
-    setSession(JSON.parse(raw));
+    const s = JSON.parse(raw) as Session;
+    setSession(s);
+    sessionRef.current = s;
   }, [router]);
 
-  const fetchOrders = useCallback(async (driverId: string) => {
-    const [{ data: activeData }, { data: doneData }] = await Promise.all([
-      supabase
-        .from('orders')
-        .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at')
-        .eq('driver_id', driverId)
-        .in('status', ['preparing', 'ready'])
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('orders')
-        .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at')
-        .eq('driver_id', driverId)
-        .eq('status', 'completed')
-        .gte('created_at', todayStart())
-        .order('created_at', { ascending: false }),
-    ]);
-    setActive((activeData as Order[]) || []);
-    setCompleted((doneData as Order[]) || []);
+  const fetchIncoming = useCallback((driverId: string) => {
+    const rejected = getRejected(driverId);
+    supabase
+      .from('orders')
+      .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at')
+      .eq('status', 'pending')
+      .is('driver_id', null)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        const filtered = ((data as Order[]) || []).filter(o => !rejected.includes(o.id));
+        setIncoming(filtered);
+      });
+  }, []);
+
+  const fetchActive = useCallback((driverId: string) => {
+    supabase
+      .from('orders')
+      .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at')
+      .eq('driver_id', driverId)
+      .in('status', ['preparing', 'ready'])
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setActive((data as Order[]) || []));
+  }, []);
+
+  const fetchCompleted = useCallback((driverId: string) => {
+    supabase
+      .from('orders')
+      .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at')
+      .eq('driver_id', driverId)
+      .eq('status', 'completed')
+      .gte('created_at', todayStart())
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setCompleted((data as Order[]) || []));
   }, []);
 
   useEffect(() => {
@@ -92,13 +118,21 @@ export default function DriverDashboard() {
         }
       }).catch(() => {});
     }
-    fetchOrders(session.id);
-    const ch = supabase.channel(`driver-orders-${session.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `driver_id=eq.${session.id}` },
-        () => fetchOrders(session.id))
+
+    fetchIncoming(session.id);
+    fetchActive(session.id);
+    fetchCompleted(session.id);
+
+    // real-time: طلبات جديدة (pending بلا سائق)
+    const chIncoming = supabase.channel('driver-incoming')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        const s = sessionRef.current;
+        if (s) { fetchIncoming(s.id); fetchActive(s.id); fetchCompleted(s.id); }
+      })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [session, fetchOrders]);
+
+    return () => { supabase.removeChannel(chIncoming); };
+  }, [session, fetchIncoming, fetchActive, fetchCompleted]);
 
   async function saveSubscription(driverId: string, sub: PushSubscription) {
     await fetch('/api/push/subscribe', {
@@ -128,6 +162,42 @@ export default function DriverDashboard() {
       await subscribeToPush(session.id, reg);
     }
     setSubscribing(false);
+  };
+
+  const acceptOrder = async (order: Order) => {
+    if (!session || accepting) return;
+    setAccepting(order.id);
+    // نحاول نعين الطلب — فقط إذا لا يزال بلا سائق (race condition protection)
+    const { data, error } = await supabase
+      .from('orders')
+      .update({
+        driver_id:    session.id,
+        driver_name:  session.name,
+        driver_phone: session.phone,
+        status:       'preparing',
+      })
+      .eq('id', order.id)
+      .is('driver_id', null)
+      .select('id')
+      .single();
+
+    if (error || !data) {
+      // سبقه سائق آخر
+      setFlashId(order.id);
+      setTimeout(() => setFlashId(null), 2500);
+      setIncoming(prev => prev.filter(o => o.id !== order.id));
+    } else {
+      await supabase.from('drivers').update({ status: 'unavailable' }).eq('id', session.id);
+      setIncoming(prev => prev.filter(o => o.id !== order.id));
+      fetchActive(session.id);
+    }
+    setAccepting(null);
+  };
+
+  const rejectOrder = (orderId: string) => {
+    if (!session) return;
+    addRejected(session.id, orderId);
+    setIncoming(prev => prev.filter(o => o.id !== orderId));
   };
 
   const logout = () => {
@@ -183,18 +253,93 @@ export default function DriverDashboard() {
           </div>
         )}
 
+        {/* ═══ طلبات جديدة ═══ */}
+        {incoming.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse" />
+              <p className="text-blue-300 text-sm font-black">طلبات جديدة ({incoming.length})</p>
+            </div>
+
+            {incoming.map(order => (
+              <div key={order.id}
+                className={`rounded-3xl border-2 overflow-hidden transition-all ${
+                  flashId === order.id
+                    ? 'border-red-500 bg-red-900/30'
+                    : 'border-blue-500/60 bg-slate-800'
+                }`}>
+                {flashId === order.id ? (
+                  <div className="px-4 py-5 text-center">
+                    <p className="text-red-300 font-black text-lg">⚡ استلمها سائق آخر!</p>
+                    <p className="text-red-400 text-sm mt-1">الطلب لم يعد متاحاً</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="px-4 py-2 bg-blue-600/20 flex items-center justify-between border-b border-blue-500/20">
+                      <div className="flex items-center gap-1.5">
+                        <Clock size={12} className="text-blue-400" />
+                        <span className="text-blue-300 text-xs">{timeAgo(order.created_at)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Package size={13} className="text-blue-400" />
+                        <span className="text-blue-200 text-xs font-bold">طلب جديد</span>
+                      </div>
+                    </div>
+
+                    <div className="px-4 py-3.5">
+                      <div className="flex items-start justify-between mb-3">
+                        <span className="text-green-400 font-black text-xl">
+                          {order.total_amount.toLocaleString()}
+                          <span className="text-xs font-normal text-slate-400"> د.ع</span>
+                        </span>
+                        <div className="text-right">
+                          <p className="font-black text-white text-lg">{order.client_name}</p>
+                          {order.delivery_address && (
+                            <p className="text-slate-400 text-xs flex items-center gap-1 justify-end mt-0.5">
+                              <MapPin size={10} /> {order.delivery_address}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => rejectOrder(order.id)}
+                          disabled={accepting === order.id}
+                          className="flex items-center justify-center gap-1.5 py-3 bg-slate-700 text-slate-300 font-bold rounded-2xl text-sm active:scale-95 transition-all disabled:opacity-40">
+                          <X size={17} /> رفض
+                        </button>
+                        <button
+                          onClick={() => acceptOrder(order)}
+                          disabled={!!accepting}
+                          className="flex items-center justify-center gap-1.5 py-3 bg-blue-600 text-white font-black rounded-2xl text-sm active:scale-95 transition-all disabled:opacity-60 shadow-lg shadow-blue-900/50">
+                          {accepting === order.id
+                            ? <Loader2 size={17} className="animate-spin" />
+                            : <Check size={17} />
+                          }
+                          قبول
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* إحصائيات اليوم */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/60 text-center">
             <div className="flex items-center justify-center gap-1.5 mb-1">
-              <CheckCircle2 size={15} className="text-green-400" />
+              <CheckCircle2 size={14} className="text-green-400" />
               <span className="text-slate-400 text-xs font-medium">توصيلات اليوم</span>
             </div>
             <p className="text-white font-black text-3xl">{completed.length}</p>
           </div>
           <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/60 text-center">
             <div className="flex items-center justify-center gap-1.5 mb-1">
-              <TrendingUp size={15} className="text-green-400" />
+              <TrendingUp size={14} className="text-green-400" />
               <span className="text-slate-400 text-xs font-medium">مجموع اليوم</span>
             </div>
             <p className="text-green-400 font-black text-2xl">{todayEarnings.toLocaleString()}</p>
@@ -202,15 +347,15 @@ export default function DriverDashboard() {
           </div>
         </div>
 
-        {/* طلبات "جاهزة" — أولوية قصوى */}
+        {/* طلبات "جاهزة" — اذهب للمطعم الآن */}
         {readyOrders.map(order => (
           <div key={order.id} className="bg-amber-500 rounded-3xl overflow-hidden shadow-lg shadow-amber-900/40">
             <div className="px-4 py-2 bg-amber-600/50 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Clock size={13} className="text-amber-200" />
-                <span className="text-amber-200 text-xs font-medium">{timeAgo(order.created_at)}</span>
+                <Clock size={12} className="text-amber-200" />
+                <span className="text-amber-200 text-xs">{timeAgo(order.created_at)}</span>
               </div>
-              <span className="text-amber-100 text-xs font-black tracking-wide">🔔 اذهب للمطعم الآن</span>
+              <span className="text-amber-100 text-xs font-black">🔔 اذهب للمطعم الآن</span>
             </div>
             <div className="px-4 py-4">
               <div className="flex items-start justify-between mb-3">
@@ -231,14 +376,13 @@ export default function DriverDashboard() {
                 {order.client_phone && (
                   <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
                     target="_blank" rel="noopener noreferrer"
-                    onClick={e => e.stopPropagation()}
-                    className="flex items-center justify-center gap-1.5 py-2.5 bg-white/20 text-white font-bold rounded-xl text-sm active:scale-95 transition-all">
+                    className="flex items-center justify-center gap-1.5 py-2.5 bg-white/20 text-white font-bold rounded-2xl text-sm active:scale-95 transition-all">
                     <MessageCircle size={16} /> واتساب
                   </a>
                 )}
                 <a href={`/delivery/${order.id}`}
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-white text-amber-600 font-black rounded-xl text-sm active:scale-95 transition-all">
-                  ابدأ التوصيل <ChevronLeft size={16} />
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-white text-amber-600 font-black rounded-2xl text-sm active:scale-95 transition-all">
+                  ابدأ <ChevronLeft size={16} />
                 </a>
               </div>
             </div>
@@ -278,7 +422,10 @@ export default function DriverDashboard() {
                       </a>
                     )}
                     <div className="flex items-center gap-2">
-                      <span className="text-green-400 font-black text-lg">{order.total_amount.toLocaleString()} <span className="text-xs font-normal text-slate-500">د.ع</span></span>
+                      <span className="text-green-400 font-black text-lg">
+                        {order.total_amount.toLocaleString()}
+                        <span className="text-xs font-normal text-slate-500"> د.ع</span>
+                      </span>
                       <ChevronLeft size={16} className="text-slate-500" />
                     </div>
                   </div>
@@ -288,12 +435,12 @@ export default function DriverDashboard() {
           </div>
         )}
 
-        {/* لا يوجد طلبات نشطة */}
-        {active.length === 0 && (
+        {/* لا يوجد طلبات */}
+        {active.length === 0 && incoming.length === 0 && (
           <div className="text-center py-14 space-y-3">
             <p className="text-6xl">😴</p>
             <p className="text-slate-300 text-xl font-black">لا يوجد طلبات الآن</p>
-            <p className="text-slate-500 text-sm">ستظهر هنا فور تعيينك على طلب</p>
+            <p className="text-slate-500 text-sm">ستظهر الطلبات الجديدة هنا فوراً</p>
           </div>
         )}
 
@@ -311,7 +458,10 @@ export default function DriverDashboard() {
                   <span>{timeAgo(order.created_at)}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-green-500 font-bold text-sm">{order.total_amount.toLocaleString()} <span className="text-xs font-normal text-slate-600">د.ع</span></span>
+                  <span className="text-green-500 font-bold text-sm">
+                    {order.total_amount.toLocaleString()}
+                    <span className="text-xs font-normal text-slate-600"> د.ع</span>
+                  </span>
                   <p className="text-slate-400 font-bold text-sm">{order.client_name}</p>
                   <CheckCircle2 size={15} className="text-green-600" />
                 </div>
