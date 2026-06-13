@@ -518,6 +518,7 @@ export default function TrackPage() {
 
             {/* Timeline */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
+              <style>{`@keyframes line-fill{0%{width:0%}100%{width:100%}}`}</style>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-6">حالة الطلب</h3>
               <div className="flex items-start">
                 {STEPS.map((step, idx) => (
@@ -542,7 +543,7 @@ export default function TrackPage() {
                             idx < current
                               ? { width: '100%' }
                               : idx === current
-                              ? { animation: 'line-fill 2s ease-in-out infinite' }
+                              ? { width: '0%', animation: 'line-fill 2s linear infinite' }
                               : { width: '0%' }
                           }
                         />
