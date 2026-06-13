@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Search, MessageSquare, AlertCircle } from 'lucide-react';
@@ -154,6 +154,7 @@ type Order = {
 };
 
 
+const MOTO_ICON_HTML = `<div style="width:46px;height:46px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 4px 16px rgba(37,99,235,0.45);display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;">🏍️</div>`;
 
 export default function TrackPage() {
   const { dark } = useDarkMode();
@@ -205,6 +206,14 @@ export default function TrackPage() {
   const [feedbackDone, setFeedbackDone] = useState(false);
   const [alreadySentFeedback, setAlreadySentFeedback] = useState(false);
 
+  const trackMapRef          = useRef<HTMLDivElement>(null);
+  const trackMapInstance     = useRef<any>(null);
+  const trackDriverMarker    = useRef<any>(null);
+  const trackLeafletCss      = useRef<HTMLLinkElement | null>(null);
+  const orderIdRef           = useRef<string | null>(null);
+  const trackRouteLineRef    = useRef<any>(null);
+  const trackRouteLastFetch  = useRef<number>(0);
+
   const fetchOrder = useCallback(async (phone: string) => {
     if (!phone) { setLoading(false); setNotFound(true); return; }
     setLoading(true);
@@ -254,6 +263,147 @@ export default function TrackPage() {
     return () => { supabase.removeChannel(channel); };
   }, [order?.id]);
 
+  // keep a stable ref to the current order id so polling closures don't go stale
+  orderIdRef.current = order?.id ?? null;
+
+  const destroyMap = useCallback(() => {
+    if (trackMapInstance.current) {
+      trackMapInstance.current.remove();
+      trackMapInstance.current = null;
+      trackDriverMarker.current = null;
+      trackRouteLineRef.current = null;
+    }
+    if (trackLeafletCss.current?.parentNode) {
+      trackLeafletCss.current.parentNode.removeChild(trackLeafletCss.current);
+      trackLeafletCss.current = null;
+    }
+  }, []);
+
+  // Effect A: map lifecycle — depends only on status + client location.
+  // This effect NEVER re-runs due to driver position changes, so the map
+  // is not torn down every time the driver moves.
+  useEffect(() => {
+    if (order?.status !== 'ready') { destroyMap(); return destroyMap; }
+    if (trackMapInstance.current) return; // already initialized by a previous run
+    if (!order.client_lat || !order.client_lng || !trackMapRef.current) return;
+    // client location available — create the base map with home marker
+    if (!trackLeafletCss.current) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+      trackLeafletCss.current = link;
+    }
+    import('leaflet').then((mod) => {
+      const L = (mod as any).default ?? mod;
+      if (!trackMapRef.current || trackMapInstance.current) return;
+      const map = L.map(trackMapRef.current, { attributionControl: false })
+        .setView([order.client_lat!, order.client_lng!], 15);
+      trackMapInstance.current = map;
+      setTimeout(() => map.invalidateSize(), 100);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap', maxZoom: 19,
+      }).addTo(map);
+      const homeIcon = L.divIcon({
+        html: `<div style="width:34px;height:34px;background:#ef4444;border-radius:50%;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:18px">🏠</div>`,
+        className: '', iconSize: [34, 34], iconAnchor: [17, 17],
+      });
+      L.marker([order.client_lat!, order.client_lng!], { icon: homeIcon })
+        .addTo(map)
+        .bindPopup(`<div dir="rtl" style="font-family:sans-serif"><b>موقعك</b></div>`);
+    });
+    return destroyMap;
+  }, [order?.status, order?.client_lat, order?.client_lng, destroyMap]);
+
+  // Effect B: driver marker — runs on every position update but NEVER destroys the map.
+  // Also handles the case where client_lat is null (initialises the map on first driver fix).
+  useEffect(() => {
+    if (order?.status !== 'ready' || !order.driver_lat || !order.driver_lng) return;
+    const dLat = order.driver_lat;
+    const dLng = order.driver_lng;
+
+    import('leaflet').then((mod) => {
+      const L = (mod as any).default ?? mod;
+
+      // If no map yet (client never shared location), create one centred on driver
+      if (!trackMapInstance.current && trackMapRef.current) {
+        if (!trackLeafletCss.current) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(link);
+          trackLeafletCss.current = link;
+        }
+        const map = L.map(trackMapRef.current, { attributionControl: false }).setView([dLat, dLng], 15);
+        trackMapInstance.current = map;
+        setTimeout(() => map.invalidateSize(), 100);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap', maxZoom: 19,
+        }).addTo(map);
+      }
+
+      if (!trackMapInstance.current) return;
+
+      if (trackDriverMarker.current) {
+        trackDriverMarker.current.setLatLng([dLat, dLng]);
+      } else {
+        const icon = L.divIcon({
+          html: MOTO_ICON_HTML,
+          className: '', iconSize: [46, 46], iconAnchor: [23, 23],
+        });
+        trackDriverMarker.current = L.marker([dLat, dLng], { icon })
+          .addTo(trackMapInstance.current)
+          .bindPopup(`<div dir="rtl" style="font-family:sans-serif"><b>السائق في الطريق إليك</b></div>`);
+        if (order.client_lat && order.client_lng) {
+          try {
+            trackMapInstance.current.fitBounds(
+              L.latLngBounds([order.client_lat, order.client_lng], [dLat, dLng]),
+              { padding: [50, 50] }
+            );
+          } catch (_) {}
+        }
+      }
+
+      // رسم مسار الطريق من موقع السائق إلى العميل
+      if (order.client_lat && order.client_lng) {
+        const shouldFetch = !trackRouteLineRef.current || (Date.now() - trackRouteLastFetch.current > 30_000);
+        if (shouldFetch) {
+          trackRouteLastFetch.current = Date.now();
+          const cLat = order.client_lat, cLng = order.client_lng;
+          fetch(`https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${cLng},${cLat}?overview=full&geometries=geojson`)
+            .then(r => r.json())
+            .then(json => {
+              const coords = json.routes?.[0]?.geometry?.coordinates?.map(
+                ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+              );
+              if (!coords?.length || !trackMapInstance.current) return;
+              if (trackRouteLineRef.current) {
+                trackRouteLineRef.current.setLatLngs(coords);
+              } else {
+                trackRouteLineRef.current = L.polyline(coords, {
+                  color: '#2563eb', weight: 4, opacity: 0.8, dashArray: '8, 5',
+                }).addTo(trackMapInstance.current);
+                trackRouteLineRef.current.bringToBack();
+              }
+            })
+            .catch(() => {});
+        }
+      }
+    });
+  }, [order?.status, order?.driver_lat, order?.driver_lng]);
+
+  // Polling fallback: re-fetch the order every 8 s while in transit so the
+  // driver marker updates even if the Supabase Realtime subscription lags.
+  useEffect(() => {
+    if (order?.status !== 'ready') return;
+    const id = setInterval(async () => {
+      const currentId = orderIdRef.current;
+      if (!currentId) return;
+      const { data } = await supabase.from('orders').select('*').eq('id', currentId).single();
+      if (data) setOrder(data as Order);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [order?.status]);
 
   const submitFeedback = async () => {
     if (!feedbackText.trim() || !order) return;
@@ -404,29 +554,97 @@ export default function TrackPage() {
               </div>
             </div>
 
+            {/* Live Driver Map */}
+            {order.status === 'ready' && (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${order.driver_lat ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-500'}`} />
+                    <span className="text-xs font-medium text-gray-500 dark:text-slate-400">
+                      {order.driver_lat ? 'مباشر' : 'في انتظار السائق'}
+                    </span>
+                  </div>
+                  <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">تتبع السائق 🏍️</p>
+                </div>
+                <div style={{ position: 'relative', height: 280 }}>
+                  <div ref={trackMapRef} style={{ height: 280 }} />
+                  {!order.driver_lat && !order.client_lat && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-50 dark:bg-slate-700">
+                      <div className="text-4xl">🏍️</div>
+                      <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">جاري تحديد موقع السائق...</p>
+                    </div>
+                  )}
+                  {order.client_lat && !order.driver_lat && (
+                    <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none">
+                      <div className="bg-white/90 dark:bg-slate-800/90 text-xs text-gray-500 dark:text-slate-400 px-3 py-1.5 rounded-full shadow flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
+                        في انتظار موقع السائق...
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Driver Arrived Banner */}
+            {order.driver_arrived && order.status === 'ready' && (
+              <div className="rounded-2xl p-5 text-center border-2 border-orange-300 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-700"
+                   style={{ animation: 'status-enter 0.5s ease-out' }}>
+                <div className="text-4xl mb-2">🏍️</div>
+                <p className="font-black text-orange-800 dark:text-orange-300 text-lg mb-1">السائق وصل!</p>
+                <p className="text-orange-600 dark:text-orange-400 text-sm">الرجاء الاستعداد لاستلام طلبك</p>
+              </div>
+            )}
+
             {/* Animated Status Card */}
             <div key={order.status}
                  className="border-2 rounded-2xl p-5 text-center border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                  style={{ animation: 'status-enter 0.5s ease-out' }}>
-              <div className="mb-3">
-                {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{STEPS[current]?.icon}</div>}
-              </div>
-              <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{STEPS[current]?.label}</p>
-              <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
-              {order.status === 'completed' && !alreadySentFeedback && (
-                <button
-                  onClick={() => { setShowFeedbackModal(true); setFeedbackStep('choose'); setFeedbackDone(false); setFeedbackText(''); }}
-                  className="mt-4 flex items-center gap-2 mx-auto px-5 py-2.5 rounded-2xl border-2 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
-                >
-                  <MessageSquare size={16} />
-                  <span>تقديم ملاحظة أو شكوى</span>
-                </button>
+              {order.status !== 'ready' && (
+                <>
+                  <div className="mb-3">
+                    {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{STEPS[current]?.icon}</div>}
+                  </div>
+                  <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{STEPS[current]?.label}</p>
+                  <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
+                  {order.status === 'completed' && !alreadySentFeedback && (
+                    <button
+                      onClick={() => { setShowFeedbackModal(true); setFeedbackStep('choose'); setFeedbackDone(false); setFeedbackText(''); }}
+                      className="mt-4 flex items-center gap-2 mx-auto px-5 py-2.5 rounded-2xl border-2 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
+                    >
+                      <MessageSquare size={16} />
+                      <span>تقديم ملاحظة أو شكوى</span>
+                    </button>
+                  )}
+                  {order.status === 'completed' && alreadySentFeedback && (
+                    <p className="mt-4 text-xs text-gray-400 dark:text-slate-500 flex items-center justify-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                      تم إرسال ملاحظتك، شكراً!
+                    </p>
+                  )}
+                </>
               )}
-              {order.status === 'completed' && alreadySentFeedback && (
-                <p className="mt-4 text-xs text-gray-400 dark:text-slate-500 flex items-center justify-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-                  تم إرسال ملاحظتك، شكراً!
-                </p>
+              {order.status === 'ready' && order.driver_name && (
+                <div>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mb-1">السائق</p>
+                  <p className="font-bold text-gray-900 dark:text-slate-100 text-base">{order.driver_name}</p>
+                  <div className="flex items-center justify-center gap-2 mt-0.5" dir="ltr">
+                    <span className="font-bold text-sm text-gray-900 dark:text-white">{order.driver_phone}</span>
+                    {order.driver_phone && (
+                      <a
+                        href={`https://wa.me/${order.driver_phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: '#25D366' }}
+                      >
+                        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                        </svg>
+                      </a>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
