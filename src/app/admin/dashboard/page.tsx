@@ -14,7 +14,7 @@ type Driver = { id: string; name: string; phone: string; status: string };
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز',  color: '#f59e0b', dot: 'bg-yellow-400', btnColor: '#3b82f6' },
   preparing: { label: 'قيد التجهيز', next: 'ready'     as const, nextLabel: 'جاهز للتسليم', color: '#3b82f6', dot: 'bg-blue-400',   btnColor: '#22c55e' },
-  ready:     { label: 'جاهز',        next: 'completed'  as const, nextLabel: 'تم التسليم',   color: '#22c55e', dot: 'bg-green-400',  btnColor: '#6b7280' },
+  ready:     { label: 'جار التوصيل', next: 'completed'  as const, nextLabel: 'تم التسليم',   color: '#22c55e', dot: 'bg-green-400',  btnColor: '#6b7280' },
   completed: { label: 'مكتمل',       next: null,                  nextLabel: '',              color: '#9ca3af', dot: 'bg-gray-400',   btnColor: '#9ca3af' },
 };
 
@@ -59,6 +59,76 @@ function waitInfo(createdAt: string) {
   if (mins < 10) return { color: '#22c55e', text: `${mins} د` };
   if (mins < 20) return { color: '#f59e0b', text: `${mins} د` };
   return { color: '#ef4444', text: `${mins} د ⚠️` };
+}
+
+/* ─── خريطة جار التوصيل ─── */
+function DeliveryMap({ orders }: { orders: Order[] }) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef          = useRef<any>(null);
+
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.rel  = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+
+    const ordersWithLocation = orders.filter(o => o.client_lat && o.client_lng);
+
+    import('leaflet').then((mod) => {
+      const L = (mod as any).default ?? mod;
+      if (!mapContainerRef.current || mapRef.current) return;
+
+      const defaultCenter: [number, number] = ordersWithLocation.length > 0
+        ? [ordersWithLocation[0].client_lat!, ordersWithLocation[0].client_lng!]
+        : [33.3152, 44.3661]; // بغداد
+
+      const map = L.map(mapContainerRef.current).setView(defaultCenter, 13);
+      mapRef.current = map;
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap', maxZoom: 19,
+      }).addTo(map);
+
+      const bounds: [number, number][] = [];
+
+      ordersWithLocation.forEach((order, i) => {
+        const lat = order.client_lat!;
+        const lng = order.client_lng!;
+        bounds.push([lat, lng]);
+
+        const icon = L.divIcon({
+          html: `<div style="width:32px;height:32px;background:#22c55e;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:13px">${i + 1}</div>`,
+          className: '',
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
+        });
+
+        L.marker([lat, lng], { icon })
+          .addTo(map)
+          .bindPopup(
+            `<div dir="rtl" style="font-family:sans-serif;min-width:140px">
+              <b style="font-size:13px">${order.client_name}</b>
+              ${order.delivery_address ? `<br><span style="color:#6b7280;font-size:11px">📍 ${order.delivery_address}</span>` : ''}
+              ${order.driver_name ? `<br><span style="color:#3b82f6;font-size:11px">🏍️ ${order.driver_name}</span>` : ''}
+              <br><span style="color:#22c55e;font-weight:bold;font-size:12px">${order.total_amount.toLocaleString()} د.ع</span>
+            </div>`,
+            { offset: [0, -8] }
+          );
+      });
+
+      if (bounds.length > 1) {
+        map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40] });
+      }
+    });
+
+    return () => {
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
+      if (link.parentNode) link.parentNode.removeChild(link);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return <div ref={mapContainerRef} className="w-full h-56 rounded-2xl overflow-hidden z-0" />;
 }
 
 function DriverPickerModal({ drivers, onPick, onClose }: {
@@ -279,7 +349,89 @@ function DashboardPage() {
           <div className="flex justify-center mt-20"><div className="w-10 h-10 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
         ) : filtered.length === 0 ? (
           <div className="text-center mt-20"><p className="text-4xl mb-3">📋</p><p className="text-gray-400 dark:text-slate-500">لا توجد طلبات</p></div>
+        ) : filter === 'ready' ? (
+          /* ═══ عرض جار التوصيل ═══ */
+          <div className="space-y-3">
+            <DeliveryMap orders={filtered} />
+            {filtered.map((order, idx) => {
+              const wait = waitInfo(order.created_at);
+              return (
+                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                  <div className="h-1.5 bg-green-400" />
+                  <div className="p-4">
+
+                    {/* رقم الطلب + الاسم + المبلغ */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 font-black text-sm flex items-center justify-center flex-shrink-0">
+                          {idx + 1}
+                        </span>
+                        <p className="text-green-500 font-bold text-lg tabular-nums">
+                          {order.total_amount.toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span>
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-900 dark:text-slate-100">{order.client_name}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5" dir="ltr">{order.client_phone}</p>
+                      </div>
+                    </div>
+
+                    {/* العنوان + خريطة */}
+                    {(order.delivery_address || (order.client_lat && order.client_lng)) && (
+                      <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/40 rounded-xl px-3 py-2 mb-3">
+                        <a
+                          href={`https://maps.google.com/?q=${order.client_lat},${order.client_lng}`}
+                          target="_blank" rel="noreferrer"
+                          className="text-xs font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg active:opacity-70">
+                          📍 خريطة
+                        </a>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 text-right flex-1 mr-2 truncate">
+                          {order.delivery_address ?? ''}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* ملاحظة */}
+                    {order.client_note && (
+                      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2 mb-3">
+                        <p className="text-sm text-amber-700 dark:text-amber-400 text-right">📝 {order.client_note}</p>
+                      </div>
+                    )}
+
+                    {/* السائق + وقت الانتظار */}
+                    <div className="flex items-center justify-between">
+                      {order.driver_name ? (
+                        <button
+                          onClick={() => {
+                            const phone = formatPhoneForWA(order.driver_phone ?? '');
+                            const deliveryLink = `${window.location.origin}/delivery/${order.id}`;
+                            const msg = `🔔 تذكير\nتعال اخذ الطلب من المطعم، جاهز ينتظرك! 🏍️\n\n✅ رابط إتمام التوصيل:\n${deliveryLink}`;
+                            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                          }}
+                          className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2 active:scale-95 transition-all">
+                          <span className="text-lg">🏍️</span>
+                          <div className="text-right">
+                            <p className="text-blue-700 dark:text-blue-300 font-bold text-sm">{order.driver_name}</p>
+                            <p className="text-[10px] text-blue-400 font-medium">اضغط للتذكير</p>
+                          </div>
+                        </button>
+                      ) : <div />}
+                      <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ color: wait.color, backgroundColor: wait.color + '18' }}>
+                        ⏱ {wait.text}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button onClick={() => handleAction(order)}
+                    className="w-full py-4 text-white font-bold text-base transition-all active:opacity-80 bg-gray-500">
+                    تم التسليم ✓
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         ) : (
+          /* ═══ عرض الطلبات العادي ═══ */
           <div className="space-y-3">
             {filtered.map(order => {
               const cfg  = STATUS[order.status];
@@ -288,7 +440,6 @@ function DashboardPage() {
                 <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
                   <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
                   <div className="p-4">
-                    {/* Header */}
                     <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
                       <div className="flex flex-col gap-1">
                         {wait && (
@@ -305,7 +456,6 @@ function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* Items with images */}
                     <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 mb-3 space-y-2">
                       {order.items?.map(item => {
                         const img = imageMap.get(item.item_name);
@@ -328,7 +478,6 @@ function DashboardPage() {
                     {order.delivery_address && <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">📍 {order.delivery_address}</p>}
                     {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
 
-                    {/* Driver info — اضغط لإرسال تذكير */}
                     {order.driver_name && (
                       <button
                         onClick={() => {
