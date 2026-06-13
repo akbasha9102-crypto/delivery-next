@@ -8,7 +8,7 @@ import { Moon, Sun, X, ClipboardList } from 'lucide-react';
 import { useNewOrders } from '@/context/NewOrdersContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null };
 type Driver = { id: string; name: string; phone: string; status: string };
 
 const STATUS = {
@@ -16,6 +16,7 @@ const STATUS = {
   preparing: { label: 'قيد التجهيز', next: 'ready'     as const, nextLabel: 'جاهز للتسليم', color: '#3b82f6', dot: 'bg-blue-400',   btnColor: '#22c55e' },
   ready:     { label: 'جار التوصيل', next: 'completed'  as const, nextLabel: 'تم التسليم',   color: '#22c55e', dot: 'bg-green-400',  btnColor: '#6b7280' },
   completed: { label: 'مكتمل',       next: null,                  nextLabel: '',              color: '#9ca3af', dot: 'bg-gray-400',   btnColor: '#9ca3af' },
+  rejected:  { label: 'مرفوضة',      next: null,                  nextLabel: '',              color: '#ef4444', dot: 'bg-red-400',    btnColor: '#ef4444' },
 };
 
 
@@ -154,7 +155,7 @@ function DashboardPage() {
   const [orders,        setOrders]        = useState<Order[]>([]);
   const [imageMap,      setImageMap]      = useState<Map<string, string>>(new Map());
   const [loading,       setLoading]       = useState(true);
-  const [filter,        setFilter]        = useState<'pending'|'preparing'|'ready'|'completed'>('pending');
+  const [filter,        setFilter]        = useState<'pending'|'preparing'|'ready'|'completed'|'rejected'>('pending');
   const [newOrderFlash, setNewOrderFlash] = useState(false);
   const [drivers,       setDrivers]       = useState<Driver[]>([]);
   const [pickerOrderId, setPickerOrderId] = useState<string | null>(null);
@@ -249,6 +250,11 @@ function DashboardPage() {
     sendPushToDriver(driver.id, '🛵 طلب جديد!', `طلب جديد من ${order?.client_name ?? ''}`, deliveryLink, 'new-order');
   };
 
+  const rejectOrder = async (id: string) => {
+    await supabase.from('orders').update({ status: 'rejected' }).eq('id', id);
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'rejected' } : o));
+  };
+
   const handleAction = (order: Order) => {
     const next = STATUS[order.status].next;
     if (!next) return;
@@ -263,8 +269,8 @@ function DashboardPage() {
     }
   };
 
-  const counts       = { pending:0, preparing:0, ready:0, completed:0 } as Record<string,number>;
-  orders.forEach(o => counts[o.status]++);
+  const counts       = { pending:0, preparing:0, ready:0, completed:0, rejected:0 } as Record<string,number>;
+  orders.forEach(o => counts[o.status] = (counts[o.status] || 0) + 1);
   const todayRevenue = orders.filter(o=>o.status==='completed').reduce((s,o)=>s+o.total_amount,0);
   const filtered     = orders.filter(o => o.status === filter);
 
@@ -304,7 +310,7 @@ function DashboardPage() {
 
       {/* تابس الفلتر */}
       <div className="flex gap-2 px-3 pb-3 overflow-x-auto">
-        {(['pending','preparing','ready','completed'] as const).map(tab => {
+        {(['pending','preparing','ready','completed','rejected'] as const).map(tab => {
           const active = filter === tab;
           const count  = counts[tab] || 0;
           return (
@@ -470,7 +476,18 @@ function DashboardPage() {
                     )}
                   </div>
 
-                  {cfg.next ? (
+                  {order.status === 'pending' ? (
+                    <div className="grid grid-cols-2">
+                      <button onClick={() => rejectOrder(order.id)}
+                        className="py-4 text-white font-bold text-base transition-all active:opacity-80 bg-red-500">
+                        ✕ رفض
+                      </button>
+                      <button onClick={() => handleAction(order)}
+                        className="py-4 text-white font-bold text-base transition-all active:opacity-80 bg-blue-600">
+                        ✓ قبول
+                      </button>
+                    </div>
+                  ) : cfg.next ? (
                     <button onClick={() => handleAction(order)}
                       className="w-full py-4 text-white font-bold text-base transition-all active:opacity-80"
                       style={{ backgroundColor: cfg.btnColor }}>
@@ -478,7 +495,7 @@ function DashboardPage() {
                     </button>
                   ) : (
                     <div className="w-full py-4 bg-gray-100 dark:bg-slate-700 text-center text-gray-400 dark:text-slate-500 font-bold text-sm">
-                      ✓ مكتمل
+                      {order.status === 'rejected' ? '✕ مرفوض' : '✓ مكتمل'}
                     </div>
                   )}
                 </div>

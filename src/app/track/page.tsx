@@ -7,7 +7,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
 
 const STEPS = [
-  { key: 'pending',   label: 'استلام',      icon: '📋', desc: 'تم استلام طلبك وسيبدأ التجهيز' },
+  { key: 'pending',   label: 'انتظار',      icon: '⏳', desc: 'تم إرسال طلبك، بانتظار القبول' },
   { key: 'preparing', label: 'تجهيز',       icon: '🍳', desc: 'طلبك قيد التجهيز الآن' },
   { key: 'ready',     label: 'في الطريق',   icon: '🏍️', desc: 'طلبك في الطريق إليك' },
   { key: 'completed', label: 'تم التوصيل', icon: '🎉', desc: 'تم توصيل طلبك بنجاح' },
@@ -139,6 +139,7 @@ const STATUS_ANIMATION: Record<string, React.ReactNode> = {
   pending:   <PendingAnimation />,
   preparing: <PreparingAnimation />,
   completed: <CompletedAnimation />,
+  rejected:  null,
 };
 
 type Order = {
@@ -431,6 +432,25 @@ export default function TrackPage() {
                 className="flex-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2"
                 style={{ '--tw-ring-color': brandColor } as any}
               />
+            </div>
+          </div>
+        ) : order?.status === 'rejected' ? (
+          <div className="max-w-lg mx-auto mt-10 text-center space-y-4" style={{ animation: 'status-enter 0.5s ease-out' }}>
+            <div className="text-7xl">❌</div>
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-red-200 dark:border-red-800">
+              <h2 className="text-xl font-black text-red-600 dark:text-red-400 mb-2">تم رفض طلبك</h2>
+              <p className="text-gray-500 dark:text-slate-400 text-sm mb-1">عذراً، لم نتمكن من قبول طلبك في الوقت الحالي.</p>
+              <p className="text-gray-400 dark:text-slate-500 text-sm">يمكنك التواصل معنا أو إعادة الطلب.</p>
+            </div>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 text-right space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-gray-900 dark:text-white">{order.client_name}</span>
+                <span className="text-gray-400 text-sm">الاسم</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-red-500">{order.total_amount.toLocaleString()} د.ع</span>
+                <span className="text-gray-400 text-sm">المبلغ</span>
+              </div>
             </div>
           </div>
         ) : order && (
