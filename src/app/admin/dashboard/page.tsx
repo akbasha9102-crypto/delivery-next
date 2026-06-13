@@ -466,30 +466,33 @@ function DashboardPage() {
               void tick; // force re-render on tick
               return (
                 <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
-                  {/* شريط العداد للطلبات الواردة */}
+                  {/* شريط/هيدر العداد للطلبات الواردة */}
                   {countdown ? (
-                    <div className="relative h-2 bg-gray-100 dark:bg-slate-700">
-                      <div
-                        className="absolute inset-y-0 right-0 transition-all duration-1000"
-                        style={{
-                          width: `${countdown.pct * 100}%`,
-                          backgroundColor: countdown.urgent ? '#ef4444' : countdown.pct > 0.5 ? '#22c55e' : '#f59e0b',
-                        }}
-                      />
-                    </div>
+                    <>
+                      {/* شريط التقدم */}
+                      <div className="relative h-2 bg-gray-100 dark:bg-slate-700">
+                        <div className="absolute inset-y-0 right-0 transition-all duration-1000"
+                          style={{
+                            width: `${countdown.pct * 100}%`,
+                            backgroundColor: countdown.urgent ? '#ef4444' : countdown.pct > 0.5 ? '#22c55e' : '#f59e0b',
+                          }} />
+                      </div>
+                      {/* هيدر العداد */}
+                      <div className={`flex items-center justify-between px-4 py-2 ${countdown.urgent ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20'}`}>
+                        <span className={`text-xs font-medium ${countdown.urgent ? 'text-red-500' : 'text-amber-600 dark:text-amber-400'}`}>
+                          {countdown.urgent ? '⚠️ على وشك الإلغاء' : 'في انتظار القبول'}
+                        </span>
+                        <span className={`text-base font-black tabular-nums ${countdown.urgent ? 'text-red-500 animate-pulse' : 'text-amber-600 dark:text-amber-400'}`}>
+                          ⏱ {fmtCountdown(countdown.secs)}
+                        </span>
+                      </div>
+                    </>
                   ) : (
                     <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
                   )}
                   <div className="p-4">
                     <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
                       <div className="flex flex-col gap-1">
-                        {countdown && (
-                          <div className={`flex items-center gap-1.5 ${countdown.urgent ? 'animate-pulse' : ''}`}>
-                            <span className="text-xs font-black" style={{ color: countdown.urgent ? '#ef4444' : '#f59e0b' }}>
-                              ⏱ {fmtCountdown(countdown.secs)}
-                            </span>
-                          </div>
-                        )}
                         {!countdown && wait && (
                           <div className="flex items-center gap-1.5">
                             <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: wait.color }} />

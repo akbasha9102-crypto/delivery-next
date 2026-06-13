@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Search, MessageSquare, AlertCircle } from 'lucide-react';
@@ -177,6 +177,25 @@ export default function TrackPage() {
   const [notFound, setNotFound] = useState(false);
   const [inputPhone, setInputPhone] = useState('');
   const [loading, setLoading] = useState(true);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!order || order.status !== 'pending') return;
+    const t = setInterval(() => setTick(n => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [order?.status]);
+
+  const pendingCountdown = useMemo(() => {
+    if (!order?.created_at || order.status !== 'pending') return null;
+    void tick;
+    const total   = 5 * 60;
+    const elapsed = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 1000);
+    const secs    = Math.max(0, total - elapsed);
+    const pct     = secs / total;
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return { secs, pct, label: `${m}:${s}`, urgent: secs <= 60 };
+  }, [order?.created_at, order?.status, tick]);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackStep, setFeedbackStep] = useState<'choose' | 'write'>('choose');
@@ -455,6 +474,47 @@ export default function TrackPage() {
           </div>
         ) : order && (
           <div className="space-y-4 max-w-lg mx-auto">
+
+            {/* ══ عداد انتظار القبول ══ */}
+            {order.status === 'pending' && pendingCountdown && (
+              <div className={`rounded-3xl p-6 text-center border-2 transition-colors ${pendingCountdown.urgent ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700'}`}
+                style={{ animation: 'status-enter 0.5s ease-out' }}>
+
+                {/* دائرة العداد SVG */}
+                <div className="relative w-36 h-36 mx-auto mb-4">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                    {/* الخلفية */}
+                    <circle cx="60" cy="60" r="52" fill="none" strokeWidth="8"
+                      className="stroke-gray-200 dark:stroke-slate-700" />
+                    {/* الشريط المتحرك */}
+                    <circle cx="60" cy="60" r="52" fill="none" strokeWidth="8"
+                      strokeLinecap="round"
+                      stroke={pendingCountdown.urgent ? '#ef4444' : '#f59e0b'}
+                      strokeDasharray={`${2 * Math.PI * 52}`}
+                      strokeDashoffset={`${2 * Math.PI * 52 * (1 - pendingCountdown.pct)}`}
+                      style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s' }}
+                    />
+                  </svg>
+                  {/* الرقم في المنتصف */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-3xl font-black tabular-nums ${pendingCountdown.urgent ? 'text-red-500' : 'text-amber-500'}`}>
+                      {pendingCountdown.label}
+                    </span>
+                    <span className="text-xs text-gray-400 dark:text-slate-500 font-medium mt-0.5">دقيقة</span>
+                  </div>
+                </div>
+
+                <p className={`font-black text-lg mb-1 ${pendingCountdown.urgent ? 'text-red-600 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                  {pendingCountdown.urgent ? '⚠️ على وشك الإلغاء!' : '⏳ في انتظار قبول الطلب'}
+                </p>
+                <p className="text-sm text-gray-400 dark:text-slate-500">
+                  {pendingCountdown.urgent
+                    ? 'سيُلغى طلبك خلال ثوانٍ إذا لم يُقبل'
+                    : 'سيُلغى الطلب تلقائياً إذا لم يُقبل خلال الوقت المحدد'}
+                </p>
+              </div>
+            )}
+
             {/* Timeline */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-6">حالة الطلب</h3>
