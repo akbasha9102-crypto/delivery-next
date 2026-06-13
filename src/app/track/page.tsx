@@ -534,9 +534,15 @@ export default function TrackPage() {
                       }`}>{step.label}</span>
                     </div>
                     {idx < STEPS.length - 1 && (
-                      <div className={`flex-1 h-1 rounded mx-1 mb-5 transition-all duration-700 ${
-                        idx < current ? 'bg-gray-900 dark:bg-white' : 'bg-gray-100 dark:bg-slate-700'
-                      }`}/>
+                      <div className="flex-1 h-1 rounded mx-1 mb-5 relative overflow-hidden bg-gray-100 dark:bg-slate-700">
+                        <div
+                          className="absolute inset-y-0 left-0 rounded bg-gray-900 dark:bg-white"
+                          style={{
+                            width: idx < current ? '100%' : '0%',
+                            transition: 'width 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          }}
+                        />
+                      </div>
                     )}
                   </div>
                 ))}
