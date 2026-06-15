@@ -834,8 +834,7 @@ const proceedFromReview = () => {
             </div>
 
             <button onClick={handleConfirmSaved}
-              className="w-full font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95"
-              style={{ backgroundColor: brandColor, color: textOnBrand }}>
+              className="w-full font-bold py-3.5 rounded-xl mb-3 transition-all active:scale-95 bg-red-500 text-white">
               نعم، أكمل الطلب
             </button>
             <button onClick={handleEditSaved}
