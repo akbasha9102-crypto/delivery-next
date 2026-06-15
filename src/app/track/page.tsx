@@ -520,9 +520,9 @@ export default function TrackPage() {
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
               <style>{`@keyframes line-fill-rtl{0%{width:0%}100%{width:100%}}`}</style>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-6">حالة الطلب</h3>
-              <div className="flex items-start flex-row-reverse">
+              <div className="flex items-start">
                 {STEPS.map((step, idx) => (
-                  <div key={step.key} className="flex items-center flex-1 flex-row-reverse">
+                  <div key={step.key} className="flex items-center flex-1">
                     <div className="flex flex-col items-center flex-shrink-0">
                       <div className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition-all duration-500 ${
                         idx <= current
@@ -538,7 +538,7 @@ export default function TrackPage() {
                     {idx < STEPS.length - 1 && (
                       <div className="flex-1 h-1 rounded mx-1 mb-5 relative overflow-hidden bg-gray-100 dark:bg-slate-700">
                         <div
-                          className="absolute inset-y-0 left-0 rounded bg-gray-900 dark:bg-white"
+                          className="absolute inset-y-0 right-0 rounded bg-gray-900 dark:bg-white"
                           style={
                             idx < current
                               ? { width: '100%' }
