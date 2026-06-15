@@ -10,7 +10,7 @@ type Order = {
   client_phone: string;
   delivery_address: string | null;
   total_amount: number;
-  status: 'pending' | 'preparing' | 'ready' | 'completed';
+  status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed';
   created_at: string;
 };
 
@@ -89,7 +89,7 @@ export default function DriverDashboard() {
       .from('orders')
       .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at')
       .eq('driver_id', driverId)
-      .in('status', ['preparing', 'ready'])
+      .in('status', ['preparing', 'pickup', 'ready'])
       .order('created_at', { ascending: false })
       .then(({ data }) => setActive((data as Order[]) || []));
   }, []);
@@ -208,6 +208,7 @@ export default function DriverDashboard() {
   if (!session) return null;
 
   const readyOrders    = active.filter(o => o.status === 'ready');
+  const pickupOrders   = active.filter(o => o.status === 'pickup');
   const preparingOrders = active.filter(o => o.status === 'preparing');
   const todayEarnings  = completed.reduce((s, o) => s + o.total_amount, 0);
 
@@ -347,6 +348,48 @@ export default function DriverDashboard() {
           </div>
         </div>
 
+        {/* طلبات "جاهز للاستلام" — الطلب جاهز في المطعم */}
+        {pickupOrders.map(order => (
+          <div key={order.id} className="bg-green-500 rounded-3xl overflow-hidden shadow-lg shadow-green-900/40">
+            <div className="px-4 py-2 bg-green-600/50 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Clock size={12} className="text-green-200" />
+                <span className="text-green-200 text-xs">{timeAgo(order.created_at)}</span>
+              </div>
+              <span className="text-green-100 text-xs font-black">🍔 الطلب جاهز! اذهب للمطعم</span>
+            </div>
+            <div className="px-4 py-4">
+              <div className="flex items-start justify-between mb-3">
+                <span className="text-green-900 font-black text-2xl">
+                  {order.total_amount.toLocaleString()}
+                  <span className="text-sm font-normal"> د.ع</span>
+                </span>
+                <div className="text-right">
+                  <p className="font-black text-white text-xl">{order.client_name}</p>
+                  {order.delivery_address && (
+                    <p className="text-green-100 text-xs flex items-center gap-1 justify-end mt-0.5">
+                      <MapPin size={10} /> {order.delivery_address}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {order.client_phone && (
+                  <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 py-2.5 bg-white/20 text-white font-bold rounded-2xl text-sm active:scale-95 transition-all">
+                    <MessageCircle size={16} /> واتساب
+                  </a>
+                )}
+                <a href={`/delivery/${order.id}`}
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-white text-green-600 font-black rounded-2xl text-sm active:scale-95 transition-all">
+                  ابدأ <ChevronLeft size={16} />
+                </a>
+              </div>
+            </div>
+          </div>
+        ))}
+
         {/* طلبات "جاهزة" — اذهب للمطعم الآن */}
         {readyOrders.map(order => (
           <div key={order.id} className="bg-amber-500 rounded-3xl overflow-hidden shadow-lg shadow-amber-900/40">
@@ -436,7 +479,7 @@ export default function DriverDashboard() {
         )}
 
         {/* لا يوجد طلبات */}
-        {active.length === 0 && incoming.length === 0 && (
+        {active.length === 0 && incoming.length === 0 && pickupOrders.length === 0 && (
           <div className="text-center py-14 space-y-3">
             <p className="text-6xl">😴</p>
             <p className="text-slate-300 text-xl font-black">لا يوجد طلبات الآن</p>

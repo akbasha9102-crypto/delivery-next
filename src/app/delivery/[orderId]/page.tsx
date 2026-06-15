@@ -97,6 +97,21 @@ export default function DeliveryPage() {
       });
   }, [orderId]);
 
+  // Realtime: update status when admin changes it (preparing → pickup → ready)
+  useEffect(() => {
+    if (!orderId) return;
+    const ch = supabase.channel(`delivery-status-${orderId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' },
+        ({ new: row }: any) => {
+          if (row.id !== orderId) return;
+          setOrder(prev => prev ? { ...prev, status: row.status } : null);
+          if (row.status === 'ready' || row.status === 'completed') setStarted(true);
+          if (row.status === 'completed') setDelivered(true);
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [orderId]);
+
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -317,15 +332,31 @@ export default function DeliveryPage() {
     );
   }
 
-  // ── شاشة البدء ──
+  // ── انتظار جاهزية الطلب (قيد التجهيز) ──
+  if (!started && order.status === 'preparing') {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center px-6 text-center">
+        <div className="text-7xl mb-5 animate-pulse">⏳</div>
+        <h1 className="text-white font-black text-2xl mb-2">الطلب قيد التجهيز</h1>
+        <p className="text-slate-400 text-base mb-8">ستصلك إشعار فور جاهزية الطلب</p>
+        <div className="bg-slate-800 rounded-2xl p-5 w-full max-w-sm border border-slate-700 text-right">
+          <p className="text-white font-bold text-lg">{order.client_name}</p>
+          {order.delivery_address && <p className="text-slate-400 text-sm mt-1">📍 {order.delivery_address}</p>}
+          <p className="text-green-400 font-black text-xl mt-3">{order.total_amount.toLocaleString()} <span className="text-xs text-slate-500 font-normal">د.ع</span></p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── شاشة البدء (الطلب جاهز في المطعم) ──
   if (!started) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col">
         {/* هيدر */}
         <div className="px-5 pt-12 pb-6 text-center">
-          <div className="text-5xl mb-3">🏍️</div>
-          <h1 className="text-white font-black text-2xl">طلب جديد</h1>
-          <p className="text-slate-400 text-sm mt-1">راجع التفاصيل ثم ابدأ التوصيل</p>
+          <div className="text-5xl mb-3">🍔</div>
+          <h1 className="text-white font-black text-2xl">الطلب جاهز!</h1>
+          <p className="text-slate-400 text-sm mt-1">اذهب للمطعم واستلم الطلب ثم ابدأ التوصيل</p>
         </div>
 
         {/* بطاقة الطلب */}

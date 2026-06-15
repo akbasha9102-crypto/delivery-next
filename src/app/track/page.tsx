@@ -421,7 +421,7 @@ export default function TrackPage() {
     setAlreadySentFeedback(true);
   };
 
-  const stepIndex = (s: string) => STEPS.findIndex(x => x.key === s);
+  const stepIndex = (s: string) => s === 'pickup' ? 1 : STEPS.findIndex(x => x.key === s);
   const current = order ? stepIndex(order.status) : -1;
 
   return (
