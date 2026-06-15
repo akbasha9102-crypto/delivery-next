@@ -75,7 +75,7 @@ export default function DriverDashboard() {
     supabase
       .from('orders')
       .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at')
-      .eq('status', 'pending')
+      .eq('status', 'preparing')
       .is('driver_id', null)
       .order('created_at', { ascending: true })
       .then(({ data }) => {
@@ -174,10 +174,10 @@ export default function DriverDashboard() {
         driver_id:    session.id,
         driver_name:  session.name,
         driver_phone: session.phone,
-        status:       'preparing',
       })
       .eq('id', order.id)
       .is('driver_id', null)
+      .eq('status', 'preparing')
       .select('id')
       .single();
 

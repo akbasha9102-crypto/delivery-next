@@ -4,13 +4,12 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, X, ClipboardList, Clock } from 'lucide-react';
+import { Moon, Sun, ClipboardList, Clock } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null };
-type Driver = { id: string; name: string; phone: string; status: string };
 
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing'  as const, nextLabel: 'ابدأ التجهيز', color: '#f59e0b', dot: 'bg-yellow-400', btnColor: '#3b82f6' },
@@ -47,51 +46,6 @@ function waitInfo(createdAt: string) {
 }
 
 
-function DriverPickerModal({ drivers, onPick, onClose }: {
-  drivers: Driver[];
-  onPick: (driver: Driver) => void;
-  onClose: () => void;
-}) {
-  const available = drivers.filter(d => d.status === 'available');
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg p-5 pb-6" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-5">
-          <button onClick={onClose} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
-            <X size={18} />
-          </button>
-          <p className="font-bold text-gray-900 dark:text-slate-100 text-lg">اختر السائق</p>
-          <div className="w-9" />
-        </div>
-
-        {available.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-4xl mb-3">🏍️</p>
-            <p className="text-gray-500 dark:text-slate-400 font-medium">لا يوجد سواقون متاحون</p>
-            <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">جميع السواقين مشغولون حالياً</p>
-          </div>
-        ) : (
-          <div className="space-y-3 max-h-72 overflow-y-auto">
-            {available.map(d => (
-              <button key={d.id} onClick={() => onPick(d)}
-                className="w-full flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 active:scale-95">
-                <span className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-400 flex-shrink-0" />
-                  <span className="font-bold text-sm text-blue-600 dark:text-blue-400">تعيين وإرسال</span>
-                </span>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900 dark:text-slate-100">{d.name}</p>
-                  <p className="text-sm text-gray-400 dark:text-slate-500 mt-0.5" dir="ltr">{d.phone}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function DashboardPage() {
   const { dark, toggleDark } = useDarkMode();
@@ -113,8 +67,6 @@ function DashboardPage() {
   const [loading,       setLoading]       = useState(true);
   const [filter,        setFilter]        = useState<'pending'|'preparing'|'completed'|'rejected'>('pending');
   const [newOrderFlash, setNewOrderFlash] = useState(false);
-  const [drivers,          setDrivers]          = useState<Driver[]>([]);
-  const [pickerOrderId,    setPickerOrderId]    = useState<string | null>(null);
   const [tick,             setTick]             = useState(0);
 
   const initialLoadDone = useRef(false);
@@ -126,18 +78,6 @@ function DashboardPage() {
   }, []);
   const today = localDate();
 
-  const fetchDrivers = useCallback(async () => {
-    const { data } = await supabase.from('drivers').select('*').order('name');
-    setDrivers(data || []);
-  }, []);
-
-  useEffect(() => {
-    fetchDrivers();
-    const ch = supabase.channel('drivers-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, fetchDrivers)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [fetchDrivers]);
 
   const fetchOrders = useCallback(async () => {
     const start = new Date(today + 'T00:00:00').toISOString();
@@ -182,37 +122,6 @@ function DashboardPage() {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: status as Order['status'] } : o));
   };
 
-  const sendPushToDriver = (driverId: string, title: string, body: string, url: string, tag: string) => {
-    fetch('/api/push/notify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ driver_id: driverId, title, body, url, tag }),
-    }).catch(() => {});
-  };
-
-  const assignDriverAndStart = async (orderId: string, driver: Driver) => {
-    const order = orders.find(o => o.id === orderId);
-
-    await Promise.all([
-      supabase.from('orders').update({
-        status: 'preparing',
-        driver_name: driver.name,
-        driver_phone: driver.phone,
-        driver_id: driver.id,
-      }).eq('id', orderId),
-      supabase.from('drivers').update({ status: 'unavailable' }).eq('id', driver.id),
-    ]);
-    setOrders(prev => prev.map(o =>
-      o.id === orderId ? { ...o, status: 'preparing', driver_name: driver.name, driver_phone: driver.phone, driver_id: driver.id } : o
-    ));
-    setDrivers(prev => prev.map(d => d.id === driver.id ? { ...d, status: 'unavailable' } : d));
-    setPickerOrderId(null);
-
-    // إشعار فوري للسائق
-    const deliveryLink = `${window.location.origin}/delivery/${orderId}`;
-    sendPushToDriver(driver.id, '🛵 طلب جديد!', `طلب جديد من ${order?.client_name ?? ''}`, deliveryLink, 'new-order');
-  };
-
   const rejectOrder = async (id: string) => {
     await supabase.from('orders').update({ status: 'rejected' }).eq('id', id);
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'rejected' } : o));
@@ -221,15 +130,7 @@ function DashboardPage() {
   const handleAction = (order: Order) => {
     const next = STATUS[order.status].next;
     if (!next) return;
-    if (order.status === 'pending') {
-      fetchDrivers().then(() => setPickerOrderId(order.id));
-    } else {
-      if (order.status === 'preparing' && order.driver_id) {
-        const deliveryLink = `${window.location.origin}/delivery/${order.id}`;
-        sendPushToDriver(order.driver_id, '✅ الطلب جاهز!', 'تفضل للمطعم لاستلام الطلب 🏍️', deliveryLink, 'order-ready');
-      }
-      updateStatus(order.id, next);
-    }
+    updateStatus(order.id, next);
   };
 
   const counts       = { pending:0, preparing:0, completed:0, rejected:0 } as Record<string,number>;
@@ -380,23 +281,15 @@ function DashboardPage() {
                     {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
 
                     {order.driver_name && (
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          if (!order.driver_id) return;
-                          const deliveryLink = `${window.location.origin}/delivery/${order.id}`;
-                          sendPushToDriver(order.driver_id, '🔔 تذكير', 'تعال اخذ الطلب من المطعم، جاهز ينتظرك! 🏍️', deliveryLink, 'reminder');
-                        }}
-                        className="mt-2 w-full flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2 active:scale-[0.98] transition-all">
-                        <span className="text-xs text-blue-400 dark:text-blue-500 font-medium">اضغط لإرسال تذكير</span>
+                      <div className="mt-2 w-full flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2">
                         <div className="flex items-center gap-2">
+                          <span className="text-xl">🏍️</span>
                           <div className="text-right">
                             <p className="text-blue-700 dark:text-blue-300 font-bold text-sm">{order.driver_name}</p>
                             <p className="text-blue-500 text-xs" dir="ltr">{order.driver_phone}</p>
                           </div>
-                          <span className="text-xl">🏍️</span>
                         </div>
-                      </button>
+                      </div>
                     )}
 
 
@@ -430,16 +323,6 @@ function DashboardPage() {
           </div>
         )}
       </div>
-
-      {/* Driver picker modal */}
-      {pickerOrderId && (
-        <DriverPickerModal
-          drivers={drivers}
-          onPick={driver => assignDriverAndStart(pickerOrderId, driver)}
-          onClose={() => setPickerOrderId(null)}
-        />
-      )}
-
 
       <AdminBottomNav />
     </div>
