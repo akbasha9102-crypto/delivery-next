@@ -476,46 +476,6 @@ export default function TrackPage() {
         ) : order && (
           <div className="space-y-4 max-w-lg mx-auto">
 
-            {/* ══ عداد انتظار القبول ══ */}
-            {order.status === 'pending' && pendingCountdown && (
-              <div className={`rounded-3xl p-6 text-center border-2 transition-colors ${pendingCountdown.urgent ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700'}`}
-                style={{ animation: 'status-enter 0.5s ease-out' }}>
-
-                {/* دائرة العداد SVG */}
-                <div className="relative w-36 h-36 mx-auto mb-4">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                    {/* الخلفية */}
-                    <circle cx="60" cy="60" r="52" fill="none" strokeWidth="8"
-                      className="stroke-gray-200 dark:stroke-slate-700" />
-                    {/* الشريط المتحرك */}
-                    <circle cx="60" cy="60" r="52" fill="none" strokeWidth="8"
-                      strokeLinecap="round"
-                      stroke={pendingCountdown.urgent ? '#ef4444' : '#f59e0b'}
-                      strokeDasharray={`${2 * Math.PI * 52}`}
-                      strokeDashoffset={`${2 * Math.PI * 52 * (1 - pendingCountdown.pct)}`}
-                      style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s' }}
-                    />
-                  </svg>
-                  {/* الرقم في المنتصف */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-3xl font-black tabular-nums ${pendingCountdown.urgent ? 'text-red-500' : 'text-amber-500'}`}>
-                      {pendingCountdown.label}
-                    </span>
-                    <span className="text-xs text-gray-400 dark:text-slate-500 font-medium mt-0.5">دقيقة</span>
-                  </div>
-                </div>
-
-                <p className={`font-black text-lg mb-1 ${pendingCountdown.urgent ? 'text-red-600 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>
-                  {pendingCountdown.urgent ? '⚠️ على وشك الإلغاء!' : '⏳ في انتظار قبول الطلب'}
-                </p>
-                <p className="text-sm text-gray-400 dark:text-slate-500">
-                  {pendingCountdown.urgent
-                    ? 'سيُلغى طلبك خلال ثوانٍ إذا لم يُقبل'
-                    : 'سيُلغى الطلب تلقائياً إذا لم يُقبل خلال الوقت المحدد'}
-                </p>
-              </div>
-            )}
-
             {/* Timeline */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
               <style>{`@keyframes line-fill-rtl{0%{width:0%}100%{width:100%}}`}</style>
@@ -526,7 +486,7 @@ export default function TrackPage() {
                     <div className="flex flex-col items-center flex-shrink-0">
                       <div className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition-all duration-500 ${
                         idx <= current
-                          ? 'bg-gray-900 dark:bg-white'
+                          ? 'bg-red-500'
                           : 'bg-gray-100 dark:bg-slate-700 text-gray-300 dark:text-slate-600'
                       }`}>
                         {step.icon}
@@ -538,7 +498,7 @@ export default function TrackPage() {
                     {idx < STEPS.length - 1 && (
                       <div className="flex-1 h-1 rounded mx-1 mb-5 relative overflow-hidden bg-gray-100 dark:bg-slate-700">
                         <div
-                          className="absolute inset-y-0 right-0 rounded bg-gray-900 dark:bg-white"
+                          className="absolute inset-y-0 right-0 rounded bg-red-500"
                           style={
                             idx < current
                               ? { width: '100%' }
