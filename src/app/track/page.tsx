@@ -538,7 +538,7 @@ export default function TrackPage() {
                     {idx < STEPS.length - 1 && (
                       <div className="flex-1 h-1 rounded mx-1 mb-5 relative overflow-hidden bg-gray-100 dark:bg-slate-700">
                         <div
-                          className="absolute inset-y-0 right-0 rounded bg-gray-900 dark:bg-white"
+                          className="absolute inset-y-0 left-0 rounded bg-gray-900 dark:bg-white"
                           style={
                             idx < current
                               ? { width: '100%' }
