@@ -13,8 +13,8 @@ type Order = { id: string; client_name: string; client_phone: string; delivery_a
 type Driver = { id: string; name: string; phone: string; status: string };
 
 const STATUS = {
-  pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز',  color: '#f59e0b', dot: 'bg-yellow-400', btnColor: '#3b82f6' },
-  preparing: { label: 'قيد التجهيز', next: 'ready'     as const, nextLabel: 'جاهز للتسليم', color: '#3b82f6', dot: 'bg-blue-400',   btnColor: '#22c55e' },
+  pending:   { label: 'واردة',        next: 'preparing'  as const, nextLabel: 'ابدأ التجهيز', color: '#f59e0b', dot: 'bg-yellow-400', btnColor: '#3b82f6' },
+  preparing: { label: 'قيد التجهيز', next: 'completed'  as const, nextLabel: 'تم التسليم',   color: '#3b82f6', dot: 'bg-blue-400',   btnColor: '#22c55e' },
   ready:     { label: 'جار التوصيل', next: 'completed'  as const, nextLabel: 'تم التسليم',   color: '#22c55e', dot: 'bg-green-400',  btnColor: '#6b7280' },
   completed: { label: 'مكتمل',       next: null,                  nextLabel: '',              color: '#9ca3af', dot: 'bg-gray-400',   btnColor: '#9ca3af' },
   rejected:  { label: 'مرفوضة',      next: null,                  nextLabel: '',              color: '#ef4444', dot: 'bg-red-400',    btnColor: '#ef4444' },
@@ -112,7 +112,7 @@ function DashboardPage() {
   const [orders,        setOrders]        = useState<Order[]>([]);
   const [imageMap,      setImageMap]      = useState<Map<string, string>>(new Map());
   const [loading,       setLoading]       = useState(true);
-  const [filter,        setFilter]        = useState<'pending'|'preparing'|'ready'|'completed'|'rejected'>('pending');
+  const [filter,        setFilter]        = useState<'pending'|'preparing'|'completed'|'rejected'>('pending');
   const [newOrderFlash, setNewOrderFlash] = useState(false);
   const [drivers,          setDrivers]          = useState<Driver[]>([]);
   const [pickerOrderId,    setPickerOrderId]    = useState<string | null>(null);
@@ -289,7 +289,7 @@ function DashboardPage() {
 
       {/* تابس الفلتر */}
       <div className="flex gap-2 px-3 pb-3 overflow-x-auto">
-        {(['pending','preparing','ready','completed','rejected'] as const).map(tab => {
+        {(['pending','preparing','completed','rejected'] as const).map(tab => {
           const active = filter === tab;
           const count  = counts[tab] || 0;
           return (
