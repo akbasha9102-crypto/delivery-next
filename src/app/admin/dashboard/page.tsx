@@ -9,13 +9,12 @@ import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null };
 type Driver = { id: string; name: string; phone: string; status: string };
 
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing'  as const, nextLabel: 'ابدأ التجهيز', color: '#f59e0b', dot: 'bg-yellow-400', btnColor: '#3b82f6' },
   preparing: { label: 'قيد التجهيز', next: 'completed'  as const, nextLabel: 'تم التسليم',   color: '#3b82f6', dot: 'bg-blue-400',   btnColor: '#22c55e' },
-  ready:     { label: 'جار التوصيل', next: 'completed'  as const, nextLabel: 'تم التسليم',   color: '#22c55e', dot: 'bg-green-400',  btnColor: '#6b7280' },
   completed: { label: 'مكتمل',       next: null,                  nextLabel: '',              color: '#9ca3af', dot: 'bg-gray-400',   btnColor: '#9ca3af' },
   rejected:  { label: 'مرفوضة',      next: null,                  nextLabel: '',              color: '#ef4444', dot: 'bg-red-400',    btnColor: '#ef4444' },
 };
@@ -233,7 +232,7 @@ function DashboardPage() {
     }
   };
 
-  const counts       = { pending:0, preparing:0, ready:0, completed:0, rejected:0 } as Record<string,number>;
+  const counts       = { pending:0, preparing:0, completed:0, rejected:0 } as Record<string,number>;
   orders.forEach(o => counts[o.status] = (counts[o.status] || 0) + 1);
   const todayRevenue = orders.filter(o=>o.status==='completed').reduce((s,o)=>s+o.total_amount,0);
   const filtered     = orders.filter(o => o.status === filter);
