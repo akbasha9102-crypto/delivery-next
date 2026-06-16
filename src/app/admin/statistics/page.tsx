@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminGuard } from '@/components/AdminGuard';
@@ -23,6 +24,7 @@ function quickRange(range: 'today' | 'week' | 'month') {
 }
 
 function StatisticsPage() {
+  const router = useRouter();
   const { dark } = useDarkMode();
   const today = localDate();
 
@@ -140,8 +142,12 @@ function StatisticsPage() {
     <div className="min-h-screen pb-24" style={{ backgroundColor: s.bg }}>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b px-4 py-4 text-center" style={{ backgroundColor: s.surface, borderColor: s.border }}>
+      <header className="sticky top-0 z-40 border-b px-4 py-4 flex items-center justify-between" style={{ backgroundColor: s.surface, borderColor: s.border }}>
+        <div className="w-9" />
         <h1 className="text-xl font-bold" style={{ color: s.text }}>الإحصائيات</h1>
+        <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl active:scale-90 transition-all" style={{ backgroundColor: s.muted }}>
+          <ChevronRight size={20} style={{ color: s.sub }} />
+        </button>
       </header>
 
       {/* Quick range */}

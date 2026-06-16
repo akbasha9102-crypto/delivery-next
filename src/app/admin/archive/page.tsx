@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useDarkMode } from '@/context/ThemeContext';
-import { MessageSquare, AlertCircle } from 'lucide-react';
+import { MessageSquare, AlertCircle, ChevronRight } from 'lucide-react';
 
 type Feedback = {
   id: string;
@@ -32,6 +33,7 @@ function localDate(d = new Date()) {
 }
 
 function ArchivePage() {
+  const router = useRouter();
   useDarkMode();
   const [feedbacks, setFeedbacks]       = useState<Feedback[]>([]);
   const [rejected, setRejected]         = useState<RejectedOrder[]>([]);
@@ -74,8 +76,12 @@ function ArchivePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-28">
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
-        <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">الأرشيف</h1>
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
+        <div className="w-9" />
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">الأرشيف</h1>
+        <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
+          <ChevronRight size={20} className="text-gray-500 dark:text-slate-400" />
+        </button>
       </header>
 
       {/* أقسام رئيسية */}

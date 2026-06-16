@@ -345,7 +345,7 @@ export default function SettingsPage() {
             className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
             <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
             <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصاء</span>
+              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصائيات</span>
               <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
                 <BarChart2 size={16} className="text-blue-500" />
               </div>
