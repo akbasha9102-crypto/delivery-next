@@ -421,6 +421,25 @@ export default function TrackPage() {
     setAlreadySentFeedback(true);
   };
 
+  // ── الوقت التقديري ──
+  const [extraMins, setExtraMins] = useState(0);
+
+  const estimatedAt = useMemo(() => {
+    if (!order?.created_at || order.status === 'completed' || order.status === 'rejected') return null;
+    return new Date(new Date(order.created_at).getTime() + (20 + extraMins) * 60_000);
+  }, [order?.created_at, order?.status, extraMins]);
+
+  useEffect(() => {
+    if (!estimatedAt) return;
+    const check = () => { if (Date.now() > estimatedAt.getTime()) setExtraMins(m => m + 10); };
+    check();
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
+  }, [estimatedAt]);
+
+  const fmtEta = (d: Date) =>
+    d.toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit', hour12: true });
+
   const stepIndex = (s: string) => s === 'pickup' ? 1 : STEPS.findIndex(x => x.key === s);
   const current = order ? stepIndex(order.status) : -1;
 
@@ -475,6 +494,23 @@ export default function TrackPage() {
           </div>
         ) : order && (
           <div className="space-y-4 max-w-lg mx-auto">
+
+            {/* الوقت التقديري */}
+            {estimatedAt && (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl px-5 py-4 border border-gray-100 dark:border-slate-700 flex items-center justify-between">
+                <div className="text-right">
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">الوقت التقديري للتوصيل</p>
+                  <p className="font-black text-gray-900 dark:text-white text-lg">
+                    سيصلك طلبك عند الساعة{' '}
+                    <span style={{ color: brandColor }}>{fmtEta(estimatedAt)}</span>
+                  </p>
+                  {extraMins > 0 && (
+                    <p className="text-xs text-amber-500 mt-0.5">⏳ تم تمديد الوقت التقديري</p>
+                  )}
+                </div>
+                <div className="text-4xl">🕐</div>
+              </div>
+            )}
 
             {/* Timeline */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
