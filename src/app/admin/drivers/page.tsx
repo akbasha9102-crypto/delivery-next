@@ -25,7 +25,15 @@ function DriversPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchDrivers(); }, [fetchDrivers]);
+  useEffect(() => {
+    fetchDrivers();
+    const ch = supabase.channel('admin-drivers-live')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'drivers' }, ({ new: row }: any) => {
+        setDrivers(prev => prev.map(d => d.id === row.id ? { ...d, status: row.status } : d));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [fetchDrivers]);
 
   const addDriver = async () => {
     if (!name.trim() || !phone.trim() || !password.trim()) return;
@@ -124,10 +132,13 @@ function DriversPage() {
                       </button>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900 dark:text-slate-100">{d.name}</p>
+                      <div className="flex items-center justify-end gap-2">
+                        {!available && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />}
+                        <p className="font-bold text-gray-900 dark:text-slate-100">{d.name}</p>
+                      </div>
                       <p className="text-sm text-gray-400 dark:text-slate-500 mt-0.5" dir="ltr">{d.phone}</p>
-                      <span className={`text-xs font-bold mt-1 inline-block px-2 py-0.5 rounded-full ${available ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
-                        {available ? 'متاح' : 'غير متاح'}
+                      <span className={`text-xs font-bold mt-1 inline-block px-2 py-0.5 rounded-full ${available ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-red-100 dark:bg-red-900/30 text-red-500'}`}>
+                        {available ? '● متاح' : '● غير متاح'}
                       </span>
                     </div>
                   </div>

@@ -54,11 +54,22 @@ export default function DriverDashboard() {
   const [incoming,    setIncoming]    = useState<Order[]>([]);
   const [active,      setActive]      = useState<Order[]>([]);
   const [completed,   setCompleted]   = useState<Order[]>([]);
-  const [notifStatus, setNotifStatus] = useState<NotificationPermission>('default');
-  const [subscribing, setSubscribing] = useState(false);
-  const [accepting,   setAccepting]   = useState<string | null>(null);
-  const [flashId,     setFlashId]     = useState<string | null>(null);
+  const [notifStatus,   setNotifStatus]   = useState<NotificationPermission>('default');
+  const [subscribing,   setSubscribing]   = useState(false);
+  const [accepting,     setAccepting]     = useState<string | null>(null);
+  const [flashId,       setFlashId]       = useState<string | null>(null);
+  const [showIOSBanner, setShowIOSBanner] = useState(false);
+  const [isAvailable,   setIsAvailable]   = useState(true);
+  const [togglingAvail, setTogglingAvail] = useState(false);
   const sessionRef = useRef<Session | null>(null);
+
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone = (navigator as any).standalone === true ||
+      window.matchMedia('(display-mode: standalone)').matches;
+    const dismissed = localStorage.getItem('ios_pwa_dismissed');
+    if (isIOS && !isStandalone && !dismissed) setShowIOSBanner(true);
+  }, []);
 
   useEffect(() => { setInterval(() => {}, 60_000); }, []);
 
@@ -69,6 +80,12 @@ export default function DriverDashboard() {
     setSession(s);
     sessionRef.current = s;
   }, [router]);
+
+  useEffect(() => {
+    if (!session) return;
+    supabase.from('drivers').select('status').eq('id', session.id).single()
+      .then(({ data }) => { if (data) setIsAvailable(data.status === 'available'); });
+  }, [session]);
 
   const fetchIncoming = useCallback((driverId: string) => {
     const rejected = getRejected(driverId);
@@ -154,6 +171,11 @@ export default function DriverDashboard() {
 
   const enableNotifications = async () => {
     if (!session) return;
+    // On iOS non-PWA, Notification API is unavailable — show install prompt instead
+    if (typeof Notification === 'undefined' || !('PushManager' in window)) {
+      setShowIOSBanner(true);
+      return;
+    }
     setSubscribing(true);
     const perm = await Notification.requestPermission();
     setNotifStatus(perm);
@@ -162,6 +184,15 @@ export default function DriverDashboard() {
       await subscribeToPush(session.id, reg);
     }
     setSubscribing(false);
+  };
+
+  const toggleAvailability = async () => {
+    if (!session || togglingAvail) return;
+    setTogglingAvail(true);
+    const newStatus = isAvailable ? 'unavailable' : 'available';
+    const { error } = await supabase.from('drivers').update({ status: newStatus }).eq('id', session.id);
+    if (!error) setIsAvailable(!isAvailable);
+    setTogglingAvail(false);
   };
 
   const acceptOrder = async (order: Order) => {
@@ -188,6 +219,7 @@ export default function DriverDashboard() {
       setIncoming(prev => prev.filter(o => o.id !== order.id));
     } else {
       await supabase.from('drivers').update({ status: 'unavailable' }).eq('id', session.id);
+      setIsAvailable(false);
       setIncoming(prev => prev.filter(o => o.id !== order.id));
       fetchActive(session.id);
     }
@@ -240,6 +272,64 @@ export default function DriverDashboard() {
 
       <div className="px-4 pt-4 space-y-4 max-w-lg mx-auto">
 
+        {/* سويتش التوفر */}
+        <div className={`rounded-2xl px-4 py-3.5 flex items-center justify-between border-2 transition-all ${
+          isAvailable
+            ? 'bg-green-900/20 border-green-700/40'
+            : 'bg-red-900/25 border-red-700/50'
+        }`} dir="rtl">
+          <div>
+            <p className={`font-black text-sm ${isAvailable ? 'text-green-400' : 'text-red-400'}`}>
+              {isAvailable ? '🟢 أنت متاح للطلبات' : '🔴 أنت غير متاح'}
+            </p>
+            <p className="text-slate-500 text-xs mt-0.5">
+              {isAvailable ? 'ستصلك الطلبات الجديدة فوراً' : 'لن يصلك أي طلب جديد'}
+            </p>
+          </div>
+          <button
+            onClick={toggleAvailability}
+            disabled={togglingAvail}
+            className={`relative w-14 h-7 rounded-full transition-all duration-300 flex-shrink-0 disabled:opacity-60 ${
+              isAvailable ? 'bg-green-500 shadow-md shadow-green-900/50' : 'bg-slate-600'
+            }`}
+          >
+            {togglingAvail ? (
+              <span className="absolute inset-0 flex items-center justify-center">
+                <Loader2 size={15} className="animate-spin text-white" />
+              </span>
+            ) : (
+              <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
+                isAvailable ? 'translate-x-7' : 'translate-x-0.5'
+              }`} />
+            )}
+          </button>
+        </div>
+
+        {/* بانر تثبيت PWA على iOS */}
+        {showIOSBanner && (
+          <div className="bg-blue-950 border border-blue-700/60 rounded-2xl p-4 relative" dir="rtl">
+            <button
+              onClick={() => { setShowIOSBanner(false); localStorage.setItem('ios_pwa_dismissed', '1'); }}
+              className="absolute top-3 left-3 text-blue-400 p-1 active:scale-90 transition-all"
+            >
+              <X size={16} />
+            </button>
+            <div className="flex gap-3 items-start">
+              <span className="text-3xl leading-none mt-0.5">📲</span>
+              <div className="flex-1">
+                <p className="text-white font-black text-sm mb-2">فعّل الإشعارات على iPhone</p>
+                <p className="text-blue-300 text-xs leading-6">
+                  ١. اضغط على أيقونة <span className="font-bold text-white">المشاركة</span> <span className="text-base">⎙</span> في شريط Safari<br />
+                  ٢. اختر <span className="font-bold text-white">"إضافة إلى الشاشة الرئيسية"</span><br />
+                  ٣. افتح التطبيق من الشاشة الرئيسية<br />
+                  ٤. اضغط على زر الجرس 🔔 لتفعيل الإشعارات
+                </p>
+                <p className="text-blue-400 text-xs mt-2">* يتطلب iOS 16.4 أو أحدث</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* تنبيه الإشعارات */}
         {notifStatus === 'default' && (
           <button onClick={enableNotifications} disabled={subscribing}
@@ -255,7 +345,7 @@ export default function DriverDashboard() {
         )}
 
         {/* ═══ طلبات جديدة ═══ */}
-        {incoming.length > 0 && (
+        {isAvailable && incoming.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 px-1">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse" />
@@ -479,11 +569,21 @@ export default function DriverDashboard() {
         )}
 
         {/* لا يوجد طلبات */}
-        {active.length === 0 && incoming.length === 0 && pickupOrders.length === 0 && (
+        {active.length === 0 && pickupOrders.length === 0 && (isAvailable ? incoming.length === 0 : true) && (
           <div className="text-center py-14 space-y-3">
-            <p className="text-6xl">😴</p>
-            <p className="text-slate-300 text-xl font-black">لا يوجد طلبات الآن</p>
-            <p className="text-slate-500 text-sm">ستظهر الطلبات الجديدة هنا فوراً</p>
+            {isAvailable ? (
+              <>
+                <p className="text-6xl">😴</p>
+                <p className="text-slate-300 text-xl font-black">لا يوجد طلبات الآن</p>
+                <p className="text-slate-500 text-sm">ستظهر الطلبات الجديدة هنا فوراً</p>
+              </>
+            ) : (
+              <>
+                <p className="text-6xl">⏸️</p>
+                <p className="text-slate-300 text-xl font-black">أنت غير متاح حالياً</p>
+                <p className="text-slate-500 text-sm">فعّل السويتش أعلاه لتستلم الطلبات</p>
+              </>
+            )}
           </div>
         )}
 
