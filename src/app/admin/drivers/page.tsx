@@ -3,21 +3,27 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { AdminGuard } from '@/components/AdminGuard';
-import { Plus, Trash2, CheckCircle, Circle, Copy, Check, KeyRound } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Circle, Copy, Check, KeyRound, X, RefreshCw, Loader2 } from 'lucide-react';
 
 type Driver = { id: string; name: string; phone: string; status: string; password?: string | null };
 
+function generatePassword() {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
 function DriversPage() {
-  const [drivers,  setDrivers]  = useState<Driver[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [name,     setName]     = useState('');
-  const [phone,    setPhone]    = useState('');
-  const [password, setPassword] = useState('');
-  const [adding,   setAdding]   = useState(false);
-  const [copied,   setCopied]   = useState<string | null>(null);
-  const [editPw,   setEditPw]   = useState<string | null>(null);
-  const [newPw,    setNewPw]    = useState('');
-  const [savingPw, setSavingPw] = useState(false);
+  const [drivers,     setDrivers]     = useState<Driver[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [showAdd,     setShowAdd]     = useState(false);
+  const [name,        setName]        = useState('');
+  const [phone,       setPhone]       = useState('');
+  const [password,    setPassword]    = useState('');
+  const [adding,      setAdding]      = useState(false);
+  const [copied,      setCopied]      = useState<string | null>(null);
+  const [editPw,      setEditPw]      = useState<string | null>(null);
+  const [newPw,       setNewPw]       = useState('');
+  const [savingPw,    setSavingPw]    = useState(false);
 
   const fetchDrivers = useCallback(async () => {
     const { data } = await supabase.from('drivers').select('*').order('created_at', { ascending: false });
@@ -35,6 +41,11 @@ function DriversPage() {
     return () => { supabase.removeChannel(ch); };
   }, [fetchDrivers]);
 
+  const closeAdd = () => {
+    setShowAdd(false);
+    setName(''); setPhone(''); setPassword('');
+  };
+
   const addDriver = async () => {
     if (!name.trim() || !phone.trim() || !password.trim()) return;
     setAdding(true);
@@ -44,8 +55,8 @@ function DriversPage() {
       password: password.trim(),
       status: 'unavailable',
     });
-    setName(''); setPhone(''); setPassword('');
     setAdding(false);
+    closeAdd();
     fetchDrivers();
   };
 
@@ -82,37 +93,30 @@ function DriversPage() {
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900 pb-24">
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100 text-center">السواقون</h1>
+
+      {/* هيدر */}
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
+        <button
+          onClick={() => setShowAdd(true)}
+          className="w-9 h-9 rounded-xl bg-[#2563eb] text-white flex items-center justify-center active:scale-90 transition-all shadow-sm"
+        >
+          <Plus size={20} />
+        </button>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">السائقين</h1>
+        <div className="w-9" />
       </header>
 
+      {/* قائمة السائقين */}
       <div className="px-4 pt-4">
-        {/* Add form */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 mb-4">
-          <p className="font-bold text-gray-800 dark:text-slate-200 text-right mb-3">إضافة سائق جديد</p>
-          <div className="space-y-2">
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="اسم السائق" dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb]" />
-            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="رقم الهاتف" dir="ltr"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb]" />
-            <input value={password} onChange={e => setPassword(e.target.value)} placeholder="كلمة المرور (مثل: 1234)" dir="ltr"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb]" />
-            <button onClick={addDriver} disabled={adding || !name.trim() || !phone.trim() || !password.trim()}
-              className="w-full py-3 bg-[#2563eb] text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50">
-              <Plus size={18} /> إضافة سائق
-            </button>
-          </div>
-        </div>
-
-        {/* List */}
         {loading ? (
           <div className="flex justify-center mt-20">
             <div className="w-10 h-10 border-4 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : drivers.length === 0 ? (
-          <div className="text-center mt-16">
-            <p className="text-4xl mb-3">🏍️</p>
-            <p className="text-gray-400 dark:text-slate-500">لا يوجد سواقون بعد</p>
+          <div className="text-center mt-24">
+            <p className="text-5xl mb-3">🏍️</p>
+            <p className="text-gray-400 dark:text-slate-500 font-medium">لا يوجد سائقين بعد</p>
+            <p className="text-gray-300 dark:text-slate-600 text-sm mt-1">اضغط + لإضافة سائق</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -147,38 +151,26 @@ function DriversPage() {
                   <div className="flex items-center gap-2 pt-1 border-t border-gray-100 dark:border-slate-700">
                     {editPw === d.id ? (
                       <div className="flex gap-2 flex-1">
-                        <button
-                          onClick={() => savePassword(d.id)}
-                          disabled={savingPw}
-                          className="px-3 py-1.5 bg-blue-600 text-white text-sm font-bold rounded-lg active:scale-95 transition-all disabled:opacity-50"
-                        >
+                        <button onClick={() => savePassword(d.id)} disabled={savingPw}
+                          className="px-3 py-1.5 bg-blue-600 text-white text-sm font-bold rounded-lg active:scale-95 transition-all disabled:opacity-50">
                           {savingPw ? '...' : 'حفظ'}
                         </button>
-                        <input
-                          value={newPw}
-                          onChange={e => setNewPw(e.target.value)}
+                        <input value={newPw} onChange={e => setNewPw(e.target.value)}
                           onKeyDown={e => e.key === 'Enter' && savePassword(d.id)}
-                          placeholder="كلمة مرور جديدة"
-                          autoFocus
-                          dir="ltr"
-                          className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-slate-100 outline-none"
-                        />
+                          placeholder="كلمة مرور جديدة" autoFocus dir="ltr"
+                          className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-slate-100 outline-none" />
                       </div>
                     ) : (
                       <>
-                        <button
-                          onClick={() => copyLink(d)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold active:scale-95 transition-all"
-                        >
+                        <button onClick={() => copyLink(d)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold active:scale-95 transition-all">
                           {copied === d.id ? <Check size={13} /> : <Copy size={13} />}
                           {copied === d.id ? 'تم النسخ' : 'نسخ بيانات الدخول'}
                         </button>
-                        <button
-                          onClick={() => { setEditPw(d.id); setNewPw(''); }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-lg text-xs font-bold active:scale-95 transition-all mr-auto"
-                        >
+                        <button onClick={() => { setEditPw(d.id); setNewPw(''); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-lg text-xs font-bold active:scale-95 transition-all mr-auto">
                           <KeyRound size={13} />
-                          {d.password ? `••••` : 'تعيين كلمة مرور'}
+                          {d.password ? '••••' : 'تعيين كلمة مرور'}
                         </button>
                       </>
                     )}
@@ -191,6 +183,64 @@ function DriversPage() {
       </div>
 
       <AdminBottomNav />
+
+      {/* Bottom sheet — إضافة سائق */}
+      {showAdd && (
+        <div className="fixed inset-0 z-50 flex items-end" onClick={closeAdd}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full bg-white dark:bg-slate-800 rounded-t-3xl px-5 pt-5 pb-10 space-y-3"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* مقبض + عنوان */}
+            <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mb-4" />
+            <div className="flex items-center justify-between mb-1">
+              <button onClick={closeAdd} className="p-1.5 rounded-xl text-gray-400 active:scale-90 transition-all">
+                <X size={20} />
+              </button>
+              <p className="font-bold text-gray-900 dark:text-slate-100 text-base">إضافة سائق جديد</p>
+              <div className="w-8" />
+            </div>
+
+            {/* الخانات */}
+            <input
+              value={name} onChange={e => setName(e.target.value)}
+              placeholder="اسم السائق" dir="rtl"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb]"
+            />
+            <input
+              value={phone} onChange={e => setPhone(e.target.value)}
+              placeholder="رقم الهاتف" dir="ltr" type="tel"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb]"
+            />
+
+            {/* باسوورد + زر توليد */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPassword(generatePassword())}
+                className="flex items-center gap-1.5 px-3 py-3 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-xl text-sm font-bold active:scale-90 transition-all flex-shrink-0"
+                title="توليد تلقائي"
+              >
+                <RefreshCw size={15} />
+              </button>
+              <input
+                value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="كلمة المرور" dir="ltr"
+                className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb]"
+              />
+            </div>
+
+            <button
+              onClick={addDriver}
+              disabled={adding || !name.trim() || !phone.trim() || !password.trim()}
+              className="w-full py-3.5 bg-[#2563eb] text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 mt-1"
+            >
+              {adding ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+              إضافة سائق
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
