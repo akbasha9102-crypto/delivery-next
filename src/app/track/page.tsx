@@ -180,6 +180,16 @@ export default function TrackPage() {
   const [inputPhone, setInputPhone] = useState('');
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
+  const [driverPhone, setDriverPhone] = useState<string | null>(null);
+
+  // Keep driverPhone in sync — use order.driver_phone if set,
+  // otherwise look it up from the drivers table via driver_id.
+  useEffect(() => {
+    if (!order?.driver_id) { setDriverPhone(null); return; }
+    if (order.driver_phone) { setDriverPhone(order.driver_phone); return; }
+    supabase.from('drivers').select('phone').eq('id', order.driver_id).single()
+      .then(({ data }) => { if (data?.phone) setDriverPhone(data.phone); });
+  }, [order?.driver_id, order?.driver_phone]);
 
   useEffect(() => {
     if (!order || order.status !== 'pending') return;
@@ -676,9 +686,9 @@ export default function TrackPage() {
                       <p className="font-black text-lg text-red-500 dark:text-red-400 leading-tight">{order.driver_name}</p>
                       <p className="text-gray-500 dark:text-slate-400 text-sm mt-0.5">سيوصل طلبك</p>
                     </div>
-                    {order.driver_phone && (
+                    {driverPhone && (
                       <a
-                        href={`https://wa.me/${order.driver_phone.replace(/\D/g, '')}`}
+                        href={`https://wa.me/${driverPhone.replace(/\D/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="w-14 h-14 rounded-2xl flex items-center justify-center active:scale-90 transition-all flex-shrink-0"
