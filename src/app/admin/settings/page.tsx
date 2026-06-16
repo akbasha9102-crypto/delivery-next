@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar } from 'lucide-react';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminBottomNav } from '@/components/BottomNav';
 
@@ -408,8 +408,32 @@ export default function BrandingPage() {
              <p className="text-center text-[10px] text-gray-400 font-medium">الشعار يظهر دائماً في الجهة اليسرى للهيدر</p>
           </div>
         </div>
+        {/* ── الأرشيف والإحصاء ── */}
+        <div className="mt-8 grid grid-cols-2 gap-3">
+          <button onClick={() => router.push('/admin/statistics')}
+            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm active:scale-95 transition-all">
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصاء</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                <BarChart2 size={16} className="text-blue-500" />
+              </div>
+            </div>
+          </button>
+          <button onClick={() => router.push('/admin/archive')}
+            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm active:scale-95 transition-all">
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأرشيف</span>
+              <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                <Archive size={16} className="text-amber-500" />
+              </div>
+            </div>
+          </button>
+        </div>
+
         {/* ── تسجيل الخروج ── */}
-        <div className="mt-8">
+        <div className="mt-4">
           <button onClick={logout}
             className="w-full py-4 rounded-2xl bg-red-500 text-white font-black text-base flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg">
             <LogOut size={18} />
