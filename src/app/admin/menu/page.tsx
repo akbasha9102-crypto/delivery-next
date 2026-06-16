@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { AdminGuard } from '@/components/AdminGuard';
-import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft } from 'lucide-react';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
@@ -42,7 +42,9 @@ function MenuPage() {
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showReorder, setShowReorder] = useState(false);
   const [reorderCats, setReorderCats] = useState<Category[]>([]);
-  const [colorPopup, setColorPopup] = useState<{ catId: string } | null>(null);
+  const [editCatSheet, setEditCatSheet] = useState<{ catId: string } | null>(null);
+  const [editCatAnimateIn, setEditCatAnimateIn] = useState(false);
+  const [editCatName, setEditCatName] = useState('');
 
   const fetchMenu = async () => {
     setLoading(true);
@@ -187,10 +189,31 @@ function MenuPage() {
     showToast('✓ تم حفظ الترتيب');
   };
 
+  const openCatEdit = (cat: Category) => {
+    setEditCatName(cat.name);
+    setEditCatSheet({ catId: cat.id });
+    requestAnimationFrame(() => setEditCatAnimateIn(true));
+  };
+
+  const closeCatEdit = () => {
+    setEditCatAnimateIn(false);
+    setTimeout(() => setEditCatSheet(null), 300);
+  };
+
+  const saveCatName = async () => {
+    if (!editCatSheet || !editCatName.trim()) return;
+    const id = editCatSheet.catId;
+    setSaving(true);
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, name: editCatName.trim() } : c));
+    await supabase.from('categories').update({ name: editCatName.trim() }).eq('id', id);
+    setSaving(false);
+    showToast('✓ تم حفظ القسم');
+  };
+
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24" onClick={() => setColorPopup(null)}>
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24">
       {/* Edit Modal */}
       {editItem && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
@@ -386,10 +409,10 @@ function MenuPage() {
                         {cat.name} ({count})
                       </button>
                       <button
-                        onClick={() => deleteCategory(cat)}
-                        className="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-400 active:scale-90 transition-all"
-                        title="حذف القسم">
-                        <Trash2 size={12} />
+                        onClick={() => openCatEdit(cat)}
+                        className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-400 dark:text-slate-500 active:scale-90 transition-all"
+                        title="تعديل القسم">
+                        <ChevronLeft size={13} />
                       </button>
                     </div>
                   );
@@ -425,68 +448,7 @@ function MenuPage() {
                 <div key={cat.id}>
                   <div className="flex items-center justify-end gap-2 mb-3">
                     <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">{cat.name}</h3>
-                    <div className="relative" onClick={e => e.stopPropagation()}>
-                      <button
-                        onClick={() => setColorPopup(colorPopup?.catId === cat.id ? null : { catId: cat.id })}
-                        className="w-7 h-7 rounded-full border-2 border-gray-200 dark:border-slate-600 cursor-pointer flex-shrink-0 shadow-sm"
-                        style={{ backgroundColor: cat.color || '#e67e22' }}
-                        title="تعديل ألوان القسم"
-                      />
-                      {colorPopup?.catId === cat.id && (
-                        <div className="absolute left-0 top-9 z-50 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-2xl shadow-xl p-3 w-56 flex flex-col gap-1">
-                          <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right pb-1 border-b border-gray-100 dark:border-slate-700 mb-1">☀️ الوضع النهاري</p>
-                          <label className="flex items-center justify-between gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                            <input
-                              type="color"
-                              value={cat.color || '#e67e22'}
-                              onChange={e => updateCatColor(cat.id, e.target.value)}
-                              className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0"
-                            />
-                            <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الأزرار</span>
-                          </label>
-                          <label className="flex items-center justify-between gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                            <input
-                              type="color"
-                              value={cat.card_color || '#ffffff'}
-                              onChange={e => updateCatCardColor(cat.id, e.target.value)}
-                              className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0"
-                            />
-                            <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
-                          </label>
-                          <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right pb-1 border-b border-gray-100 dark:border-slate-700 mt-1 mb-1">🌙 الوضع الليلي</p>
-                          <label className="flex items-center justify-between gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                            <input
-                              type="color"
-                              value={cat.color_dark || cat.color || '#e67e22'}
-                              onChange={e => updateCatColorDark(cat.id, e.target.value)}
-                              className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0"
-                            />
-                            <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الأزرار</span>
-                          </label>
-                          <label className="flex items-center justify-between gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                            <input
-                              type="color"
-                              value={cat.card_color_dark || '#1e293b'}
-                              onChange={e => updateCatCardColorDark(cat.id, e.target.value)}
-                              className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0"
-                            />
-                            <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
-                          </label>
-                          <button
-                            onClick={() => setColorPopup(null)}
-                            className="text-xs text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 mt-1 text-center">
-                            إغلاق
-                          </button>
-                        </div>
-                      )}
-                    </div>
                     <span className="bg-orange-100 dark:bg-orange-900/20 text-[#f97316] text-xs font-bold px-2.5 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">{catItems.length}</span>
-                    <button
-                      onClick={() => deleteCategory(cat)}
-                      className="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-400 active:scale-90 transition-all flex-shrink-0"
-                      title="حذف القسم">
-                      <Trash2 size={13} />
-                    </button>
                   </div>
                   {catItems.length === 0 ? (
                     <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-dashed border-gray-200 dark:border-slate-600 text-center text-gray-400 dark:text-slate-500 text-sm">لا توجد أطباق</div>
@@ -546,6 +508,81 @@ function MenuPage() {
           </div>
         )}
       </div>
+
+      {/* Category edit bottom sheet */}
+      {editCatSheet && (() => {
+        const editCat = categories.find(c => c.id === editCatSheet.catId);
+        if (!editCat) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-end" onClick={closeCatEdit}>
+            <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${editCatAnimateIn ? 'opacity-100' : 'opacity-0'}`} />
+            <div
+              className={`relative w-full bg-white dark:bg-slate-800 rounded-t-3xl px-5 pt-5 pb-10 transition-transform duration-300 ease-out ${editCatAnimateIn ? 'translate-y-0' : 'translate-y-full'}`}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mb-4" />
+              <div className="flex items-center justify-between mb-4">
+                <button onClick={closeCatEdit} className="p-1.5 rounded-xl text-gray-400 active:scale-90 transition-all">
+                  <X size={20} />
+                </button>
+                <p className="font-bold text-gray-900 dark:text-slate-100 text-base">تعديل القسم</p>
+                <div className="w-8" />
+              </div>
+
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1.5">اسم القسم</p>
+              <div className="flex gap-2 mb-5">
+                <button
+                  onClick={saveCatName}
+                  disabled={saving || !editCatName.trim()}
+                  className="px-4 py-3 bg-[#f97316] disabled:opacity-40 text-white font-bold rounded-xl active:scale-95 transition-all text-sm flex-shrink-0">
+                  {saving ? '...' : 'حفظ'}
+                </button>
+                <input
+                  value={editCatName}
+                  onChange={e => setEditCatName(e.target.value)}
+                  placeholder="اسم القسم"
+                  dir="rtl"
+                  className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]"
+                />
+              </div>
+
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl p-3 mb-3">
+                <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right pb-2 border-b border-gray-200 dark:border-slate-600 mb-2">☀️ الوضع النهاري</p>
+                <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
+                  <input type="color" value={editCat.color || '#e67e22'} onChange={e => updateCatColor(editCat.id, e.target.value)}
+                    className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
+                  <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الأزرار</span>
+                </label>
+                <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
+                  <input type="color" value={editCat.card_color || '#ffffff'} onChange={e => updateCatCardColor(editCat.id, e.target.value)}
+                    className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
+                  <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
+                </label>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl p-3 mb-5">
+                <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right pb-2 border-b border-gray-200 dark:border-slate-600 mb-2">🌙 الوضع الليلي</p>
+                <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
+                  <input type="color" value={editCat.color_dark || editCat.color || '#e67e22'} onChange={e => updateCatColorDark(editCat.id, e.target.value)}
+                    className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
+                  <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الأزرار</span>
+                </label>
+                <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
+                  <input type="color" value={editCat.card_color_dark || '#1e293b'} onChange={e => updateCatCardColorDark(editCat.id, e.target.value)}
+                    className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
+                  <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
+                </label>
+              </div>
+
+              <button
+                onClick={() => { closeCatEdit(); setTimeout(() => deleteCategory(editCat), 350); }}
+                className="w-full py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-500 font-bold rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2">
+                <Trash2 size={16} /> حذف القسم
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       <AdminBottomNav />
     </div>
