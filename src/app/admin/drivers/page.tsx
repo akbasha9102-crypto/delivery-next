@@ -16,6 +16,7 @@ function DriversPage() {
   const [drivers,     setDrivers]     = useState<Driver[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [showAdd,     setShowAdd]     = useState(false);
+  const [animateIn,   setAnimateIn]   = useState(false);
   const [name,        setName]        = useState('');
   const [phone,       setPhone]       = useState('');
   const [password,    setPassword]    = useState('');
@@ -41,9 +42,17 @@ function DriversPage() {
     return () => { supabase.removeChannel(ch); };
   }, [fetchDrivers]);
 
+  const openAdd = () => {
+    setShowAdd(true);
+    requestAnimationFrame(() => setAnimateIn(true));
+  };
+
   const closeAdd = () => {
-    setShowAdd(false);
-    setName(''); setPhone(''); setPassword('');
+    setAnimateIn(false);
+    setTimeout(() => {
+      setShowAdd(false);
+      setName(''); setPhone(''); setPassword('');
+    }, 300);
   };
 
   const addDriver = async () => {
@@ -99,7 +108,7 @@ function DriversPage() {
         <div className="w-9" />
         <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">السائقين</h1>
         <button
-          onClick={() => setShowAdd(true)}
+          onClick={openAdd}
           className="w-9 h-9 rounded-xl bg-[#2563eb] text-white flex items-center justify-center active:scale-90 transition-all shadow-sm"
         >
           <Plus size={20} />
@@ -187,9 +196,9 @@ function DriversPage() {
       {/* Bottom sheet — إضافة سائق */}
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-end" onClick={closeAdd}>
-          <div className="absolute inset-0 bg-black/40" />
+          <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`} />
           <div
-            className="relative w-full bg-white dark:bg-slate-800 rounded-t-3xl px-5 pt-5 pb-10 space-y-3"
+            className={`relative w-full bg-white dark:bg-slate-800 rounded-t-3xl px-5 pt-5 pb-10 space-y-3 transition-transform duration-300 ease-out ${animateIn ? 'translate-y-0' : 'translate-y-full'}`}
             onClick={e => e.stopPropagation()}
           >
             {/* مقبض + عنوان */}
