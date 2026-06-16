@@ -257,23 +257,28 @@ export default function DriverDashboard() {
           <p className="font-black text-white text-base">{session.name}</p>
         </div>
         {notifStatus === 'granted' ? (
-          <button
-            onClick={toggleAvailability}
-            disabled={togglingAvail}
-            className={`relative w-14 h-7 rounded-full transition-all duration-300 flex-shrink-0 disabled:opacity-60 ${
-              isAvailable ? 'bg-green-500 shadow-md shadow-green-900/40' : 'bg-slate-600'
-            }`}
-          >
-            {togglingAvail ? (
-              <span className="absolute inset-0 flex items-center justify-center">
-                <Loader2 size={14} className="animate-spin text-white" />
-              </span>
-            ) : (
-              <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
-                isAvailable ? 'translate-x-7' : 'translate-x-0.5'
-              }`} />
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <p className={`text-xs font-bold ${isAvailable ? 'text-green-400' : 'text-red-400'}`}>
+              {isAvailable ? 'متاح للطلبات' : 'غير متاح'}
+            </p>
+            <button
+              onClick={toggleAvailability}
+              disabled={togglingAvail}
+              className={`relative w-14 h-7 rounded-full transition-all duration-300 flex-shrink-0 disabled:opacity-60 ${
+                isAvailable ? 'bg-green-500 shadow-md shadow-green-900/40' : 'bg-slate-600'
+              }`}
+            >
+              {togglingAvail ? (
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <Loader2 size={14} className="animate-spin text-white" />
+                </span>
+              ) : (
+                <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
+                  isAvailable ? 'translate-x-7' : 'translate-x-0.5'
+                }`} />
+              )}
+            </button>
+          </div>
         ) : (
           <button
             onClick={enableNotifications}
