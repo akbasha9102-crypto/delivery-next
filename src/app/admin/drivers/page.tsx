@@ -58,9 +58,11 @@ function DriversPage() {
   const addDriver = async () => {
     if (!name.trim() || !phone.trim() || !password.trim()) return;
     setAdding(true);
+    const localNumber = phone.trim().replace(/^0/, '');
+    const fullPhone = `+964${localNumber}`;
     await supabase.from('drivers').insert({
       name: name.trim(),
-      phone: phone.trim(),
+      phone: fullPhone,
       password: password.trim(),
       status: 'unavailable',
     });
@@ -217,11 +219,16 @@ function DriversPage() {
               placeholder="اسم السائق" dir="rtl"
               className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb]"
             />
-            <input
-              value={phone} onChange={e => setPhone(e.target.value)}
-              placeholder="رقم الهاتف" dir="ltr" type="tel"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb]"
-            />
+            <div className="flex items-center bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#2563eb]">
+              <span className="px-3 text-gray-500 dark:text-slate-400 font-bold text-sm border-r border-gray-200 dark:border-slate-600 h-full flex items-center py-3 select-none">
+                +964
+              </span>
+              <input
+                value={phone} onChange={e => setPhone(e.target.value)}
+                placeholder="07XXXXXXXX" dir="ltr" type="tel"
+                className="flex-1 bg-transparent px-3 py-3 text-gray-900 dark:text-slate-100 outline-none"
+              />
+            </div>
 
             {/* باسوورد + زر توليد */}
             <div className="flex gap-2">
