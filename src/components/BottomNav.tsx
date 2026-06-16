@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Truck, UtensilsCrossed, ClipboardList, BarChart2, Car, Store, Settings, Archive } from 'lucide-react';
+import { User, Truck, UtensilsCrossed, ClipboardList, BarChart2, Car, Store, Menu, Archive } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 
@@ -16,7 +16,7 @@ const adminTabs = [
   { href: '/admin/local',       icon: Store,           label: 'المحل' },
   { href: '/admin/menu',        icon: UtensilsCrossed, label: 'المنيو' },
   { href: '/admin/drivers',     icon: Car,             label: 'السائقين' },
-  { href: '/admin/settings',    icon: Settings,        label: 'الإعدادات' },
+  { href: '/admin/settings',    icon: Menu,            label: 'مطعمي' },
 ];
 
 export function ClientBottomNav() {
