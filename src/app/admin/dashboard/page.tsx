@@ -58,9 +58,11 @@ function calcBearing(lat1: number, lng1: number, lat2: number, lng2: number): nu
 }
 
 function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => void }) {
-  const mapRef         = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const driverMarkerRef = useRef<any>(null);
+  const mapRef            = useRef<HTMLDivElement>(null);
+  const mapInstanceRef    = useRef<any>(null);
+  const driverMarkerRef   = useRef<any>(null);
+  const routeLineRef      = useRef<any>(null);
+  const routeLastFetchRef = useRef<number>(0);
   const [order, setOrder] = useState(init);
 
   useEffect(() => {
@@ -95,7 +97,12 @@ function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => 
         .bindPopup(`<b dir="rtl">${order.client_name}</b>`);
     });
     return () => {
-      if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; driverMarkerRef.current = null; }
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        driverMarkerRef.current = null;
+        routeLineRef.current = null;
+      }
     };
   }, [order.client_lat, order.client_lng, order.client_name]);
 
@@ -123,6 +130,33 @@ function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => 
             L.latLngBounds([order.client_lat, order.client_lng], [order.driver_lat!, order.driver_lng!]),
             { padding: [40, 40] }
           );
+        }
+      }
+
+      // Fetch route line (throttled to once per 30s)
+      if (order.client_lat && order.client_lng) {
+        const shouldFetch = !routeLineRef.current || (Date.now() - routeLastFetchRef.current > 30_000);
+        if (shouldFetch) {
+          routeLastFetchRef.current = Date.now();
+          const dLat = order.driver_lat!, dLng = order.driver_lng!;
+          const cLat = order.client_lat,  cLng = order.client_lng;
+          fetch(`https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${cLng},${cLat}?overview=full&geometries=geojson`)
+            .then(r => r.json())
+            .then(json => {
+              const coords = json.routes?.[0]?.geometry?.coordinates?.map(
+                ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+              );
+              if (!coords?.length || !mapInstanceRef.current) return;
+              if (routeLineRef.current) {
+                routeLineRef.current.setLatLngs(coords);
+              } else {
+                routeLineRef.current = L.polyline(coords, {
+                  color: '#2563eb', weight: 4, opacity: 0.85,
+                }).addTo(mapInstanceRef.current);
+                routeLineRef.current.bringToBack();
+              }
+            })
+            .catch(() => {});
         }
       }
     });

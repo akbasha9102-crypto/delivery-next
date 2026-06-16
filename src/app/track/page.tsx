@@ -381,7 +381,7 @@ export default function TrackPage() {
                 trackRouteLineRef.current.setLatLngs(coords);
               } else {
                 trackRouteLineRef.current = L.polyline(coords, {
-                  color: '#2563eb', weight: 4, opacity: 0.8, dashArray: '8, 5',
+                  color: '#2563eb', weight: 4, opacity: 0.85,
                 }).addTo(trackMapInstance.current);
                 trackRouteLineRef.current.bringToBack();
               }
