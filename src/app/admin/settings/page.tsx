@@ -3,8 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, Store } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
 
 /* ─── جدولة الدوام ─── */
@@ -96,17 +95,194 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose }:
   );
 }
 
-export default function BrandingPage() {
-  const router = useRouter();
-  const { restaurant_name, primary_color, logo_url, whatsapp_number, location_url, refreshSettings, loaded,
-          is_closed, opens_at, id: settingsId, schedule: ctxSchedule } = useSettings();
+/* ─── نافذة معلومات المطعم ─── */
+function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
+  onClose: () => void;
+  settingsId: string;
+  refreshSettings: () => Promise<void>;
+}) {
+  const { restaurant_name, primary_color, logo_url, whatsapp_number, location_url } = useSettings();
+  const [animateIn, setAnimateIn] = useState(false);
+  const [form, setForm] = useState({
+    name:     restaurant_name || '',
+    color:    primary_color   || '#000000',
+    logo:     logo_url        || '',
+    whatsapp: whatsapp_number || '',
+    location: location_url    || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
 
-  /* ── حالة المطعم ── */
-  const [scheduleLocal,   setScheduleLocal]   = useState<WeekSchedule | null>(null);
-  const [showClosedModal, setShowClosedModal] = useState(false);
-  const [opensAtInput,    setOpensAtInput]    = useState('');
-  const [showSchedule,    setShowSchedule]    = useState(false);
-  const [tick,            setTick]            = useState(0);
+  useEffect(() => { requestAnimationFrame(() => setAnimateIn(true)); }, []);
+
+  const close = () => {
+    setAnimateIn(false);
+    setTimeout(onClose, 300);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    await supabase.from('restaurant_settings').update({
+      restaurant_name: form.name,
+      primary_color:   form.color,
+      logo_url:        form.logo,
+      whatsapp_number: form.whatsapp || null,
+      location_url:    form.location || null,
+      updated_at:      new Date().toISOString(),
+    }).eq('id', settingsId);
+    await refreshSettings();
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end" onClick={close}>
+      <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`} />
+      <div
+        className={`relative w-full bg-white dark:bg-slate-900 rounded-t-3xl transition-transform duration-300 ease-out flex flex-col max-h-[92vh] ${animateIn ? 'translate-y-0' : 'translate-y-full'}`}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* هيدر الشيت */}
+        <div className="flex-shrink-0 px-5 pt-4 pb-3 border-b border-gray-100 dark:border-slate-800">
+          <div className="w-10 h-1 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4" />
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handleSave} disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold text-sm rounded-xl active:scale-95 transition-all disabled:opacity-50"
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {saved ? '✓ تم الحفظ' : 'حفظ'}
+            </button>
+            <p className="font-bold text-gray-900 dark:text-slate-100 text-base">معلومات المطعم</p>
+            <button onClick={close} className="p-1.5 rounded-xl text-gray-400 active:scale-90 transition-all">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* المحتوى بالتمرير */}
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+
+          {/* الحقول */}
+          <div className="space-y-3">
+            <label className="flex items-center justify-end gap-2 text-xs font-bold text-gray-400 dark:text-slate-500">
+              اسم المطعم <Type size={13} />
+            </label>
+            <input
+              value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+              placeholder="أدخل اسم المطعم" dir="rtl"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-2xl text-right font-bold text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <label className="flex items-center justify-end gap-2 text-xs font-bold text-gray-400 dark:text-slate-500">
+              رابط الشعار <ImageIcon size={13} />
+            </label>
+            <input
+              value={form.logo} onChange={e => setForm({ ...form, logo: e.target.value })}
+              placeholder="https://..." dir="ltr"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-2xl font-medium text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <label className="flex items-center justify-end gap-2 text-xs font-bold text-gray-400 dark:text-slate-500">
+              لون الأقسام <Palette size={13} />
+            </label>
+            <div
+              className="w-full h-16 rounded-2xl relative overflow-hidden border-2 border-gray-100 dark:border-slate-700 cursor-pointer"
+              style={{ backgroundColor: form.color }}
+            >
+              <input
+                type="color" value={form.color}
+                onChange={e => setForm({ ...form, color: e.target.value })}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <span className="absolute inset-0 flex items-center justify-center font-mono text-white text-sm font-bold drop-shadow">
+                {form.color.toUpperCase()}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="flex items-center justify-end gap-2 text-xs font-bold text-gray-400 dark:text-slate-500">
+              رقم الواتساب <MessageCircle size={13} />
+            </label>
+            <input
+              value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
+              placeholder="9647801234567" dir="ltr"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-2xl font-medium text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            />
+            <p className="text-xs text-gray-400 text-right">بدون + مثال: 9647801234567</p>
+          </div>
+
+          <div className="space-y-3">
+            <label className="flex items-center justify-end gap-2 text-xs font-bold text-gray-400 dark:text-slate-500">
+              رابط الموقع <MapPin size={13} />
+            </label>
+            <input
+              value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
+              placeholder="https://maps.google.com/..." dir="ltr"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-2xl font-medium text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
+            />
+          </div>
+
+          {/* معاينة مباشرة */}
+          <div className="pt-2">
+            <p className="text-xs font-bold text-gray-400 dark:text-slate-500 text-right mb-3">معاينة مباشرة</p>
+            <div className="bg-gray-50 dark:bg-slate-950 p-3 rounded-3xl border-4 border-gray-200 dark:border-slate-800">
+              {/* هيدر وهمي */}
+              <div className="bg-white dark:bg-slate-900 px-3 h-12 flex items-center justify-between shadow-sm rounded-2xl mb-3">
+                <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                  <Moon size={12} className="text-gray-400" />
+                </div>
+                <p className="text-xs font-black truncate max-w-[100px]">{form.name || 'اسم المطعم'}</p>
+                {form.logo ? (
+                  <img src={form.logo} alt="" className="h-8 w-8 object-cover rounded-lg border border-gray-100" />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: form.color }}>
+                    <ImageIcon size={13} />
+                  </div>
+                )}
+              </div>
+              {/* أقسام وهمية */}
+              <div className="flex gap-2 flex-row-reverse mb-3 overflow-hidden">
+                <div className="px-3 py-1.5 rounded-xl text-[10px] font-black text-white whitespace-nowrap" style={{ backgroundColor: form.color }}>القسم المختار</div>
+                <div className="px-3 py-1.5 rounded-xl text-[10px] font-black bg-white dark:bg-slate-800 text-gray-400 whitespace-nowrap">قسم آخر</div>
+              </div>
+              {/* بطاقة وهمية */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl p-2.5 flex items-center gap-2.5 flex-row-reverse">
+                <div className="text-right flex-1">
+                  <p className="font-black text-xs">اسم المنتج</p>
+                  <p className="text-xs font-bold" style={{ color: form.color }}>15,000 د.ع</p>
+                </div>
+                <div className="w-14 h-14 rounded-xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
+                  <ShoppingBag size={18} className="text-gray-300" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pb-4" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── الصفحة الرئيسية ─── */
+export default function SettingsPage() {
+  const router = useRouter();
+  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded } = useSettings();
+
+  const [scheduleLocal,    setScheduleLocal]    = useState<WeekSchedule | null>(null);
+  const [showClosedModal,  setShowClosedModal]  = useState(false);
+  const [opensAtInput,     setOpensAtInput]     = useState('');
+  const [showSchedule,     setShowSchedule]     = useState(false);
+  const [showInfo,         setShowInfo]         = useState(false);
+  const [tick,             setTick]             = useState(0);
   const isClosedRef = useRef(is_closed);
   useEffect(() => { isClosedRef.current = is_closed; }, [is_closed]);
   useEffect(() => { setScheduleLocal(ctxSchedule); }, [ctxSchedule]);
@@ -114,6 +290,7 @@ export default function BrandingPage() {
     const id = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(id);
   }, []);
+
   useEffect(() => {
     if (!scheduleLocal?.auto || !settingsId || !loaded) return;
     const now    = new Date();
@@ -153,295 +330,111 @@ export default function BrandingPage() {
   };
   const logout = async () => { await supabase.auth.signOut(); router.replace('/login'); };
 
-  /* ── إعدادات الهوية ── */
-  const [form, setForm] = useState({
-    name: '',
-    color: '#000000',
-    logo: '',
-    whatsapp: '',
-    location: ''
-  });
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState({ text: '', error: false });
-
-  useEffect(() => {
-    if (loaded) {
-      setForm({
-        name: restaurant_name || '',
-        color: primary_color || '#000000',
-        logo: logo_url || '',
-        whatsapp: whatsapp_number || '',
-        location: location_url || ''
-      });
-    }
-  }, [loaded, restaurant_name, primary_color, logo_url, whatsapp_number, location_url]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    setMsg({ text: '', error: false });
-
-    const { error } = await supabase
-      .from('restaurant_settings')
-      .update({
-        restaurant_name: form.name,
-        primary_color: form.color,
-        logo_url: form.logo,
-        whatsapp_number: form.whatsapp || null,
-        location_url: form.location || null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', (await supabase.from('restaurant_settings').select('id').limit(1)).data?.[0]?.id);
-
-    if (error) {
-      setMsg({ text: 'تعذّر حفظ الإعدادات', error: true });
-    } else {
-      await refreshSettings();
-      setMsg({ text: '✓ تم حفظ التعديلات بنجاح', error: false });
-    }
-    setSaving(false);
-  };
-
-  if (!loaded) return <div className="p-10 text-center"><Loader2 className="animate-spin mx-auto" /></div>;
+  if (!loaded) return (
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
+      <Loader2 className="animate-spin text-gray-400" size={32} />
+    </div>
+  );
 
   return (
-    <div className="max-w-4xl mx-auto p-6 pb-32">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => router.back()}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors active:scale-95">
-            <X size={20} />
-          </button>
-          <h1 className="text-2xl font-black text-right">الإعدادات</h1>
-          <div className="w-10" />
-        </div>
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 pb-24">
 
-        {/* ── حالة المطعم ── */}
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-gray-100 dark:border-slate-800 shadow-xl p-6 mb-8">
-          <p className="text-right font-black text-lg mb-4">حالة المطعم</p>
+      {/* هيدر */}
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
+        <div className="w-9" />
+        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">مطعمي</h1>
+        <div className="w-9" />
+      </header>
 
-          <div className="flex gap-3 items-stretch">
-            {/* زر الفتح / الإغلاق */}
+      <div className="px-4 pt-4 space-y-3">
+
+        {/* ─ معلومات المطعم ─ */}
+        <button
+          onClick={() => setShowInfo(true)}
+          className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-[0.98] transition-all"
+        >
+          <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">معلومات المطعم</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">الاسم، الشعار، اللون، الواتساب، الموقع</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+              <Store size={18} className="text-orange-500" />
+            </div>
+          </div>
+        </button>
+
+        {/* ─ حالة المطعم ─ */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3">
+          <p className="text-right font-bold text-gray-900 dark:text-slate-100 text-sm">حالة المطعم</p>
+          <div className="flex gap-2">
+            <button onClick={() => setShowSchedule(true)}
+              className="relative flex flex-col items-center justify-center gap-1 px-4 py-3 rounded-xl border bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 active:scale-95 transition-all">
+              <Calendar size={18} className="text-gray-500 dark:text-slate-400" />
+              <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">جدولة</span>
+              {scheduleLocal?.auto && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-green-400" />}
+            </button>
             <button onClick={handleToggleClosed}
-              className={`flex-1 rounded-2xl px-4 py-4 border flex items-center justify-between transition-all active:scale-[0.98] ${is_closed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'}`}>
-              <div dir="ltr" className={`relative w-12 h-6 rounded-full transition-colors duration-300 flex-shrink-0 ${is_closed ? 'bg-red-500' : 'bg-green-400'}`}>
-                <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${is_closed ? 'translate-x-0' : 'translate-x-6'}`} />
+              className={`flex-1 rounded-xl px-4 py-3 border flex items-center justify-between transition-all active:scale-[0.98] ${is_closed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'}`}>
+              <div dir="ltr" className={`relative w-10 h-5 rounded-full transition-colors duration-300 flex-shrink-0 ${is_closed ? 'bg-red-500' : 'bg-green-400'}`}>
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${is_closed ? 'translate-x-0' : 'translate-x-5'}`} />
               </div>
               <div className="text-right">
                 <p className={`font-bold text-sm ${is_closed ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                   {is_closed ? '🔒 المطعم مغلق' : '✅ المطعم مفتوح'}
                 </p>
                 {is_closed && opens_at && (
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">سيفتح الساعة {opens_at}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">سيفتح الساعة {opens_at}</p>
                 )}
               </div>
             </button>
-
-            {/* زر الجدولة */}
-            <button onClick={() => setShowSchedule(true)}
-              className="relative flex flex-col items-center justify-center gap-1.5 px-4 rounded-2xl border bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 active:scale-95 transition-all">
-              <Calendar size={20} className="text-gray-500 dark:text-slate-400" />
-              <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 whitespace-nowrap">جدولة</span>
-              {scheduleLocal?.auto && <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-green-400" />}
-            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Controls */}
-          <div className="space-y-8 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-800 shadow-xl">
-            
-            <div className="space-y-2 text-right">
-              <label className="flex items-center justify-end gap-2 text-sm font-black opacity-50">
-                اسم المطعم <Type size={16}/>
-              </label>
-              <input 
-                type="text" 
-                value={form.name}
-                onChange={e => setForm({...form, name: e.target.value})}
-                className="w-full p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-2 focus:ring-black text-right font-bold"
-                placeholder="أدخل اسم المطعم هنا"
-              />
-            </div>
-
-            <div className="space-y-4 text-right">
-              <label className="flex items-center justify-end gap-2 text-sm font-black opacity-50">
-                اللون الأساسي <Palette size={16}/>
-              </label>
-              <div className="flex flex-col items-center gap-4">
-                 <div 
-                   className="w-full h-32 rounded-[2rem] shadow-inner flex items-center justify-center cursor-pointer relative overflow-hidden group border-4 border-gray-50 dark:border-slate-800"
-                   style={{ backgroundColor: form.color }}
-                 >
-                    <input 
-                      type="color" 
-                      value={form.color}
-                      onChange={e => setForm({...form, color: e.target.value})}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl text-white font-mono text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                      {form.color.toUpperCase()}
-                    </div>
-                 </div>
-                 <p className="text-[10px] text-gray-400 font-bold">انقر على المربع أعلاه لتغيير اللون</p>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-right">
-              <label className="flex items-center justify-end gap-2 text-sm font-black opacity-50">
-                رابط الشعار (URL) <ImageIcon size={16}/>
-              </label>
-              <input
-                type="text"
-                value={form.logo}
-                onChange={e => setForm({...form, logo: e.target.value})}
-                className="w-full p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-2 focus:ring-black text-left font-medium"
-                placeholder="https://image-url.com/logo.png"
-              />
-            </div>
-
-            <div className="space-y-2 text-right">
-              <label className="flex items-center justify-end gap-2 text-sm font-black opacity-50">
-                رقم الواتساب <MessageCircle size={16}/>
-              </label>
-              <input
-                type="text"
-                value={form.whatsapp}
-                onChange={e => setForm({...form, whatsapp: e.target.value})}
-                className="w-full p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-2 focus:ring-black text-left font-medium"
-                placeholder="9647801234567"
-                dir="ltr"
-              />
-              <p className="text-xs text-gray-400 font-medium">أدخل الرقم مع رمز البلد بدون + مثال: 9647801234567</p>
-            </div>
-
-            <div className="space-y-2 text-right">
-              <label className="flex items-center justify-end gap-2 text-sm font-black opacity-50">
-                رابط الموقع (خرائط) <MapPin size={16}/>
-              </label>
-              <input
-                type="text"
-                value={form.location}
-                onChange={e => setForm({...form, location: e.target.value})}
-                className="w-full p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border-none focus:ring-2 focus:ring-black text-left font-medium"
-                placeholder="https://maps.google.com/..."
-                dir="ltr"
-              />
-              <p className="text-xs text-gray-400 font-medium">افتح موقع المطعم في خرائط قوقل ثم انسخ الرابط</p>
-            </div>
-
-            <button 
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full py-5 bg-black text-white rounded-[1.5rem] font-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="animate-spin" /> : <Save size={20}/>}
-              حفظ التعديلات
-            </button>
-
-            {msg.text && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`text-center font-black ${msg.error ? 'text-red-500' : 'text-green-500'}`}>
-                {msg.text}
-              </motion.p>
-            )}
-          </div>
-
-          {/* Preview */}
-          <div className="space-y-4">
-             <p className="text-right text-xs font-black opacity-30 uppercase tracking-widest px-2">معاينة مباشرة (شاشة الجوال)</p>
-             <div className="bg-gray-50 dark:bg-slate-950 p-4 rounded-[3rem] border-8 border-gray-200 dark:border-slate-800 shadow-2xl min-h-[500px] flex flex-col overflow-hidden relative">
-                
-                {/* Simulated Header */}
-                <div className="bg-white dark:bg-slate-900 px-4 h-16 flex items-center justify-between shadow-sm rounded-t-[1.5rem]">
-                  <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-                    <Moon size={14} className="text-gray-400"/>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] font-black truncate max-w-[120px]">{form.name || 'اسم المطعم'}</p>
-                    <div className="w-6 h-0.5 mx-auto rounded-full opacity-20" style={{ backgroundColor: form.color }}/>
-                  </div>
-                  {form.logo ? (
-                    <img src={form.logo} alt="Logo" className="h-10 w-10 object-cover rounded-lg border border-gray-100" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: form.color }}>
-                      <ImageIcon size={16} />
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 space-y-4">
-                  {/* Simulated Category Pills */}
-                  <div className="flex gap-2 overflow-x-hidden flex-row-reverse">
-                    <div className="px-4 py-2 rounded-xl text-[10px] font-black text-white" style={{ backgroundColor: form.color }}>القسم المختار</div>
-                    <div className="px-4 py-2 rounded-xl text-[10px] font-black bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-400">قسم آخر</div>
-                    <div className="px-4 py-2 rounded-xl text-[10px] font-black bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-400">قسم ثالث</div>
-                  </div>
-
-                  {/* Simulated Card */}
-                  <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-3 shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col gap-2">
-                    <div className="h-32 bg-gray-50 dark:bg-slate-800 rounded-[1.5rem] flex items-center justify-center text-gray-200">
-                      <ImageIcon size={32} />
-                    </div>
-                    <div className="flex justify-between items-center flex-row-reverse px-1">
-                      <div className="text-right">
-                        <p className="font-black text-sm">اسم المنتج</p>
-                        <p className="text-xs font-black" style={{ color: form.color }}>15,000 د.ع</p>
-                      </div>
-                      <div className="h-8 px-4 rounded-xl text-white text-[10px] font-black flex items-center justify-center" style={{ backgroundColor: form.color }}>
-                        إضافة
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Bar Info */}
-                <div className="absolute bottom-6 left-6 right-6 p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-gray-100 dark:border-slate-800 flex items-center justify-between flex-row-reverse">
-                   <div className="flex items-center gap-2">
-                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: form.color }}>
-                       <ShoppingBag size={14} />
-                     </div>
-                     <p className="text-[10px] font-black">السلة</p>
-                   </div>
-                   <div className="px-4 py-2 rounded-xl text-white text-[10px] font-black" style={{ backgroundColor: form.color }}>إتمام الطلب</div>
-                </div>
-             </div>
-             <p className="text-center text-[10px] text-gray-400 font-medium">الشعار يظهر دائماً في الجهة اليسرى للهيدر</p>
-          </div>
-        </div>
-        {/* ── الأرشيف والإحصاء ── */}
-        <div className="mt-8 grid grid-cols-2 gap-3">
+        {/* ─ الأرشيف والإحصاء ─ */}
+        <div className="grid grid-cols-2 gap-3">
           <button onClick={() => router.push('/admin/statistics')}
-            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm active:scale-95 transition-all">
+            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
             <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصاء</span>
-              <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
                 <BarChart2 size={16} className="text-blue-500" />
               </div>
             </div>
           </button>
           <button onClick={() => router.push('/admin/archive')}
-            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm active:scale-95 transition-all">
+            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
             <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأرشيف</span>
-              <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
                 <Archive size={16} className="text-amber-500" />
               </div>
             </div>
           </button>
         </div>
 
-        {/* ── تسجيل الخروج ── */}
-        <div className="mt-4">
-          <button onClick={logout}
-            className="w-full py-4 rounded-2xl bg-red-500 text-white font-black text-base flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg">
-            <LogOut size={18} />
-            تسجيل الخروج
-          </button>
-        </div>
+        {/* ─ تسجيل الخروج ─ */}
+        <button onClick={logout}
+          className="w-full py-4 rounded-2xl bg-red-500 text-white font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
+          <LogOut size={16} />
+          تسجيل الخروج
+        </button>
 
-      </motion.div>
+      </div>
+
+      <AdminBottomNav />
+
+      {/* نافذة معلومات المطعم */}
+      {showInfo && (
+        <RestaurantInfoSheet
+          onClose={() => setShowInfo(false)}
+          settingsId={settingsId}
+          refreshSettings={refreshSettings}
+        />
+      )}
 
       {/* موديل جدولة الدوام */}
       {showSchedule && (
@@ -460,7 +453,7 @@ export default function BrandingPage() {
             <div className="text-center mb-5">
               <p className="text-4xl mb-2">🔒</p>
               <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">إغلاق المطعم</h3>
-              <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">حدد وقت الفتح (اختياري)</p>
+              <p className="text-sm text-gray-400 mt-1">حدد وقت الفتح (اختياري)</p>
             </div>
             <div className="flex items-center gap-3 bg-gray-50 dark:bg-slate-700 rounded-2xl px-4 py-3 mb-5">
               <Clock size={18} className="text-gray-400 flex-shrink-0" />
@@ -480,8 +473,6 @@ export default function BrandingPage() {
           </div>
         </div>
       )}
-
-      <AdminBottomNav />
     </div>
   );
 }
