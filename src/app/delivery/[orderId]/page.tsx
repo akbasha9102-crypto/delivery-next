@@ -53,6 +53,22 @@ function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function calculateBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
+  const Δλ = (lng2 - lng1) * Math.PI / 180;
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
+
+function makeDriverArrow(deg: number): string {
+  return `<div style="width:46px;height:46px;display:flex;align-items:center;justify-content:center;transform:rotate(${Math.round(deg)}deg);filter:drop-shadow(0 3px 10px rgba(37,99,235,0.65));transition:transform 0.4s ease">
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="20,3 33,34 20,27 7,34" fill="#2563eb" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+    </svg>
+  </div>`;
+}
+
 export default function DeliveryPage() {
   const params  = useParams<{ orderId: string }>();
   const orderId = params.orderId;
@@ -67,9 +83,7 @@ export default function DeliveryPage() {
   const routeLineRef       = useRef<any>(null);
   const lastRouteFetchRef  = useRef<number>(0);
   const leafletLinkRef     = useRef<HTMLLinkElement | null>(null);
-  const driverIconHtmlRef  = useRef<string>(
-    `<div style="width:44px;height:44px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 3px 14px rgba(37,99,235,0.5);display:flex;align-items:center;justify-content:center;font-size:22px">🏍️</div>`
-  );
+  const driverIconHtmlRef  = useRef<string>(makeDriverArrow(0));
 
   const [order,          setOrder]          = useState<Order | null>(null);
   const [loading,        setLoading]        = useState(true);
@@ -136,8 +150,18 @@ export default function DeliveryPage() {
       setLocationStatus('tracking');
       watchIdRef.current = navigator.geolocation.watchPosition(
         (pos) => {
-          const { latitude, longitude } = pos.coords;
+          const { latitude, longitude, heading: gpsHeading } = pos.coords;
           setLocationStatus('tracking');
+
+          // Compute arrow rotation: GPS heading first, then bearing to customer
+          let rotation = 0;
+          if (gpsHeading != null && !isNaN(gpsHeading)) {
+            rotation = gpsHeading;
+          } else if (order?.client_lat && order?.client_lng) {
+            rotation = calculateBearing(latitude, longitude, order.client_lat, order.client_lng);
+          }
+          const iconHtml = makeDriverArrow(rotation);
+          driverIconHtmlRef.current = iconHtml;
 
           const now = Date.now();
           if (now - lastSaveRef.current > 5000) {
@@ -150,16 +174,17 @@ export default function DeliveryPage() {
               });
           }
 
-          if (mapInstanceRef.current && driverIconHtmlRef.current) {
+          if (mapInstanceRef.current) {
             import('leaflet').then((mod) => {
               const L = (mod as any).default ?? mod;
               if (!mapInstanceRef.current) return;
               const icon = L.divIcon({
-                html: driverIconHtmlRef.current!,
-                className: '', iconSize: [44, 44], iconAnchor: [22, 22],
+                html: iconHtml,
+                className: '', iconSize: [46, 46], iconAnchor: [23, 23],
               });
               if (driverMarkerRef.current) {
                 driverMarkerRef.current.setLatLng([latitude, longitude]);
+                driverMarkerRef.current.setIcon(icon);
               } else if (order?.client_lat && order?.client_lng) {
                 driverMarkerRef.current = L.marker([latitude, longitude], { icon })
                   .addTo(mapInstanceRef.current)

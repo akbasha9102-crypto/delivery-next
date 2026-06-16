@@ -49,6 +49,14 @@ function waitInfo(createdAt: string) {
 
 
 
+function calcBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
+  const Δλ = (lng2 - lng1) * Math.PI / 180;
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
+
 function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => void }) {
   const mapRef         = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -96,13 +104,19 @@ function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => 
     import('leaflet').then((mod) => {
       const L = (mod as any).default ?? mod;
       if (!mapInstanceRef.current) return;
+      const rotation = (order.client_lat && order.client_lng)
+        ? calcBearing(order.driver_lat!, order.driver_lng!, order.client_lat, order.client_lng)
+        : 0;
+      const arrowHtml = `<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;transform:rotate(${Math.round(rotation)}deg);filter:drop-shadow(0 3px 10px rgba(37,99,235,0.65));transition:transform 0.4s ease">
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="19,3 32,33 19,26 6,33" fill="#2563eb" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+        </svg>
+      </div>`;
+      const icon = L.divIcon({ html: arrowHtml, className: '', iconSize: [44, 44], iconAnchor: [22, 22] });
       if (driverMarkerRef.current) {
         driverMarkerRef.current.setLatLng([order.driver_lat!, order.driver_lng!]);
+        driverMarkerRef.current.setIcon(icon);
       } else {
-        const icon = L.divIcon({
-          html: '<div style="width:40px;height:40px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 3px 14px rgba(37,99,235,0.5);display:flex;align-items:center;justify-content:center;font-size:22px">🏍️</div>',
-          className: '', iconSize: [40, 40], iconAnchor: [20, 20],
-        });
         driverMarkerRef.current = L.marker([order.driver_lat!, order.driver_lng!], { icon }).addTo(mapInstanceRef.current);
         if (order.client_lat && order.client_lng) {
           mapInstanceRef.current.fitBounds(
