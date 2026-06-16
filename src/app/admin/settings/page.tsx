@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, Store } from 'lucide-react';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
 
 /* ─── جدولة الدوام ─── */
@@ -306,8 +306,8 @@ export default function SettingsPage() {
               <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">معلومات المطعم</p>
               <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">الاسم، الشعار، اللون، الواتساب، الموقع</p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
-              <Store size={18} className="text-orange-500" />
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <PenLine size={18} className="text-gray-500 dark:text-slate-400" />
             </div>
           </div>
         </button>
