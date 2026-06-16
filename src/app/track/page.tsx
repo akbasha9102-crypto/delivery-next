@@ -513,7 +513,6 @@ export default function TrackPage() {
                     <p className="text-xs text-amber-500 mt-0.5">⏳ تم تمديد الوقت التقديري</p>
                   )}
                 </div>
-                <div className="text-4xl">🕐</div>
               </div>
             )}
 
