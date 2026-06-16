@@ -256,46 +256,17 @@ export default function DriverDashboard() {
           <span className="text-xl">🏍️</span>
           <p className="font-black text-white text-base">{session.name}</p>
         </div>
-        <button
-          onClick={notifStatus === 'granted' ? undefined : enableNotifications}
-          disabled={subscribing || notifStatus === 'denied'}
-          className={`p-2 rounded-xl transition-all active:scale-90 ${
-            notifStatus === 'granted'  ? 'bg-green-600/30 text-green-400' :
-            notifStatus === 'denied'   ? 'bg-red-900/30 text-red-400' :
-                                         'bg-amber-500 text-white'
-          }`}
-        >
-          {subscribing ? <Loader2 size={17} className="animate-spin" /> :
-           notifStatus === 'denied' ? <BellOff size={17} /> : <Bell size={17} />}
-        </button>
-      </header>
-
-      <div className="px-4 pt-4 space-y-4 max-w-lg mx-auto">
-
-        {/* سويتش التوفر */}
-        <div className={`rounded-2xl px-4 py-3.5 flex items-center justify-between border-2 transition-all ${
-          isAvailable
-            ? 'bg-green-900/20 border-green-700/40'
-            : 'bg-red-900/25 border-red-700/50'
-        }`} dir="rtl">
-          <div>
-            <p className={`font-black text-sm ${isAvailable ? 'text-green-400' : 'text-red-400'}`}>
-              {isAvailable ? '🟢 أنت متاح للطلبات' : '🔴 أنت غير متاح'}
-            </p>
-            <p className="text-slate-500 text-xs mt-0.5">
-              {isAvailable ? 'ستصلك الطلبات الجديدة فوراً' : 'لن يصلك أي طلب جديد'}
-            </p>
-          </div>
+        {notifStatus === 'granted' ? (
           <button
             onClick={toggleAvailability}
             disabled={togglingAvail}
             className={`relative w-14 h-7 rounded-full transition-all duration-300 flex-shrink-0 disabled:opacity-60 ${
-              isAvailable ? 'bg-green-500 shadow-md shadow-green-900/50' : 'bg-slate-600'
+              isAvailable ? 'bg-green-500 shadow-md shadow-green-900/40' : 'bg-slate-600'
             }`}
           >
             {togglingAvail ? (
               <span className="absolute inset-0 flex items-center justify-center">
-                <Loader2 size={15} className="animate-spin text-white" />
+                <Loader2 size={14} className="animate-spin text-white" />
               </span>
             ) : (
               <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
@@ -303,7 +274,21 @@ export default function DriverDashboard() {
               }`} />
             )}
           </button>
-        </div>
+        ) : (
+          <button
+            onClick={enableNotifications}
+            disabled={subscribing || notifStatus === 'denied'}
+            className={`p-2 rounded-xl transition-all active:scale-90 ${
+              notifStatus === 'denied' ? 'bg-red-900/30 text-red-400' : 'bg-amber-500 text-white'
+            }`}
+          >
+            {subscribing ? <Loader2 size={17} className="animate-spin" /> :
+             notifStatus === 'denied' ? <BellOff size={17} /> : <Bell size={17} />}
+          </button>
+        )}
+      </header>
+
+      <div className="px-4 pt-4 space-y-4 max-w-lg mx-auto">
 
         {/* بانر تثبيت PWA على iOS */}
         {showIOSBanner && (
