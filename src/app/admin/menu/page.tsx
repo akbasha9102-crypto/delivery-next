@@ -45,6 +45,7 @@ function MenuPage() {
   const [editCatSheet, setEditCatSheet] = useState<{ catId: string } | null>(null);
   const [editCatAnimateIn, setEditCatAnimateIn] = useState(false);
   const [editCatName, setEditCatName] = useState('');
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
 
   const fetchMenu = async () => {
     setLoading(true);
@@ -409,10 +410,10 @@ function MenuPage() {
                         {cat.name} ({count})
                       </button>
                       <button
-                        onClick={() => openCatEdit(cat)}
-                        className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-400 dark:text-slate-500 active:scale-90 transition-all"
-                        title="تعديل القسم">
-                        <ChevronLeft size={13} />
+                        onClick={() => deleteCategory(cat)}
+                        className="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-400 active:scale-90 transition-all"
+                        title="حذف القسم">
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   );
@@ -444,15 +445,29 @@ function MenuPage() {
                 (!selectedCat || i.category_id === selectedCat)
               );
               if (catItems.length === 0) return null;
+              const collapsed = collapsedCats.has(cat.id);
+              const toggleCollapse = () => setCollapsedCats(prev => {
+                const next = new Set(prev);
+                next.has(cat.id) ? next.delete(cat.id) : next.add(cat.id);
+                return next;
+              });
               return (
                 <div key={cat.id}>
                   <div className="flex items-center justify-end gap-2 mb-3">
                     <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">{cat.name}</h3>
                     <span className="bg-orange-100 dark:bg-orange-900/20 text-[#f97316] text-xs font-bold px-2.5 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">{catItems.length}</span>
+                    <button
+                      onClick={() => openCatEdit(cat)}
+                      className="w-7 h-7 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-400 dark:text-slate-500 active:scale-90 transition-all">
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button
+                      onClick={toggleCollapse}
+                      className="w-7 h-7 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-400 dark:text-slate-500 active:scale-90 transition-all">
+                      <X size={14} />
+                    </button>
                   </div>
-                  {catItems.length === 0 ? (
-                    <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-dashed border-gray-200 dark:border-slate-600 text-center text-gray-400 dark:text-slate-500 text-sm">لا توجد أطباق</div>
-                  ) : (
+                  {!collapsed && (
                     <div className="space-y-3">
                       {catItems.map(item => (
                         <div key={item.id} className={`bg-white dark:bg-slate-800 rounded-2xl border ${getItemStatus(item) === 'hidden' ? 'opacity-50 border-gray-200 dark:border-slate-600' : 'border-gray-100 dark:border-slate-700'}`}>
