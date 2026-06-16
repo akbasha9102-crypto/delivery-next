@@ -437,8 +437,13 @@ export default function TrackPage() {
     return () => clearInterval(id);
   }, [estimatedAt]);
 
-  const fmtEta = (d: Date) =>
-    d.toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const fmtEta = (d: Date) => {
+    const h = d.getHours();
+    const m = d.getMinutes().toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'م' : 'ص';
+    const h12 = h % 12 || 12;
+    return `${h12}:${m} ${ampm}`;
+  };
 
   const stepIndex = (s: string) => s === 'pickup' ? 1 : STEPS.findIndex(x => x.key === s);
   const current = order ? stepIndex(order.status) : -1;
@@ -502,7 +507,7 @@ export default function TrackPage() {
                   <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">الوقت التقديري للتوصيل</p>
                   <p className="font-black text-gray-900 dark:text-white text-lg">
                     سيصلك طلبك عند الساعة{' '}
-                    <span style={{ color: brandColor }}>{fmtEta(estimatedAt)}</span>
+                    <span className="text-orange-500">{fmtEta(estimatedAt)}</span>
                   </p>
                   {extraMins > 0 && (
                     <p className="text-xs text-amber-500 mt-0.5">⏳ تم تمديد الوقت التقديري</p>
