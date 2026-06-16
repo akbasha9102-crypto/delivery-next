@@ -61,6 +61,20 @@ function calculateBearing(lat1: number, lng1: number, lat2: number, lng2: number
   return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
 }
 
+const OFF_ROUTE_THRESHOLD_M = 60;
+
+// Returns true if driver is more than OFF_ROUTE_THRESHOLD_M meters from every sampled point on the route
+function isOffRoute(lat: number, lng: number, routeCoords: [number, number][]): boolean {
+  if (routeCoords.length < 2) return false;
+  const step = Math.max(1, Math.floor(routeCoords.length / 80));
+  for (let i = 0; i < routeCoords.length; i += step) {
+    if (getDistanceMeters(lat, lng, routeCoords[i][0], routeCoords[i][1]) < OFF_ROUTE_THRESHOLD_M) return false;
+  }
+  // always check last point too
+  const last = routeCoords[routeCoords.length - 1];
+  return getDistanceMeters(lat, lng, last[0], last[1]) >= OFF_ROUTE_THRESHOLD_M;
+}
+
 function makeDriverArrow(deg: number): string {
   return `<div style="width:46px;height:46px;display:flex;align-items:center;justify-content:center;transform:rotate(${Math.round(deg)}deg);filter:drop-shadow(0 3px 10px rgba(37,99,235,0.65));transition:transform 0.4s ease">
     <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -77,16 +91,20 @@ export default function DeliveryPage() {
   const mapContainerRef    = useRef<HTMLDivElement>(null);
   const mapInstanceRef     = useRef<any>(null);
   const driverMarkerRef    = useRef<any>(null);
+  const customerMarkersRef = useRef<any[]>([]);
   const watchIdRef         = useRef<number | null>(null);
   const arrivedSentRef     = useRef(false);
   const lastSaveRef        = useRef<number>(0);
   const routeLineRef       = useRef<any>(null);
+  const routeCoordsRef     = useRef<[number, number][]>([]);
   const lastRouteFetchRef  = useRef<number>(0);
   const leafletLinkRef     = useRef<HTMLLinkElement | null>(null);
   const driverIconHtmlRef  = useRef<string>(makeDriverArrow(0));
 
   const [order,          setOrder]          = useState<Order | null>(null);
   const orderRef = useRef<Order | null>(null);
+  const [mapReady,       setMapReady]       = useState(false);
+  const [driverOrders,   setDriverOrders]   = useState<Array<{id:string; client_name:string; client_lat:number|null; client_lng:number|null; delivery_address:string|null}>>([]);
   const [loading,        setLoading]        = useState(true);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'tracking' | 'denied'>('idle');
   const [nearCustomer,   setNearCustomer]   = useState(false);
@@ -136,157 +154,76 @@ export default function DeliveryPage() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // Notification API is unavailable in iOS Safari (non-PWA) — guard before access
+    if (typeof Notification === 'undefined') return;
     if (Notification.permission === 'granted') setNotifStatus('granted');
     if (Notification.permission === 'denied')  setNotifStatus('denied');
   }, []);
 
   useEffect(() => {
     if (!order?.driver_id) return;
+    if (typeof Notification === 'undefined' || !('PushManager' in window)) return;
     if (Notification.permission === 'granted') {
       setNotifStatus('granted');
       subscribeDriver(order.driver_id);
     }
   }, [order?.driver_id]);
 
+  // Fetch all active orders for this driver (for multi-destination markers)
+  useEffect(() => {
+    if (!started || !order?.driver_id) return;
+    supabase
+      .from('orders')
+      .select('id, client_name, client_lat, client_lng, delivery_address')
+      .eq('driver_id', order.driver_id)
+      .in('status', ['pickup', 'ready', 'preparing'])
+      .order('created_at', { ascending: true })
+      .then(({ data }) => setDriverOrders(data || []));
+  }, [order?.driver_id, started]);
+
+  // Draw / refresh numbered customer markers on the map
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current) return;
+
+    // Remove previous customer markers
+    customerMarkersRef.current.forEach(m => m.remove());
+    customerMarkersRef.current = [];
+
+    if (!driverOrders.length) return;
+
+    import('leaflet').then(mod => {
+      const L = (mod as any).default ?? mod;
+      if (!mapInstanceRef.current) return;
+      driverOrders.forEach((o, idx) => {
+        if (!o.client_lat || !o.client_lng) return;
+        const num = idx + 1;
+        const isCurrent = o.id === orderId;
+        const color = isCurrent ? '#ef4444' : '#f97316';
+        const iconHtml = `<div style="position:relative;width:38px;height:44px">
+          <div style="width:38px;height:38px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3)"></div>
+          <span style="position:absolute;top:3px;left:0;width:38px;text-align:center;font-weight:900;font-size:15px;color:white;line-height:1.2">${num}</span>
+        </div>`;
+        const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [38, 44], iconAnchor: [19, 44] });
+        const marker = L.marker([o.client_lat, o.client_lng], { icon })
+          .addTo(mapInstanceRef.current)
+          .bindPopup(
+            `<div dir="rtl" style="font-family:sans-serif;min-width:120px"><b>${o.client_name}</b>${o.delivery_address ? `<br><small style="color:#6b7280">${o.delivery_address}</small>` : ''}</div>`,
+            { offset: [0, -20] }
+          );
+        if (isCurrent) marker.openPopup();
+        customerMarkersRef.current.push(marker);
+      });
+    });
+  }, [mapReady, driverOrders, orderId]);
+
   useEffect(() => {
     if (!started) return;
 
-    if (!('geolocation' in navigator)) {
-      setLocationStatus('denied');
-    } else {
-      setLocationStatus('tracking');
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (pos) => {
-          const { latitude, longitude, heading: gpsHeading } = pos.coords;
-          setLocationStatus('tracking');
+    let cancelled = false;
+    let mapInitDone = false;
 
-          // Compute arrow rotation: GPS heading first, then bearing to customer
-          const o = orderRef.current;
-          let rotation = 0;
-          if (gpsHeading != null && !isNaN(gpsHeading)) {
-            rotation = gpsHeading;
-          } else if (o?.client_lat && o?.client_lng) {
-            rotation = calculateBearing(latitude, longitude, o.client_lat, o.client_lng);
-          }
-          const iconHtml = makeDriverArrow(rotation);
-          driverIconHtmlRef.current = iconHtml;
-
-          const now = Date.now();
-          if (now - lastSaveRef.current > 5000) {
-            lastSaveRef.current = now;
-            supabase.from('orders')
-              .update({ driver_lat: latitude, driver_lng: longitude })
-              .eq('id', orderId)
-              .then(({ error }) => {
-                if (error) console.error('[driver-location] فشل حفظ الموقع:', error.message);
-              });
-          }
-
-          if (mapInstanceRef.current) {
-            import('leaflet').then((mod) => {
-              const L = (mod as any).default ?? mod;
-              if (!mapInstanceRef.current) return;
-              const icon = L.divIcon({
-                html: iconHtml,
-                className: '', iconSize: [46, 46], iconAnchor: [23, 23],
-              });
-              if (driverMarkerRef.current) {
-                driverMarkerRef.current.setLatLng([latitude, longitude]);
-                driverMarkerRef.current.setIcon(icon);
-              } else if (o?.client_lat && o?.client_lng) {
-                driverMarkerRef.current = L.marker([latitude, longitude], { icon })
-                  .addTo(mapInstanceRef.current)
-                  .bindPopup('<div dir="rtl">موقعك الحالي</div>');
-                mapInstanceRef.current.fitBounds(
-                  L.latLngBounds([o.client_lat, o.client_lng], [latitude, longitude]),
-                  { padding: [60, 60] }
-                );
-              }
-            });
-          }
-
-          if (o?.client_lat && o?.client_lng && mapInstanceRef.current) {
-            const shouldFetch = !routeLineRef.current || (Date.now() - lastRouteFetchRef.current > 30_000);
-            if (shouldFetch) {
-              lastRouteFetchRef.current = Date.now();
-              const rLat = latitude, rLng = longitude;
-              const cLat = o.client_lat, cLng = o.client_lng;
-              fetch(`https://router.project-osrm.org/route/v1/driving/${rLng},${rLat};${cLng},${cLat}?overview=full&geometries=geojson`)
-                .then(r => r.json())
-                .then(json => {
-                  const coords = json.routes?.[0]?.geometry?.coordinates?.map(
-                    ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
-                  );
-                  if (!coords?.length || !mapInstanceRef.current) return;
-                  import('leaflet').then(mod => {
-                    const L = (mod as any).default ?? mod;
-                    if (!mapInstanceRef.current) return;
-                    if (routeLineRef.current) {
-                      routeLineRef.current.setLatLngs(coords);
-                    } else {
-                      routeLineRef.current = L.polyline(coords, {
-                        color: '#2563eb', weight: 5, opacity: 0.85,
-                      }).addTo(mapInstanceRef.current);
-                      routeLineRef.current.bringToBack();
-                    }
-                  });
-                })
-                .catch(() => {});
-            }
-          }
-
-          if (o?.client_lat && o?.client_lng) {
-            const dist = getDistanceMeters(latitude, longitude, o.client_lat, o.client_lng);
-            if (dist <= 100 && !arrivedSentRef.current) {
-              arrivedSentRef.current = true;
-              setNearCustomer(true);
-              supabase.from('orders').update({ driver_arrived: true }).eq('id', orderId);
-            }
-          }
-        },
-        () => setLocationStatus('denied'),
-        { enableHighAccuracy: true, maximumAge: 4000, timeout: 12000 }
-      );
-    }
-
-    const clientLat = orderRef.current?.client_lat;
-    const clientLng = orderRef.current?.client_lng;
-    if (!clientLat || !clientLng) return;
-    if (!mapContainerRef.current || mapInstanceRef.current) return;
-
-    if (!leafletLinkRef.current) {
-      const link = document.createElement('link');
-      link.rel  = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-      leafletLinkRef.current = link;
-    }
-
-    import('leaflet').then((mod) => {
-      const L = (mod as any).default ?? mod;
-      if (!mapContainerRef.current || mapInstanceRef.current) return;
-
-      const map = L.map(mapContainerRef.current, { attributionControl: false, zoomControl: false })
-        .setView([clientLat, clientLng], 15);
-      mapInstanceRef.current = map;
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-
-      const o = orderRef.current;
-      const customerIcon = L.divIcon({
-        html: `<div style="width:38px;height:38px;background:#ef4444;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px rgba(239,68,68,0.5)"></div>`,
-        className: '', iconSize: [38, 38], iconAnchor: [19, 38],
-      });
-      L.marker([clientLat, clientLng], { icon: customerIcon })
-        .addTo(map)
-        .bindPopup(
-          `<div dir="rtl" style="font-family:sans-serif;min-width:130px"><b>${o?.client_name ?? ''}</b>${o?.delivery_address ? `<br><small style="color:#6b7280">${o.delivery_address}</small>` : ''}</div>`,
-          { offset: [0, -20] }
-        )
-        .openPopup();
-    });
-
-    return () => {
+    const doCleanup = () => {
+      cancelled = true;
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
@@ -296,8 +233,156 @@ export default function DeliveryPage() {
         mapInstanceRef.current = null;
         driverMarkerRef.current = null;
         routeLineRef.current = null;
+        routeCoordsRef.current = [];
+        customerMarkersRef.current = [];
       }
+      setMapReady(false);
     };
+
+    if (!('geolocation' in navigator)) {
+      setLocationStatus('denied');
+      return doCleanup;
+    }
+
+    // Initialize map only after first GPS fix — prevents simultaneous GPS dialog + Leaflet load on iOS
+    const initMapOnce = () => {
+      if (mapInitDone || mapInstanceRef.current || !mapContainerRef.current) return;
+      const clientLat = orderRef.current?.client_lat;
+      const clientLng = orderRef.current?.client_lng;
+      if (!clientLat || !clientLng) return;
+      mapInitDone = true;
+
+      if (!leafletLinkRef.current) {
+        const link = document.createElement('link');
+        link.rel  = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+        leafletLinkRef.current = link;
+      }
+
+      import('leaflet').then((mod) => {
+        if (cancelled || !mapContainerRef.current || mapInstanceRef.current) return;
+        const L = (mod as any).default ?? mod;
+        try {
+          const map = L.map(mapContainerRef.current, { attributionControl: false, zoomControl: false })
+            .setView([clientLat, clientLng], 15);
+          mapInstanceRef.current = map;
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+          setMapReady(true);
+        } catch (e) {
+          console.error('[map] init failed:', e);
+        }
+      }).catch(() => {});
+    };
+
+    setLocationStatus('tracking');
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude, heading: gpsHeading } = pos.coords;
+        setLocationStatus('tracking');
+
+        // Compute arrow rotation: GPS heading first, then bearing to customer
+        const o = orderRef.current;
+        let rotation = 0;
+        if (gpsHeading != null && !isNaN(gpsHeading)) {
+          rotation = gpsHeading;
+        } else if (o?.client_lat && o?.client_lng) {
+          rotation = calculateBearing(latitude, longitude, o.client_lat, o.client_lng);
+        }
+        const iconHtml = makeDriverArrow(rotation);
+        driverIconHtmlRef.current = iconHtml;
+
+        const now = Date.now();
+        if (now - lastSaveRef.current > 5000) {
+          lastSaveRef.current = now;
+          supabase.from('orders')
+            .update({ driver_lat: latitude, driver_lng: longitude })
+            .eq('id', orderId)
+            .then(({ error }) => {
+              if (error) console.error('[driver-location] فشل حفظ الموقع:', error.message);
+            });
+        }
+
+        // Initialize map on first GPS fix (iOS: permission dialog is dismissed by now)
+        initMapOnce();
+
+        if (mapInstanceRef.current) {
+          import('leaflet').then((mod) => {
+            const L = (mod as any).default ?? mod;
+            if (!mapInstanceRef.current) return;
+            const icon = L.divIcon({
+              html: iconHtml,
+              className: '', iconSize: [46, 46], iconAnchor: [23, 23],
+            });
+            if (driverMarkerRef.current) {
+              driverMarkerRef.current.setLatLng([latitude, longitude]);
+              driverMarkerRef.current.setIcon(icon);
+            } else if (o?.client_lat && o?.client_lng) {
+              driverMarkerRef.current = L.marker([latitude, longitude], { icon })
+                .addTo(mapInstanceRef.current)
+                .bindPopup('<div dir="rtl">موقعك الحالي</div>');
+              mapInstanceRef.current.fitBounds(
+                L.latLngBounds([o.client_lat, o.client_lng], [latitude, longitude]),
+                { padding: [60, 60] }
+              );
+            }
+          });
+        }
+
+        if (o?.client_lat && o?.client_lng && mapInstanceRef.current) {
+          const timeSinceLast = Date.now() - lastRouteFetchRef.current;
+          const deviated = routeCoordsRef.current.length > 0
+            && isOffRoute(latitude, longitude, routeCoordsRef.current);
+          // Re-fetch if: first time, or 30s passed, or driver deviated (min 8s cooldown)
+          const shouldFetch = !routeLineRef.current
+            || timeSinceLast > 30_000
+            || (deviated && timeSinceLast > 8_000);
+
+          if (shouldFetch) {
+            lastRouteFetchRef.current = Date.now();
+            const rLat = latitude, rLng = longitude;
+            const cLat = o.client_lat, cLng = o.client_lng;
+            fetch(`https://router.project-osrm.org/route/v1/driving/${rLng},${rLat};${cLng},${cLat}?overview=full&geometries=geojson&alternatives=false`)
+              .then(r => { if (!r.ok) throw new Error('osrm'); return r.json(); })
+              .then(json => {
+                const coords: [number, number][] = (json.routes?.[0]?.geometry?.coordinates ?? [])
+                  .map(([lng, lat]: [number, number]) => [lat, lng]);
+                if (!coords.length || !mapInstanceRef.current) return;
+                routeCoordsRef.current = coords;
+                import('leaflet').then(mod => {
+                  const L = (mod as any).default ?? mod;
+                  if (!mapInstanceRef.current) return;
+                  if (routeLineRef.current) {
+                    routeLineRef.current.setLatLngs(coords);
+                  } else {
+                    routeLineRef.current = L.polyline(coords, {
+                      color: '#2563eb', weight: 5, opacity: 0.85,
+                    }).addTo(mapInstanceRef.current);
+                    routeLineRef.current.bringToBack();
+                  }
+                });
+              })
+              .catch(() => {
+                // reset timer so we retry sooner on network failure
+                lastRouteFetchRef.current = Date.now() - 22_000;
+              });
+          }
+        }
+
+        if (o?.client_lat && o?.client_lng) {
+          const dist = getDistanceMeters(latitude, longitude, o.client_lat, o.client_lng);
+          if (dist <= 100 && !arrivedSentRef.current) {
+            arrivedSentRef.current = true;
+            setNearCustomer(true);
+            supabase.from('orders').update({ driver_arrived: true }).eq('id', orderId);
+          }
+        }
+      },
+      () => setLocationStatus('denied'),
+      { enableHighAccuracy: true, maximumAge: 4000, timeout: 12000 }
+    );
+
+    return doCleanup;
   }, [orderId, started]);
 
   const handleStart = async () => {
