@@ -102,11 +102,10 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
   refreshSettings: () => Promise<void>;
 }) {
   const { restaurant_name, primary_color, logo_url, whatsapp_number, location_url } = useSettings();
-  const colorInputRef = useRef<HTMLInputElement>(null);
+  void primary_color;
   const [animateIn, setAnimateIn] = useState(false);
   const [form, setForm] = useState({
     name:     restaurant_name || '',
-    color:    primary_color   || '#f97316',
     logo:     logo_url        || '',
     whatsapp: whatsapp_number || '',
     location: location_url    || '',
@@ -122,7 +121,6 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
     setSaving(true);
     await supabase.from('restaurant_settings').update({
       restaurant_name: form.name,
-      primary_color:   form.color,
       logo_url:        form.logo,
       whatsapp_number: form.whatsapp || null,
       location_url:    form.location || null,
@@ -181,29 +179,7 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
               className={inputCls} />
           </Field>
 
-          {/* لون الأقسام */}
-          <Field label="لون الأقسام">
-            <button
-              type="button"
-              onClick={() => colorInputRef.current?.click()}
-              className="w-full flex items-center justify-between px-4 py-3.5 bg-gray-50 dark:bg-slate-800 rounded-2xl active:scale-[0.98] transition-all"
-            >
-              <span className="text-xs font-mono text-gray-500 dark:text-slate-400">{form.color.toUpperCase()}</span>
-              <div className="flex items-center gap-2.5">
-                <span className="text-sm text-gray-400 dark:text-slate-500">اضغط لتغيير اللون</span>
-                <span className="w-8 h-8 rounded-xl border-2 border-white shadow-md flex-shrink-0" style={{ backgroundColor: form.color }} />
-              </div>
-            </button>
-            <input
-              ref={colorInputRef}
-              type="color"
-              value={form.color}
-              onChange={e => setForm({ ...form, color: e.target.value })}
-              className="sr-only"
-            />
-          </Field>
-
-          <Field label="رقم الواتساب">
+<Field label="رقم الواتساب">
             <input value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
               placeholder="9647801234567" dir="ltr"
               className={inputCls} />
@@ -226,11 +202,11 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
                 <p className="text-xs font-black truncate max-w-[110px]">{form.name || 'اسم المطعم'}</p>
                 {form.logo
                   ? <img src={form.logo} alt="" className="h-7 w-7 object-cover rounded-lg" />
-                  : <div className="w-7 h-7 rounded-lg text-white flex items-center justify-center" style={{ backgroundColor: form.color }}><ImageIcon size={12} /></div>
+                  : <div className="w-7 h-7 rounded-lg text-white flex items-center justify-center bg-orange-400"><ImageIcon size={12} /></div>
                 }
               </div>
               <div className="flex gap-2 flex-row-reverse">
-                <span className="px-3 py-1 rounded-lg text-[10px] font-black text-white" style={{ backgroundColor: form.color }}>مختار</span>
+                <span className="px-3 py-1 rounded-lg text-[10px] font-black text-white bg-orange-400">مختار</span>
                 <span className="px-3 py-1 rounded-lg text-[10px] font-black bg-white dark:bg-slate-800 text-gray-400">قسم آخر</span>
               </div>
             </div>
