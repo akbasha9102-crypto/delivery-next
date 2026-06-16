@@ -102,10 +102,11 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
   refreshSettings: () => Promise<void>;
 }) {
   const { restaurant_name, primary_color, logo_url, whatsapp_number, location_url } = useSettings();
+  const colorInputRef = useRef<HTMLInputElement>(null);
   const [animateIn, setAnimateIn] = useState(false);
   const [form, setForm] = useState({
     name:     restaurant_name || '',
-    color:    primary_color   || '#000000',
+    color:    primary_color   || '#f97316',
     logo:     logo_url        || '',
     whatsapp: whatsapp_number || '',
     location: location_url    || '',
@@ -115,10 +116,7 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
 
   useEffect(() => { requestAnimationFrame(() => setAnimateIn(true)); }, []);
 
-  const close = () => {
-    setAnimateIn(false);
-    setTimeout(onClose, 300);
-  };
+  const close = () => { setAnimateIn(false); setTimeout(onClose, 300); };
 
   const handleSave = async () => {
     setSaving(true);
@@ -136,6 +134,15 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div dir="rtl">
+      <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5 px-1">{label}</p>
+      {children}
+    </div>
+  );
+
+  const inputCls = "w-full px-4 py-3.5 bg-gray-50 dark:bg-slate-800 rounded-2xl text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 text-sm";
+
   return (
     <div className="fixed inset-0 z-50 flex items-end" onClick={close}>
       <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`} />
@@ -143,129 +150,93 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
         className={`relative w-full bg-white dark:bg-slate-900 rounded-t-3xl transition-transform duration-300 ease-out flex flex-col max-h-[92vh] ${animateIn ? 'translate-y-0' : 'translate-y-full'}`}
         onClick={e => e.stopPropagation()}
       >
-        {/* هيدر الشيت */}
-        <div className="flex-shrink-0 px-5 pt-4 pb-3 border-b border-gray-100 dark:border-slate-800">
+        {/* هيدر */}
+        <div className="flex-shrink-0 px-5 pt-4 pb-4 border-b border-gray-100 dark:border-slate-800">
           <div className="w-10 h-1 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4" />
           <div className="flex items-center justify-between">
-            <button
-              onClick={handleSave} disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold text-sm rounded-xl active:scale-95 transition-all disabled:opacity-50"
-            >
+            <button onClick={handleSave} disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold text-sm rounded-xl active:scale-95 transition-all disabled:opacity-50">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              {saved ? '✓ تم الحفظ' : 'حفظ'}
+              {saved ? '✓ تم' : 'حفظ'}
             </button>
-            <p className="font-bold text-gray-900 dark:text-slate-100 text-base">معلومات المطعم</p>
+            <p className="font-bold text-gray-900 dark:text-slate-100">معلومات المطعم</p>
             <button onClick={close} className="p-1.5 rounded-xl text-gray-400 active:scale-90 transition-all">
               <X size={20} />
             </button>
           </div>
         </div>
 
-        {/* المحتوى بالتمرير */}
-        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+        {/* الحقول */}
+        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
 
-          {/* الحقول */}
-          <div className="space-y-3">
-            <label className="flex items-center justify-end gap-2 text-xs font-bold text-gray-400 dark:text-slate-500">
-              اسم المطعم <Type size={13} />
-            </label>
-            <input
-              value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-              placeholder="أدخل اسم المطعم" dir="rtl"
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-2xl text-right font-bold text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
-            />
-          </div>
+          <Field label="اسم المطعم">
+            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+              placeholder="مثال: مطعم الأصيل" dir="rtl"
+              className={inputCls + " text-right font-bold"} />
+          </Field>
 
-          <div className="space-y-3">
-            <label className="flex items-center justify-end gap-2 text-xs font-bold text-gray-400 dark:text-slate-500">
-              رابط الشعار <ImageIcon size={13} />
-            </label>
-            <input
-              value={form.logo} onChange={e => setForm({ ...form, logo: e.target.value })}
+          <Field label="رابط الشعار">
+            <input value={form.logo} onChange={e => setForm({ ...form, logo: e.target.value })}
               placeholder="https://..." dir="ltr"
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-2xl font-medium text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
-            />
-          </div>
+              className={inputCls} />
+          </Field>
 
-          <div className="space-y-3">
-            <label className="flex items-center justify-end gap-2 text-xs font-bold text-gray-400 dark:text-slate-500">
-              لون الأقسام <Palette size={13} />
-            </label>
-            <div
-              className="w-full h-16 rounded-2xl relative overflow-hidden border-2 border-gray-100 dark:border-slate-700 cursor-pointer"
-              style={{ backgroundColor: form.color }}
+          {/* لون الأقسام */}
+          <Field label="لون الأقسام">
+            <button
+              type="button"
+              onClick={() => colorInputRef.current?.click()}
+              className="w-full flex items-center justify-between px-4 py-3.5 bg-gray-50 dark:bg-slate-800 rounded-2xl active:scale-[0.98] transition-all"
             >
-              <input
-                type="color" value={form.color}
-                onChange={e => setForm({ ...form, color: e.target.value })}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <span className="absolute inset-0 flex items-center justify-center font-mono text-white text-sm font-bold drop-shadow">
-                {form.color.toUpperCase()}
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <label className="flex items-center justify-end gap-2 text-xs font-bold text-gray-400 dark:text-slate-500">
-              رقم الواتساب <MessageCircle size={13} />
-            </label>
+              <span className="text-xs font-mono text-gray-500 dark:text-slate-400">{form.color.toUpperCase()}</span>
+              <div className="flex items-center gap-2.5">
+                <span className="text-sm text-gray-400 dark:text-slate-500">اضغط لتغيير اللون</span>
+                <span className="w-8 h-8 rounded-xl border-2 border-white shadow-md flex-shrink-0" style={{ backgroundColor: form.color }} />
+              </div>
+            </button>
             <input
-              value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
+              ref={colorInputRef}
+              type="color"
+              value={form.color}
+              onChange={e => setForm({ ...form, color: e.target.value })}
+              className="sr-only"
+            />
+          </Field>
+
+          <Field label="رقم الواتساب">
+            <input value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
               placeholder="9647801234567" dir="ltr"
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-2xl font-medium text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
-            />
-            <p className="text-xs text-gray-400 text-right">بدون + مثال: 9647801234567</p>
-          </div>
+              className={inputCls} />
+            <p className="text-xs text-gray-400 mt-1.5 px-1">بدون علامة + — مثال: 9647801234567</p>
+          </Field>
 
-          <div className="space-y-3">
-            <label className="flex items-center justify-end gap-2 text-xs font-bold text-gray-400 dark:text-slate-500">
-              رابط الموقع <MapPin size={13} />
-            </label>
-            <input
-              value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
+          <Field label="رابط الموقع على الخريطة">
+            <input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
               placeholder="https://maps.google.com/..." dir="ltr"
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-2xl font-medium text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
-            />
-          </div>
+              className={inputCls} />
+          </Field>
 
-          {/* معاينة مباشرة */}
-          <div className="pt-2">
-            <p className="text-xs font-bold text-gray-400 dark:text-slate-500 text-right mb-3">معاينة مباشرة</p>
-            <div className="bg-gray-50 dark:bg-slate-950 p-3 rounded-3xl border-4 border-gray-200 dark:border-slate-800">
-              {/* هيدر وهمي */}
-              <div className="bg-white dark:bg-slate-900 px-3 h-12 flex items-center justify-between shadow-sm rounded-2xl mb-3">
-                <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-                  <Moon size={12} className="text-gray-400" />
+          {/* معاينة مصغرة */}
+          <Field label="معاينة">
+            <div className="bg-gray-50 dark:bg-slate-950 p-3 rounded-2xl border border-gray-100 dark:border-slate-800">
+              <div className="bg-white dark:bg-slate-900 px-3 h-11 flex items-center justify-between rounded-xl mb-2.5 shadow-sm">
+                <div className="w-6 h-6 rounded-lg bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                  <Moon size={11} className="text-gray-400" />
                 </div>
-                <p className="text-xs font-black truncate max-w-[100px]">{form.name || 'اسم المطعم'}</p>
-                {form.logo ? (
-                  <img src={form.logo} alt="" className="h-8 w-8 object-cover rounded-lg border border-gray-100" />
-                ) : (
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: form.color }}>
-                    <ImageIcon size={13} />
-                  </div>
-                )}
+                <p className="text-xs font-black truncate max-w-[110px]">{form.name || 'اسم المطعم'}</p>
+                {form.logo
+                  ? <img src={form.logo} alt="" className="h-7 w-7 object-cover rounded-lg" />
+                  : <div className="w-7 h-7 rounded-lg text-white flex items-center justify-center" style={{ backgroundColor: form.color }}><ImageIcon size={12} /></div>
+                }
               </div>
-              {/* أقسام وهمية */}
-              <div className="flex gap-2 flex-row-reverse mb-3 overflow-hidden">
-                <div className="px-3 py-1.5 rounded-xl text-[10px] font-black text-white whitespace-nowrap" style={{ backgroundColor: form.color }}>القسم المختار</div>
-                <div className="px-3 py-1.5 rounded-xl text-[10px] font-black bg-white dark:bg-slate-800 text-gray-400 whitespace-nowrap">قسم آخر</div>
-              </div>
-              {/* بطاقة وهمية */}
-              <div className="bg-white dark:bg-slate-900 rounded-2xl p-2.5 flex items-center gap-2.5 flex-row-reverse">
-                <div className="text-right flex-1">
-                  <p className="font-black text-xs">اسم المنتج</p>
-                  <p className="text-xs font-bold" style={{ color: form.color }}>15,000 د.ع</p>
-                </div>
-                <div className="w-14 h-14 rounded-xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
-                  <ShoppingBag size={18} className="text-gray-300" />
-                </div>
+              <div className="flex gap-2 flex-row-reverse">
+                <span className="px-3 py-1 rounded-lg text-[10px] font-black text-white" style={{ backgroundColor: form.color }}>مختار</span>
+                <span className="px-3 py-1 rounded-lg text-[10px] font-black bg-white dark:bg-slate-800 text-gray-400">قسم آخر</span>
               </div>
             </div>
-          </div>
+          </Field>
 
-          <div className="pb-4" />
+          <div className="pb-2" />
         </div>
       </div>
     </div>
