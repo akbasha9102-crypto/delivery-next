@@ -143,11 +143,11 @@ function StatisticsPage() {
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b px-4 py-4 flex items-center justify-between" style={{ backgroundColor: s.surface, borderColor: s.border }}>
-        <div className="w-9" />
-        <h1 className="text-xl font-bold" style={{ color: s.text }}>الإحصائيات</h1>
         <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl active:scale-90 transition-all" style={{ backgroundColor: s.muted }}>
           <ChevronRight size={20} style={{ color: s.sub }} />
         </button>
+        <h1 className="text-xl font-bold" style={{ color: s.text }}>الإحصائيات</h1>
+        <div className="w-9" />
       </header>
 
       {/* Quick range */}
