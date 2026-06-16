@@ -86,6 +86,7 @@ export default function DeliveryPage() {
   const driverIconHtmlRef  = useRef<string>(makeDriverArrow(0));
 
   const [order,          setOrder]          = useState<Order | null>(null);
+  const orderRef = useRef<Order | null>(null);
   const [loading,        setLoading]        = useState(true);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'tracking' | 'denied'>('idle');
   const [nearCustomer,   setNearCustomer]   = useState(false);
@@ -111,14 +112,20 @@ export default function DeliveryPage() {
       });
   }, [orderId]);
 
-  // Realtime: update status when admin changes it (preparing → pickup → ready)
+  // Keep orderRef in sync without triggering GPS/map effect re-runs
+  useEffect(() => { orderRef.current = order; }, [order]);
+
+  // Realtime: only react to status changes, not GPS coordinate saves
   useEffect(() => {
     if (!orderId) return;
     const ch = supabase.channel(`delivery-status-${orderId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' },
         ({ new: row }: any) => {
           if (row.id !== orderId) return;
-          setOrder(prev => prev ? { ...prev, status: row.status } : null);
+          setOrder(prev => {
+            if (!prev || prev.status === row.status) return prev; // same status → same reference → no re-render
+            return { ...prev, status: row.status };
+          });
           if (row.status === 'ready' || row.status === 'completed') setStarted(true);
           if (row.status === 'completed') setDelivered(true);
         })
@@ -154,11 +161,12 @@ export default function DeliveryPage() {
           setLocationStatus('tracking');
 
           // Compute arrow rotation: GPS heading first, then bearing to customer
+          const o = orderRef.current;
           let rotation = 0;
           if (gpsHeading != null && !isNaN(gpsHeading)) {
             rotation = gpsHeading;
-          } else if (order?.client_lat && order?.client_lng) {
-            rotation = calculateBearing(latitude, longitude, order.client_lat, order.client_lng);
+          } else if (o?.client_lat && o?.client_lng) {
+            rotation = calculateBearing(latitude, longitude, o.client_lat, o.client_lng);
           }
           const iconHtml = makeDriverArrow(rotation);
           driverIconHtmlRef.current = iconHtml;
@@ -185,24 +193,24 @@ export default function DeliveryPage() {
               if (driverMarkerRef.current) {
                 driverMarkerRef.current.setLatLng([latitude, longitude]);
                 driverMarkerRef.current.setIcon(icon);
-              } else if (order?.client_lat && order?.client_lng) {
+              } else if (o?.client_lat && o?.client_lng) {
                 driverMarkerRef.current = L.marker([latitude, longitude], { icon })
                   .addTo(mapInstanceRef.current)
                   .bindPopup('<div dir="rtl">موقعك الحالي</div>');
                 mapInstanceRef.current.fitBounds(
-                  L.latLngBounds([order.client_lat, order.client_lng], [latitude, longitude]),
+                  L.latLngBounds([o.client_lat, o.client_lng], [latitude, longitude]),
                   { padding: [60, 60] }
                 );
               }
             });
           }
 
-          if (order?.client_lat && order?.client_lng && mapInstanceRef.current) {
+          if (o?.client_lat && o?.client_lng && mapInstanceRef.current) {
             const shouldFetch = !routeLineRef.current || (Date.now() - lastRouteFetchRef.current > 30_000);
             if (shouldFetch) {
               lastRouteFetchRef.current = Date.now();
               const rLat = latitude, rLng = longitude;
-              const cLat = order.client_lat, cLng = order.client_lng;
+              const cLat = o.client_lat, cLng = o.client_lng;
               fetch(`https://router.project-osrm.org/route/v1/driving/${rLng},${rLat};${cLng},${cLat}?overview=full&geometries=geojson`)
                 .then(r => r.json())
                 .then(json => {
@@ -217,7 +225,7 @@ export default function DeliveryPage() {
                       routeLineRef.current.setLatLngs(coords);
                     } else {
                       routeLineRef.current = L.polyline(coords, {
-                        color: '#2563eb', weight: 5, opacity: 0.85, dashArray: '10, 6',
+                        color: '#2563eb', weight: 5, opacity: 0.85,
                       }).addTo(mapInstanceRef.current);
                       routeLineRef.current.bringToBack();
                     }
@@ -227,8 +235,8 @@ export default function DeliveryPage() {
             }
           }
 
-          if (order?.client_lat && order?.client_lng) {
-            const dist = getDistanceMeters(latitude, longitude, order.client_lat, order.client_lng);
+          if (o?.client_lat && o?.client_lng) {
+            const dist = getDistanceMeters(latitude, longitude, o.client_lat, o.client_lng);
             if (dist <= 100 && !arrivedSentRef.current) {
               arrivedSentRef.current = true;
               setNearCustomer(true);
@@ -241,7 +249,9 @@ export default function DeliveryPage() {
       );
     }
 
-    if (!order?.client_lat || !order?.client_lng) return;
+    const clientLat = orderRef.current?.client_lat;
+    const clientLng = orderRef.current?.client_lng;
+    if (!clientLat || !clientLng) return;
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
     if (!leafletLinkRef.current) {
@@ -257,19 +267,20 @@ export default function DeliveryPage() {
       if (!mapContainerRef.current || mapInstanceRef.current) return;
 
       const map = L.map(mapContainerRef.current, { attributionControl: false, zoomControl: false })
-        .setView([order.client_lat!, order.client_lng!], 15);
+        .setView([clientLat, clientLng], 15);
       mapInstanceRef.current = map;
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
+      const o = orderRef.current;
       const customerIcon = L.divIcon({
         html: `<div style="width:38px;height:38px;background:#ef4444;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px rgba(239,68,68,0.5)"></div>`,
         className: '', iconSize: [38, 38], iconAnchor: [19, 38],
       });
-      L.marker([order.client_lat!, order.client_lng!], { icon: customerIcon })
+      L.marker([clientLat, clientLng], { icon: customerIcon })
         .addTo(map)
         .bindPopup(
-          `<div dir="rtl" style="font-family:sans-serif;min-width:130px"><b>${order.client_name}</b>${order.delivery_address ? `<br><small style="color:#6b7280">${order.delivery_address}</small>` : ''}</div>`,
+          `<div dir="rtl" style="font-family:sans-serif;min-width:130px"><b>${o?.client_name ?? ''}</b>${o?.delivery_address ? `<br><small style="color:#6b7280">${o.delivery_address}</small>` : ''}</div>`,
           { offset: [0, -20] }
         )
         .openPopup();
@@ -287,7 +298,7 @@ export default function DeliveryPage() {
         routeLineRef.current = null;
       }
     };
-  }, [order, orderId, started]);
+  }, [orderId, started]);
 
   const handleStart = async () => {
     setStarting(true);
