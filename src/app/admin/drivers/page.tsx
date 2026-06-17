@@ -103,7 +103,7 @@ function DriversPage() {
   };
 
   return (
-    <div className="min-h-screen bg-amber-50 dark:bg-slate-900 pb-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24">
 
       {/* هيدر */}
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">

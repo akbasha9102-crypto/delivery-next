@@ -203,7 +203,7 @@ function OrdersPage() {
   const filtered = orders.filter(o => o.status === tab);
 
   return (
-    <div className="min-h-screen bg-amber-50 dark:bg-slate-900 pb-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 stagger-0">
         <div className="flex border-b border-gray-100 dark:border-slate-700">
           {TABS.map(t => {

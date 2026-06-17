@@ -416,7 +416,7 @@ function DashboardPage() {
     : orders.filter(o => o.status === filter);
 
   return (
-    <div className="min-h-screen bg-amber-50 dark:bg-slate-900 pb-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24">
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
