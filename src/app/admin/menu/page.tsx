@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { AdminGuard } from '@/components/AdminGuard';
-import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft } from 'lucide-react';
+import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal } from 'lucide-react';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
@@ -468,7 +468,7 @@ function MenuPage() {
                     <button
                       onClick={() => openCatEdit(cat)}
                       className="w-7 h-7 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-400 dark:text-slate-500 active:scale-90 transition-all">
-                      <ChevronLeft size={14} />
+                      <SlidersHorizontal size={14} />
                     </button>
                     <button
                       onClick={toggleCollapse}
