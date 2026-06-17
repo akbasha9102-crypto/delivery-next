@@ -381,7 +381,7 @@ const proceedFromReview = () => {
 
   const handleSubmitPress = () => {
     if (!name.trim() || !phone.trim()) { alert('الرجاء إدخال الاسم ورقم الهاتف'); return; }
-    if (!nickname.trim()) { alert('الرجاء إدخال اللقب'); return; }
+
     if (!addressDetails.trim()) { alert('الرجاء إدخال تفاصيل العنوان'); return; }
     if (items.length === 0) { alert('السلة فارغة'); return; }
     if (!locationConfirmed) {
@@ -398,7 +398,7 @@ const proceedFromReview = () => {
     saveInfo({ name: name.trim(), nickname: nickname.trim(), phone: phone.trim(), locationDesc: locationDesc.trim(), addressDetails: addressDetails.trim() });
 
     const { data: order, error } = await supabase.from('orders').insert([{
-      client_name: `${name.trim()} (${nickname.trim()})`, client_phone: phone.trim(),
+      client_name: nickname.trim() ? `${name.trim()} (${nickname.trim()})` : name.trim(), client_phone: phone.trim(),
       delivery_address: addressDetails.trim() ? `${locationDesc.trim()} — ${addressDetails.trim()}` : locationDesc.trim() || null,
       client_note: note || null,
       total_amount: grandTotal, status: 'pending',
@@ -456,7 +456,7 @@ const proceedFromReview = () => {
 
             {/* اللقب */}
             <input type="text" value={nickname} onChange={e => setNickname(e.target.value)}
-              placeholder="اللقب *" dir="rtl"
+              placeholder="اللقب (اختياري)" dir="rtl"
               className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2"
               style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />

@@ -282,13 +282,13 @@ export default function SettingsPage() {
   const logout = async () => { await supabase.auth.signOut(); router.replace('/login'); };
 
   if (!loaded) return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
+    <div className="min-h-screen bg-amber-50 dark:bg-slate-900 flex items-center justify-center">
       <Loader2 className="animate-spin text-gray-400" size={32} />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 pb-24">
+    <div className="min-h-screen bg-amber-50 dark:bg-slate-900 pb-24">
 
       {/* هيدر */}
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">

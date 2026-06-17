@@ -1,0 +1,21 @@
+{
+  "name": "CulinaShare",
+  "short_name": "CulinaShare",
+  "description": "منصة التوصيل",
+  "start_url": "/driver/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#f97316",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ]
+}
