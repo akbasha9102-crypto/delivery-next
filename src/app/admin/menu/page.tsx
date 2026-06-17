@@ -608,7 +608,7 @@ function MenuPage() {
         );
       })()}
 
-      <AdminBottomNav />
+      {!editCatSheet && <AdminBottomNav />}
     </div>
   );
 }
