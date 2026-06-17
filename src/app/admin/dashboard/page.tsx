@@ -58,12 +58,15 @@ function calcBearing(lat1: number, lng1: number, lat2: number, lng2: number): nu
 }
 
 function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => void }) {
-  const mapRef            = useRef<HTMLDivElement>(null);
-  const mapInstanceRef    = useRef<any>(null);
-  const driverMarkerRef   = useRef<any>(null);
-  const routeLineRef      = useRef<any>(null);
-  const routeLastFetchRef = useRef<number>(0);
-  const [order, setOrder] = useState(init);
+  const mapRef              = useRef<HTMLDivElement>(null);
+  const mapInstanceRef      = useRef<any>(null);
+  const driverMarkerRef     = useRef<any>(null);
+  const routeLineRef        = useRef<any>(null);
+  const routeLastFetchRef   = useRef<number>(0);
+  const customerMarkersRef  = useRef<any[]>([]);
+  const [order, setOrder]   = useState(init);
+  const [mapReady, setMapReady]     = useState(false);
+  const [driverOrders, setDriverOrders] = useState<Array<{id:string; client_name:string; client_lat:number|null; client_lng:number|null; delivery_address:string|null}>>([]);
 
   useEffect(() => {
     const ch = supabase.channel(`admin-modal-${init.id}`)
@@ -89,12 +92,7 @@ function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => 
         .setView([order.client_lat!, order.client_lng!], 15);
       mapInstanceRef.current = map;
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-      const icon = L.divIcon({
-        html: '<div style="width:34px;height:34px;background:#ef4444;border-radius:50%;border:3px solid white;box-shadow:0 2px 10px rgba(239,68,68,0.5);display:flex;align-items:center;justify-content:center;font-size:18px">🏠</div>',
-        className: '', iconSize: [34, 34], iconAnchor: [17, 17],
-      });
-      L.marker([order.client_lat!, order.client_lng!], { icon }).addTo(map)
-        .bindPopup(`<b dir="rtl">${order.client_name}</b>`);
+      setMapReady(true);
     });
     return () => {
       if (mapInstanceRef.current) {
@@ -102,9 +100,54 @@ function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => 
         mapInstanceRef.current = null;
         driverMarkerRef.current = null;
         routeLineRef.current = null;
+        customerMarkersRef.current = [];
       }
+      setMapReady(false);
     };
-  }, [order.client_lat, order.client_lng, order.client_name]);
+  }, [order.client_lat, order.client_lng]);
+
+  // Fetch all active orders for this driver
+  useEffect(() => {
+    if (!order.driver_id) return;
+    supabase
+      .from('orders')
+      .select('id, client_name, client_lat, client_lng, delivery_address')
+      .eq('driver_id', order.driver_id)
+      .in('status', ['pickup', 'ready', 'preparing'])
+      .order('created_at', { ascending: true })
+      .then(({ data }) => setDriverOrders(data || []));
+  }, [order.driver_id]);
+
+  // Draw numbered customer markers
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current) return;
+
+    customerMarkersRef.current.forEach(m => m.remove());
+    customerMarkersRef.current = [];
+
+    if (!driverOrders.length) return;
+
+    import('leaflet').then(mod => {
+      const L = (mod as any).default ?? mod;
+      if (!mapInstanceRef.current) return;
+      driverOrders.forEach((o, idx) => {
+        if (!o.client_lat || !o.client_lng) return;
+        const num = idx + 1;
+        const isCurrent = o.id === init.id;
+        const color = isCurrent ? '#ef4444' : '#f97316';
+        const iconHtml = `<div style="position:relative;width:38px;height:44px">
+          <div style="width:38px;height:38px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3)"></div>
+          <span style="position:absolute;top:3px;left:0;width:38px;text-align:center;font-weight:900;font-size:15px;color:white;line-height:1.2">${num}</span>
+        </div>`;
+        const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [38, 44], iconAnchor: [19, 44] });
+        const marker = L.marker([o.client_lat, o.client_lng], { icon })
+          .addTo(mapInstanceRef.current)
+          .bindPopup(`<b dir="rtl">${o.client_name}</b>${o.delivery_address ? `<br><small style="color:#6b7280">${o.delivery_address}</small>` : ''}`, { offset: [0, -20] });
+        if (isCurrent) marker.openPopup();
+        customerMarkersRef.current.push(marker);
+      });
+    });
+  }, [mapReady, driverOrders, init.id]);
 
   useEffect(() => {
     if (!mapInstanceRef.current || !order.driver_lat || !order.driver_lng) return;
@@ -373,7 +416,7 @@ function DashboardPage() {
     : orders.filter(o => o.status === filter);
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 pb-24">
+    <div className="min-h-screen bg-amber-50 dark:bg-slate-900 pb-24">
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
@@ -443,25 +486,33 @@ function DashboardPage() {
         ) : filtered.length === 0 ? (
           <div className="text-center mt-20"><p className="text-4xl mb-3">📋</p><p className="text-gray-400 dark:text-slate-500">لا توجد طلبات</p></div>
         ) : filter === 'delivery' ? (
-          /* ═══ تاب قيد التوصيل — بطاقات مضغوطة ═══ */
-          <div className="grid grid-cols-2 gap-3">
+          /* ═══ تاب قيد التوصيل — كل طلب بطاقة مستقلة ═══ */
+          <div className="space-y-3">
             {filtered.map(order => (
               <button key={order.id} onClick={() => setSelectedOrder(order)}
-                className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 text-right active:scale-95 transition-all overflow-hidden flex flex-col">
-                <div className={`h-1 rounded-full mb-3 w-full ${order.status === 'ready' ? 'bg-purple-500' : 'bg-orange-500'}`} />
-                <p className="font-bold text-gray-900 dark:text-white text-sm leading-tight">{order.client_name}</p>
-                {order.delivery_address && (
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1 leading-tight line-clamp-2">📍 {order.delivery_address}</p>
-                )}
-                <p className="text-green-500 font-bold text-sm mt-2">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
-                {order.driver_name && <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">🏍️ {order.driver_name}</p>}
-                <span className={`mt-2 text-xs font-bold px-2 py-0.5 rounded-full self-end ${
-                  order.status === 'ready'
-                    ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
-                    : 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
-                }`}>
-                  {order.status === 'ready' ? 'في الطريق' : 'ينتظر السائق'}
-                </span>
+                className="w-full bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 text-right active:scale-95 transition-all overflow-hidden flex items-stretch">
+                <div className={`w-1.5 flex-shrink-0 ${order.status === 'ready' ? 'bg-purple-500' : 'bg-orange-500'}`} />
+                <div className="flex-1 p-4 min-w-0">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                      order.status === 'ready'
+                        ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+                        : 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                    }`}>
+                      {order.status === 'ready' ? 'في الطريق' : 'ينتظر السائق'}
+                    </span>
+                    <p className="font-bold text-gray-900 dark:text-white">{order.client_name}</p>
+                  </div>
+                  {order.delivery_address && (
+                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">📍 {order.delivery_address}</p>
+                  )}
+                  <div className="flex justify-between items-center">
+                    {order.driver_name
+                      ? <p className="text-xs text-blue-500 dark:text-blue-400">🏍️ {order.driver_name}</p>
+                      : <span />}
+                    <p className="text-green-500 font-bold text-sm">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
+                  </div>
+                </div>
               </button>
             ))}
           </div>
