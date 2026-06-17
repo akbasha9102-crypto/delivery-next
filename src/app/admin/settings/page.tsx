@@ -113,7 +113,11 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
   const [saving, setSaving] = useState(false);
   const [saved,  setSaved]  = useState(false);
 
-  useEffect(() => { requestAnimationFrame(() => setAnimateIn(true)); }, []);
+  useEffect(() => {
+    requestAnimationFrame(() => setAnimateIn(true));
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   const close = () => { setAnimateIn(false); setTimeout(onClose, 300); };
 
@@ -157,7 +161,7 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               {saved ? '✓ تم' : 'حفظ'}
             </button>
-            <p className="font-bold text-gray-900 dark:text-slate-100">معلومات المطعم</p>
+            <p className="font-bold text-gray-900 dark:text-slate-100">تعديل معلومات المطعم</p>
             <button onClick={close} className="p-1.5 rounded-xl text-gray-400 active:scale-90 transition-all">
               <X size={20} />
             </button>
@@ -372,7 +376,7 @@ export default function SettingsPage() {
 
       </div>
 
-      <AdminBottomNav />
+      {!showInfo && <AdminBottomNav />}
 
       {/* نافذة معلومات المطعم */}
       {showInfo && (
