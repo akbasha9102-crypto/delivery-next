@@ -190,6 +190,15 @@ function MenuPage() {
     showToast('✓ تم حفظ الترتيب');
   };
 
+  useEffect(() => {
+    if (editCatSheet) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [editCatSheet]);
+
   const openCatEdit = (cat: Category) => {
     setEditCatName(cat.name);
     setEditCatSheet({ catId: cat.id });
@@ -532,7 +541,7 @@ function MenuPage() {
           <div className="fixed inset-0 z-50 flex items-end" onClick={closeCatEdit}>
             <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${editCatAnimateIn ? 'opacity-100' : 'opacity-0'}`} />
             <div
-              className={`relative w-full bg-white dark:bg-slate-800 rounded-t-3xl px-5 pt-5 pb-10 transition-transform duration-300 ease-out ${editCatAnimateIn ? 'translate-y-0' : 'translate-y-full'}`}
+              className={`relative w-full bg-white dark:bg-slate-800 rounded-t-3xl px-5 pt-5 pb-10 overflow-y-auto max-h-[90vh] transition-transform duration-300 ease-out ${editCatAnimateIn ? 'translate-y-0' : 'translate-y-full'}`}
               onClick={e => e.stopPropagation()}
             >
               <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mb-4" />
