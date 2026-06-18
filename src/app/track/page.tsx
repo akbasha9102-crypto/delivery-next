@@ -584,11 +584,11 @@ export default function TrackPage() {
                 <div className="flex items-center gap-4">
                   <div className="relative flex-shrink-0 w-16 h-16 flex items-center justify-center"
                        style={{ animation: 'driver-avatar-pop 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s both' }}>
-                    <div className="absolute inset-0 rounded-full bg-green-400"
-                         style={{ animation: 'driver-ring-pulse 6.8s ease-out 0.3s infinite' }} />
-                    <div className="absolute inset-0 rounded-full bg-green-300"
-                         style={{ animation: 'driver-ring-pulse2 6.8s ease-out 0.7s infinite' }} />
-                    <img src="/driver-cartoon.svg" alt="" className="w-16 h-16 relative z-10 rounded-full"
+                    <div className="absolute -inset-3 rounded-full bg-blue-500/40"
+                         style={{ animation: 'driver-ring-pulse 3s ease-out 0.3s infinite' }} />
+                    <div className="absolute -inset-4 rounded-full bg-blue-400/25"
+                         style={{ animation: 'driver-ring-pulse2 3s ease-out 0.8s infinite' }} />
+                    <img src="/driver-cartoon.svg" alt="" className="w-16 h-16 relative z-10 rounded-full bg-blue-600 border-2 border-blue-400"
                          style={{ animation: 'driver-accepted-glow 2.5s ease-in-out 1s infinite' }} />
                   </div>
                   <div className="flex-1" style={{ animation: 'driver-name-reveal 0.4s ease-out 0.35s both' }}>
