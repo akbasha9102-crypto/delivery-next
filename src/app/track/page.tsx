@@ -591,7 +591,9 @@ export default function TrackPage() {
                   </div>
                   <div className="flex-1" style={{ animation: 'driver-name-reveal 0.4s ease-out 0.35s both' }}>
                     <p className="font-black text-xl text-red-500 dark:text-red-400 leading-tight">{order.driver_name}</p>
-                    <p className="text-gray-500 dark:text-slate-400 text-sm mt-0.5">سيوصل طلبك وفي طريقه إليك 🏍️</p>
+                    <p className="text-gray-500 dark:text-slate-400 text-sm mt-0.5">
+                      {order.status === 'ready' ? 'سيوصل طلبك وفي طريقه إليك 🏍️' : 'سيوصل طلبك 🏍️'}
+                    </p>
                   </div>
                   {driverPhone && (
                     <a href={`https://wa.me/${driverPhone.replace(/\D/g, '')}`}
