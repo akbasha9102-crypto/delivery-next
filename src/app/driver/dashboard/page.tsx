@@ -218,8 +218,6 @@ export default function DriverDashboard() {
       setTimeout(() => setFlashId(null), 2500);
       setIncoming(prev => prev.filter(o => o.id !== order.id));
     } else {
-      await supabase.from('drivers').update({ status: 'unavailable' }).eq('id', session.id);
-      setIsAvailable(false);
       setIncoming(prev => prev.filter(o => o.id !== order.id));
       fetchActive(session.id);
     }
