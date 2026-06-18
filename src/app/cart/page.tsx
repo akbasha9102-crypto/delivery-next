@@ -20,7 +20,8 @@ const KEYS = {
   addressDetails: 'deliveryAddressDetails',
 };
 
-const BASRA_CENTER: [number, number] = [30.5085, 47.7804];
+const BASRA_CENTER: [number, number]      = [30.5085, 47.7804];
+const ABU_KHASEEB_CENTER: [number, number] = [30.4632, 47.9769];
 
 
 type SavedInfo = { name: string; nickname: string; phone: string; locationDesc: string; addressDetails: string };
@@ -190,15 +191,15 @@ export default function CartPage() {
   };
 
   // فتح الخريطة يدوياً بدون GPS
-  const doOpenMapManual = () => {
+  const doOpenMapManual = (center: [number, number] = BASRA_CENTER) => {
     setShowPermissionModal(false);
     setShowPreciseModal(false);
     stopGpsWatch();
     setGpsLocating(false);
     setGpsAccuracy(null);
     setShowMap(true);
-    setClientLat(BASRA_CENTER[0]);
-    setClientLng(BASRA_CENTER[1]);
+    setClientLat(center[0]);
+    setClientLng(center[1]);
   };
 
   const openMap = () => {
@@ -287,7 +288,8 @@ export default function CartPage() {
       import('leaflet').then((mod) => {
         const L = (mod as any).default ?? mod;
         if (!locationMapRef.current || locationMapInstanceRef.current) return;
-        const map = L.map(locationMapRef.current, { zoomControl: false, attributionControl: false }).setView(BASRA_CENTER, 13);
+        const initialCenter: [number, number] = (clientLat && clientLng) ? [clientLat, clientLng] : BASRA_CENTER;
+        const map = L.map(locationMapRef.current, { zoomControl: false, attributionControl: false }).setView(initialCenter, 13);
         locationMapInstanceRef.current = map;
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
           attribution: '© OpenStreetMap contributors © CARTO', maxZoom: 19,
@@ -1053,7 +1055,7 @@ const proceedFromReview = () => {
               style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}cc)`, color: textOnBrand, boxShadow: `0 8px 24px ${brandColor}50` }}>
               فعّلته — أعد المحاولة
             </button>
-            <button onClick={doOpenMapManual}
+            <button onClick={() => doOpenMapManual()}
               className="w-full py-3.5 rounded-2xl font-semibold text-sm border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 transition-all active:scale-95">
               تحديد موقعي يدوياً على الخريطة
             </button>
@@ -1092,7 +1094,7 @@ const proceedFromReview = () => {
               style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}cc)`, color: textOnBrand, boxShadow: `0 8px 24px ${brandColor}50` }}>
               فعّلت الموقع — أعد المحاولة
             </button>
-            <button onClick={doOpenMapManual}
+            <button onClick={() => doOpenMapManual()}
               className="w-full py-3.5 rounded-2xl font-semibold text-sm border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 transition-all active:scale-95">
               تحديد موقعي يدوياً على الخريطة
             </button>
@@ -1201,7 +1203,7 @@ const proceedFromReview = () => {
         onContinue={() => {
           setShowInAppBanner(false);
           pendingOpenMapRef.current = null;
-          doOpenMapManual();
+          doOpenMapManual(ABU_KHASEEB_CENTER);
         }}
       />
 
