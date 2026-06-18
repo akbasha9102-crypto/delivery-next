@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, Truck, UtensilsCrossed, ClipboardList, BarChart2, Car, Store, Menu, Archive } from 'lucide-react';
+import { User, Truck, UtensilsCrossed, ClipboardList, BarChart2, Car, Store, Menu, Archive, ShoppingBag } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 
@@ -9,6 +9,7 @@ const clientTabs = [
   { href: '/home',    icon: UtensilsCrossed, label: 'المنيو' },
   { href: '/track',   icon: Truck,           label: 'تتبع طلبك' },
   { href: '/profile', icon: User,            label: 'معلوماتي' },
+  { href: '/orders',  icon: ShoppingBag,     label: 'طلباتي' },
 ];
 
 const adminTabs = [
