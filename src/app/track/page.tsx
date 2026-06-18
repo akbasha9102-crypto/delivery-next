@@ -57,14 +57,16 @@ const CSS = `
     100% { opacity:1; transform:translateX(0) }
   }
   @keyframes driver-ring-pulse {
-    0%   { transform:scale(1);   opacity:0.55 }
-    70%  { transform:scale(1.55); opacity:0 }
-    100% { transform:scale(1.55); opacity:0 }
+    0%     { transform:scale(1);    opacity:0.55 }
+    18.5%  { transform:scale(1.55); opacity:0 }
+    26.5%  { transform:scale(1);    opacity:0 }
+    100%   { transform:scale(1);    opacity:0 }
   }
   @keyframes driver-ring-pulse2 {
-    0%   { transform:scale(1);   opacity:0.35 }
-    70%  { transform:scale(1.75); opacity:0 }
-    100% { transform:scale(1.75); opacity:0 }
+    0%     { transform:scale(1);    opacity:0.35 }
+    18.5%  { transform:scale(1.75); opacity:0 }
+    26.5%  { transform:scale(1);    opacity:0 }
+    100%   { transform:scale(1);    opacity:0 }
   }
   @keyframes driver-accepted-glow {
     0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0) }
@@ -583,9 +585,9 @@ export default function TrackPage() {
                   <div className="relative flex-shrink-0 w-16 h-16 flex items-center justify-center"
                        style={{ animation: 'driver-avatar-pop 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s both' }}>
                     <div className="absolute inset-0 rounded-full bg-green-400"
-                         style={{ animation: 'driver-ring-pulse 1.8s ease-out 0.3s infinite' }} />
+                         style={{ animation: 'driver-ring-pulse 6.8s ease-out 0.3s infinite' }} />
                     <div className="absolute inset-0 rounded-full bg-green-300"
-                         style={{ animation: 'driver-ring-pulse2 1.8s ease-out 0.7s infinite' }} />
+                         style={{ animation: 'driver-ring-pulse2 6.8s ease-out 0.7s infinite' }} />
                     <img src="/driver-cartoon.svg" alt="" className="w-16 h-16 relative z-10 rounded-full"
                          style={{ animation: 'driver-accepted-glow 2.5s ease-in-out 1s infinite' }} />
                   </div>
