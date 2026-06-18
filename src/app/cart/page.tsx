@@ -68,6 +68,7 @@ export default function CartPage() {
   const [locationDesc,    setLocationDesc]    = useState('');
   const [addressDetails,  setAddressDetails]  = useState('');
   const [note,            setNote]            = useState('');
+  const [addressError,    setAddressError]    = useState(false);
 
   // extras selection per item in review
   const [itemSelectedExtras, setItemSelectedExtras] = useState<Record<string, Set<string>>>({});
@@ -447,7 +448,12 @@ const proceedFromReview = () => {
   const handleSubmitPress = () => {
     if (!name.trim() || !phone.trim()) { alert('الرجاء إدخال الاسم ورقم الهاتف'); return; }
 
-    if (!addressDetails.trim()) { alert('الرجاء إدخال تفاصيل العنوان'); return; }
+    if (!addressDetails.trim()) {
+      setAddressError(true);
+      setTimeout(() => setAddressError(false), 600);
+      document.getElementById('address-details-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     if (items.length === 0) { alert('السلة فارغة'); return; }
     if (!locationConfirmed) {
       pendingConfirmRef.current = true;
@@ -560,9 +566,9 @@ const proceedFromReview = () => {
             )}
 
             {/* تفاصيل العنوان */}
-            <input type="text" value={addressDetails} onChange={e => setAddressDetails(e.target.value)}
+            <input id="address-details-input" type="text" value={addressDetails} onChange={e => { setAddressDetails(e.target.value); if (addressError) setAddressError(false); }}
               placeholder="تفاصيل العنوان — أقرب دالة *" dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2"
+              className={`w-full bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 border-2 transition-colors${addressError ? ' shake border-red-500' : ' border-gray-200 dark:border-slate-600'}`}
               style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
             />
           </div>
