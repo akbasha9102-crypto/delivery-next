@@ -69,8 +69,8 @@ const CSS = `
     100%   { transform:scale(1);    opacity:0 }
   }
   @keyframes driver-accepted-glow {
-    0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0) }
-    50%     { box-shadow: 0 0 0 10px rgba(34,197,94,0.18) }
+    0%,100% { box-shadow: 0 0 0 0 rgba(156,163,175,0) }
+    50%     { box-shadow: 0 0 0 8px rgba(156,163,175,0.45) }
   }
 `;
 
@@ -584,12 +584,8 @@ export default function TrackPage() {
                 <div className="flex items-center gap-4">
                   <div className="relative flex-shrink-0 w-16 h-16 flex items-center justify-center"
                        style={{ animation: 'driver-avatar-pop 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s both' }}>
-                    <div className="absolute -inset-3 rounded-full bg-blue-500/40"
-                         style={{ animation: 'driver-ring-pulse 3s ease-out 0.3s infinite' }} />
-                    <div className="absolute -inset-4 rounded-full bg-blue-400/25"
-                         style={{ animation: 'driver-ring-pulse2 3s ease-out 0.8s infinite' }} />
-                    <img src="/driver-cartoon.svg" alt="" className="w-16 h-16 relative z-10 rounded-full bg-blue-600 border-2 border-blue-400"
-                         style={{ animation: 'driver-accepted-glow 2.5s ease-in-out 1s infinite' }} />
+<img src="/driver-cartoon.svg" alt="" className="w-16 h-16 relative z-10 rounded-full bg-gray-400 border-2 border-gray-300"
+                         style={{ animation: 'driver-accepted-glow 2s ease-in-out infinite' }} />
                   </div>
                   <div className="flex-1" style={{ animation: 'driver-name-reveal 0.4s ease-out 0.35s both' }}>
                     <p className="font-black text-xl text-red-500 dark:text-red-400 leading-tight">{order.driver_name}</p>
