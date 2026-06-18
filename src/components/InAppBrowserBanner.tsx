@@ -66,9 +66,10 @@ export default function InAppBrowserBanner({ show, onContinue, onDismiss }: Prop
 
               <button
                 onClick={onContinue}
-                className="mt-6 w-full py-3.5 rounded-2xl bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 font-black text-sm active:scale-95 transition-all"
+                className="mt-6 w-full py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#ef4444', color: '#fff' }}
               >
-                متابعة على {appName} مؤقتاً
+                📍 تحديد الموقع يدوياً على الخريطة
               </button>
             </div>
           </motion.div>

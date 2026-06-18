@@ -1200,8 +1200,8 @@ const proceedFromReview = () => {
         onDismiss={() => setShowInAppBanner(false)}
         onContinue={() => {
           setShowInAppBanner(false);
-          pendingOpenMapRef.current?.();
           pendingOpenMapRef.current = null;
+          doOpenMapManual();
         }}
       />
 
