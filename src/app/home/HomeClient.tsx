@@ -84,27 +84,6 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   const scrolling   = useRef(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const pairs: [string, string][] = [
-      ['_name',  'deliveryName'],
-      ['_nick',  'deliveryNickname'],
-      ['_phone', 'deliveryPhone'],
-      ['_loc',   'deliveryLocationDesc'],
-      ['_addr',  'deliveryAddressDetails'],
-    ];
-    let found = false;
-    pairs.forEach(([param, key]) => {
-      const val = params.get(param);
-      if (val) { localStorage.setItem(key, val); found = true; }
-    });
-    if (found) {
-      const clean = new URL(window.location.href);
-      pairs.forEach(([param]) => clean.searchParams.delete(param));
-      window.history.replaceState({}, '', clean.toString());
-    }
-  }, []);
-
-  useEffect(() => {
     const fetchData = async () => {
       const { data: cats } = await supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
       const { data: its }  = await supabase.from('items').select('*').order('name');

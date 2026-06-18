@@ -42,7 +42,7 @@ function saveInfo(info: SavedInfo) {
 }
 
 export default function CartPage() {
-  const { items, addItem, decrementItem, removeItem, clearCart, total } = useCart();
+  const { items, addItem, decrementItem, removeItem, clearCart, restoreCart, total } = useCart();
   const { primary_color } = useSettings();
   const { dark } = useDarkMode();
   const router = useRouter();
@@ -339,9 +339,47 @@ export default function CartPage() {
     };
   }, [showConfirmModal, clientLat, clientLng, brandColor]);
 
-  // ── Load saved info ───────────────────────────────────────────────────────
+  // ── Load saved info + restore from external-browser redirect ─────────────
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hasRedirectData = params.has('_name') || params.has('_phone') || params.has('_cart');
+
+    if (hasRedirectData) {
+      // Restore form data
+      const n  = params.get('_name')  || '';
+      const ni = params.get('_nick')  || '';
+      const ph = params.get('_phone') || '';
+      const lo = params.get('_loc')   || '';
+      const ad = params.get('_addr')  || '';
+
+      if (n)  { setName(n);             localStorage.setItem('deliveryName',           n);  }
+      if (ni) { setNickname(ni);        localStorage.setItem('deliveryNickname',       ni); }
+      if (ph) { setPhone(ph);           localStorage.setItem('deliveryPhone',          ph); }
+      if (lo) { setLocationDesc(lo);    localStorage.setItem('deliveryLocationDesc',   lo); }
+      if (ad) { setAddressDetails(ad);  localStorage.setItem('deliveryAddressDetails', ad); }
+
+      if (n || ph) hasSavedInfoRef.current = true;
+
+      // Restore cart items
+      const cartParam = params.get('_cart');
+      if (cartParam) {
+        try {
+          const decoded = JSON.parse(decodeURIComponent(atob(cartParam)));
+          if (Array.isArray(decoded) && decoded.length > 0) restoreCart(decoded);
+        } catch { /* ignore */ }
+      }
+
+      // Show form directly
+      setEditing(true);
+
+      // Clean URL
+      const clean = new URL(window.location.href);
+      ['_name','_nick','_phone','_loc','_addr','_cart'].forEach(k => clean.searchParams.delete(k));
+      window.history.replaceState({}, '', clean.toString());
+      return;
+    }
+
     const saved = loadSaved();
     if (saved) {
       setName(saved.name);
@@ -1206,6 +1244,7 @@ const proceedFromReview = () => {
           doOpenMapManual(ABU_KHASEEB_CENTER);
         }}
         formData={{ name, nickname, phone, locationDesc, addressDetails }}
+        cartItems={items}
       />
 
       <ClientBottomNav />

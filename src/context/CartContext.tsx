@@ -8,6 +8,7 @@ type Ctx = {
   decrementItem: (id: string) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
+  restoreCart: (items: CartItem[]) => void;
   total: number;
 };
 
@@ -33,9 +34,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const removeItem = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
   const clearCart = () => setItems([]);
+  const restoreCart = (newItems: CartItem[]) => setItems(newItems);
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  return <CartContext.Provider value={{ items, addItem, decrementItem, removeItem, clearCart, total }}>{children}</CartContext.Provider>;
+  return <CartContext.Provider value={{ items, addItem, decrementItem, removeItem, clearCart, restoreCart, total }}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {

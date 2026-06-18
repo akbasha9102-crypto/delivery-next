@@ -12,6 +12,8 @@ function isAndroid() {
   return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
 }
 
+type CartItem = { id: string; name: string; price: number; quantity: number; extras_json?: string };
+
 type FormData = {
   name: string;
   nickname: string;
@@ -25,22 +27,28 @@ type Props = {
   onContinue: () => void;
   onDismiss: () => void;
   formData?: FormData;
+  cartItems?: CartItem[];
 };
 
-function buildRedirectUrl(formData?: FormData): string {
+function buildRedirectUrl(formData?: FormData, cartItems?: CartItem[]): string {
   const url = new URL(window.location.href);
-  url.pathname = '/home';
+  url.pathname = '/cart';
   url.search = '';
   if (formData?.name)           url.searchParams.set('_name',  formData.name);
   if (formData?.nickname)       url.searchParams.set('_nick',  formData.nickname);
   if (formData?.phone)          url.searchParams.set('_phone', formData.phone);
   if (formData?.locationDesc)   url.searchParams.set('_loc',   formData.locationDesc);
   if (formData?.addressDetails) url.searchParams.set('_addr',  formData.addressDetails);
+  if (cartItems && cartItems.length > 0) {
+    // encode without image_url to keep URL short
+    const slim = cartItems.map(({ id, name, price, quantity, extras_json }) => ({ id, name, price, quantity, extras_json }));
+    url.searchParams.set('_cart', btoa(encodeURIComponent(JSON.stringify(slim))));
+  }
   return url.toString();
 }
 
-function redirectToExternalBrowser(formData?: FormData) {
-  const targetUrl = buildRedirectUrl(formData);
+function redirectToExternalBrowser(formData?: FormData, cartItems?: CartItem[]) {
+  const targetUrl = buildRedirectUrl(formData, cartItems);
   if (isAndroid()) {
     const parsed = new URL(targetUrl);
     window.location.href = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=https;package=com.android.chrome;end`;
@@ -49,7 +57,7 @@ function redirectToExternalBrowser(formData?: FormData) {
   }
 }
 
-export default function InAppBrowserBanner({ show, onContinue, onDismiss, formData }: Props) {
+export default function InAppBrowserBanner({ show, onContinue, onDismiss, formData, cartItems }: Props) {
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   const isInstagram = /Instagram/i.test(ua);
   const appName = isInstagram ? 'إنستقرام' : 'تيك توك';
@@ -94,7 +102,7 @@ export default function InAppBrowserBanner({ show, onContinue, onDismiss, formDa
 
               {/* Primary: open in browser */}
               <button
-                onClick={() => redirectToExternalBrowser(formData)}
+                onClick={() => redirectToExternalBrowser(formData, cartItems)}
                 className="w-full py-4 rounded-2xl font-black text-sm active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg"
                 style={{ background: 'linear-gradient(135deg, #f97316, #ef4444)', color: '#fff' }}
               >
