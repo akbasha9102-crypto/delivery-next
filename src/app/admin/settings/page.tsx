@@ -306,12 +306,12 @@ export default function SettingsPage() {
         >
           <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <PenLine size={18} className="text-gray-600 dark:text-slate-400" />
-            </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">معلومات المطعم</p>
               <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">الاسم، الشعار، الواتساب، الموقع</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <PenLine size={18} className="text-gray-600 dark:text-slate-400" />
             </div>
           </div>
         </button>
