@@ -23,17 +23,12 @@ export default function InAppRedirect() {
 
   useEffect(() => {
     if (!isInAppBrowser()) return;
-
-    if (isAndroid()) {
-      openInExternalBrowser();
-      return;
-    }
-
-    // iOS: show top banner
     setShow(true);
   }, []);
 
   if (!show) return null;
+
+  const btnLabel = isAndroid() ? 'افتح في المتصفح' : 'افتح في Safari';
 
   return (
     <div
@@ -41,13 +36,13 @@ export default function InAppRedirect() {
       style={{ background: 'linear-gradient(90deg, #f97316, #ef4444)', boxShadow: '0 4px 20px rgba(239,68,68,0.4)' }}
     >
       <p className="text-white text-xs font-bold leading-tight text-right flex-1">
-        افتح في Safari للحصول على تجربة طلب أفضل 🧭
+        للحصول على تجربة أفضل افتحه في المتصفح 🧭
       </p>
       <button
         onClick={openInExternalBrowser}
         className="flex-shrink-0 bg-white text-orange-500 font-black text-xs px-3 py-1.5 rounded-full active:scale-95 transition-all whitespace-nowrap"
       >
-        افتح في Safari
+        {btnLabel}
       </button>
       <button onClick={() => setShow(false)} className="text-white/70 text-lg leading-none flex-shrink-0">
         ✕
