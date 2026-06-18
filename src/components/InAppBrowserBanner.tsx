@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,15 +14,7 @@ function isAndroid() {
 }
 
 type CartItem = { id: string; name: string; price: number; quantity: number; extras_json?: string };
-
-type FormData = {
-  name: string;
-  nickname: string;
-  phone: string;
-  locationDesc: string;
-  addressDetails: string;
-};
-
+type FormData = { name: string; nickname: string; phone: string; locationDesc: string; addressDetails: string };
 type Props = {
   show: boolean;
   onContinue: () => void;
@@ -40,85 +33,127 @@ function buildRedirectUrl(formData?: FormData, cartItems?: CartItem[]): string {
   if (formData?.locationDesc)   url.searchParams.set('_loc',   formData.locationDesc);
   if (formData?.addressDetails) url.searchParams.set('_addr',  formData.addressDetails);
   if (cartItems && cartItems.length > 0) {
-    // encode without image_url to keep URL short
     const slim = cartItems.map(({ id, name, price, quantity, extras_json }) => ({ id, name, price, quantity, extras_json }));
     url.searchParams.set('_cart', btoa(encodeURIComponent(JSON.stringify(slim))));
   }
   return url.toString();
 }
 
-function redirectToExternalBrowser(formData?: FormData, cartItems?: CartItem[]) {
-  const targetUrl = buildRedirectUrl(formData, cartItems);
-  if (isAndroid()) {
-    const parsed = new URL(targetUrl);
-    window.location.href = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=https;package=com.android.chrome;end`;
-  } else {
-    window.location.href = 'x-safari-' + targetUrl;
-  }
-}
-
 export default function InAppBrowserBanner({ show, onContinue, onDismiss, formData, cartItems }: Props) {
-  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  const isInstagram = /Instagram/i.test(ua);
-  const appName = isInstagram ? 'إنستقرام' : 'تيك توك';
+  const android = isAndroid();
+
+  // Embed form data into the current URL so when the user taps "Open in Safari/Chrome"
+  // from the browser's ••• menu, their data carries over automatically.
+  useEffect(() => {
+    if (!show) return;
+    const url = buildRedirectUrl(formData, cartItems);
+    window.history.replaceState({}, '', url);
+  }, [show]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <AnimatePresence>
       {show && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
-        >
+        <>
+          {/* Backdrop */}
           <motion.div
-            initial={{ y: 80, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 80, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-hidden"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90]"
+            style={{ background: 'rgba(0,0,0,0.45)' }}
+            onClick={onDismiss}
+          />
+
+          {/* Callout — top-right, below the browser's ••• button */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.82, y: -10 }}
+            animate={{ opacity: 1, scale: 1,    y: 0   }}
+            exit={{   opacity: 0, scale: 0.82, y: -10 }}
+            transition={{ type: 'spring', stiffness: 340, damping: 26 }}
+            className="fixed z-[100]"
+            style={{ top: 62, right: 8 }}
           >
-            {/* Header */}
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 pt-6 pb-8 text-center relative">
+            {/* Arrow pointing up toward ••• button */}
+            <div style={{
+              position: 'absolute', top: -9, right: 18,
+              width: 0, height: 0,
+              borderLeft:   '9px solid transparent',
+              borderRight:  '9px solid transparent',
+              borderBottom: '9px solid white',
+              filter: 'drop-shadow(0 -2px 3px rgba(0,0,0,0.08))',
+            }}/>
+
+            {/* Card */}
+            <div dir="rtl" style={{
+              background: 'white',
+              borderRadius: 18,
+              padding: '14px 14px 14px 36px',
+              maxWidth: 228,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.08)',
+              position: 'relative',
+            }}>
+              {/* Close button */}
               <button
                 onClick={onDismiss}
-                className="absolute top-4 left-4 w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-white"
+                style={{
+                  position: 'absolute', top: 8, left: 8,
+                  width: 24, height: 24,
+                  background: '#f3f4f6', borderRadius: 12,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}
               >
-                <X size={16} />
+                <X size={12} color="#9ca3af"/>
               </button>
-              <div className="text-5xl mb-3">📍</div>
-              <h2 className="text-white font-black text-xl">تحديد الموقع لا يعمل بدقة</h2>
-              <p className="text-white/80 text-sm mt-1 font-medium">
-                متصفح {appName} يمنع الوصول الدقيق للموقع
-              </p>
-            </div>
 
-            {/* Body */}
-            <div className="px-6 py-5" dir="rtl">
-              <p className="text-gray-600 dark:text-slate-300 text-sm leading-relaxed mb-5 font-medium">
-                لتحديد موقعك بشكل دقيق وضمان وصول طلبك بشكل صحيح، افتح الرابط في المتصفح — معلوماتك ستنحفظ تلقائياً.
+              <p style={{ fontWeight: 900, fontSize: 13, color: '#111827', marginBottom: 10, lineHeight: 1.4 }}>
+                افتح في {android ? 'Chrome' : 'Safari'} 📍
               </p>
 
-              {/* Primary: open in browser */}
-              <button
-                onClick={() => redirectToExternalBrowser(formData, cartItems)}
-                className="w-full py-4 rounded-2xl font-black text-sm active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #f97316, #ef4444)', color: '#fff' }}
-              >
-                🧭 افتح في المتصفح مع حفظ معلوماتي
-              </button>
+              <div style={{ fontSize: 13, color: '#1f2937', lineHeight: 1.85 }}>
+                <p>
+                  <span style={{ fontWeight: 700, color: '#ef4444' }}>①</span>
+                  {' '}اضغط <strong style={{ fontSize: 16, letterSpacing: 1 }}>⋯</strong> أعلى اليمين
+                </p>
+                <p>
+                  <span style={{ fontWeight: 700, color: '#ef4444' }}>②</span>
+                  {' '}اختر <strong>"{android ? 'فتح في Chrome' : 'فتح في Safari'}"</strong>
+                </p>
+              </div>
 
-              {/* Secondary: manual location */}
-              <button
-                onClick={onContinue}
-                className="mt-3 w-full py-3.5 rounded-2xl bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 font-black text-sm active:scale-95 transition-all"
-              >
-                📍 تحديد الموقع يدوياً على الخريطة
-              </button>
+              <div style={{
+                marginTop: 10,
+                background: '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                borderRadius: 10,
+                padding: '6px 10px',
+                fontSize: 11,
+                color: '#15803d',
+                fontWeight: 700,
+              }}>
+                ✓ معلوماتك محفوظة وتنتقل معك تلقائياً
+              </div>
             </div>
+
+            {/* Manual map fallback */}
+            <button
+              onClick={onContinue}
+              dir="rtl"
+              style={{
+                marginTop: 8,
+                width: '100%',
+                background: 'rgba(255,255,255,0.90)',
+                backdropFilter: 'blur(4px)',
+                borderRadius: 13,
+                padding: '9px 14px',
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#6b7280',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+              }}
+            >
+              أو حدد موقعك يدوياً على الخريطة
+            </button>
           </motion.div>
-        </motion.div>
+        </>
       )}
     </AnimatePresence>
   );
