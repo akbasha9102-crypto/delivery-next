@@ -527,11 +527,17 @@ const proceedFromReview = () => {
             />
 
             {/* رقم الهاتف */}
-            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-              placeholder="رقم الهاتف *" dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2"
-              style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
-            />
+            <div className="flex items-center bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl overflow-hidden focus-within:ring-2"
+              style={{ '--tw-ring-color': brandColor } as React.CSSProperties}>
+              <div className="flex items-center gap-1.5 px-3 py-3 border-r border-gray-200 dark:border-slate-600 flex-shrink-0 select-none">
+                <span className="text-base leading-none">🇮🇶</span>
+                <span className="text-sm font-bold text-gray-500 dark:text-slate-400">+964</span>
+              </div>
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                placeholder="رقم الهاتف *" dir="rtl"
+                className="flex-1 bg-transparent px-3 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none"
+              />
+            </div>
 
             {/* زر الخريطة */}
             {locationConfirmed ? (
@@ -876,15 +882,23 @@ const proceedFromReview = () => {
               <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-600 pt-3">
                 <div className="flex items-center gap-2">
                   {editingPhone ? (
-                    <input
-                      type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                      onBlur={() => setEditingPhone(false)} autoFocus dir="rtl"
-                      className="bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-slate-100 outline-none"
-                    />
+                    <div className="flex items-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-lg overflow-hidden">
+                      <div className="flex items-center gap-1 px-2 py-1 border-r border-gray-200 dark:border-slate-500 flex-shrink-0">
+                        <span className="text-sm leading-none">🇮🇶</span>
+                        <span className="text-xs font-bold text-gray-400">+964</span>
+                      </div>
+                      <input
+                        type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                        onBlur={() => setEditingPhone(false)} autoFocus dir="rtl"
+                        className="bg-transparent px-2 py-1 text-sm text-gray-900 dark:text-slate-100 outline-none w-28"
+                      />
+                    </div>
                   ) : (
                     <>
                       <button onClick={() => setEditingPhone(true)} className="text-gray-400 active:scale-90 transition-all"><Pencil size={13}/></button>
-                      <span className="font-bold tracking-widest" style={{ color: '#ef4444' }}>{phone}</span>
+                      <span className="font-bold tracking-widest" style={{ color: '#ef4444' }}>
+                        <span className="text-gray-400 font-normal text-xs ml-1">🇮🇶 +964</span>{phone}
+                      </span>
                     </>
                   )}
                 </div>
@@ -985,15 +999,23 @@ const proceedFromReview = () => {
                 <div className="flex-1">
                   <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">رقم الهاتف</p>
                   {editingConfirmPhone ? (
-                    <input
-                      type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                      onBlur={() => setEditingConfirmPhone(false)} autoFocus dir="rtl"
-                      className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm font-bold outline-none"
-                      style={{ color: brandColor }}
-                    />
+                    <div className="flex items-center bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-500 rounded-lg overflow-hidden">
+                      <div className="flex items-center gap-1 px-2 py-1 border-r border-gray-200 dark:border-slate-500 flex-shrink-0">
+                        <span className="text-sm leading-none">🇮🇶</span>
+                        <span className="text-xs font-bold text-gray-400">+964</span>
+                      </div>
+                      <input
+                        type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                        onBlur={() => setEditingConfirmPhone(false)} autoFocus dir="rtl"
+                        className="bg-transparent px-2 py-1 text-sm font-bold outline-none flex-1"
+                        style={{ color: brandColor }}
+                      />
+                    </div>
                   ) : (
                     <div className="flex items-center gap-2 justify-end">
-                      <p className="font-bold tracking-widest flex-1" style={{ color: '#ef4444' }}>{phone}</p>
+                      <p className="font-bold tracking-widest flex-1" style={{ color: '#ef4444' }}>
+                        <span className="text-gray-400 font-normal text-xs ml-1">🇮🇶 +964</span>{phone}
+                      </p>
                       <button type="button" onClick={() => setEditingConfirmPhone(true)} className="text-gray-400 active:scale-90 transition-all flex-shrink-0">
                         <Pencil size={13}/>
                       </button>
