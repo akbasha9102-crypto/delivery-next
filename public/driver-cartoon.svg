@@ -2,19 +2,75 @@
   <!-- Shoulders / jacket -->
   <path d="M10 115 Q10 95 50 95 Q90 95 90 115Z" fill="#f97316"/>
   <rect x="30" y="88" width="40" height="14" rx="6" fill="#f97316"/>
-  <!-- Helmet main body (full coverage) -->
+  <!-- Helmet main body -->
   <circle cx="50" cy="50" r="38" fill="#ef4444"/>
   <!-- Helmet chin/lower part -->
   <path d="M16 58 Q12 80 28 90 Q38 96 50 96 Q62 96 72 90 Q88 80 84 58Z" fill="#dc2626"/>
-  <!-- Visor slot (dark opening) -->
+  <!-- Visor slot -->
   <rect x="20" y="50" width="60" height="20" rx="7" fill="#0f172a"/>
-  <!-- Eyes (visible through visor) -->
-  <circle cx="36" cy="60" r="7.5" fill="white"/>
-  <circle cx="64" cy="60" r="7.5" fill="white"/>
-  <circle cx="37" cy="61" r="4.5" fill="#0f172a"/>
-  <circle cx="65" cy="61" r="4.5" fill="#0f172a"/>
-  <circle cx="39" cy="59" r="1.8" fill="white"/>
-  <circle cx="67" cy="59" r="1.8" fill="white"/>
+
+  <!-- ═══ LEFT EYE ═══ -->
+  <!-- White (ellipse so ry can animate for blink) -->
+  <ellipse cx="36" cy="60" rx="7.5" ry="7.5" fill="white">
+    <animate attributeName="ry"
+      values="7.5;7.5;7.5;7.5;7.5;0.6;7.5;7.5;7.5;7.5;7.5;0.6;7.5;7.5"
+      keyTimes="0;0.08;0.28;0.46;0.60;0.65;0.70;0.75;0.82;0.88;0.92;0.95;0.98;1"
+      dur="5s" repeatCount="indefinite"/>
+  </ellipse>
+  <!-- Pupil -->
+  <ellipse cx="37" cy="61" rx="4.5" ry="4.5" fill="#0f172a">
+    <animate attributeName="cx"
+      values="37;37;33;37;41;37;37;33;37;41;37;37"
+      keyTimes="0;0.05;0.20;0.38;0.55;0.70;0.75;0.82;0.90;0.95;0.98;1"
+      dur="7s" repeatCount="indefinite"/>
+    <animate attributeName="ry"
+      values="4.5;4.5;4.5;4.5;4.5;0.4;4.5;4.5;4.5;4.5;4.5;0.4;4.5;4.5"
+      keyTimes="0;0.08;0.28;0.46;0.60;0.65;0.70;0.75;0.82;0.88;0.92;0.95;0.98;1"
+      dur="5s" repeatCount="indefinite"/>
+  </ellipse>
+  <!-- Reflection -->
+  <ellipse cx="39" cy="59" rx="1.8" ry="1.8" fill="white">
+    <animate attributeName="cx"
+      values="39;39;35;39;43;39;39;35;39;43;39;39"
+      keyTimes="0;0.05;0.20;0.38;0.55;0.70;0.75;0.82;0.90;0.95;0.98;1"
+      dur="7s" repeatCount="indefinite"/>
+    <animate attributeName="ry"
+      values="1.8;1.8;1.8;1.8;1.8;0;1.8;1.8;1.8;1.8;1.8;0;1.8;1.8"
+      keyTimes="0;0.08;0.28;0.46;0.60;0.65;0.70;0.75;0.82;0.88;0.92;0.95;0.98;1"
+      dur="5s" repeatCount="indefinite"/>
+  </ellipse>
+
+  <!-- ═══ RIGHT EYE ═══ -->
+  <!-- White -->
+  <ellipse cx="64" cy="60" rx="7.5" ry="7.5" fill="white">
+    <animate attributeName="ry"
+      values="7.5;7.5;7.5;7.5;7.5;0.6;7.5;7.5;7.5;7.5;7.5;0.6;7.5;7.5"
+      keyTimes="0;0.08;0.28;0.46;0.60;0.65;0.70;0.75;0.82;0.88;0.92;0.95;0.98;1"
+      dur="5s" repeatCount="indefinite"/>
+  </ellipse>
+  <!-- Pupil -->
+  <ellipse cx="65" cy="61" rx="4.5" ry="4.5" fill="#0f172a">
+    <animate attributeName="cx"
+      values="65;65;61;65;69;65;65;61;65;69;65;65"
+      keyTimes="0;0.05;0.20;0.38;0.55;0.70;0.75;0.82;0.90;0.95;0.98;1"
+      dur="7s" repeatCount="indefinite"/>
+    <animate attributeName="ry"
+      values="4.5;4.5;4.5;4.5;4.5;0.4;4.5;4.5;4.5;4.5;4.5;0.4;4.5;4.5"
+      keyTimes="0;0.08;0.28;0.46;0.60;0.65;0.70;0.75;0.82;0.88;0.92;0.95;0.98;1"
+      dur="5s" repeatCount="indefinite"/>
+  </ellipse>
+  <!-- Reflection -->
+  <ellipse cx="67" cy="59" rx="1.8" ry="1.8" fill="white">
+    <animate attributeName="cx"
+      values="67;67;63;67;71;67;67;63;67;71;67;67"
+      keyTimes="0;0.05;0.20;0.38;0.55;0.70;0.75;0.82;0.90;0.95;0.98;1"
+      dur="7s" repeatCount="indefinite"/>
+    <animate attributeName="ry"
+      values="1.8;1.8;1.8;1.8;1.8;0;1.8;1.8;1.8;1.8;1.8;0;1.8;1.8"
+      keyTimes="0;0.08;0.28;0.46;0.60;0.65;0.70;0.75;0.82;0.88;0.92;0.95;0.98;1"
+      dur="5s" repeatCount="indefinite"/>
+  </ellipse>
+
   <!-- Visor glare -->
   <path d="M23 52 Q30 50 38 52" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.3"/>
   <!-- Helmet top gloss -->
