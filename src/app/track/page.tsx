@@ -556,12 +556,24 @@ export default function TrackPage() {
         ) : order && (
           <div className="space-y-4 max-w-lg mx-auto">
 
-            {/* Animated Status Card — أول شيء في الصفحة */}
+            {/* Animated Status Card + Timeline — في نفس الخانة */}
             <div key={order.status}
-                 className="text-center py-2"
+                 className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700"
                  style={{ animation: 'status-enter 0.5s ease-out' }}>
+              <style>{`
+                @keyframes line-fill-rtl {
+                  0%   { width: 0% }
+                  25%  { width: 52% }
+                  50%  { width: 72% }
+                  70%  { width: 82% }
+                  85%  { width: 87% }
+                  100% { width: 91% }
+                }
+              `}</style>
+
+              {/* الأنيميشن والنص */}
               {order.status !== 'ready' && (
-                <>
+                <div className="text-center mb-5">
                   <div className="mb-3">
                     {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{STEPS[current]?.icon}</div>}
                   </div>
@@ -582,23 +594,10 @@ export default function TrackPage() {
                       تم إرسال ملاحظتك، شكراً!
                     </p>
                   )}
-                </>
+                </div>
               )}
-            </div>
 
-            {/* Timeline — شريط حالة الطلب */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
-              <style>{`
-                @keyframes line-fill-rtl {
-                  0%   { width: 0% }
-                  25%  { width: 52% }
-                  50%  { width: 72% }
-                  70%  { width: 82% }
-                  85%  { width: 87% }
-                  100% { width: 91% }
-                }
-              `}</style>
-              <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-6">حالة الطلب</h3>
+              {/* شريط حالة الطلب */}
               <div className="flex items-start">
                 {STEPS.map((step, idx) => (
                   <div key={step.key} className="flex items-center flex-1">
