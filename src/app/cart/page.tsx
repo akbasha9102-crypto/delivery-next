@@ -454,7 +454,6 @@ const proceedFromReview = () => {
       openMap();
       return;
     }
-    if (!locationDesc.trim()) { alert('الرجاء كتابة وصف عنوانك'); return; }
     setShowConfirmModal(true);
   };
 
@@ -464,7 +463,7 @@ const proceedFromReview = () => {
 
     const { data: order, error } = await supabase.from('orders').insert([{
       client_name: nickname.trim() ? `${name.trim()} (${nickname.trim()})` : name.trim(), client_phone: phone.trim(),
-      delivery_address: addressDetails.trim() ? `${locationDesc.trim()} — ${addressDetails.trim()}` : locationDesc.trim() || null,
+      delivery_address: addressDetails.trim() || null,
       client_note: note || null,
       total_amount: grandTotal, status: 'pending',
       ...(clientLat !== null && clientLng !== null ? { client_lat: clientLat, client_lng: clientLng } : {}),
@@ -559,23 +558,6 @@ const proceedFromReview = () => {
                 اضغط هنا لتحديد الموقع
               </button>
             )}
-
-            {/* وصف العنوان — يظهر فقط بعد تحديد الموقع */}
-            <AnimatePresence>
-            {locationConfirmed && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}>
-                <input type="text" value={locationDesc} onChange={e => setLocationDesc(e.target.value)}
-                  placeholder="وصف عنوانك (حي، شارع، علامة مميزة...) *" dir="rtl"
-                  className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2"
-                  style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
-                />
-              </motion.div>
-            )}
-            </AnimatePresence>
 
             {/* تفاصيل العنوان */}
             <input type="text" value={addressDetails} onChange={e => setAddressDetails(e.target.value)}
@@ -978,13 +960,13 @@ const proceedFromReview = () => {
                   <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">العنوان</p>
                   {editingConfirmAddress ? (
                     <input
-                      type="text" value={locationDesc} onChange={e => setLocationDesc(e.target.value)}
+                      type="text" value={addressDetails} onChange={e => setAddressDetails(e.target.value)}
                       onBlur={() => setEditingConfirmAddress(false)} autoFocus dir="rtl"
                       className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-slate-100 outline-none"
                     />
                   ) : (
                     <div className="flex items-center gap-2 justify-end">
-                      <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-relaxed flex-1">{locationDesc || '—'}</p>
+                      <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-relaxed flex-1">{addressDetails || '—'}</p>
                       <button type="button" onClick={() => setEditingConfirmAddress(true)} className="text-gray-400 active:scale-90 transition-all flex-shrink-0">
                         <Pencil size={13}/>
                       </button>
