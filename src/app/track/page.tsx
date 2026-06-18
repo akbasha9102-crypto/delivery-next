@@ -558,7 +558,7 @@ export default function TrackPage() {
 
             {/* Animated Status Card — أول شيء في الصفحة */}
             <div key={order.status}
-                 className="border-2 rounded-2xl p-5 text-center border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                 className="text-center py-2"
                  style={{ animation: 'status-enter 0.5s ease-out' }}>
               {order.status !== 'ready' && (
                 <>
