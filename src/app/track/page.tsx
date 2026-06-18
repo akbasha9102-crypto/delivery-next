@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Search, MessageSquare, AlertCircle } from 'lucide-react';
@@ -571,9 +571,9 @@ export default function TrackPage() {
             {/* ── شريط الطلب المشترك (Timeline) ── */}
             {(() => {
               const timeline = (
-                <div className="flex items-start" style={{ transform: 'translateX(-10px)' }}>
+                <div className="flex items-start">
                   {STEPS.map((step, idx) => (
-                    <div key={step.key} className="flex items-center flex-1">
+                    <React.Fragment key={step.key}>
                       <div className="flex flex-col items-center flex-shrink-0">
                         <div className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition-all duration-500 ${
                           idx <= current ? 'bg-red-500' : 'bg-gray-100 dark:bg-slate-700 text-gray-300 dark:text-slate-600'
@@ -583,7 +583,7 @@ export default function TrackPage() {
                         }`}>{step.label}</span>
                       </div>
                       {idx < STEPS.length - 1 && (
-                        <div className="flex-1 h-1 rounded mx-1 mb-5 relative overflow-hidden bg-gray-100 dark:bg-slate-700">
+                        <div className="flex-1 h-1 rounded mx-1 relative overflow-hidden bg-gray-100 dark:bg-slate-700" style={{ marginTop: '21px' }}>
                           <div key={`${idx}-${current}`} className="absolute inset-y-0 right-0 rounded bg-red-500"
                             style={
                               idx < current  ? { width: '100%', transition: 'width 0.4s ease-out' }
@@ -592,7 +592,7 @@ export default function TrackPage() {
                             }/>
                         </div>
                       )}
-                    </div>
+                    </React.Fragment>
                   ))}
                 </div>
               );
