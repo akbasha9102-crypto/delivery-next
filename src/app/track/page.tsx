@@ -151,6 +151,79 @@ function PreparingAnimation() {
 }
 
 
+function ReadyAnimation() {
+  return (
+    <div className="relative w-52 h-36 mx-auto overflow-hidden">
+      <style>{CSS}</style>
+      <svg viewBox="0 0 180 110" className="w-full h-full">
+        {/* Sky */}
+        <rect x="0" y="0" width="180" height="80" fill="#e3f2fd"/>
+        {/* Clouds */}
+        <g opacity="0.85" style={{ animation: 'pan-x 6s linear infinite' }}>
+          <ellipse cx="30" cy="22" rx="22" ry="10" fill="white"/>
+          <ellipse cx="48" cy="18" rx="16" ry="9" fill="white"/>
+          <ellipse cx="14" cy="20" rx="13" ry="8" fill="white"/>
+          <ellipse cx="130" cy="28" rx="18" ry="8" fill="white"/>
+          <ellipse cx="146" cy="24" rx="13" ry="7" fill="white"/>
+          <ellipse cx="116" cy="26" rx="11" ry="7" fill="white"/>
+        </g>
+        {/* Road */}
+        <rect x="0" y="80" width="180" height="30" fill="#546e7a"/>
+        <rect x="0" y="78" width="180" height="5" fill="#607d8b"/>
+        {/* Road dashes */}
+        <g style={{ animation: 'road-m 0.35s linear infinite' }}>
+          <rect x="0"   y="91" width="35" height="4" rx="2" fill="#ffeb3b" opacity="0.9"/>
+          <rect x="55"  y="91" width="35" height="4" rx="2" fill="#ffeb3b" opacity="0.9"/>
+          <rect x="110" y="91" width="35" height="4" rx="2" fill="#ffeb3b" opacity="0.9"/>
+          <rect x="165" y="91" width="35" height="4" rx="2" fill="#ffeb3b" opacity="0.9"/>
+        </g>
+        {/* Speed lines */}
+        <line x1="18" y1="60" x2="55" y2="60" stroke="#90caf9" strokeWidth="2.5" strokeLinecap="round" style={{ opacity:0, animation:'speed-l 0.8s ease-in-out infinite' }}/>
+        <line x1="12" y1="68" x2="44" y2="68" stroke="#90caf9" strokeWidth="2"   strokeLinecap="round" style={{ opacity:0, animation:'speed-l 0.8s ease-in-out infinite 0.25s' }}/>
+        <line x1="22" y1="53" x2="50" y2="53" stroke="#90caf9" strokeWidth="1.5" strokeLinecap="round" style={{ opacity:0, animation:'speed-l 0.8s ease-in-out infinite 0.5s' }}/>
+        {/* Motorcycle group */}
+        <g style={{ animation:'moto-b 0.45s ease-in-out infinite', transformOrigin:'110px 78px' }}>
+          {/* Exhaust smoke */}
+          <circle cx="74" cy="74" r="4" fill="#b0bec5" style={{ animation:'exhaust 0.55s ease-out infinite' }}/>
+          <circle cx="70" cy="72" r="3" fill="#b0bec5" style={{ animation:'exhaust 0.55s ease-out infinite 0.18s' }}/>
+          {/* Rear wheel */}
+          <circle cx="82"  cy="84" r="14" fill="#212121"/>
+          <circle cx="82"  cy="84" r="8"  fill="#37474f"/>
+          <circle cx="82"  cy="84" r="3"  fill="#78909c"/>
+          {/* Front wheel */}
+          <circle cx="138" cy="84" r="14" fill="#212121"/>
+          <circle cx="138" cy="84" r="8"  fill="#37474f"/>
+          <circle cx="138" cy="84" r="3"  fill="#78909c"/>
+          {/* Body / fairing */}
+          <path d="M88 76 L96 52 L128 50 L148 68 L136 76 Z" fill="#e53935"/>
+          <path d="M96 52 L104 50 L130 50 L128 52 Z" fill="#b71c1c"/>
+          {/* Windshield */}
+          <path d="M128 52 L138 56 L148 68 L136 68 Z" fill="#90caf9" opacity="0.7"/>
+          {/* Seat */}
+          <rect x="96" y="49" width="30" height="6" rx="3" fill="#1a237e"/>
+          {/* Handlebar */}
+          <path d="M140 56 L150 48 L154 51" stroke="#37474f" strokeWidth="3.5" strokeLinecap="round" fill="none"/>
+          {/* Front fork */}
+          <line x1="143" y1="68" x2="138" y2="82" stroke="#546e7a" strokeWidth="4" strokeLinecap="round"/>
+          {/* Rider body */}
+          <path d="M105 58 Q110 50 120 50 L128 50 L130 70 L102 70 Z" fill="#1565c0"/>
+          {/* Rider head */}
+          <circle cx="116" cy="44" r="11" fill="#ffcc80"/>
+          {/* Helmet */}
+          <path d="M106 44 Q106 32 116 32 Q126 32 126 44 Q126 50 116 51 Q106 50 106 44Z" fill="#e53935"/>
+          <path d="M108 43 Q108 35 116 35 Q124 35 124 43" fill="none" stroke="#ffeb3b" strokeWidth="2" strokeLinecap="round"/>
+          {/* Visor */}
+          <path d="M108 46 Q116 50 124 46" fill="#1565c0" opacity="0.5"/>
+          {/* Delivery box on back */}
+          <rect x="88" y="55" width="20" height="18" rx="3" fill="#ff8f00"/>
+          <rect x="88" y="55" width="20" height="5"  rx="3" fill="#e65100"/>
+          <line x1="98" y1="60" x2="98" y2="73" stroke="#e65100" strokeWidth="1.5"/>
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 function CompletedAnimation() {
   return (
     <div className="w-32 h-32 mx-auto relative">
@@ -171,6 +244,7 @@ function CompletedAnimation() {
 const STATUS_ANIMATION: Record<string, React.ReactNode> = {
   pending:   <PendingAnimation />,
   preparing: <PreparingAnimation />,
+  ready:     <ReadyAnimation />,
   completed: <CompletedAnimation />,
   rejected:  null,
 };
@@ -572,8 +646,7 @@ export default function TrackPage() {
               `}</style>
 
               {/* الأنيميشن والنص */}
-              {order.status !== 'ready' && (
-                <div className="text-center mb-5">
+              <div className="text-center mb-5">
                   <div className="mb-3">
                     {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{STEPS[current]?.icon}</div>}
                   </div>
@@ -594,8 +667,7 @@ export default function TrackPage() {
                       تم إرسال ملاحظتك، شكراً!
                     </p>
                   )}
-                </div>
-              )}
+              </div>
 
               {/* شريط حالة الطلب */}
               <div className="flex items-start">
