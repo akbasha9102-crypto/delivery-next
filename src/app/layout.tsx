@@ -3,7 +3,6 @@ import './globals.css';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { CartProvider } from '@/context/CartContext';
 import { SettingsProvider } from '@/context/SettingsContext';
-import InAppRedirect from '@/components/InAppRedirect';
 
 export const metadata: Metadata = {
   title: 'CulinaShare',
@@ -27,7 +26,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SettingsProvider>
           <ThemeProvider>
             <CartProvider>
-              <InAppRedirect />
               {children}
             </CartProvider>
           </ThemeProvider>

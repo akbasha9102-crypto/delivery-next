@@ -1205,6 +1205,7 @@ const proceedFromReview = () => {
           pendingOpenMapRef.current = null;
           doOpenMapManual(ABU_KHASEEB_CENTER);
         }}
+        formData={{ name, nickname, phone, locationDesc, addressDetails }}
       />
 
       <ClientBottomNav />
