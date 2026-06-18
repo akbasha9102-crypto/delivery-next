@@ -109,12 +109,14 @@ export default function ProfilePage() {
       <div className="px-4 pt-5 max-w-lg mx-auto space-y-4">
 
         <div className="flex justify-center pt-2 pb-1">
-          <div className="relative flex items-center justify-center">
-            <div className="absolute w-28 h-28 rounded-full bg-blue-500/25 animate-ping" />
-            <div className="absolute w-24 h-24 rounded-full bg-blue-500/15 animate-ping" style={{ animationDelay: '0.3s' }} />
-            <div className="relative w-20 h-20 rounded-full flex items-center justify-center bg-blue-600 border-4 border-blue-400 shadow-lg shadow-blue-500/40">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center bg-blue-600 shadow-lg shadow-blue-500/40">
+            {name ? (
+              <span className="text-white font-bold text-base text-center leading-tight px-2 break-words max-w-full">
+                {name}
+              </span>
+            ) : (
               <User size={36} className="text-white" />
-            </div>
+            )}
           </div>
         </div>
 
