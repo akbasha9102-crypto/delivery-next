@@ -244,6 +244,7 @@ function CompletedAnimation() {
 const STATUS_ANIMATION: Record<string, React.ReactNode> = {
   pending:   <PendingAnimation />,
   preparing: <PreparingAnimation />,
+  pickup:    <PreparingAnimation />,
   ready:     <ReadyAnimation />,
   completed: <CompletedAnimation />,
   rejected:  null,
