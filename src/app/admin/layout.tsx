@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { NewOrdersProvider } from '@/context/NewOrdersContext';
 
@@ -46,5 +47,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  return <NewOrdersProvider>{children}</NewOrdersProvider>;
+  return (
+    <NewOrdersProvider>
+      <Image
+        src="/dasha-logo.png"
+        alt="Dasha"
+        width={36}
+        height={36}
+        className="fixed top-2.5 left-3 z-50 object-contain pointer-events-none"
+        priority
+      />
+      {children}
+    </NewOrdersProvider>
+  );
 }

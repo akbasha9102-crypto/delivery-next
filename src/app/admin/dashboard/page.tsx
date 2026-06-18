@@ -420,14 +420,14 @@ function DashboardPage() {
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
-        <button onClick={toggleDark} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
-          {dark ? <Sun size={16} className="text-yellow-400" /> : <Moon size={16} className="text-gray-600" />}
-        </button>
+        <div className="w-10" />
         <div className="flex items-center gap-1.5">
           <ClipboardList size={18} className="text-[#f97316]" />
           <p className="font-bold text-gray-900 dark:text-slate-100">الطلبات</p>
         </div>
-        <div className="w-10" />
+        <button onClick={toggleDark} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
+          {dark ? <Sun size={16} className="text-yellow-400" /> : <Moon size={16} className="text-gray-600" />}
+        </button>
       </header>
 
       {/* شريط الحالة والوقت */}
