@@ -8,6 +8,7 @@ import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2,
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
+import InAppBrowserBanner, { isInAppBrowser } from '@/components/InAppBrowserBanner';
 
 type Extra = { id: string; name: string; price: number };
 
@@ -107,6 +108,8 @@ export default function CartPage() {
   const [gpsAccuracy,       setGpsAccuracy]       = useState<number | null>(null);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [showPreciseModal,    setShowPreciseModal]    = useState(false);
+  const [showInAppBanner,     setShowInAppBanner]     = useState(false);
+  const pendingOpenMapRef = useRef<(() => void) | null>(null);
 
   // refs
   const preciseTimerRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -199,6 +202,16 @@ export default function CartPage() {
   };
 
   const openMap = () => {
+    if (isInAppBrowser()) {
+      pendingOpenMapRef.current = () => {
+        if (!('geolocation' in navigator)) { setShowPermissionModal(true); return; }
+        navigator.permissions?.query({ name: 'geolocation' as PermissionName })
+          .then((result: PermissionStatus) => { if (result.state === 'denied') setShowPermissionModal(true); else doOpenMap(); })
+          .catch(() => doOpenMap());
+      };
+      setShowInAppBanner(true);
+      return;
+    }
     if (!('geolocation' in navigator)) { setShowPermissionModal(true); return; }
     navigator.permissions?.query({ name: 'geolocation' as PermissionName })
       .then((result: PermissionStatus) => { if (result.state === 'denied') setShowPermissionModal(true); else doOpenMap(); })
@@ -1181,6 +1194,16 @@ const proceedFromReview = () => {
         </motion.div>
       )}
       </AnimatePresence>
+
+      <InAppBrowserBanner
+        show={showInAppBanner}
+        onDismiss={() => setShowInAppBanner(false)}
+        onContinue={() => {
+          setShowInAppBanner(false);
+          pendingOpenMapRef.current?.();
+          pendingOpenMapRef.current = null;
+        }}
+      />
 
       <ClientBottomNav />
     </div>

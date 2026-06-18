@@ -9,7 +9,6 @@ import { ClientBottomNav } from '@/components/BottomNav';
 import { Moon, Sun, Plus, Minus, X, ShoppingBag, Trash2, MapPin, MessageCircle } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import InAppBrowserBanner from '@/components/InAppBrowserBanner';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string };
 type Extra    = { id: string; name: string; price: number };
@@ -162,7 +161,6 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950 pb-36">
-      <InAppBrowserBanner />
 
       {/* ══ HEADER ══ */}
       <motion.header
