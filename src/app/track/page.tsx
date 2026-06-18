@@ -245,7 +245,6 @@ const STATUS_ANIMATION: Record<string, React.ReactNode> = {
   pending:   <PendingAnimation />,
   preparing: <PreparingAnimation />,
   pickup:    <PreparingAnimation />,
-  ready:     <ReadyAnimation />,
   completed: <CompletedAnimation />,
   rejected:  null,
 };
@@ -630,189 +629,236 @@ export default function TrackPage() {
           </div>
         ) : order && (
           <div className="space-y-4 max-w-lg mx-auto">
+            <style>{`
+              @keyframes line-fill-rtl {
+                0%   { width: 0% }
+                25%  { width: 52% }
+                50%  { width: 72% }
+                70%  { width: 82% }
+                85%  { width: 87% }
+                100% { width: 91% }
+              }
+            `}</style>
 
-            {/* Animated Status Card + Timeline — في نفس الخانة */}
-            <div key={order.status}
-                 className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700"
-                 style={{ animation: 'status-enter 0.5s ease-out' }}>
-              <style>{`
-                @keyframes line-fill-rtl {
-                  0%   { width: 0% }
-                  25%  { width: 52% }
-                  50%  { width: 72% }
-                  70%  { width: 82% }
-                  85%  { width: 87% }
-                  100% { width: 91% }
-                }
-              `}</style>
-
-              {/* الأنيميشن والنص */}
-              <div className="text-center mb-5">
-                  <div className="mb-3">
-                    {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{STEPS[current]?.icon}</div>}
-                  </div>
-                  <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{STEPS[current]?.label}</p>
-                  <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
-                  {order.status === 'completed' && !alreadySentFeedback && (
-                    <button
-                      onClick={() => { setShowFeedbackModal(true); setFeedbackStep('choose'); setFeedbackDone(false); setFeedbackText(''); }}
-                      className="mt-4 flex items-center gap-2 mx-auto px-5 py-2.5 rounded-2xl border-2 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
-                    >
-                      <MessageSquare size={16} />
-                      <span>تقديم ملاحظة أو شكوى</span>
-                    </button>
-                  )}
-                  {order.status === 'completed' && alreadySentFeedback && (
-                    <p className="mt-4 text-xs text-gray-400 dark:text-slate-500 flex items-center justify-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-                      تم إرسال ملاحظتك، شكراً!
-                    </p>
-                  )}
-              </div>
-
-              {/* شريط حالة الطلب */}
-              <div className="flex items-start">
-                {STEPS.map((step, idx) => (
-                  <div key={step.key} className="flex items-center flex-1">
-                    <div className="flex flex-col items-center flex-shrink-0">
-                      <div className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition-all duration-500 ${
-                        idx <= current
-                          ? 'bg-red-500'
-                          : 'bg-gray-100 dark:bg-slate-700 text-gray-300 dark:text-slate-600'
-                      }`}>
-                        {step.icon}
+            {/* ── شريط الطلب المشترك (Timeline) ── */}
+            {(() => {
+              const timeline = (
+                <div className="flex items-start">
+                  {STEPS.map((step, idx) => (
+                    <div key={step.key} className="flex items-center flex-1">
+                      <div className="flex flex-col items-center flex-shrink-0">
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition-all duration-500 ${
+                          idx <= current ? 'bg-red-500' : 'bg-gray-100 dark:bg-slate-700 text-gray-300 dark:text-slate-600'
+                        }`}>{step.icon}</div>
+                        <span className={`text-xs mt-1.5 font-medium text-center leading-tight max-w-[52px] ${
+                          idx <= current ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-slate-500'
+                        }`}>{step.label}</span>
                       </div>
-                      <span className={`text-xs mt-1.5 font-medium text-center leading-tight max-w-[52px] ${
-                        idx <= current ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-slate-500'
-                      }`}>{step.label}</span>
-                    </div>
-                    {idx < STEPS.length - 1 && (
-                      <div className="flex-1 h-1 rounded mx-1 mb-5 relative overflow-hidden bg-gray-100 dark:bg-slate-700">
-                        <div
-                          key={`${idx}-${current}`}
-                          className="absolute inset-y-0 right-0 rounded bg-red-500"
-                          style={
-                            idx < current
-                              ? { width: '100%', transition: 'width 0.4s ease-out' }
-                              : idx === current
-                              ? { width: '0%', animation: 'line-fill-rtl 80s linear forwards' }
+                      {idx < STEPS.length - 1 && (
+                        <div className="flex-1 h-1 rounded mx-1 mb-5 relative overflow-hidden bg-gray-100 dark:bg-slate-700">
+                          <div key={`${idx}-${current}`} className="absolute inset-y-0 right-0 rounded bg-red-500"
+                            style={
+                              idx < current  ? { width: '100%', transition: 'width 0.4s ease-out' }
+                              : idx === current ? { width: '0%', animation: 'line-fill-rtl 80s linear forwards' }
                               : { width: '0%' }
-                          }
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* الوقت التقديري — يظهر فقط إذا لم يُعيَّن سائق بعد */}
-            {estimatedAt && !order.driver_name && (
-              <div className="bg-white dark:bg-slate-800 rounded-2xl px-5 py-4 border border-gray-100 dark:border-slate-700 flex items-center justify-between">
-                <div className="text-right">
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">الوقت التقديري للتوصيل</p>
-                  <p className="font-black text-gray-900 dark:text-white text-lg">
-                    سيصلك طلبك عند الساعة{' '}
-                    <span className="text-orange-500">{fmtEta(estimatedAt)}</span>
-                  </p>
-                  {extraMins > 0 && (
-                    <p className="text-xs text-amber-500 mt-0.5">⏳ تم تمديد الوقت التقديري</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* بطاقة السائق */}
-            {order.driver_name && !['pending', 'rejected', 'completed'].includes(order.status) && (
-              <div
-                key={order.driver_name}
-                className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700"
-                dir="rtl"
-                style={{ animation: 'driver-slide-up 0.65s cubic-bezier(0.34,1.56,0.64,1) both' }}
-              >
-                <p className="text-xs text-gray-400 dark:text-slate-500 mb-3">السائق الذي سيوصل طلبك</p>
-                <div className="flex items-center gap-4">
-                  <div className="relative flex-shrink-0 w-16 h-16 flex items-center justify-center"
-                       style={{ animation: 'driver-avatar-pop 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s both' }}>
-                    <img src="/driver-cartoon.svg" alt="" className="w-16 h-16 relative z-10 rounded-full bg-gray-400 border-2 border-gray-300"
-                         style={{ animation: 'driver-accepted-glow 2s ease-in-out infinite' }} />
-                  </div>
-                  <div className="flex-1" style={{ animation: 'driver-name-reveal 0.4s ease-out 0.35s both' }}>
-                    <p className="font-black text-xl text-red-500 dark:text-red-400 leading-tight">{order.driver_name}</p>
-                    <p className="text-gray-500 dark:text-slate-400 text-sm mt-0.5">
-                      {order.status === 'ready' ? 'سيوصل طلبك وفي طريقه إليك 🏍️' : 'سيوصل طلبك 🏍️'}
-                    </p>
-                  </div>
-                  {driverPhone && (
-                    <a href={`https://wa.me/${driverPhone.replace(/\D/g, '')}`}
-                       target="_blank" rel="noopener noreferrer"
-                       className="w-14 h-14 rounded-2xl flex items-center justify-center active:scale-90 transition-all flex-shrink-0"
-                       style={{ backgroundColor: '#25D366', animation: 'driver-name-reveal 0.4s ease-out 0.5s both' }}>
-                      <svg viewBox="0 0 24 24" className="w-8 h-8" fill="white">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                      </svg>
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Live Driver Map */}
-            {order.status === 'ready' && (
-              <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${order.driver_lat ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-500'}`} />
-                    <span className="text-xs font-medium text-gray-500 dark:text-slate-400">
-                      {order.driver_lat ? 'مباشر' : 'في انتظار السائق'}
-                    </span>
-                  </div>
-                  <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">تتبع السائق 🏍️</p>
-                </div>
-                <div style={{ position: 'relative', height: 280 }}>
-                  <div ref={trackMapRef} style={{ height: 280 }} />
-                  {!order.driver_lat && !order.client_lat && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-50 dark:bg-slate-700">
-                      <div className="text-4xl">🏍️</div>
-                      <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">جاري تحديد موقع السائق...</p>
+                            }/>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {order.client_lat && !order.driver_lat && (
-                    <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none">
-                      <div className="bg-white/90 dark:bg-slate-800/90 text-xs text-gray-500 dark:text-slate-400 px-3 py-1.5 rounded-full shadow flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
-                        في انتظار موقع السائق...
+                  ))}
+                </div>
+              );
+
+              /* ── حالة "في الطريق": خريطة → شريط → سائق → تفاصيل ── */
+              if (order.status === 'ready') return (
+                <>
+                  {/* الخريطة */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${order.driver_lat ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-500'}`}/>
+                        <span className="text-xs font-medium text-gray-500 dark:text-slate-400">
+                          {order.driver_lat ? 'مباشر' : 'في انتظار السائق'}
+                        </span>
+                      </div>
+                      <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">تتبع السائق 🏍️</p>
+                    </div>
+                    <div style={{ position: 'relative', height: 280 }}>
+                      <div ref={trackMapRef} style={{ height: 280 }}/>
+                      {!order.driver_lat && !order.client_lat && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-50 dark:bg-slate-700">
+                          <div className="text-4xl">🏍️</div>
+                          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">جاري تحديد موقع السائق...</p>
+                        </div>
+                      )}
+                      {order.client_lat && !order.driver_lat && (
+                        <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none">
+                          <div className="bg-white/90 dark:bg-slate-800/90 text-xs text-gray-500 dark:text-slate-400 px-3 py-1.5 rounded-full shadow flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse"/>
+                            في انتظار موقع السائق...
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* شريط حالة الطلب */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
+                    {timeline}
+                  </div>
+
+                  {/* بطاقة السائق */}
+                  {order.driver_name && (
+                    <div key={order.driver_name}
+                         className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700"
+                         dir="rtl"
+                         style={{ animation: 'driver-slide-up 0.65s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mb-3">السائق الذي سيوصل طلبك</p>
+                      <div className="flex items-center gap-4">
+                        <div className="relative flex-shrink-0 w-16 h-16 flex items-center justify-center"
+                             style={{ animation: 'driver-avatar-pop 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s both' }}>
+                          <img src="/driver-cartoon.svg" alt="" className="w-16 h-16 relative z-10 rounded-full bg-gray-400 border-2 border-gray-300"
+                               style={{ animation: 'driver-accepted-glow 2s ease-in-out infinite' }}/>
+                        </div>
+                        <div className="flex-1" style={{ animation: 'driver-name-reveal 0.4s ease-out 0.35s both' }}>
+                          <p className="font-black text-xl text-red-500 dark:text-red-400 leading-tight">{order.driver_name}</p>
+                          <p className="text-gray-500 dark:text-slate-400 text-sm mt-0.5">سيوصل طلبك وفي طريقه إليك 🏍️</p>
+                        </div>
+                        {driverPhone && (
+                          <a href={`https://wa.me/${driverPhone.replace(/\D/g, '')}`}
+                             target="_blank" rel="noopener noreferrer"
+                             className="w-14 h-14 rounded-2xl flex items-center justify-center active:scale-90 transition-all flex-shrink-0"
+                             style={{ backgroundColor: '#25D366', animation: 'driver-name-reveal 0.4s ease-out 0.5s both' }}>
+                            <svg viewBox="0 0 24 24" className="w-8 h-8" fill="white">
+                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                            </svg>
+                          </a>
+                        )}
                       </div>
                     </div>
                   )}
-                </div>
-              </div>
-            )}
 
-            {/* Driver Arrived Banner */}
-            {order.driver_arrived && order.status === 'ready' && (
-              <div className="rounded-2xl p-5 text-center border-2 border-orange-300 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-700"
-                   style={{ animation: 'status-enter 0.5s ease-out' }}>
-                <div className="text-4xl mb-2">🏍️</div>
-                <p className="font-black text-orange-800 dark:text-orange-300 text-lg mb-1">السائق وصل!</p>
-                <p className="text-orange-600 dark:text-orange-400 text-sm">الرجاء الاستعداد لاستلام طلبك</p>
-              </div>
-            )}
+                  {/* السائق وصل */}
+                  {order.driver_arrived && (
+                    <div className="rounded-2xl p-5 text-center border-2 border-orange-300 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-700"
+                         style={{ animation: 'status-enter 0.5s ease-out' }}>
+                      <div className="text-4xl mb-2">🏍️</div>
+                      <p className="font-black text-orange-800 dark:text-orange-300 text-lg mb-1">السائق وصل!</p>
+                      <p className="text-orange-600 dark:text-orange-400 text-sm">الرجاء الاستعداد لاستلام طلبك</p>
+                    </div>
+                  )}
 
-            {/* Order Details */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
-              <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-4">تفاصيل الطلب</h3>
-              {[
-                { label: 'الاسم',     value: order.client_name },
-                { label: 'المنطقة',   value: order.delivery_address || '—' },
-                { label: 'الإجمالي', value: `${order.total_amount.toLocaleString()} د.ع` },
-              ].map(row => (
-                <div key={row.label} className="flex justify-between items-center py-3 border-b border-gray-50 dark:border-slate-700 last:border-0">
-                  <span className="font-semibold text-gray-900 dark:text-white">{row.value}</span>
-                  <span className="text-gray-500 dark:text-slate-400 text-sm">{row.label}</span>
-                </div>
-              ))}
-            </div>
+                  {/* تفاصيل الطلب */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
+                    <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-4">تفاصيل الطلب</h3>
+                    {[
+                      { label: 'الاسم',     value: order.client_name },
+                      { label: 'المنطقة',   value: order.delivery_address || '—' },
+                      { label: 'الإجمالي', value: `${order.total_amount.toLocaleString()} د.ع` },
+                    ].map(row => (
+                      <div key={row.label} className="flex justify-between items-center py-3 border-b border-gray-50 dark:border-slate-700 last:border-0">
+                        <span className="font-semibold text-gray-900 dark:text-white">{row.value}</span>
+                        <span className="text-gray-500 dark:text-slate-400 text-sm">{row.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+
+              /* ── باقي الحالات: أنيميشن + شريط → سائق/وقت → تفاصيل ── */
+              return (
+                <>
+                  {/* أنيميشن + شريط في نفس الخانة */}
+                  <div key={order.status}
+                       className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700"
+                       style={{ animation: 'status-enter 0.5s ease-out' }}>
+                    <div className="text-center mb-5">
+                      <div className="mb-3">
+                        {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{STEPS[current]?.icon}</div>}
+                      </div>
+                      <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{STEPS[current]?.label}</p>
+                      <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
+                      {order.status === 'completed' && !alreadySentFeedback && (
+                        <button
+                          onClick={() => { setShowFeedbackModal(true); setFeedbackStep('choose'); setFeedbackDone(false); setFeedbackText(''); }}
+                          className="mt-4 flex items-center gap-2 mx-auto px-5 py-2.5 rounded-2xl border-2 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
+                        >
+                          <MessageSquare size={16}/>
+                          <span>تقديم ملاحظة أو شكوى</span>
+                        </button>
+                      )}
+                      {order.status === 'completed' && alreadySentFeedback && (
+                        <p className="mt-4 text-xs text-gray-400 dark:text-slate-500 flex items-center justify-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"/>
+                          تم إرسال ملاحظتك، شكراً!
+                        </p>
+                      )}
+                    </div>
+                    {timeline}
+                  </div>
+
+                  {/* الوقت التقديري */}
+                  {estimatedAt && !order.driver_name && (
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl px-5 py-4 border border-gray-100 dark:border-slate-700">
+                      <div className="text-right">
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">الوقت التقديري للتوصيل</p>
+                        <p className="font-black text-gray-900 dark:text-white text-lg">
+                          سيصلك طلبك عند الساعة{' '}
+                          <span className="text-orange-500">{fmtEta(estimatedAt)}</span>
+                        </p>
+                        {extraMins > 0 && <p className="text-xs text-amber-500 mt-0.5">⏳ تم تمديد الوقت التقديري</p>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* بطاقة السائق */}
+                  {order.driver_name && !['pending', 'rejected', 'completed'].includes(order.status) && (
+                    <div key={order.driver_name}
+                         className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700"
+                         dir="rtl"
+                         style={{ animation: 'driver-slide-up 0.65s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mb-3">السائق الذي سيوصل طلبك</p>
+                      <div className="flex items-center gap-4">
+                        <div className="relative flex-shrink-0 w-16 h-16 flex items-center justify-center"
+                             style={{ animation: 'driver-avatar-pop 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s both' }}>
+                          <img src="/driver-cartoon.svg" alt="" className="w-16 h-16 relative z-10 rounded-full bg-gray-400 border-2 border-gray-300"
+                               style={{ animation: 'driver-accepted-glow 2s ease-in-out infinite' }}/>
+                        </div>
+                        <div className="flex-1" style={{ animation: 'driver-name-reveal 0.4s ease-out 0.35s both' }}>
+                          <p className="font-black text-xl text-red-500 dark:text-red-400 leading-tight">{order.driver_name}</p>
+                          <p className="text-gray-500 dark:text-slate-400 text-sm mt-0.5">سيوصل طلبك 🏍️</p>
+                        </div>
+                        {driverPhone && (
+                          <a href={`https://wa.me/${driverPhone.replace(/\D/g, '')}`}
+                             target="_blank" rel="noopener noreferrer"
+                             className="w-14 h-14 rounded-2xl flex items-center justify-center active:scale-90 transition-all flex-shrink-0"
+                             style={{ backgroundColor: '#25D366', animation: 'driver-name-reveal 0.4s ease-out 0.5s both' }}>
+                            <svg viewBox="0 0 24 24" className="w-8 h-8" fill="white">
+                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                            </svg>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* تفاصيل الطلب */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
+                    <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-4">تفاصيل الطلب</h3>
+                    {[
+                      { label: 'الاسم',     value: order.client_name },
+                      { label: 'المنطقة',   value: order.delivery_address || '—' },
+                      { label: 'الإجمالي', value: `${order.total_amount.toLocaleString()} د.ع` },
+                    ].map(row => (
+                      <div key={row.label} className="flex justify-between items-center py-3 border-b border-gray-50 dark:border-slate-700 last:border-0">
+                        <span className="font-semibold text-gray-900 dark:text-white">{row.value}</span>
+                        <span className="text-gray-500 dark:text-slate-400 text-sm">{row.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
 
           </div>
         )}
