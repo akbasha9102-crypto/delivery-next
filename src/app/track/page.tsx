@@ -571,7 +571,7 @@ export default function TrackPage() {
             {/* ── شريط الطلب المشترك (Timeline) ── */}
             {(() => {
               const timeline = (
-                <div className="flex items-start">
+                <div className="flex items-start" style={{ transform: 'translateX(-10px)' }}>
                   {STEPS.map((step, idx) => (
                     <div key={step.key} className="flex items-center flex-1">
                       <div className="flex flex-col items-center flex-shrink-0">
