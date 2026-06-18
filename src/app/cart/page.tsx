@@ -157,7 +157,7 @@ export default function CartPage() {
       },
       (err) => {
         setGpsLocating(false);
-        if (err.code === 1) { setShowPermissionModal(true); setShowMap(false); }
+        if (err.code === 1) { setShowPermissionModal(true); }
       },
       { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
@@ -184,6 +184,18 @@ export default function CartPage() {
         pendingFlyRef.current = { lat, lng, accuracy };
       }
     });
+  };
+
+  // فتح الخريطة يدوياً بدون GPS
+  const doOpenMapManual = () => {
+    setShowPermissionModal(false);
+    setShowPreciseModal(false);
+    stopGpsWatch();
+    setGpsLocating(false);
+    setGpsAccuracy(null);
+    setShowMap(true);
+    setClientLat(BASRA_CENTER[0]);
+    setClientLng(BASRA_CENTER[1]);
   };
 
   const openMap = () => {
@@ -1028,7 +1040,7 @@ const proceedFromReview = () => {
               style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}cc)`, color: textOnBrand, boxShadow: `0 8px 24px ${brandColor}50` }}>
               فعّلته — أعد المحاولة
             </button>
-            <button onClick={() => setShowPreciseModal(false)}
+            <button onClick={doOpenMapManual}
               className="w-full py-3.5 rounded-2xl font-semibold text-sm border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 transition-all active:scale-95">
               تحديد موقعي يدوياً على الخريطة
             </button>
@@ -1067,7 +1079,7 @@ const proceedFromReview = () => {
               style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}cc)`, color: textOnBrand, boxShadow: `0 8px 24px ${brandColor}50` }}>
               فعّلت الموقع — أعد المحاولة
             </button>
-            <button onClick={() => { setShowPermissionModal(false); doOpenMap(); }}
+            <button onClick={doOpenMapManual}
               className="w-full py-3.5 rounded-2xl font-semibold text-sm border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 transition-all active:scale-95">
               تحديد موقعي يدوياً على الخريطة
             </button>
