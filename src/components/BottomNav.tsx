@@ -8,8 +8,8 @@ import { useNewOrders } from '@/context/NewOrdersContext';
 const clientTabs = [
   { href: '/home',    icon: UtensilsCrossed, label: 'المنيو' },
   { href: '/track',   icon: Truck,           label: 'تتبع طلبك' },
-  { href: '/profile', icon: User,            label: 'معلوماتي' },
   { href: '/orders',  icon: ShoppingBag,     label: 'طلباتي' },
+  { href: '/profile', icon: User,            label: 'معلوماتي' },
 ];
 
 const adminTabs = [
