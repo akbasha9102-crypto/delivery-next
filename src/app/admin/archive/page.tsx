@@ -87,14 +87,19 @@ export default function ArchivePage() {
     setFeedbacks(enriched);
     setRejected((rejRes.data as RejectedOrder[]) || []);
 
-    // جلب عناصر كل رحلة
+    // جلب عناصر كل رحلة — batch واحد بدلاً من N+1
     const rawTrips = (tripsRes.data || []) as Omit<DriverTrip, 'items'>[];
-    const tripsWithItems: DriverTrip[] = await Promise.all(
-      rawTrips.map(async trip => {
-        const { data: items } = await supabase.from('order_items').select('id, item_name, quantity, price').eq('order_id', trip.id);
-        return { ...trip, items: (items as TripItem[]) || [] };
-      })
-    );
+    const tripIds = rawTrips.map(t => t.id);
+    const allTripItems = tripIds.length
+      ? ((await supabase.from('order_items').select('id, item_name, quantity, price, order_id').in('order_id', tripIds)).data || []) as (TripItem & { order_id: string })[]
+      : [];
+    const itemsByTrip = new Map<string, TripItem[]>();
+    allTripItems.forEach(it => {
+      const arr = itemsByTrip.get(it.order_id) ?? [];
+      arr.push(it);
+      itemsByTrip.set(it.order_id, arr);
+    });
+    const tripsWithItems: DriverTrip[] = rawTrips.map(trip => ({ ...trip, items: itemsByTrip.get(trip.id) ?? [] }));
 
     // تجميع حسب السائق
     const map = new Map<string, DriverGroup>();

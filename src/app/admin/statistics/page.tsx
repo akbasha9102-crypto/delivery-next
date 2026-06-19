@@ -59,10 +59,18 @@ export default function StatisticsPage() {
     setCatMap(cMap);
     setCategories(catsRes.data || []);
 
-    const withItems = await Promise.all((ordersRes.data || []).map(async o => {
-      const { data: items } = await supabase.from('order_items').select('*').eq('order_id', o.id);
-      return { ...o, items: items || [] };
-    }));
+    const orders = ordersRes.data || [];
+    const orderIds = orders.map(o => o.id);
+    const allItems = orderIds.length
+      ? (await supabase.from('order_items').select('*').in('order_id', orderIds)).data || []
+      : [];
+    const itemsByOrder = new Map<string, typeof allItems>();
+    allItems.forEach(it => {
+      const arr = itemsByOrder.get(it.order_id) ?? [];
+      arr.push(it);
+      itemsByOrder.set(it.order_id, arr);
+    });
+    const withItems = orders.map(o => ({ ...o, items: itemsByOrder.get(o.id) ?? [] }));
     setOrders(withItems);
     setLoading(false);
   }, [fromDate, toDate]);
