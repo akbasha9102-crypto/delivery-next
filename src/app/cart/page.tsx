@@ -511,7 +511,7 @@ const proceedFromReview = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
-        <h1 className="text-xl font-bold text-center" style={{ color: brandColor }}>سلة المشتريات</h1>
+        <h1 className="text-xl font-bold text-center" style={{ color: dark ? brandColor : '#111827' }}>سلة المشتريات</h1>
       </header>
 
       <div className="px-4 pt-4 space-y-4">
@@ -590,7 +590,7 @@ const proceedFromReview = () => {
           {editing ? (
             <button ref={submitBtnRef} onClick={handleSubmitPress} disabled={items.length === 0}
               className="w-full disabled:opacity-40 font-bold py-4 rounded-xl text-lg transition-all active:scale-95"
-              style={{ backgroundColor: brandColor, color: textOnBrand }}>
+              style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff', boxShadow: '0 8px 28px #ef444445' }}>
               إرسال الطلب
             </button>
           ) : (
