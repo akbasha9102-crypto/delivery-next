@@ -7,6 +7,11 @@ const supabase = createClient(
 );
 
 export async function POST(request: Request) {
+  const secret = request.headers.get('x-api-secret');
+  if (!secret || secret !== process.env.API_SECRET) {
+    return Response.json({ error: 'unauthorized' }, { status: 401 });
+  }
+
   webpush.setVapidDetails(
     process.env.VAPID_SUBJECT!,
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,

@@ -378,7 +378,7 @@ function DashboardPage() {
     if (order.status === 'pending') {
       fetch('/api/push/broadcast', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
         body: JSON.stringify({
           title: '🔔 طلب جديد',
           body: `طلب من ${order.client_name} — ${order.total_amount.toLocaleString()} د.ع`,
@@ -391,7 +391,7 @@ function DashboardPage() {
     if (order.status === 'preparing' && order.driver_id) {
       fetch('/api/push/notify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
         body: JSON.stringify({
           driver_id: order.driver_id,
           title: '🍔 الطلب جاهز!',

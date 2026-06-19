@@ -192,7 +192,7 @@ function OrdersPage() {
     const link = `${window.location.origin}/delivery/${order.id}`;
     fetch('/api/push/notify', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
       body: JSON.stringify({ driver_id: driverId, title: '🛵 طلب جديد!', body: `طلب جديد من ${order.client_name}`, url: link, tag: 'new-order' }),
     }).catch(() => {});
 
