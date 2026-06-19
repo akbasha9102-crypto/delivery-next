@@ -97,7 +97,9 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
       setCategories(cats || []);
       setItems(its || []);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'خطأ في تحميل القائمة';
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message || 'خطأ في تحميل القائمة';
       setDataError(msg);
     } finally {
       setDataLoading(false);
@@ -283,8 +285,8 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
       {/* ══ CONTENT ══ */}
       <div className="px-4 pt-2">
 
-        {/* ── حالة الخطأ ── */}
-        {dataError && (
+        {/* ── حالة الخطأ: شاشة كاملة فقط إذا لا توجد بيانات ── */}
+        {dataError && categories.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
             <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
               <span className="text-3xl">⚠️</span>
