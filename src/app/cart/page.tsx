@@ -867,7 +867,7 @@ const proceedFromReview = () => {
                     />
                   ) : (
                     <>
-                      <button onClick={() => setEditingName(true)} className="text-gray-400 active:scale-90 transition-all"><Pencil size={13}/></button>
+                      <button onClick={() => setEditingName(true)} className="text-gray-900 dark:text-gray-400 active:scale-90 transition-all"><Pencil size={13}/></button>
                       <span className="text-gray-900 dark:text-slate-100 font-semibold">{name}</span>
                     </>
                   )}
@@ -890,7 +890,7 @@ const proceedFromReview = () => {
                     </div>
                   ) : (
                     <>
-                      <button onClick={() => setEditingPhone(true)} className="text-gray-400 active:scale-90 transition-all"><Pencil size={13}/></button>
+                      <button onClick={() => setEditingPhone(true)} className="text-gray-900 dark:text-gray-400 active:scale-90 transition-all"><Pencil size={13}/></button>
                       <span className="font-bold tracking-widest" style={{ color: '#ef4444' }}>
                         <span className="text-gray-400 font-normal text-xs ml-1">🇮🇶 +964</span>{phone}
                       </span>
