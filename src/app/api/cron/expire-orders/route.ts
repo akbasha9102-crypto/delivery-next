@@ -5,7 +5,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = request.headers.get('authorization');
+  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+    return Response.json({ error: 'unauthorized' }, { status: 401 });
+  }
+
   const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
   const { data, error } = await supabase
