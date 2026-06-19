@@ -1,7 +1,21 @@
 'use client';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
-type CartItem = { id: string; name: string; price: number; image_url: string | null; quantity: number; extras_json?: string };
+// ── نوع العناصر ─────────────────────────────────────────────────────────────
+// عند تغيير هذا النوع يجب رفع رقم CART_VERSION بمقدار 1
+// حتى تُهمَل البيانات القديمة بدلاً من قراءة بيانات بشكل غلط.
+const CART_VERSION = 1;
+const CART_KEY = `cart_v${CART_VERSION}`;
+
+type CartItem = {
+  id: string;
+  name: string;
+  price: number;
+  image_url: string | null;
+  quantity: number;
+  extras_json?: string;
+};
+
 type Ctx = {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
@@ -12,10 +26,55 @@ type Ctx = {
   total: number;
 };
 
+// ── حارس نوع: يتحقق من صحة كل عنصر مقروء من localStorage ─────────────────
+function isValidCartItem(v: unknown): v is CartItem {
+  if (!v || typeof v !== 'object') return false;
+  const obj = v as Record<string, unknown>;
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.name === 'string' &&
+    typeof obj.price === 'number' &&
+    typeof obj.quantity === 'number' &&
+    obj.quantity > 0 &&
+    (obj.image_url === null || typeof obj.image_url === 'string') &&
+    (obj.extras_json === undefined || typeof obj.extras_json === 'string')
+  );
+}
+
+function readCart(): CartItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    // نُبقي فقط العناصر الصالحة — الحماية من تغييرات مستقبلية في CartItem
+    return parsed.filter(isValidCartItem);
+  } catch {
+    return [];
+  }
+}
+
+function writeCart(items: CartItem[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CART_KEY, JSON.stringify(items));
+  } catch {
+    // QuotaExceededError — نتجاهله بصمت
+  }
+}
+
+// ── Provider ────────────────────────────────────────────────────────────────
 const CartContext = createContext<Ctx | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  // نُهيّئ الحالة من localStorage مباشرة (تجنّب flash of empty cart)
+  const [items, setItems] = useState<CartItem[]>(() => readCart());
+
+  // كلما تغيّرت items نكتب في localStorage
+  useEffect(() => {
+    writeCart(items);
+  }, [items]);
 
   const addItem = (item: Omit<CartItem, 'quantity'>) =>
     setItems(prev => {
@@ -33,15 +92,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
 
   const removeItem = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
-  const clearCart = () => setItems([]);
+  const clearCart  = () => setItems([]);
   const restoreCart = (newItems: CartItem[]) => setItems(newItems);
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  return <CartContext.Provider value={{ items, addItem, decrementItem, removeItem, clearCart, restoreCart, total }}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider value={{ items, addItem, decrementItem, removeItem, clearCart, restoreCart, total }}>
+      {children}
+    </CartContext.Provider>
+  );
 }
 
 export function useCart() {
   const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCart outside provider');
+  if (!ctx) throw new Error('useCart must be used inside CartProvider');
   return ctx;
 }

@@ -73,6 +73,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   const [categories,   setCategories]   = useState<Category[]>(initialCategories);
   const [items,        setItems]        = useState<Item[]>(initialItems);
   const [dataLoading,  setDataLoading]  = useState(initialItems.length === 0);
+  const [dataError,    setDataError]    = useState<string | null>(null);
   const [activeCategory,   setActiveCategory]   = useState('all');
   const [showClosedToast,  setShowClosedToast]  = useState(false);
   const [showCartPanel,  setShowCartPanel]  = useState(false);
@@ -83,20 +84,34 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   const pillsRef    = useRef<HTMLDivElement>(null);
   const scrolling   = useRef(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data: cats } = await supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
-      const { data: its }  = await supabase.from('items').select('*').order('name');
+  const fetchData = async () => {
+    setDataLoading(true);
+    setDataError(null);
+    try {
+      const [{ data: cats, error: catsErr }, { data: its, error: itsErr }] = await Promise.all([
+        supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false }),
+        supabase.from('items').select('*').order('name'),
+      ]);
+      if (catsErr) throw catsErr;
+      if (itsErr)  throw itsErr;
       setCategories(cats || []);
       setItems(its || []);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'خطأ في تحميل القائمة';
+      setDataError(msg);
+    } finally {
       setDataLoading(false);
-    };
+    }
+  };
+
+  useEffect(() => {
     fetchData();
     const ch = supabase.channel('menu-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'items' },      fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, fetchData)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -267,6 +282,23 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
 
       {/* ══ CONTENT ══ */}
       <div className="px-4 pt-2">
+
+        {/* ── حالة الخطأ ── */}
+        {dataError && (
+          <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+              <span className="text-3xl">⚠️</span>
+            </div>
+            <p className="text-gray-500 dark:text-slate-400 text-sm font-medium px-6">{dataError}</p>
+            <button
+              onClick={fetchData}
+              className="px-6 py-3 rounded-2xl font-black text-sm shadow-lg transition-all active:scale-95"
+              style={{ backgroundColor: brandColor, color: textOnBrand }}>
+              إعادة المحاولة
+            </button>
+          </div>
+        )}
+
         {dataLoading && categories.length === 0 && (
           <div className="grid grid-cols-2 gap-3 px-1 pt-2">
             {Array.from({ length: 6 }).map((_, i) => (

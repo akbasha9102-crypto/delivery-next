@@ -1,8 +1,8 @@
 'use client';
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
-export type DaySchedule = { enabled: boolean; open: string; close: string };
+export type DaySchedule  = { enabled: boolean; open: string; close: string };
 export type WeekSchedule = { auto: boolean; days: Record<string, DaySchedule> };
 
 export type Settings = {
@@ -34,7 +34,7 @@ const CACHE_KEY = 'rs_settings_v1';
 function readCache(): Settings | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    return raw ? (JSON.parse(raw) as Settings) : null;
   } catch { return null; }
 }
 
@@ -65,32 +65,52 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [loaded,   setLoaded]   = useState(false);
 
-  const fetchSettings = async () => {
-    const { data } = await supabase.from('restaurant_settings').select('*').order('updated_at', { ascending: false }).limit(1);
+  const fetchSettings = useCallback(async () => {
+    const { data } = await supabase
+      .from('restaurant_settings')
+      .select('*')
+      .order('updated_at', { ascending: false })
+      .limit(1);
     if (data?.[0]) {
-      setSettings(data[0]);
-      writeCache(data[0]);
+      setSettings(data[0] as Settings);
+      writeCache(data[0] as Settings);
     }
     setLoaded(true);
-  };
+  }, []);
 
   useEffect(() => {
+    // تحميل من cache فوري لتجنب وميض الإعدادات الافتراضية
     const cached = readCache();
     if (cached) { setSettings(cached); setLoaded(true); }
 
+    // جلب حديث من الشبكة
     fetchSettings();
 
+    // ── Realtime: نستمع لـ UPDATE و INSERT معاً ─────────────────────────────
+    // INSERT: يحدث عند إنشاء السجل لأول مرة (جدول فارغ ثم يُملأ)
+    // UPDATE: يحدث عند تعديل الإعدادات من لوحة الإدارة
     const channel = supabase
       .channel('settings-live')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'restaurant_settings' }, ({ new: row }) => {
-        setSettings(row as Settings);
-        writeCache(row as Settings);
-      })
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'restaurant_settings' },
+        ({ new: row }) => {
+          setSettings(row as Settings);
+          writeCache(row as Settings);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'restaurant_settings' },
+        ({ new: row }) => {
+          setSettings(row as Settings);
+          writeCache(row as Settings);
+        }
+      )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchSettings]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -100,7 +120,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--primary-light', hexLighten(settings.primary_color));
   }, [settings.primary_color]);
 
-  return <SettingsCtx.Provider value={{ ...settings, loaded, refreshSettings: fetchSettings }}>{children}</SettingsCtx.Provider>;
+  return (
+    <SettingsCtx.Provider value={{ ...settings, loaded, refreshSettings: fetchSettings }}>
+      {children}
+    </SettingsCtx.Provider>
+  );
 }
 
 export const useSettings = () => useContext(SettingsCtx);

@@ -47,17 +47,48 @@ function MenuPage() {
   const [editCatName, setEditCatName] = useState('');
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
 
-  const fetchMenu = async () => {
+  const fetchMenu = async (seedIfEmpty = true) => {
     setLoading(true);
-    const { data: cats } = await supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
-    if (!cats?.length) {
-      await supabase.from('categories').insert([{ name: 'وجبات سريعة' }, { name: 'مشروبات' }, { name: 'حلويات' }]);
-      return fetchMenu();
+    try {
+      const { data: cats, error: catsError } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sort_order', { ascending: true, nullsFirst: false });
+
+      if (catsError) throw catsError;
+
+      // الأقسام فارغة وهذه أول محاولة → نُدرج البيانات الافتراضية مرة واحدة فقط
+      if (!cats?.length && seedIfEmpty) {
+        const { error: insertError } = await supabase
+          .from('categories')
+          .insert([{ name: 'وجبات سريعة' }, { name: 'مشروبات' }, { name: 'حلويات' }]);
+
+        if (insertError) {
+          console.error('خطأ في إدراج الأقسام الافتراضية:', insertError.message);
+          // نُكمل بقائمة فارغة بدلاً من الدخول في حلقة
+          setCategories([]);
+        } else {
+          // نُعيد الجلب مرة واحدة فقط (seedIfEmpty=false لمنع أي loop)
+          return fetchMenu(false);
+        }
+      } else {
+        setCategories(cats || []);
+      }
+
+      const { data: its, error: itemsError } = await supabase
+        .from('items')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (itemsError) throw itemsError;
+      setItems(its || []);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('fetchMenu error:', msg);
+      showToast('تعذّر تحميل القائمة — ' + msg, false);
+    } finally {
+      setLoading(false);
     }
-    setCategories(cats);
-    const { data: its } = await supabase.from('items').select('*').order('created_at', { ascending: false });
-    setItems(its || []);
-    setLoading(false);
   };
 
   useEffect(() => { fetchMenu(); }, []);
