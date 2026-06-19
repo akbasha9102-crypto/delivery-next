@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { AdminGuard } from '@/components/AdminGuard';
 import { Plus, Trash2, CheckCircle, Circle, Copy, Check, KeyRound, X, RefreshCw, Loader2 } from 'lucide-react';
 
 type Driver = { id: string; name: string; phone: string; status: string; password?: string | null };
@@ -12,7 +11,7 @@ function generatePassword() {
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
-function DriversPage() {
+export default function DriversPage() {
   const [drivers,     setDrivers]     = useState<Driver[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [showAdd,     setShowAdd]     = useState(false);
@@ -261,6 +260,3 @@ function DriversPage() {
   );
 }
 
-export default function DriversPageGuarded() {
-  return <AdminGuard><DriversPage /></AdminGuard>;
-}

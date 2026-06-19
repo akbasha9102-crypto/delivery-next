@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { AdminGuard } from '@/components/AdminGuard';
 import { Send, ChevronDown, MapPin, X, Locate } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
@@ -135,7 +134,7 @@ const TABS = [
   { id: 'completed' as const, name: 'مكتمل' },
 ];
 
-function OrdersPage() {
+export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'pending' | 'preparing' | 'ready' | 'completed'>('pending');
@@ -330,6 +329,3 @@ function OrdersPage() {
   );
 }
 
-export default function OrdersPageGuarded() {
-  return <AdminGuard><OrdersPage /></AdminGuard>;
-}

@@ -2,7 +2,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
-import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { Moon, Sun, ClipboardList, Clock } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
@@ -288,7 +287,7 @@ function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => 
   );
 }
 
-function DashboardPage() {
+export default function DashboardPage() {
   const { dark, toggleDark } = useDarkMode();
   const { markSeen } = useNewOrders();
   useEffect(() => { markSeen(); }, [markSeen]);
@@ -623,6 +622,3 @@ function DashboardPage() {
   );
 }
 
-export default function DashboardPageGuarded() {
-  return <AdminGuard><DashboardPage /></AdminGuard>;
-}

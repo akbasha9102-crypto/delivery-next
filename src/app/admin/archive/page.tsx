@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useDarkMode } from '@/context/ThemeContext';
 import { MessageSquare, AlertCircle, ChevronRight, ChevronDown, ChevronUp, MapPin, Car } from 'lucide-react';
@@ -57,7 +56,7 @@ function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function ArchivePage() {
+export default function ArchivePage() {
   const router = useRouter();
   useDarkMode();
   const [feedbacks, setFeedbacks]     = useState<Feedback[]>([]);
@@ -411,6 +410,3 @@ function ArchivePage() {
   );
 }
 
-export default function ArchivePageGuarded() {
-  return <AdminGuard><ArchivePage /></AdminGuard>;
-}

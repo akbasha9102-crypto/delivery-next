@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
-import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { Minus, Plus, X, ShoppingBag, Check } from 'lucide-react';
 
@@ -10,7 +9,7 @@ type Category = { id: string; name: string; color?: string };
 type Item = { id: string; category_id: string; name: string; price: number; image_url: string; is_available: boolean; item_status?: string };
 type CartEntry = { item: Item; qty: number };
 
-function LocalPOSPage() {
+export default function LocalPOSPage() {
   const { dark } = useDarkMode();
   const [categories, setCategories] = useState<Category[]>([]);
   const [items,      setItems]      = useState<Item[]>([]);
@@ -317,6 +316,3 @@ function LocalPOSPage() {
   );
 }
 
-export default function LocalPOSPageGuarded() {
-  return <AdminGuard><LocalPOSPage /></AdminGuard>;
-}

@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
-import { AdminGuard } from '@/components/AdminGuard';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -23,7 +22,7 @@ function quickRange(range: 'today' | 'week' | 'month') {
   return { from: localDate(start), to: localDate(end) };
 }
 
-function StatisticsPage() {
+export default function StatisticsPage() {
   const router = useRouter();
   const { dark } = useDarkMode();
   const today = localDate();
@@ -390,6 +389,3 @@ function StatisticsPage() {
   );
 }
 
-export default function StatisticsPageGuarded() {
-  return <AdminGuard><StatisticsPage /></AdminGuard>;
-}

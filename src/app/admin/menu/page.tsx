@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { AdminGuard } from '@/components/AdminGuard';
 import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal } from 'lucide-react';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
@@ -22,7 +21,7 @@ function getItemStatus(item: Item) {
 
 const DEFAULT_IMAGE = 'https://via.placeholder.com/300x200.png?text=Food';
 
-function MenuPage() {
+export default function MenuPage() {
   const { dark } = useDarkMode();
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -646,6 +645,3 @@ function MenuPage() {
   );
 }
 
-export default function MenuPageGuarded() {
-  return <AdminGuard><MenuPage /></AdminGuard>;
-}
