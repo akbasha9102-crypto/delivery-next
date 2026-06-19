@@ -16,6 +16,7 @@ function EditableRow({
   icon,
   type = 'text',
   color,
+  pencilColor,
   onSave,
 }: {
   label: string;
@@ -23,6 +24,7 @@ function EditableRow({
   icon: React.ReactNode;
   type?: string;
   color: string;
+  pencilColor: string;
   onSave: (v: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -57,7 +59,7 @@ function EditableRow({
       ) : (
         <>
           <div className="flex items-center gap-2">
-            <button onClick={() => setEditing(true)} className="active:scale-95 transition-all" style={{ color }}>
+            <button onClick={() => setEditing(true)} className="active:scale-95 transition-all" style={{ color: pencilColor }}>
               <Pencil size={15} />
             </button>
             <span className="text-gray-800 dark:text-slate-200 font-semibold text-sm">
@@ -81,6 +83,7 @@ export default function ProfilePage() {
   const rawColor   = primary_color || '#e67e22';
   const isTooDark  = rawColor === '#000000' || rawColor.toLowerCase() === '#121212';
   const brandColor = dark && isTooDark ? '#ffffff' : rawColor;
+  const pencilColor = dark ? brandColor : '#111827';
 
   const [name,    setName]    = useState('');
   const [phone,   setPhone]   = useState('');
@@ -125,8 +128,8 @@ export default function ProfilePage() {
             <h3 className="font-bold text-gray-900 dark:text-slate-100 py-2">معلوماتك الشخصية</h3>
           </div>
           <div className="px-5 pb-2">
-            <EditableRow label="الاسم"   value={name}  icon={<User  size={14}/>} color={brandColor} onSave={saveName}  />
-            <EditableRow label="الهاتف"  value={phone} icon={<Phone size={14}/>} color={brandColor} onSave={savePhone} type="tel" />
+            <EditableRow label="الاسم"   value={name}  icon={<User  size={14}/>} color={brandColor} pencilColor={pencilColor} onSave={saveName}  />
+            <EditableRow label="الهاتف"  value={phone} icon={<Phone size={14}/>} color={brandColor} pencilColor={pencilColor} onSave={savePhone} type="tel" />
           </div>
         </div>
 
