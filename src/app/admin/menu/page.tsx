@@ -131,9 +131,11 @@ function MenuPage() {
     if (!confirm(msg)) return;
     setSaving(true);
     if (itemCount > 0) {
-      await supabase.from('items').delete().eq('category_id', cat.id);
+      const { error: itemsErr } = await supabase.from('items').delete().eq('category_id', cat.id);
+      if (itemsErr) { showToast('تعذّر حذف أطباق القسم', false); setSaving(false); return; }
     }
-    await supabase.from('categories').delete().eq('id', cat.id);
+    const { error: catErr } = await supabase.from('categories').delete().eq('id', cat.id);
+    if (catErr) { showToast('تعذّر حذف القسم', false); setSaving(false); return; }
     if (selectedCat === cat.id) setSelectedCat(null);
     await fetchMenu();
     showToast('✓ تم حذف القسم');

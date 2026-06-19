@@ -477,7 +477,7 @@ const proceedFromReview = () => {
 
     if (error || !order) { alert('حدث خطأ، حاول مجدداً'); setLoading(false); return; }
 
-    await supabase.from('order_items').insert(
+    const { error: itemsError } = await supabase.from('order_items').insert(
       items.map(i => {
         const extras = getExtras(i.extras_json);
         const selected = itemSelectedExtras[i.id] || new Set<string>();
@@ -492,6 +492,13 @@ const proceedFromReview = () => {
         };
       })
     );
+
+    if (itemsError) {
+      await supabase.from('orders').delete().eq('id', order.id);
+      alert('حدث خطأ في حفظ الطلب، حاول مجدداً');
+      setLoading(false);
+      return;
+    }
 
     localStorage.setItem('lastOrderId', order.id);
     clearCart();

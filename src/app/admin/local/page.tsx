@@ -78,9 +78,16 @@ function LocalPOSPage() {
       return;
     }
 
-    await supabase.from('order_items').insert(
+    const { error: itemsError } = await supabase.from('order_items').insert(
       cart.map(e => ({ order_id: order.id, item_name: e.item.name, quantity: e.qty, price: e.item.price }))
     );
+
+    if (itemsError) {
+      await supabase.from('orders').delete().eq('id', order.id);
+      alert('حدث خطأ في حفظ عناصر الطلب، حاول مجدداً');
+      setSubmitting(false);
+      return;
+    }
 
     setCart([]);
     setCustomerName('');

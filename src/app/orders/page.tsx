@@ -274,7 +274,7 @@ export default function OrdersPage() {
 
     if (error || !order) { alert('حدث خطأ، حاول مجدداً'); setSubmitting(false); return; }
 
-    await supabase.from('order_items').insert(
+    const { error: itemsError } = await supabase.from('order_items').insert(
       reorderItems.map(i => ({
         order_id:  order.id,
         item_name: i.item_name,
@@ -282,6 +282,13 @@ export default function OrdersPage() {
         price:     i.price,
       }))
     );
+
+    if (itemsError) {
+      await supabase.from('orders').delete().eq('id', order.id);
+      alert('حدث خطأ في حفظ الطلب، حاول مجدداً');
+      setSubmitting(false);
+      return;
+    }
 
     localStorage.setItem('lastOrderId', order.id);
     setSubmitting(false);
