@@ -518,7 +518,7 @@ export default function SuperAdminDashboard() {
               <input
                 value={addName}
                 onChange={e => { setAddName(e.target.value); if (!addSlug) setAddSlug(autoSlug(e.target.value)); }}
-                placeholder="مثال: مطعم داري"
+                placeholder="مثال: مطعم ميلانو"
                 dir="rtl"
                 className="w-full bg-[#0d0d20] border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 text-sm outline-none focus:border-violet-500/50 placeholder:text-slate-600"
               />
@@ -526,17 +526,22 @@ export default function SuperAdminDashboard() {
 
             {/* الـ Slug */}
             <div>
-              <p className="text-slate-500 text-[11px] mb-1.5 text-right">الـ Slug (يُولَّد تلقائياً)</p>
-              <div className="flex items-center bg-[#0d0d20] border border-slate-700/50 rounded-xl overflow-hidden focus-within:border-violet-500/50">
+              <p className="text-slate-500 text-[11px] mb-1.5 text-right">
+                الـ Slug — <span className="text-amber-400">اكتبه بالإنجليزي *</span>
+              </p>
+              <div className={`flex items-center bg-[#0d0d20] border rounded-xl overflow-hidden focus-within:border-violet-500/50 ${!addSlug.trim() ? 'border-amber-500/60' : 'border-slate-700/50'}`}>
                 <span className="px-3 text-slate-600 text-xs border-r border-slate-700/50 py-3 select-none">menu/</span>
                 <input
                   value={addSlug}
-                  onChange={e => setAddSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                  placeholder="dari"
+                  onChange={e => setAddSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/\s+/g, '-'))}
+                  placeholder="milano"
                   dir="ltr"
                   className="flex-1 bg-transparent px-3 py-3 text-violet-300 text-sm outline-none font-mono"
                 />
               </div>
+              {!addSlug.trim() && addName.trim() && (
+                <p className="text-amber-400 text-[10px] mt-1 text-right">اكتب الـ slug بالإنجليزي مثل: milano</p>
+              )}
             </div>
 
             {/* الإيميل */}
@@ -574,13 +579,14 @@ export default function SuperAdminDashboard() {
 
             <button
               onClick={addRestaurant}
-              disabled={addLoading || !addName.trim() || !addEmail.trim() || !addPass.trim()}
+              disabled={addLoading || !addName.trim() || !addSlug.trim() || !addEmail.trim() || !addPass.trim()}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black text-sm transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {addLoading ? (
                 <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> جاري الإنشاء...</>
               ) : '➕ إنشاء المطعم'}
             </button>
+            <p className="text-slate-600 text-[10px] text-center">الـ slug يظهر في رابط المنيو: menu/<span className="text-violet-400">{addSlug || 'slug'}</span></p>
           </div>
         )}
 
