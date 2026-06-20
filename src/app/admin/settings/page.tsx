@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine } from 'lucide-react';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 
@@ -224,6 +224,114 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
   );
 }
 
+/* ─── نافذة تغيير كلمة المرور ─── */
+function ChangePasswordSheet({ onClose, username }: { onClose: () => void; username: string }) {
+  const [animateIn, setAnimateIn] = useState(false);
+  const [newPass,   setNewPass]   = useState('');
+  const [confirm,   setConfirm]   = useState('');
+  const [showPass,  setShowPass]  = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [result,    setResult]    = useState<'idle'|'ok'|'err'|'mismatch'>('idle');
+
+  useEffect(() => {
+    requestAnimationFrame(() => setAnimateIn(true));
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  const close = () => { setAnimateIn(false); setTimeout(onClose, 300); };
+
+  const handleSave = async () => {
+    if (newPass.length < 6) { setResult('err'); return; }
+    if (newPass !== confirm) { setResult('mismatch'); return; }
+    setSaving(true); setResult('idle');
+    const { error } = await supabase.auth.updateUser({ password: newPass });
+    setSaving(false);
+    if (error) { setResult('err'); return; }
+    setResult('ok');
+    setTimeout(close, 1500);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end" onClick={close}>
+      <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`} />
+      <div
+        className={`relative w-full bg-white dark:bg-slate-900 rounded-t-3xl transition-transform duration-300 ease-out max-h-[85vh] flex flex-col ${animateIn ? 'translate-y-0' : 'translate-y-full'}`}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex-shrink-0 px-5 pt-4 pb-4 border-b border-gray-100 dark:border-slate-800">
+          <div className="w-10 h-1 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4" />
+          <div className="flex items-center justify-between">
+            <div className="w-9" />
+            <p className="font-bold text-gray-900 dark:text-slate-100">تغيير كلمة المرور</p>
+            <button onClick={close} className="p-1.5 rounded-xl text-gray-400 active:scale-90 transition-all">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4" dir="rtl">
+          {/* اسم المستخدم */}
+          <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <User size={16} className="text-gray-400 flex-shrink-0" />
+            <div>
+              <p className="text-[10px] text-gray-400 mb-0.5">اسم المستخدم</p>
+              <p className="font-mono font-bold text-gray-800 dark:text-slate-200" dir="ltr">{username}</p>
+            </div>
+          </div>
+
+          {/* كلمة المرور الجديدة */}
+          <div>
+            <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5 px-1">كلمة المرور الجديدة</p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowPass(v => !v)}
+                className="w-11 h-12 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-400 flex-shrink-0">
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+              <input
+                type={showPass ? 'text' : 'password'}
+                value={newPass}
+                onChange={e => { setNewPass(e.target.value); setResult('idle'); }}
+                placeholder="6 أحرف على الأقل"
+                dir="ltr"
+                className="flex-1 px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-2xl text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* تأكيد كلمة المرور */}
+          <div>
+            <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5 px-1">تأكيد كلمة المرور</p>
+            <input
+              type={showPass ? 'text' : 'password'}
+              value={confirm}
+              onChange={e => { setConfirm(e.target.value); setResult('idle'); }}
+              onKeyDown={e => e.key === 'Enter' && handleSave()}
+              placeholder="أعد كتابة كلمة المرور"
+              dir="ltr"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-2xl text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 text-sm"
+            />
+          </div>
+
+          {/* رسائل الحالة */}
+          {result === 'mismatch' && <p className="text-red-500 text-sm text-center">كلمتا المرور غير متطابقتين</p>}
+          {result === 'err'      && <p className="text-red-500 text-sm text-center">فشل التغيير — تأكد أن كلمة المرور 6 أحرف على الأقل</p>}
+          {result === 'ok'       && <p className="text-green-500 text-sm text-center font-bold">✓ تم تغيير كلمة المرور</p>}
+
+          <button
+            onClick={handleSave}
+            disabled={saving || !newPass || !confirm}
+            className="w-full py-4 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-bold text-base active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+          >
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
+            {saving ? 'جاري الحفظ...' : 'حفظ كلمة المرور'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── الصفحة الرئيسية ─── */
 export default function SettingsPage() {
   const router = useRouter();
@@ -234,7 +342,16 @@ export default function SettingsPage() {
   const [opensAtInput,     setOpensAtInput]     = useState('');
   const [showSchedule,     setShowSchedule]     = useState(false);
   const [showInfo,         setShowInfo]         = useState(false);
+  const [showChangePass,   setShowChangePass]   = useState(false);
+  const [username,         setUsername]         = useState('');
   const [tick,             setTick]             = useState(0);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const email = session?.user?.email ?? '';
+      setUsername(email.replace('@dasha.app', ''));
+    });
+  }, []);
   const isClosedRef = useRef(is_closed);
   useEffect(() => { isClosedRef.current = is_closed; }, [is_closed]);
   useEffect(() => { setScheduleLocal(ctxSchedule); }, [ctxSchedule]);
@@ -317,6 +434,26 @@ export default function SettingsPage() {
           <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
         </button>
 
+        {/* ─ حساب الدخول ─ */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4" dir="rtl">
+          <p className="font-bold text-gray-900 dark:text-slate-100 text-sm mb-3">حساب الدخول</p>
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
+            <p className="font-mono font-bold text-gray-800 dark:text-slate-200 text-sm" dir="ltr">{username}</p>
+            <p className="text-[10px] text-gray-400">اسم المستخدم</p>
+          </div>
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
+            <p className="font-mono text-gray-400 tracking-widest text-sm">••••••••</p>
+            <p className="text-[10px] text-gray-400">كلمة المرور</p>
+          </div>
+          <button
+            onClick={() => setShowChangePass(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
+          >
+            <KeyRound size={15} />
+            تغيير كلمة المرور
+          </button>
+        </div>
+
         {/* ─ حالة المطعم ─ */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3">
           <p className="text-right font-bold text-gray-900 dark:text-slate-100 text-sm">حالة المطعم</p>
@@ -377,7 +514,15 @@ export default function SettingsPage() {
 
       </div>
 
-      {!showInfo && <AdminBottomNav />}
+      {!showInfo && !showChangePass && <AdminBottomNav />}
+
+      {/* نافذة تغيير كلمة المرور */}
+      {showChangePass && (
+        <ChangePasswordSheet
+          onClose={() => setShowChangePass(false)}
+          username={username}
+        />
+      )}
 
       {/* نافذة معلومات المطعم */}
       {showInfo && (
