@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal } from 'lucide-react';
+import { useRestaurant } from '@/context/RestaurantContext';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
@@ -23,6 +24,7 @@ const DEFAULT_IMAGE = 'https://via.placeholder.com/300x200.png?text=Food';
 
 export default function MenuPage() {
   const { dark } = useDarkMode();
+  const { restaurantId } = useRestaurant();
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,36 +51,36 @@ export default function MenuPage() {
   const fetchMenu = async (seedIfEmpty = true) => {
     setLoading(true);
     try {
-      const { data: cats, error: catsError } = await supabase
-        .from('categories')
-        .select('*')
-        .order('sort_order', { ascending: true, nullsFirst: false });
+      let catsQ = supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
+      let itsQ  = supabase.from('items').select('*').order('created_at', { ascending: false });
+      if (restaurantId) {
+        catsQ = catsQ.eq('restaurant_id', restaurantId) as typeof catsQ;
+        itsQ  = itsQ.eq('restaurant_id',  restaurantId) as typeof itsQ;
+      }
 
+      const { data: cats, error: catsError } = await catsQ;
       if (catsError) throw catsError;
 
       // الأقسام فارغة وهذه أول محاولة → نُدرج البيانات الافتراضية مرة واحدة فقط
       if (!cats?.length && seedIfEmpty) {
         const { error: insertError } = await supabase
           .from('categories')
-          .insert([{ name: 'وجبات سريعة' }, { name: 'مشروبات' }, { name: 'حلويات' }]);
-
+          .insert([
+            { name: 'وجبات سريعة', ...(restaurantId ? { restaurant_id: restaurantId } : {}) },
+            { name: 'مشروبات',     ...(restaurantId ? { restaurant_id: restaurantId } : {}) },
+            { name: 'حلويات',      ...(restaurantId ? { restaurant_id: restaurantId } : {}) },
+          ]);
         if (insertError) {
           console.error('خطأ في إدراج الأقسام الافتراضية:', insertError.message);
-          // نُكمل بقائمة فارغة بدلاً من الدخول في حلقة
           setCategories([]);
         } else {
-          // نُعيد الجلب مرة واحدة فقط (seedIfEmpty=false لمنع أي loop)
           return fetchMenu(false);
         }
       } else {
         setCategories(cats || []);
       }
 
-      const { data: its, error: itemsError } = await supabase
-        .from('items')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      const { data: its, error: itemsError } = await itsQ;
       if (itemsError) throw itemsError;
       setItems(its || []);
     } catch (err: unknown) {
@@ -90,14 +92,18 @@ export default function MenuPage() {
     }
   };
 
-  useEffect(() => { fetchMenu(); }, []);
+  useEffect(() => { fetchMenu(); }, [restaurantId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
   const addCategory = async () => {
     if (!newCat.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from('categories').insert([{ name: newCat.trim(), color: newCatColor }]);
+    const { error } = await supabase.from('categories').insert([{
+      name: newCat.trim(),
+      color: newCatColor,
+      ...(restaurantId ? { restaurant_id: restaurantId } : {}),
+    }]);
     error ? showToast('تعذّر إضافة القسم', false) : (setNewCat(''), fetchMenu(), showToast('✓ تم إضافة القسم'));
     setSaving(false);
   };
@@ -146,7 +152,15 @@ export default function MenuPage() {
     const price = parseFloat(form.price.replace(',', '.'));
     if (isNaN(price) || price <= 0) return alert('سعر غير صالح');
     setSaving(true);
-    const { error } = await supabase.from('items').insert([{ ...form, name: form.name.trim(), description: form.description.trim(), price, image_url: form.image_url.trim() || DEFAULT_IMAGE, is_available: true }]);
+    const { error } = await supabase.from('items').insert([{
+      ...form,
+      name: form.name.trim(),
+      description: form.description.trim(),
+      price,
+      image_url: form.image_url.trim() || DEFAULT_IMAGE,
+      is_available: true,
+      ...(restaurantId ? { restaurant_id: restaurantId } : {}),
+    }]);
     error ? showToast('تعذّر إضافة الطبق', false) : (setForm({ category_id: '', name: '', description: '', price: '', image_url: '' }), fetchMenu(), showToast('✓ تم إضافة الطبق'));
     setSaving(false);
   };

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { Send, ChevronDown, MapPin, X, Locate } from 'lucide-react';
+import { useRestaurant } from '@/context/RestaurantContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; client_lat: number | null; client_lng: number | null };
@@ -135,6 +136,7 @@ const TABS = [
 ];
 
 export default function OrdersPage() {
+  const { restaurantId } = useRestaurant();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'pending' | 'preparing' | 'ready' | 'completed'>('pending');
@@ -144,7 +146,9 @@ export default function OrdersPage() {
   const [mapOrder, setMapOrder] = useState<Order | null>(null);
 
   const fetchOrders = useCallback(async () => {
-    const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100);
+    let q = supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100);
+    if (restaurantId) q = q.eq('restaurant_id', restaurantId) as typeof q;
+    const { data } = await q;
     if (!data) { setLoading(false); return; }
     const withItems = await Promise.all(data.map(async o => {
       const { data: items } = await supabase.from('order_items').select('*').eq('order_id', o.id);
@@ -152,13 +156,15 @@ export default function OrdersPage() {
     }));
     setOrders(withItems);
     setLoading(false);
-  }, []);
+  }, [restaurantId]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   useEffect(() => {
-    supabase.from('drivers').select('id, name, phone').then(({ data }) => setDrivers(data || []));
-  }, []);
+    let dq = supabase.from('drivers').select('id, name, phone');
+    if (restaurantId) dq = dq.eq('restaurant_id', restaurantId) as typeof dq;
+    dq.then(({ data }) => setDrivers(data || []));
+  }, [restaurantId]);
 
   useEffect(() => {
     const ch = supabase.channel('orders-live')

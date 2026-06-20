@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
 import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
+import { useRestaurant } from '@/context/RestaurantContext';
 
 /* ─── جدولة الدوام ─── */
 const DAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
