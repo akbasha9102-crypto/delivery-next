@@ -175,12 +175,9 @@ function UserCredentialRow({ user, onChangePassword }: {
 
 // ─── Restaurant Card ──────────────────────────────────────────────────────────
 function RestaurantCard({
-  r, todayOrders, todayRevenue, toggling,
-  authUsers, onToggleSuspended,
+  r, toggling, authUsers, onToggleSuspended,
 }: {
   r: Restaurant;
-  todayOrders: number;
-  todayRevenue: number;
   toggling: boolean;
   authUsers: AuthUser[];
   onToggleSuspended: () => void;
@@ -202,16 +199,9 @@ function RestaurantCard({
         )}
         <div className="flex-1 min-w-0 text-right">
           <p className="font-bold text-sm text-white leading-tight truncate">{r.restaurant_name}</p>
-          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${r.is_suspended ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
-              {r.is_suspended ? 'موقوف' : 'نشط'}
-            </span>
-            <span className="text-slate-500 text-[10px]">{todayOrders} طلب اليوم</span>
-          </div>
-        </div>
-        <div className="flex-shrink-0 flex flex-col items-end gap-1">
-          <p className="text-green-400 font-black text-sm">{todayRevenue.toLocaleString()}</p>
-          <p className="text-slate-500 text-[10px]">د.ع اليوم</p>
+          <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold mt-1 ${r.is_suspended ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+            {r.is_suspended ? 'موقوف' : 'نشط'}
+          </span>
         </div>
         <span className={`text-slate-500 transition-transform duration-200 flex-shrink-0 ${open ? 'rotate-180' : ''}`}>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -234,7 +224,7 @@ function RestaurantCard({
               </div>
             ) : (
               <div className="space-y-2">
-                {authUsers.map(u => (
+                {authUsers.filter(u => u.email !== 'akbasha9102@gmail.com').map(u => (
                   <UserCredentialRow
                     key={u.id}
                     user={u}
@@ -290,22 +280,18 @@ function RestaurantCard({
 export default function SuperAdminDashboard() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [authUsers,   setAuthUsers]   = useState<AuthUser[]>([]);
-  const [drivers,     setDrivers]     = useState<Driver[]>([]);
   const [orders,      setOrders]      = useState<Order[]>([]);
   const [loading,     setLoading]     = useState(true);
-  const [tab,         setTab]         = useState<'overview'|'restaurants'|'drivers'|'orders'>('overview');
+  const [tab,         setTab]         = useState<'overview'|'restaurants'>('overview');
   const [toggling,    setToggling]    = useState<string|null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const loadAll = useCallback(async () => {
     const today = todayISO();
-    const [{ data: rs }, { data: dr }, { data: or }] = await Promise.all([
+    const [{ data: rs }, { data: or }] = await Promise.all([
       supabase.from('restaurant_settings').select('*').order('updated_at', { ascending: false }),
-      supabase.from('drivers').select('*').order('created_at', { ascending: false }),
       supabase.from('orders').select('*').gte('created_at', today+'T00:00:00').order('created_at', { ascending: false }).limit(300),
     ]);
     setRestaurants((rs || []) as Restaurant[]);
-    setDrivers((dr || []) as Driver[]);
     setOrders((or || []) as Order[]);
     setLoading(false);
   }, []);
@@ -322,7 +308,6 @@ export default function SuperAdminDashboard() {
     loadAuthUsers();
     const ch = supabase.channel('sa-live')
       .on('postgres_changes', { event:'*', schema:'public', table:'orders' }, loadAll)
-      .on('postgres_changes', { event:'*', schema:'public', table:'drivers' }, loadAll)
       .on('postgres_changes', { event:'*', schema:'public', table:'restaurant_settings' }, loadAll)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -346,13 +331,9 @@ export default function SuperAdminDashboard() {
   // ── Derived ──────────────────────────────────────────────────────────────
   const activeRest    = restaurants.filter(r => !r.is_suspended).length;
   const suspendedRest = restaurants.filter(r =>  r.is_suspended).length;
-  const driverActive  = drivers.filter(d => d.status === 'active').length;
-  const driverTrip    = drivers.filter(d => d.status === 'on_trip').length;
-  const driverOff     = drivers.filter(d => d.status === 'offline').length;
   const liveOrders    = orders.filter(o => !['completed','rejected'].includes(o.status));
   const todayRevenue  = orders.filter(o => o.status === 'completed').reduce((s,o) => s+o.total_amount, 0);
   const commission    = Math.round(todayRevenue * COMMISSION);
-  const filteredOrders = statusFilter === 'all' ? orders : orders.filter(o => o.status === statusFilter);
 
   if (loading) return (
     <div className="min-h-screen bg-[#09090f] flex items-center justify-center">
@@ -400,22 +381,18 @@ export default function SuperAdminDashboard() {
 
         {/* ── Stats Grid ── */}
         <div className="grid grid-cols-2 gap-3">
-          <StatCard label="المطاعم"    value={restaurants.length} sub={`${activeRest} نشط · ${suspendedRest} موقوف`}                         icon="🏪"  gradient="bg-gradient-to-br from-violet-900/60 to-indigo-900/40"  />
-          <StatCard label="السائقين"   value={drivers.length}     sub={`${driverActive} متاح · ${driverTrip} في رحلة · ${driverOff} offline`} icon="🏍️"  gradient="bg-gradient-to-br from-orange-900/60 to-amber-900/40"   />
-          <StatCard label="طلبات اليوم" value={orders.length}     sub={`${liveOrders.length} طلب حي الآن`}                                    icon="📦"  gradient="bg-gradient-to-br from-blue-900/60 to-cyan-900/40"     />
-          <StatCard label="عمولة المنصة" value={`${commission.toLocaleString()} د.ع`} sub={`من ${todayRevenue.toLocaleString()} إجمالي`}    icon="💰"  gradient="bg-gradient-to-br from-green-900/60 to-emerald-900/40"  />
+          <StatCard label="المطاعم"      value={restaurants.length} sub={`${activeRest} نشط · ${suspendedRest} موقوف`}                      icon="🏪" gradient="bg-gradient-to-br from-violet-900/60 to-indigo-900/40"  />
+          <StatCard label="عمولة المنصة" value={`${commission.toLocaleString()} د.ع`} sub={`من ${todayRevenue.toLocaleString()} إجمالي`} icon="💰" gradient="bg-gradient-to-br from-green-900/60 to-emerald-900/40"  />
         </div>
 
         {/* ── Tabs ── */}
-        <div className="grid grid-cols-4 bg-[#13132b] rounded-2xl p-1 gap-1 border border-white/5">
+        <div className="grid grid-cols-2 bg-[#13132b] rounded-2xl p-1 gap-1 border border-white/5">
           {([
-            { key: 'overview',    label: 'عام',    icon: '📊' },
-            { key: 'restaurants', label: 'مطاعم',  icon: '🏪' },
-            { key: 'drivers',     label: 'سائقين', icon: '🏍️' },
-            { key: 'orders',      label: 'طلبات',  icon: '📦' },
+            { key: 'overview',    label: 'عام',   icon: '📊' },
+            { key: 'restaurants', label: 'مطاعم', icon: '🏪' },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
-              className={`flex flex-col items-center py-2 rounded-xl text-[11px] font-bold transition-all ${
+              className={`flex flex-col items-center py-2.5 rounded-xl text-[11px] font-bold transition-all ${
                 tab === t.key
                   ? 'bg-gradient-to-b from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-900/30'
                   : 'text-slate-500 hover:text-slate-300'
@@ -428,60 +405,26 @@ export default function SuperAdminDashboard() {
 
         {/* ══ Tab: عام ══ */}
         {tab === 'overview' && (
-          <div className="space-y-3">
-            <div className="bg-[#13132b] rounded-2xl border border-white/5 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-                <span className="text-white text-sm font-bold">الطلبات الحية</span>
-                <span className="text-slate-400 text-xs">{liveOrders.length} طلب</span>
-              </div>
-              {liveOrders.length === 0 ? (
-                <div className="py-10 text-center text-slate-600 text-sm">لا توجد طلبات حية</div>
-              ) : liveOrders.slice(0, 8).map(o => (
-                <div key={o.id} className="flex items-center justify-between px-4 py-3 border-b border-white/5 last:border-0 hover:bg-white/3 transition-colors">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${S[o.status]?.dot ?? 'bg-gray-500'} ${o.status === 'pending' ? 'animate-pulse' : ''}`} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{o.client_name}</p>
-                      {o.driver_name && <p className="text-violet-400 text-[10px]">🏍️ {o.driver_name}</p>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ color: S[o.status]?.color, backgroundColor: S[o.status]?.bg }}>
-                      {S[o.status]?.label}
-                    </span>
-                    <span className="text-slate-500 text-[10px]">{fmtTime(o.created_at)}</span>
-                  </div>
-                </div>
-              ))}
+          <div className="bg-[#13132b] rounded-2xl border border-white/5 overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/5">
+              <p className="text-white text-sm font-bold">ملخص المطاعم</p>
             </div>
-
-            <div className="bg-[#13132b] rounded-2xl border border-white/5 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-                <span className="text-white text-sm font-bold">السائقين</span>
-                <div className="flex gap-2 text-[10px]">
-                  <span className="text-green-400">{driverActive} متاح</span>
-                  <span className="text-orange-400">{driverTrip} في رحلة</span>
-                  <span className="text-slate-500">{driverOff} offline</span>
+            {restaurants.length === 0 ? (
+              <div className="py-10 text-center text-slate-600 text-sm">لا توجد مطاعم</div>
+            ) : restaurants.map(r => (
+              <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-white/5 last:border-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  {r.logo_url
+                    ? <img src={r.logo_url} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                    : <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-sm" style={{ backgroundColor: r.primary_color + '30' }}>🏪</div>
+                  }
+                  <p className="text-sm font-medium text-white truncate">{r.restaurant_name}</p>
                 </div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0 ${r.is_suspended ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                  {r.is_suspended ? 'موقوف' : 'نشط'}
+                </span>
               </div>
-              {drivers.length === 0 ? (
-                <div className="py-8 text-center text-slate-600 text-sm">لا يوجد سائقون</div>
-              ) : drivers.map(d => (
-                <div key={d.id} className="flex items-center justify-between px-4 py-3 border-b border-white/5 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style={{ backgroundColor: DS[d.status]?.color + '20' }}>🏍️</div>
-                    <div>
-                      <p className="text-sm font-medium text-white">{d.name}</p>
-                      <p className="text-slate-500 text-[10px]">{d.phone}</p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full flex-shrink-0"
-                    style={{ color: DS[d.status]?.color, backgroundColor: DS[d.status]?.bg }}>
-                    {DS[d.status]?.label ?? d.status}
-                  </span>
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
         )}
 
@@ -498,101 +441,10 @@ export default function SuperAdminDashboard() {
               <RestaurantCard
                 key={r.id}
                 r={r}
-                todayOrders={orders.length}
-                todayRevenue={todayRevenue}
                 toggling={toggling === r.id}
                 authUsers={authUsers}
                 onToggleSuspended={() => toggleSuspended(r)}
               />
-            ))}
-          </div>
-        )}
-
-        {/* ══ Tab: سائقين ══ */}
-        {tab === 'drivers' && (
-          <div className="space-y-2">
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {[
-                { key: 'active',  label: 'متاح',   count: driverActive, color: '#22c55e' },
-                { key: 'on_trip', label: 'في رحلة', count: driverTrip,  color: '#f97316' },
-                { key: 'offline', label: 'offline', count: driverOff,   color: '#6b7280' },
-              ].map(s => (
-                <div key={s.key} className="bg-[#13132b] rounded-xl p-3 border border-white/5 text-center">
-                  <p className="font-black text-xl" style={{ color: s.color }}>{s.count}</p>
-                  <p className="text-slate-500 text-[10px] mt-0.5">{s.label}</p>
-                </div>
-              ))}
-            </div>
-            <div className="bg-[#13132b] rounded-2xl border border-white/5 overflow-hidden">
-              {drivers.length === 0 ? (
-                <div className="py-10 text-center text-slate-600 text-sm">لا يوجد سائقون</div>
-              ) : drivers.map(d => (
-                <div key={d.id} className="flex items-center gap-3 px-4 py-4 border-b border-white/5 last:border-0 hover:bg-white/3 transition-colors">
-                  <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 rounded-xl bg-slate-700/50 flex items-center justify-center text-xl">🏍️</div>
-                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#13132b]"
-                      style={{ backgroundColor: DS[d.status]?.color ?? '#6b7280' }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-white">{d.name}</p>
-                    <p className="text-slate-500 text-xs mt-0.5" dir="ltr">{d.phone}</p>
-                  </div>
-                  <span className="text-xs font-bold px-3 py-1.5 rounded-full flex-shrink-0"
-                    style={{ color: DS[d.status]?.color ?? '#6b7280', backgroundColor: DS[d.status]?.bg ?? 'rgba(107,114,128,0.1)' }}>
-                    {DS[d.status]?.label ?? d.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ══ Tab: طلبات ══ */}
-        {tab === 'orders' && (
-          <div className="space-y-3">
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {[
-                { key: 'all',       label: `الكل (${orders.length})` },
-                { key: 'pending',   label: 'انتظار'   },
-                { key: 'preparing', label: 'تجهيز'    },
-                { key: 'ready',     label: 'في الطريق' },
-                { key: 'completed', label: 'مكتمل'    },
-                { key: 'rejected',  label: 'مرفوض'    },
-              ].map(f => (
-                <button key={f.key} onClick={() => setStatusFilter(f.key)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                    statusFilter === f.key
-                      ? 'bg-violet-600 text-white'
-                      : 'bg-[#13132b] border border-white/5 text-slate-400 hover:text-white'
-                  }`}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
-
-            {filteredOrders.length === 0 ? (
-              <div className="bg-[#13132b] rounded-2xl p-10 text-center text-slate-600 border border-white/5">لا توجد طلبات</div>
-            ) : filteredOrders.map(o => (
-              <div key={o.id} className="bg-[#13132b] rounded-2xl border border-white/5 px-4 py-3.5 hover:border-white/10 transition-all">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${S[o.status]?.dot ?? 'bg-gray-500'} ${o.status === 'pending' ? 'animate-pulse' : ''}`} />
-                      <p className="font-bold text-sm text-white truncate">{o.client_name}</p>
-                    </div>
-                    <p className="text-slate-500 text-xs truncate">{o.delivery_address || o.client_phone}</p>
-                    {o.driver_name && <p className="text-violet-400 text-xs mt-1">🏍️ {o.driver_name}</p>}
-                    <p className="text-slate-600 text-[10px] mt-1 font-mono" dir="ltr">#{o.id.slice(0,8)}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                    <p className="text-green-400 font-black text-sm">{o.total_amount.toLocaleString()} د.ع</p>
-                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ color: S[o.status]?.color, backgroundColor: S[o.status]?.bg }}>
-                      {S[o.status]?.label ?? o.status}
-                    </span>
-                    <p className="text-slate-600 text-[10px]">{fmtTime(o.created_at)}</p>
-                  </div>
-                </div>
-              </div>
             ))}
           </div>
         )}
