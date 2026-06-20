@@ -5,16 +5,23 @@ import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
 
   const signIn = async () => {
+    if (!username.trim() || !password.trim()) return;
     setLoading(true);
     setError('');
+    // اسم المستخدم هو slug المطعم — الإيميل الداخلي مولود تلقائياً
+    const email = username.trim().toLowerCase() + '@dasha.app';
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { setError(error.message); setLoading(false); return; }
+    if (error) {
+      setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+      setLoading(false);
+      return;
+    }
     router.replace('/admin/dashboard');
   };
 
@@ -32,13 +39,14 @@ export default function LoginPage() {
         )}
 
         <div className="mb-4">
-          <label className="block text-gray-700 dark:text-slate-300 font-semibold mb-2 text-sm">البريد الإلكتروني</label>
+          <label className="block text-gray-700 dark:text-slate-300 font-semibold mb-2 text-sm">اسم المستخدم</label>
           <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="admin@example.com"
-            className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#4f46e5]"
+            type="text"
+            value={username}
+            onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+            placeholder="dari"
+            dir="ltr"
+            className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-left text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#4f46e5] font-mono"
           />
         </div>
 

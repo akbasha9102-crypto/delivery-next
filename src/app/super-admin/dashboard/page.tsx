@@ -310,7 +310,6 @@ export default function SuperAdminDashboard() {
   // ── نموذج إضافة مطعم ──
   const [addName,    setAddName]    = useState('');
   const [addSlug,    setAddSlug]    = useState('');
-  const [addEmail,   setAddEmail]   = useState('');
   const [addPass,    setAddPass]    = useState('');
   const [addLoading, setAddLoading] = useState(false);
   const [addResult,  setAddResult]  = useState<{ok: boolean; msg: string} | null>(null);
@@ -366,18 +365,18 @@ export default function SuperAdminDashboard() {
   };
 
   const addRestaurant = async () => {
-    if (!addName.trim() || !addEmail.trim() || !addPass.trim()) return;
+    if (!addName.trim() || !addPass.trim()) return;
     setAddLoading(true); setAddResult(null);
     const slug = addSlug.trim() || autoSlug(addName.trim());
     const res = await fetch('/api/super-admin/restaurants', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: addName.trim(), slug, email: addEmail.trim(), password: addPass.trim() }),
+      body: JSON.stringify({ name: addName.trim(), slug, password: addPass.trim() }),
     }).catch(() => null);
     const json = await res?.json().catch(() => ({}));
     if (res?.ok) {
-      setAddResult({ ok: true, msg: `✓ تم إنشاء مطعم "${addName.trim()}" بالـ slug: ${slug}` });
-      setAddName(''); setAddSlug(''); setAddEmail(''); setAddPass('');
+      setAddResult({ ok: true, msg: `✓ تم إنشاء مطعم "${addName.trim()}" — اسم المستخدم: ${slug}` });
+      setAddName(''); setAddSlug(''); setAddPass('');
       loadAll();
     } else {
       setAddResult({ ok: false, msg: json?.error || 'حدث خطأ' });
@@ -544,18 +543,13 @@ export default function SuperAdminDashboard() {
               )}
             </div>
 
-            {/* الإيميل */}
-            <div>
-              <p className="text-slate-500 text-[11px] mb-1.5 text-right">إيميل صاحب المطعم *</p>
-              <input
-                value={addEmail}
-                onChange={e => setAddEmail(e.target.value)}
-                type="email"
-                placeholder="restaurant@email.com"
-                dir="ltr"
-                className="w-full bg-[#0d0d20] border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 text-sm outline-none focus:border-violet-500/50 placeholder:text-slate-600 font-mono"
-              />
-            </div>
+            {/* معلومة اسم المستخدم */}
+            {addSlug.trim() && (
+              <div className="bg-indigo-900/20 border border-indigo-700/30 rounded-xl px-4 py-3 text-right">
+                <p className="text-indigo-400 text-[11px] mb-0.5">اسم المستخدم للدخول للداشبورد</p>
+                <p className="text-white font-mono font-bold text-sm">{addSlug.trim()}</p>
+              </div>
+            )}
 
             {/* الباسورد */}
             <div>
@@ -579,7 +573,7 @@ export default function SuperAdminDashboard() {
 
             <button
               onClick={addRestaurant}
-              disabled={addLoading || !addName.trim() || !addSlug.trim() || !addEmail.trim() || !addPass.trim()}
+              disabled={addLoading || !addName.trim() || !addSlug.trim() || !addPass.trim()}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black text-sm transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {addLoading ? (
