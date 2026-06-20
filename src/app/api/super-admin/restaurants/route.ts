@@ -96,3 +96,68 @@ export async function POST(req: NextRequest) {
     username: slug,
   });
 }
+
+// PATCH — تعديل slug أو كلمة مرور مطعم موجود
+export async function PATCH(req: NextRequest) {
+  if (!await isAuthed()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { restaurantDbId, newSlug, newPassword } = await req.json();
+
+  if (!restaurantDbId) {
+    return NextResponse.json({ error: 'restaurantDbId مطلوب' }, { status: 400 });
+  }
+  if (!newSlug && !newPassword) {
+    return NextResponse.json({ error: 'يجب تقديم newSlug أو newPassword على الأقل' }, { status: 400 });
+  }
+
+  // جلب المطعم الحالي
+  const { data: restaurant, error: fetchError } = await supabaseAdmin
+    .from('restaurants')
+    .select('id, slug, owner_id')
+    .eq('id', restaurantDbId)
+    .maybeSingle();
+
+  if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 });
+  if (!restaurant) return NextResponse.json({ error: 'المطعم غير موجود' }, { status: 404 });
+
+  const ownerId: string = restaurant.owner_id;
+  const authUpdates: { email?: string; password?: string } = {};
+
+  // تحديث الـ slug إذا كان مختلفاً
+  if (newSlug && newSlug !== restaurant.slug) {
+    const { data: existing } = await supabaseAdmin
+      .from('restaurants')
+      .select('id')
+      .eq('slug', newSlug)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ error: `اسم المستخدم "${newSlug}" مستخدم بالفعل` }, { status: 409 });
+    }
+
+    authUpdates.email = slugToEmail(newSlug);
+  }
+
+  // تحديث كلمة المرور
+  if (newPassword) {
+    authUpdates.password = newPassword.trim();
+  }
+
+  // Auth أولاً — لو فشل نوقف قبل تغيير الداتابيس
+  if (Object.keys(authUpdates).length > 0) {
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(ownerId, authUpdates);
+    if (authError) return NextResponse.json({ error: authError.message }, { status: 500 });
+  }
+
+  // بعد نجاح Auth نحدّث slug في الداتابيس
+  if (newSlug && newSlug !== restaurant.slug) {
+    const { error: slugError } = await supabaseAdmin
+      .from('restaurants')
+      .update({ slug: newSlug })
+      .eq('id', restaurantDbId);
+
+    if (slugError) return NextResponse.json({ error: slugError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}

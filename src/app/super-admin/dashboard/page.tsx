@@ -86,28 +86,37 @@ function StatCard({ label, value, sub, icon, gradient }: {
 }
 
 // ─── User Credential Row ──────────────────────────────────────────────────────
-function UserCredentialRow({ user, onChangePassword }: {
+function UserCredentialRow({ user, restaurantDbId, onCredentialChange }: {
   user: AuthUser;
-  onChangePassword: (newPass: string) => Promise<boolean>;
+  restaurantDbId: string;
+  onCredentialChange: (newSlug: string | null, newPass: string | null) => Promise<boolean>;
 }) {
   const [editing,    setEditing]    = useState(false);
+  const [newSlug,    setNewSlug]    = useState('');
   const [newPass,    setNewPass]    = useState('');
   const [showPass,   setShowPass]   = useState(false);
   const [saving,     setSaving]     = useState(false);
   const [status,     setStatus]     = useState<'idle'|'ok'|'err'>('idle');
 
+  const currentUsername = user.email?.replace('@dasha.app', '') ?? '';
+
+  const canSave = newSlug.trim() !== '' || newPass.trim() !== '';
+
   const handleSave = async () => {
-    if (!newPass.trim()) return;
+    if (!canSave) return;
     setSaving(true); setStatus('idle');
-    const ok = await onChangePassword(newPass.trim());
+    const ok = await onCredentialChange(newSlug.trim() || null, newPass.trim() || null);
     setSaving(false);
     setStatus(ok ? 'ok' : 'err');
-    if (ok) { setNewPass(''); setEditing(false); setTimeout(() => setStatus('idle'), 2000); }
+    if (ok) { setNewSlug(''); setNewPass(''); setEditing(false); setTimeout(() => setStatus('idle'), 2000); }
   };
+
+  // suppress unused var warning — restaurantDbId is used by the parent closure via onCredentialChange
+  void restaurantDbId;
 
   return (
     <div className="bg-[#0d0d20] rounded-xl border border-slate-700/40 overflow-hidden">
-      {/* Email row */}
+      {/* Username row */}
       <div className="flex items-center justify-between px-3 py-3">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-7 h-7 rounded-lg bg-violet-500/20 flex items-center justify-center flex-shrink-0">
@@ -116,17 +125,17 @@ function UserCredentialRow({ user, onChangePassword }: {
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] text-slate-500 mb-0.5">الإيميل</p>
-            <p className="text-slate-100 text-sm font-mono truncate" dir="ltr">{user.email}</p>
+            <p className="text-[10px] text-slate-500 mb-0.5">اسم المستخدم</p>
+            <p className="text-slate-100 text-sm font-mono truncate" dir="ltr">{currentUsername}</p>
           </div>
         </div>
         <button
-          onClick={() => { setEditing(v => !v); setStatus('idle'); setNewPass(''); }}
+          onClick={() => { setEditing(v => !v); setStatus('idle'); setNewSlug(''); setNewPass(''); }}
           className={`flex-shrink-0 text-xs px-2.5 py-1.5 rounded-lg font-bold transition-all ${
             editing ? 'bg-slate-700 text-slate-300' : 'bg-violet-600/20 text-violet-400 hover:bg-violet-600/30'
           }`}
         >
-          {editing ? 'إلغاء' : 'تغيير الباسورد'}
+          {editing ? 'إلغاء' : 'تعديل'}
         </button>
       </div>
 
@@ -143,38 +152,55 @@ function UserCredentialRow({ user, onChangePassword }: {
         </div>
       </div>
 
-      {/* Change password form */}
+      {/* Combined edit form */}
       {editing && (
-        <div className="border-t border-slate-700/30 px-3 pb-3 pt-2.5 space-y-2">
-          <p className="text-slate-500 text-[10px]">كلمة مرور جديدة</p>
-          <div className="flex gap-2">
+        <div className="border-t border-slate-700/30 px-3 pb-3 pt-2.5 space-y-3">
+          {/* New username field */}
+          <div className="space-y-1">
+            <p className="text-slate-500 text-[10px]">اسم المستخدم الجديد</p>
             <input
-              value={newPass}
-              onChange={e => setNewPass(e.target.value)}
-              type={showPass ? 'text' : 'password'}
+              value={newSlug}
+              onChange={e => setNewSlug(e.target.value.replace(/[^a-z0-9-]/g, ''))}
+              type="text"
               dir="ltr"
-              placeholder="أدخل كلمة مرور جديدة"
-              onKeyDown={e => e.key === 'Enter' && handleSave()}
-              className="flex-1 bg-[#1a1a35] text-slate-100 text-sm outline-none px-3 py-2 rounded-lg placeholder:text-slate-600 border border-slate-600/40 focus:border-violet-500/50 transition-colors"
+              placeholder={currentUsername}
+              className="w-full bg-[#1a1a35] text-slate-100 text-sm outline-none px-3 py-2 rounded-lg placeholder:text-slate-600 border border-slate-600/40 focus:border-violet-500/50 transition-colors font-mono"
             />
-            <button onClick={() => setShowPass(v => !v)}
-              className="w-9 h-9 rounded-lg bg-slate-700/50 flex items-center justify-center text-slate-400 hover:text-white transition-colors flex-shrink-0">
-              {showPass
-                ? <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
-                : <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-              }
-            </button>
           </div>
+
+          {/* New password field */}
+          <div className="space-y-1">
+            <p className="text-slate-500 text-[10px]">كلمة المرور الجديدة</p>
+            <div className="flex gap-2">
+              <input
+                value={newPass}
+                onChange={e => setNewPass(e.target.value)}
+                type={showPass ? 'text' : 'password'}
+                dir="ltr"
+                placeholder="اتركه فارغاً للإبقاء على الحالية"
+                onKeyDown={e => e.key === 'Enter' && handleSave()}
+                className="flex-1 bg-[#1a1a35] text-slate-100 text-sm outline-none px-3 py-2 rounded-lg placeholder:text-slate-600 border border-slate-600/40 focus:border-violet-500/50 transition-colors"
+              />
+              <button onClick={() => setShowPass(v => !v)}
+                className="w-9 h-9 rounded-lg bg-slate-700/50 flex items-center justify-center text-slate-400 hover:text-white transition-colors flex-shrink-0">
+                {showPass
+                  ? <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
+                  : <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                }
+              </button>
+            </div>
+          </div>
+
           <button
             onClick={handleSave}
-            disabled={saving || !newPass.trim()}
+            disabled={saving || !canSave}
             className={`w-full py-2 rounded-lg text-xs font-bold transition-all active:scale-95 disabled:opacity-40 ${
               status === 'ok'  ? 'bg-green-600/30 text-green-400 border border-green-500/30' :
               status === 'err' ? 'bg-red-600/30 text-red-400 border border-red-500/30' :
               'bg-violet-600/20 text-violet-400 border border-violet-500/30 hover:bg-violet-600/30'
             }`}
           >
-            {saving ? 'جاري الحفظ...' : status === 'ok' ? '✓ تم تغيير الباسورد' : status === 'err' ? '✗ فشل' : 'حفظ'}
+            {saving ? 'جاري الحفظ...' : status === 'ok' ? '✓ تم الحفظ' : status === 'err' ? '✗ فشل' : 'حفظ'}
           </button>
         </div>
       )}
@@ -184,12 +210,13 @@ function UserCredentialRow({ user, onChangePassword }: {
 
 // ─── Restaurant Card ──────────────────────────────────────────────────────────
 function RestaurantCard({
-  r, toggling, authUsers, onToggleSuspended,
+  r, toggling, matchedUser, onToggleSuspended, onRefresh,
 }: {
   r: Restaurant;
   toggling: boolean;
-  authUsers: AuthUser[];
+  matchedUser: AuthUser | null;
   onToggleSuspended: () => void;
+  onRefresh: () => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -227,27 +254,28 @@ function RestaurantCard({
           <div className="space-y-2">
             <p className="text-slate-400 text-xs font-bold">حسابات الدخول للداشبورد</p>
 
-            {authUsers.length === 0 ? (
+            {matchedUser === null ? (
               <div className="bg-[#0d0d20] rounded-xl border border-slate-700/40 px-4 py-3 text-slate-500 text-sm text-center">
-                جاري تحميل الحسابات...
+                لا يوجد حساب مرتبط بهذا المطعم
               </div>
             ) : (
-              <div className="space-y-2">
-                {authUsers.filter(u => u.email !== 'akbasha9102@gmail.com').map(u => (
-                  <UserCredentialRow
-                    key={u.id}
-                    user={u}
-                    onChangePassword={async (newPass) => {
-                      const res = await fetch('/api/super-admin/admin-users', {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: u.id, password: newPass }),
-                      }).catch(() => null);
-                      return !!res?.ok;
-                    }}
-                  />
-                ))}
-              </div>
+              <UserCredentialRow
+                user={matchedUser}
+                restaurantDbId={r.restaurant_id ?? r.id}
+                onCredentialChange={async (newSlug, newPass) => {
+                  const res = await fetch('/api/super-admin/restaurants', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      restaurantDbId: r.restaurant_id ?? r.id,
+                      newSlug,
+                      newPassword: newPass,
+                    }),
+                  }).catch(() => null);
+                  if (res?.ok) { onRefresh(); }
+                  return !!res?.ok;
+                }}
+              />
             )}
           </div>
 
@@ -494,15 +522,19 @@ export default function SuperAdminDashboard() {
             </div>
             {restaurants.length === 0 ? (
               <div className="bg-[#13132b] rounded-2xl p-10 text-center text-slate-600 border border-white/5">لا توجد مطاعم</div>
-            ) : restaurants.map(r => (
-              <RestaurantCard
-                key={r.id}
-                r={r}
-                toggling={toggling === r.id}
-                authUsers={authUsers}
-                onToggleSuspended={() => toggleSuspended(r)}
-              />
-            ))}
+            ) : restaurants.map(r => {
+              const matchedUser = authUsers.find(u => u.email === `${r.slug}@dasha.app`) ?? null;
+              return (
+                <RestaurantCard
+                  key={r.id}
+                  r={r}
+                  toggling={toggling === r.id}
+                  matchedUser={matchedUser}
+                  onToggleSuspended={() => toggleSuspended(r)}
+                  onRefresh={() => { loadAll(); loadAuthUsers(); }}
+                />
+              );
+            })}
           </div>
         )}
 
