@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "agent1": "npx tsx --env-file=.env.local tests/agent1-super-admin-isolation.ts",
+    "agent2": "npx tsx --env-file=.env.local tests/agent2-dashboard-tenant.ts",
+    "agent3": "npx tsx --env-file=.env.local tests/agent3-menu-link.ts",
+    "agents": "bash tests/run-all-agents.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
