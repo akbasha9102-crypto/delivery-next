@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-function isAuthed() {
-  const token = cookies().get('sa_session')?.value;
+async function isAuthed() {
+  const jar = await cookies();
+  const token = jar.get('sa_session')?.value;
   return token === process.env.SUPER_ADMIN_SESSION_TOKEN;
 }
 
@@ -16,7 +17,7 @@ ALTER TABLE restaurant_settings
 `;
 
 export async function POST() {
-  if (!isAuthed()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!await isAuthed()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   // Try via rpc exec_sql (works if function exists)
   const { error: rpcErr } = await supabaseAdmin.rpc('exec_sql', { sql: MIGRATION_SQL });
