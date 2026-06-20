@@ -7,13 +7,20 @@ type Props = { params: Promise<{ slug: string }> };
 export default async function MenuPage({ params }: Props) {
   const { slug } = await params;
 
-  const supabase = createClient(
+  // نستخدم service role للبحث عن المطعم (RLS مفعّل على جدول restaurants)
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
+  const anonClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
   // البحث عن المطعم بالـ slug
-  const { data: restaurant } = await supabase
+  const { data: restaurant } = await supabaseAdmin
     .from('restaurants')
     .select('id, name, slug')
     .eq('slug', slug)
@@ -23,12 +30,12 @@ export default async function MenuPage({ params }: Props) {
 
   // جلب فئات وأصناف هذا المطعم فقط
   const [{ data: categories }, { data: items }] = await Promise.all([
-    supabase
+    anonClient
       .from('categories')
       .select('*')
       .eq('restaurant_id', restaurant.id)
       .order('sort_order', { ascending: true, nullsFirst: false }),
-    supabase
+    anonClient
       .from('items')
       .select('*')
       .eq('restaurant_id', restaurant.id)
