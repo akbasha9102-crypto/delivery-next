@@ -49,14 +49,12 @@ export default function MenuPage() {
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
 
   const fetchMenu = async (seedIfEmpty = true) => {
+    // لا نجلب أي شيء حتى يُحدَّد restaurant_id — يمنع تسريب بيانات مطاعم أخرى
+    if (!restaurantId) { setLoading(false); return; }
     setLoading(true);
     try {
-      let catsQ = supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
-      let itsQ  = supabase.from('items').select('*').order('created_at', { ascending: false });
-      if (restaurantId) {
-        catsQ = catsQ.eq('restaurant_id', restaurantId) as typeof catsQ;
-        itsQ  = itsQ.eq('restaurant_id',  restaurantId) as typeof itsQ;
-      }
+      const catsQ = supabase.from('categories').select('*').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true, nullsFirst: false });
+      const itsQ  = supabase.from('items').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false });
 
       const { data: cats, error: catsError } = await catsQ;
       if (catsError) throw catsError;
@@ -66,9 +64,9 @@ export default function MenuPage() {
         const { error: insertError } = await supabase
           .from('categories')
           .insert([
-            { name: 'وجبات سريعة', ...(restaurantId ? { restaurant_id: restaurantId } : {}) },
-            { name: 'مشروبات',     ...(restaurantId ? { restaurant_id: restaurantId } : {}) },
-            { name: 'حلويات',      ...(restaurantId ? { restaurant_id: restaurantId } : {}) },
+            { name: 'وجبات سريعة', restaurant_id: restaurantId },
+            { name: 'مشروبات',     restaurant_id: restaurantId },
+            { name: 'حلويات',      restaurant_id: restaurantId },
           ]);
         if (insertError) {
           console.error('خطأ في إدراج الأقسام الافتراضية:', insertError.message);
@@ -102,7 +100,7 @@ export default function MenuPage() {
     const { error } = await supabase.from('categories').insert([{
       name: newCat.trim(),
       color: newCatColor,
-      ...(restaurantId ? { restaurant_id: restaurantId } : {}),
+      restaurant_id: restaurantId,
     }]);
     error ? showToast('تعذّر إضافة القسم', false) : (setNewCat(''), fetchMenu(), showToast('✓ تم إضافة القسم'));
     setSaving(false);
@@ -159,7 +157,7 @@ export default function MenuPage() {
       price,
       image_url: form.image_url.trim() || DEFAULT_IMAGE,
       is_available: true,
-      ...(restaurantId ? { restaurant_id: restaurantId } : {}),
+      restaurant_id: restaurantId,
     }]);
     error ? showToast('تعذّر إضافة الطبق', false) : (setForm({ category_id: '', name: '', description: '', price: '', image_url: '' }), fetchMenu(), showToast('✓ تم إضافة الطبق'));
     setSaving(false);

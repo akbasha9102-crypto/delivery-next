@@ -326,12 +326,9 @@ export default function DashboardPage() {
     const start = new Date(today + 'T00:00:00').toISOString();
     const end   = new Date(today + 'T23:59:59').toISOString();
 
-    let ordersQ = supabase.from('orders').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }).limit(200);
-    let itemsQ  = supabase.from('items').select('name, image_url');
-    if (restaurantId) {
-      ordersQ = ordersQ.eq('restaurant_id', restaurantId) as typeof ordersQ;
-      itemsQ  = itemsQ.eq('restaurant_id',  restaurantId) as typeof itemsQ;
-    }
+    if (!restaurantId) { setLoading(false); return; }
+    const ordersQ = supabase.from('orders').select('*').eq('restaurant_id', restaurantId).gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }).limit(200);
+    const itemsQ  = supabase.from('items').select('name, image_url').eq('restaurant_id', restaurantId);
 
     const [ordersRes, itemsRes] = await Promise.all([ordersQ, itemsQ]);
 

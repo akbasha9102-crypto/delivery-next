@@ -94,17 +94,15 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   const pillsRef    = useRef<HTMLDivElement>(null);
   const scrolling   = useRef(false);
 
-  const fetchData = async () => {
+  const fetchData = async (id: string | undefined) => {
+    if (!id) return; // لا نجلب بدون restaurant_id — يمنع تسريب بيانات مطاعم أخرى
     setDataLoading(true);
     setDataError(null);
     try {
-      let catsQ = supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
-      let itsQ  = supabase.from('items').select('*').order('name');
-      if (restaurantId) {
-        catsQ = catsQ.eq('restaurant_id', restaurantId) as typeof catsQ;
-        itsQ  = itsQ.eq('restaurant_id',  restaurantId) as typeof itsQ;
-      }
-      const [{ data: cats, error: catsErr }, { data: its, error: itsErr }] = await Promise.all([catsQ, itsQ]);
+      const [{ data: cats, error: catsErr }, { data: its, error: itsErr }] = await Promise.all([
+        supabase.from('categories').select('*').eq('restaurant_id', id).order('sort_order', { ascending: true, nullsFirst: false }),
+        supabase.from('items').select('*').eq('restaurant_id', id).order('name'),
+      ]);
       if (catsErr) throw catsErr;
       if (itsErr)  throw itsErr;
       setCategories(cats || []);
@@ -120,14 +118,14 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   };
 
   useEffect(() => {
-    fetchData();
-    const ch = supabase.channel('menu-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' },      fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, fetchData)
+    fetchData(restaurantId);
+    const ch = supabase.channel(`menu-live-${restaurantId ?? 'none'}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' },      () => fetchData(restaurantId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => fetchData(restaurantId))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [restaurantId]);
 
   useEffect(() => {
     if (categories.length === 0) return;
@@ -313,7 +311,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
             </div>
             <p className="text-gray-500 dark:text-slate-400 text-sm font-medium px-6">{dataError}</p>
             <button
-              onClick={fetchData}
+              onClick={() => fetchData(restaurantId)}
               className="px-6 py-3 rounded-2xl font-black text-sm shadow-lg transition-all active:scale-95"
               style={{ backgroundColor: brandColor, color: textOnBrand }}>
               إعادة المحاولة

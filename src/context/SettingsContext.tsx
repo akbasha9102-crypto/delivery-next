@@ -32,17 +32,20 @@ const DEFAULTS: Settings = {
   is_suspended: false,
 };
 
-const CACHE_KEY = 'rs_settings_v1';
+// مفتاح cache مرتبط بـ restaurant_id لعزل كل مطعم
+function cacheKey(id: string | null) {
+  return id ? `rs_settings_v2_${id}` : 'rs_settings_v2_default';
+}
 
-function readCache(): Settings | null {
+function readCache(id: string | null): Settings | null {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
+    const raw = localStorage.getItem(cacheKey(id));
     return raw ? (JSON.parse(raw) as Settings) : null;
   } catch { return null; }
 }
 
-function writeCache(s: Settings) {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(s)); } catch {}
+function writeCache(id: string | null, s: Settings) {
+  try { localStorage.setItem(cacheKey(id), JSON.stringify(s)); } catch {}
 }
 
 type Ctx = Settings & { loaded: boolean; refreshSettings: () => Promise<void> };
@@ -72,51 +75,50 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const fetchSettings = useCallback(async () => {
     let q = supabase.from('restaurant_settings').select('*');
     if (restaurantId) {
-      q = q.eq('restaurant_id', restaurantId) as typeof q;
+      q = q.eq('restaurant_id', restaurantId).limit(1) as typeof q;
     } else {
       q = q.order('updated_at', { ascending: false }).limit(1) as typeof q;
     }
     const { data } = await q.maybeSingle();
     if (data) {
       setSettings(data as Settings);
-      writeCache(data as Settings);
+      writeCache(restaurantId, data as Settings);
     }
     setLoaded(true);
   }, [restaurantId]);
 
   useEffect(() => {
-    // تحميل من cache فوري لتجنب وميض الإعدادات الافتراضية
-    const cached = readCache();
+    // cache مرتبط بهذا المطعم تحديداً
+    const cached = readCache(restaurantId);
     if (cached) { setSettings(cached); setLoaded(true); }
 
-    // جلب حديث من الشبكة
     fetchSettings();
 
-    // ── Realtime: نستمع لـ UPDATE و INSERT معاً ─────────────────────────────
-    // INSERT: يحدث عند إنشاء السجل لأول مرة (جدول فارغ ثم يُملأ)
-    // UPDATE: يحدث عند تعديل الإعدادات من لوحة الإدارة
     const channel = supabase
-      .channel('settings-live')
+      .channel(`settings-live-${restaurantId ?? 'default'}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'restaurant_settings' },
         ({ new: row }) => {
+          // تجاهل أحداث مطاعم أخرى
+          if (restaurantId && (row as { restaurant_id?: string }).restaurant_id !== restaurantId) return;
           setSettings(row as Settings);
-          writeCache(row as Settings);
+          writeCache(restaurantId, row as Settings);
         }
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'restaurant_settings' },
         ({ new: row }) => {
+          if (restaurantId && (row as { restaurant_id?: string }).restaurant_id !== restaurantId) return;
           setSettings(row as Settings);
-          writeCache(row as Settings);
+          writeCache(restaurantId, row as Settings);
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [fetchSettings]);
+  }, [fetchSettings, restaurantId]);
 
   useEffect(() => {
     const root = document.documentElement;

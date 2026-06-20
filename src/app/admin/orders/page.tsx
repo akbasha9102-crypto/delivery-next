@@ -146,8 +146,8 @@ export default function OrdersPage() {
   const [mapOrder, setMapOrder] = useState<Order | null>(null);
 
   const fetchOrders = useCallback(async () => {
-    let q = supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100);
-    if (restaurantId) q = q.eq('restaurant_id', restaurantId) as typeof q;
+    if (!restaurantId) { setLoading(false); return; }
+    const q = supabase.from('orders').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false }).limit(100);
     const { data } = await q;
     if (!data) { setLoading(false); return; }
     const withItems = await Promise.all(data.map(async o => {
@@ -161,9 +161,9 @@ export default function OrdersPage() {
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   useEffect(() => {
-    let dq = supabase.from('drivers').select('id, name, phone');
-    if (restaurantId) dq = dq.eq('restaurant_id', restaurantId) as typeof dq;
-    dq.then(({ data }) => setDrivers(data || []));
+    if (!restaurantId) return;
+    supabase.from('drivers').select('id, name, phone').eq('restaurant_id', restaurantId)
+      .then(({ data }) => setDrivers(data || []));
   }, [restaurantId]);
 
   useEffect(() => {
