@@ -9,7 +9,7 @@ type Restaurant = {
   updated_at?: string;
   admin_email?: string | null; admin_password?: string | null;
   subscription_start?: string | null; is_suspended?: boolean | null;
-  restaurant_id?: string | null; slug?: string | null;
+  restaurant_id?: string | null; slug?: string | null; owner_id?: string | null;
 };
 type AuthUser = { id: string; email: string | null; created_at: string };
 type Driver   = { id: string; name: string; phone: string; status: string };
@@ -344,16 +344,23 @@ export default function SuperAdminDashboard() {
 
   const loadAll = useCallback(async () => {
     const today = todayISO();
-    const [{ data: rs }, { data: or }, { data: rests }] = await Promise.all([
+    const [{ data: rs }, { data: or }, restsResp] = await Promise.all([
       supabase.from('restaurant_settings').select('*').order('updated_at', { ascending: false }),
       supabase.from('orders').select('*').gte('created_at', today+'T00:00:00').order('created_at', { ascending: false }).limit(300),
-      supabase.from('restaurants').select('id, name, slug').order('created_at', { ascending: true }),
+      fetch('/api/super-admin/restaurants').catch(() => null),
     ]);
-    // دمج slug من جدول restaurants مع بيانات restaurant_settings
-    const slugMap = new Map((rests || []).map((r: {id: string; name: string; slug: string}) => [r.id, r.slug]));
+    // جلب restaurants من الـ API (يستخدم service role — موثوق دائماً)
+    let rests: {id: string; name: string; slug: string; owner_id: string}[] = [];
+    if (restsResp?.ok) {
+      const json = await restsResp.json().catch(() => ({}));
+      rests = json.restaurants ?? [];
+    }
+    const slugMap     = new Map(rests.map(r => [r.id, r.slug]));
+    const ownerMap    = new Map(rests.map(r => [r.id, r.owner_id]));
     const merged = (rs || []).map((r: Restaurant) => ({
       ...r,
-      slug: r.restaurant_id ? (slugMap.get(r.restaurant_id) ?? null) : null,
+      slug:     r.restaurant_id ? (slugMap.get(r.restaurant_id)  ?? null) : null,
+      owner_id: r.restaurant_id ? (ownerMap.get(r.restaurant_id) ?? null) : null,
     }));
     setRestaurants(merged as Restaurant[]);
     setOrders((or || []) as Order[]);
@@ -523,7 +530,7 @@ export default function SuperAdminDashboard() {
             {restaurants.length === 0 ? (
               <div className="bg-[#13132b] rounded-2xl p-10 text-center text-slate-600 border border-white/5">لا توجد مطاعم</div>
             ) : restaurants.map(r => {
-              const matchedUser = authUsers.find(u => u.email === `${r.slug}@dasha.app`) ?? null;
+              const matchedUser = authUsers.find(u => u.id === r.owner_id) ?? null;
               return (
                 <RestaurantCard
                   key={r.id}
