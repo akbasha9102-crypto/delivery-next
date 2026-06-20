@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -7,19 +7,19 @@ type Restaurant = {
   id: string; restaurant_name: string; primary_color: string;
   logo_url: string | null; is_closed: boolean; whatsapp_number: string | null;
   updated_at?: string;
-  // super-admin fields (added after migration)
   admin_email?: string | null; admin_password?: string | null;
   subscription_start?: string | null; is_suspended?: boolean | null;
 };
-type Driver  = { id: string; name: string; phone: string; status: string };
-type Order   = {
+type AuthUser = { id: string; email: string | null; created_at: string };
+type Driver   = { id: string; name: string; phone: string; status: string };
+type Order    = {
   id: string; client_name: string; client_phone: string;
   delivery_address: string | null; total_amount: number;
   status: string; created_at: string; driver_name?: string | null;
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const COMMISSION = 0.10; // 10% platform commission
+const COMMISSION = 0.10;
 
 const S: Record<string, { label: string; color: string; bg: string; dot: string }> = {
   pending:   { label: 'انتظار',       color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  dot: 'bg-amber-400'  },
@@ -30,9 +30,9 @@ const S: Record<string, { label: string; color: string; bg: string; dot: string 
   rejected:  { label: 'مرفوض',       color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   dot: 'bg-red-400'    },
 };
 const DS: Record<string, { label: string; color: string; bg: string }> = {
-  active:  { label: 'متاح',      color: '#22c55e', bg: 'rgba(34,197,94,0.12)'  },
-  on_trip: { label: 'في رحلة',   color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
-  offline: { label: 'غير متصل',  color: '#6b7280', bg: 'rgba(107,114,128,0.1)' },
+  active:  { label: 'متاح',     color: '#22c55e', bg: 'rgba(34,197,94,0.12)'  },
+  on_trip: { label: 'في رحلة',  color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
+  offline: { label: 'غير متصل', color: '#6b7280', bg: 'rgba(107,114,128,0.1)' },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -54,12 +54,9 @@ function ToggleSwitch({ on, onChange, disabled, colorOn = '#22c55e' }: {
   on: boolean; onChange: () => void; disabled?: boolean; colorOn?: string;
 }) {
   return (
-    <button
-      onClick={onChange}
-      disabled={disabled}
+    <button onClick={onChange} disabled={disabled}
       className="relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none disabled:opacity-50 flex-shrink-0"
-      style={{ backgroundColor: on ? colorOn : '#374151' }}
-    >
+      style={{ backgroundColor: on ? colorOn : '#374151' }}>
       <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${on ? 'translate-x-5' : ''}`} />
     </button>
   );
@@ -81,41 +78,47 @@ function StatCard({ label, value, sub, icon, gradient }: {
 
 // ─── Restaurant Card ──────────────────────────────────────────────────────────
 function RestaurantCard({
-  r, todayOrders, todayRevenue,
-  onToggleSuspended, onSaveCredentials, toggling,
+  r, todayOrders, todayRevenue, toggling,
+  authUsers, onToggleSuspended, onSaveCredentials,
 }: {
   r: Restaurant;
-  todayOrders: number; todayRevenue: number;
-  onToggleSuspended: () => void;
-  onSaveCredentials: (email: string, pass: string) => Promise<boolean>;
+  todayOrders: number;
+  todayRevenue: number;
   toggling: boolean;
+  authUsers: AuthUser[];
+  onToggleSuspended: () => void;
+  onSaveCredentials: (restaurantId: string, email: string, newPass: string, authUserId: string | null) => Promise<{ ok: boolean; msg: string }>;
 }) {
-  const [open,      setOpen]      = useState(false);
-  const [showPass,  setShowPass]  = useState(false);
-  const [editEmail, setEditEmail] = useState(r.admin_email ?? '');
-  const [editPass,  setEditPass]  = useState(r.admin_password ?? '');
-  const [saving,    setSaving]    = useState(false);
+  const [open,       setOpen]       = useState(false);
+  const [showPass,   setShowPass]   = useState(false);
+  const [editEmail,  setEditEmail]  = useState('');
+  const [editPass,   setEditPass]   = useState('');
+  const [saving,     setSaving]     = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle'|'ok'|'err'>('idle');
+  const [saveMsg,    setSaveMsg]    = useState('');
 
-  // sync when parent reloads data
-  useState(() => { setEditEmail(r.admin_email ?? ''); setEditPass(r.admin_password ?? ''); });
+  // When card opens, populate email from DB record
+  useEffect(() => {
+    if (open) setEditEmail(r.admin_email ?? '');
+  }, [open, r.admin_email]);
+
+  // Match typed email to a Supabase Auth user
+  const matchedUser = authUsers.find(u => u.email && u.email.toLowerCase() === editEmail.trim().toLowerCase());
 
   const handleSave = async () => {
-    setSaving(true); setSaveStatus('idle');
-    const ok = await onSaveCredentials(editEmail, editPass);
+    if (!editEmail.trim()) return;
+    setSaving(true); setSaveStatus('idle'); setSaveMsg('');
+    const result = await onSaveCredentials(r.id, editEmail.trim(), editPass.trim(), matchedUser?.id ?? null);
     setSaving(false);
-    setSaveStatus(ok ? 'ok' : 'err');
-    if (ok) setTimeout(() => setSaveStatus('idle'), 2500);
-  };
-
-  const handlePreview = () => {
-    window.open('/api/super-admin/preview', '_blank');
+    setSaveStatus(result.ok ? 'ok' : 'err');
+    setSaveMsg(result.msg);
+    if (result.ok) { setEditPass(''); setTimeout(() => setSaveStatus('idle'), 3000); }
   };
 
   return (
-    <div className="bg-[#13132b] rounded-2xl border border-slate-700/50 overflow-hidden transition-all duration-200">
+    <div className="bg-[#13132b] rounded-2xl border border-slate-700/50 overflow-hidden">
 
-      {/* ── Header row ── */}
+      {/* Header */}
       <button
         className="w-full flex items-center gap-3 px-4 py-4 text-right hover:bg-white/5 transition-colors active:bg-white/10"
         onClick={() => setOpen(v => !v)}
@@ -145,64 +148,106 @@ function RestaurantCard({
         </span>
       </button>
 
-      {/* ── Expanded details ── */}
+      {/* Expanded */}
       {open && (
         <div className="border-t border-slate-700/50 px-4 pb-4 pt-3 space-y-4">
 
-          {/* Credentials */}
+          {/* ── Credentials ── */}
           <div className="space-y-2">
-            <p className="text-slate-400 text-xs font-bold">بيانات دخول الداشبورد</p>
-            <div className="bg-[#0d0d20] rounded-xl overflow-hidden border border-slate-700/40">
-              {/* Email */}
+            <div className="flex items-center justify-between">
+              <p className="text-slate-400 text-xs font-bold">بيانات دخول الداشبورد</p>
+              {matchedUser && (
+                <span className="text-[10px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full font-bold">
+                  ✓ مستخدم موجود
+                </span>
+              )}
+            </div>
+
+            {/* Email */}
+            <div className="bg-[#0d0d20] rounded-xl border border-slate-700/40 overflow-hidden">
               <div className="px-3 py-2.5">
-                <p className="text-slate-500 text-[10px] mb-1.5">البريد / اليوزر</p>
+                <p className="text-slate-500 text-[10px] mb-1.5">البريد الإلكتروني</p>
                 <input
                   value={editEmail}
                   onChange={e => setEditEmail(e.target.value)}
                   dir="ltr"
-                  placeholder="أدخل البريد الإلكتروني أو اسم المستخدم"
+                  placeholder="admin@example.com"
                   className="w-full bg-[#1a1a35] text-slate-100 text-sm outline-none px-3 py-2 rounded-lg placeholder:text-slate-600 border border-slate-600/40 focus:border-violet-500/50 transition-colors"
                 />
               </div>
-              {/* Password */}
+
+              {/* Password — for changing only */}
               <div className="px-3 pb-3">
-                <p className="text-slate-500 text-[10px] mb-1.5">كلمة المرور</p>
+                <p className="text-slate-500 text-[10px] mb-1.5">
+                  كلمة المرور الجديدة
+                  <span className="text-slate-600 mr-1">(اتركها فارغة إذا لا تريد تغييرها)</span>
+                </p>
                 <div className="flex gap-2">
                   <input
                     value={editPass}
                     onChange={e => setEditPass(e.target.value)}
                     type={showPass ? 'text' : 'password'}
                     dir="ltr"
-                    placeholder="أدخل كلمة المرور"
+                    placeholder="أدخل كلمة مرور جديدة..."
                     className="flex-1 bg-[#1a1a35] text-slate-100 text-sm outline-none px-3 py-2 rounded-lg placeholder:text-slate-600 border border-slate-600/40 focus:border-violet-500/50 transition-colors"
                   />
                   <button
                     onClick={() => setShowPass(v => !v)}
                     className="w-9 h-9 rounded-lg bg-slate-700/50 flex items-center justify-center text-slate-400 hover:text-white transition-colors flex-shrink-0"
                   >
-                    {showPass ? (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    )}
+                    {showPass
+                      ? <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
+                      : <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    }
                   </button>
                 </div>
               </div>
             </div>
+
+            {/* Auth users hint (when email doesn't match any user) */}
+            {editEmail.trim() && !matchedUser && authUsers.length > 0 && (
+              <div className="bg-amber-950/30 border border-amber-800/30 rounded-xl px-3 py-2">
+                <p className="text-amber-400 text-[10px] font-bold mb-1">المستخدمون المتاحون في النظام:</p>
+                {authUsers.map(u => (
+                  <button key={u.id} onClick={() => setEditEmail(u.email ?? '')}
+                    className="block text-amber-300/70 text-[11px] hover:text-amber-200 transition-colors py-0.5" dir="ltr">
+                    {u.email}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* No email yet — show users list */}
+            {!editEmail.trim() && authUsers.length > 0 && (
+              <div className="bg-[#0d0d20] border border-slate-700/40 rounded-xl px-3 py-2.5">
+                <p className="text-slate-500 text-[10px] mb-2">اختر مستخدماً من النظام:</p>
+                {authUsers.map(u => (
+                  <button key={u.id} onClick={() => setEditEmail(u.email ?? '')}
+                    className="w-full flex items-center justify-between py-1.5 hover:bg-white/5 rounded-lg px-1 transition-colors" dir="ltr">
+                    <span className="text-slate-300 text-xs">{u.email}</span>
+                    <span className="text-violet-400 text-[10px]">اختر ←</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             <button
               onClick={handleSave}
-              disabled={saving}
-              className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${
+              disabled={saving || !editEmail.trim()}
+              className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-40 ${
                 saveStatus === 'ok'  ? 'bg-green-600/30 text-green-400 border border-green-500/30' :
                 saveStatus === 'err' ? 'bg-red-600/30 text-red-400 border border-red-500/30' :
                 'bg-violet-600/20 text-violet-400 border border-violet-500/30 hover:bg-violet-600/30'
               }`}
             >
-              {saving ? 'جاري الحفظ...' : saveStatus === 'ok' ? '✓ تم الحفظ' : saveStatus === 'err' ? '✗ فشل — شغّل الـ Migration أولاً' : 'حفظ بيانات الدخول'}
+              {saving ? 'جاري الحفظ...' :
+               saveStatus === 'ok'  ? `✓ ${saveMsg || 'تم الحفظ'}` :
+               saveStatus === 'err' ? `✗ ${saveMsg || 'فشل الحفظ'}` :
+               'حفظ بيانات الدخول'}
             </button>
           </div>
 
-          {/* Subscription */}
+          {/* ── Subscription ── */}
           <div className="bg-[#0d0d20] rounded-xl p-3 border border-slate-700/40">
             <p className="text-slate-500 text-[10px] mb-1">تاريخ بدء الاشتراك في داشا</p>
             <p className="text-slate-200 text-sm font-bold">
@@ -210,23 +255,18 @@ function RestaurantCard({
             </p>
           </div>
 
-          {/* Suspend toggle only */}
+          {/* ── Suspend toggle ── */}
           <div className="flex items-center justify-between bg-red-950/30 border border-red-900/30 rounded-xl px-3 py-3">
             <div>
               <p className="text-red-300 text-sm font-semibold">تعليق الاشتراك الكامل</p>
               <p className="text-red-500/70 text-[10px] mt-0.5">يوقف الموقع والداشبورد فوراً</p>
             </div>
-            <ToggleSwitch
-              on={!!r.is_suspended}
-              onChange={onToggleSuspended}
-              disabled={toggling}
-              colorOn="#ef4444"
-            />
+            <ToggleSwitch on={!!r.is_suspended} onChange={onToggleSuspended} disabled={toggling} colorOn="#ef4444" />
           </div>
 
-          {/* Preview Dashboard */}
+          {/* ── Preview button ── */}
           <button
-            onClick={handlePreview}
+            onClick={() => window.open('/api/super-admin/preview', '_blank')}
             className="w-full py-3 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 font-bold text-sm hover:bg-indigo-600/30 transition-all active:scale-95 flex items-center justify-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -244,13 +284,13 @@ function RestaurantCard({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function SuperAdminDashboard() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [authUsers,   setAuthUsers]   = useState<AuthUser[]>([]);
   const [drivers,     setDrivers]     = useState<Driver[]>([]);
   const [orders,      setOrders]      = useState<Order[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [tab,         setTab]         = useState<'overview'|'restaurants'|'drivers'|'orders'>('overview');
   const [toggling,    setToggling]    = useState<string|null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const refreshRef = useRef<NodeJS.Timeout|null>(null);
 
   const loadAll = useCallback(async () => {
     const today = todayISO();
@@ -265,17 +305,25 @@ export default function SuperAdminDashboard() {
     setLoading(false);
   }, []);
 
+  const loadAuthUsers = useCallback(async () => {
+    const res = await fetch('/api/super-admin/admin-users').catch(() => null);
+    if (!res?.ok) return;
+    const { users } = await res.json().catch(() => ({ users: [] }));
+    setAuthUsers(users ?? []);
+  }, []);
+
   useEffect(() => {
     loadAll();
+    loadAuthUsers();
     const ch = supabase.channel('sa-live')
       .on('postgres_changes', { event:'*', schema:'public', table:'orders' }, loadAll)
       .on('postgres_changes', { event:'*', schema:'public', table:'drivers' }, loadAll)
       .on('postgres_changes', { event:'*', schema:'public', table:'restaurant_settings' }, loadAll)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [loadAll]);
+  }, [loadAll, loadAuthUsers]);
 
-  // ── actions ──
+  // ── Actions ──────────────────────────────────────────────────────────────
   const toggleSuspended = async (r: Restaurant) => {
     setToggling(r.id);
     const next = !r.is_suspended;
@@ -285,12 +333,63 @@ export default function SuperAdminDashboard() {
     await loadAll(); setToggling(null);
   };
 
-  const saveCredentials = async (r: Restaurant, email: string, pass: string): Promise<boolean> => {
-    const { error } = await supabase.from('restaurant_settings')
-      .update({ admin_email: email || null, admin_password: pass || null })
-      .eq('id', r.id);
+  const saveCredentials = async (
+    restaurantId: string,
+    email: string,
+    newPass: string,
+    authUserId: string | null
+  ): Promise<{ ok: boolean; msg: string }> => {
+
+    let dbOk = true;
+    let authOk = true;
+    const msgs: string[] = [];
+
+    // 1. Save email to restaurant_settings (if column exists after migration)
+    const { error: dbErr } = await supabase
+      .from('restaurant_settings')
+      .update({ admin_email: email, admin_password: newPass || null })
+      .eq('id', restaurantId);
+
+    if (dbErr) {
+      // Column might not exist yet — that's ok, auth update is more important
+      dbOk = false;
+    } else {
+      msgs.push('حُفظ في قاعدة البيانات');
+    }
+
+    // 2. Update Supabase Auth user (email + password) via service role
+    if (authUserId || email) {
+      const payload: Record<string, string> = {};
+      if (authUserId && email) payload.email = email;
+      if (newPass) payload.password = newPass;
+
+      if (Object.keys(payload).length > 0) {
+        const body = authUserId
+          ? { userId: authUserId, ...payload }
+          : { userId: authUsers.find(u => u.email === email)?.id, ...payload };
+
+        if (body.userId) {
+          const res = await fetch('/api/super-admin/admin-users', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          }).catch(() => null);
+
+          if (res?.ok) {
+            authOk = true;
+            msgs.push('تم تحديث بيانات الدخول في Supabase');
+          } else {
+            const err = await res?.json().catch(() => ({}));
+            authOk = false;
+            msgs.push(err?.error || 'فشل تحديث Supabase Auth');
+          }
+        }
+      }
+    }
+
     await loadAll();
-    return !error;
+    const ok = dbOk || authOk;
+    return { ok, msg: msgs.join(' · ') || (ok ? 'تم الحفظ' : 'فشل الحفظ') };
   };
 
   const signOut = async () => {
@@ -298,16 +397,15 @@ export default function SuperAdminDashboard() {
     window.location.href = '/super-admin/login';
   };
 
-  // ── derived ──
+  // ── Derived ──────────────────────────────────────────────────────────────
   const activeRest    = restaurants.filter(r => !r.is_suspended).length;
-  const suspendedRest = restaurants.filter(r => r.is_suspended).length;
+  const suspendedRest = restaurants.filter(r =>  r.is_suspended).length;
   const driverActive  = drivers.filter(d => d.status === 'active').length;
   const driverTrip    = drivers.filter(d => d.status === 'on_trip').length;
   const driverOff     = drivers.filter(d => d.status === 'offline').length;
   const liveOrders    = orders.filter(o => !['completed','rejected'].includes(o.status));
   const todayRevenue  = orders.filter(o => o.status === 'completed').reduce((s,o) => s+o.total_amount, 0);
   const commission    = Math.round(todayRevenue * COMMISSION);
-
   const filteredOrders = statusFilter === 'all' ? orders : orders.filter(o => o.status === statusFilter);
 
   if (loading) return (
@@ -356,43 +454,19 @@ export default function SuperAdminDashboard() {
 
         {/* ── Stats Grid ── */}
         <div className="grid grid-cols-2 gap-3">
-          <StatCard
-            label="المطاعم"
-            value={restaurants.length}
-            sub={`${activeRest} نشط · ${suspendedRest} موقوف`}
-            icon="🏪"
-            gradient="bg-gradient-to-br from-violet-900/60 to-indigo-900/40"
-          />
-          <StatCard
-            label="السائقين"
-            value={drivers.length}
-            sub={`${driverActive} متاح · ${driverTrip} في رحلة · ${driverOff} offline`}
-            icon="🏍️"
-            gradient="bg-gradient-to-br from-orange-900/60 to-amber-900/40"
-          />
-          <StatCard
-            label="طلبات اليوم"
-            value={orders.length}
-            sub={`${liveOrders.length} طلب حي الآن`}
-            icon="📦"
-            gradient="bg-gradient-to-br from-blue-900/60 to-cyan-900/40"
-          />
-          <StatCard
-            label="عمولة المنصة"
-            value={`${commission.toLocaleString()} د.ع`}
-            sub={`من ${todayRevenue.toLocaleString()} إجمالي`}
-            icon="💰"
-            gradient="bg-gradient-to-br from-green-900/60 to-emerald-900/40"
-          />
+          <StatCard label="المطاعم"    value={restaurants.length} sub={`${activeRest} نشط · ${suspendedRest} موقوف`}                         icon="🏪"  gradient="bg-gradient-to-br from-violet-900/60 to-indigo-900/40"  />
+          <StatCard label="السائقين"   value={drivers.length}     sub={`${driverActive} متاح · ${driverTrip} في رحلة · ${driverOff} offline`} icon="🏍️"  gradient="bg-gradient-to-br from-orange-900/60 to-amber-900/40"   />
+          <StatCard label="طلبات اليوم" value={orders.length}     sub={`${liveOrders.length} طلب حي الآن`}                                    icon="📦"  gradient="bg-gradient-to-br from-blue-900/60 to-cyan-900/40"     />
+          <StatCard label="عمولة المنصة" value={`${commission.toLocaleString()} د.ع`} sub={`من ${todayRevenue.toLocaleString()} إجمالي`}    icon="💰"  gradient="bg-gradient-to-br from-green-900/60 to-emerald-900/40"  />
         </div>
 
         {/* ── Tabs ── */}
         <div className="grid grid-cols-4 bg-[#13132b] rounded-2xl p-1 gap-1 border border-white/5">
           {([
-            { key: 'overview',    label: 'عام',      icon: '📊' },
-            { key: 'restaurants', label: 'مطاعم',    icon: '🏪' },
-            { key: 'drivers',     label: 'سائقين',   icon: '🏍️' },
-            { key: 'orders',      label: 'طلبات',    icon: '📦' },
+            { key: 'overview',    label: 'عام',    icon: '📊' },
+            { key: 'restaurants', label: 'مطاعم',  icon: '🏪' },
+            { key: 'drivers',     label: 'سائقين', icon: '🏍️' },
+            { key: 'orders',      label: 'طلبات',  icon: '📦' },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex flex-col items-center py-2 rounded-xl text-[11px] font-bold transition-all ${
@@ -409,7 +483,6 @@ export default function SuperAdminDashboard() {
         {/* ══ Tab: عام ══ */}
         {tab === 'overview' && (
           <div className="space-y-3">
-            {/* Live orders */}
             <div className="bg-[#13132b] rounded-2xl border border-white/5 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
                 <span className="text-white text-sm font-bold">الطلبات الحية</span>
@@ -436,7 +509,6 @@ export default function SuperAdminDashboard() {
               ))}
             </div>
 
-            {/* Drivers overview */}
             <div className="bg-[#13132b] rounded-2xl border border-white/5 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
                 <span className="text-white text-sm font-bold">السائقين</span>
@@ -451,9 +523,7 @@ export default function SuperAdminDashboard() {
               ) : drivers.map(d => (
                 <div key={d.id} className="flex items-center justify-between px-4 py-3 border-b border-white/5 last:border-0">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style={{ backgroundColor: DS[d.status]?.color + '20' }}>
-                      🏍️
-                    </div>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style={{ backgroundColor: DS[d.status]?.color + '20' }}>🏍️</div>
                     <div>
                       <p className="text-sm font-medium text-white">{d.name}</p>
                       <p className="text-slate-500 text-[10px]">{d.phone}</p>
@@ -485,8 +555,9 @@ export default function SuperAdminDashboard() {
                 todayOrders={orders.length}
                 todayRevenue={todayRevenue}
                 toggling={toggling === r.id}
+                authUsers={authUsers}
                 onToggleSuspended={() => toggleSuspended(r)}
-                onSaveCredentials={(e, p) => saveCredentials(r, e, p)}
+                onSaveCredentials={saveCredentials}
               />
             ))}
           </div>
@@ -497,9 +568,9 @@ export default function SuperAdminDashboard() {
           <div className="space-y-2">
             <div className="grid grid-cols-3 gap-2 mb-3">
               {[
-                { key: 'active',  label: 'متاح',    count: driverActive, color: '#22c55e' },
-                { key: 'on_trip', label: 'في رحلة', count: driverTrip,   color: '#f97316' },
-                { key: 'offline', label: 'offline',  count: driverOff,   color: '#6b7280' },
+                { key: 'active',  label: 'متاح',   count: driverActive, color: '#22c55e' },
+                { key: 'on_trip', label: 'في رحلة', count: driverTrip,  color: '#f97316' },
+                { key: 'offline', label: 'offline', count: driverOff,   color: '#6b7280' },
               ].map(s => (
                 <div key={s.key} className="bg-[#13132b] rounded-xl p-3 border border-white/5 text-center">
                   <p className="font-black text-xl" style={{ color: s.color }}>{s.count}</p>
@@ -514,7 +585,7 @@ export default function SuperAdminDashboard() {
                 <div key={d.id} className="flex items-center gap-3 px-4 py-4 border-b border-white/5 last:border-0 hover:bg-white/3 transition-colors">
                   <div className="relative flex-shrink-0">
                     <div className="w-10 h-10 rounded-xl bg-slate-700/50 flex items-center justify-center text-xl">🏍️</div>
-                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#13132b] flex-shrink-0"
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#13132b]"
                       style={{ backgroundColor: DS[d.status]?.color ?? '#6b7280' }} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -534,15 +605,14 @@ export default function SuperAdminDashboard() {
         {/* ══ Tab: طلبات ══ */}
         {tab === 'orders' && (
           <div className="space-y-3">
-            {/* Filter chips */}
             <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
               {[
-                { key: 'all',      label: `الكل (${orders.length})` },
-                { key: 'pending',   label: 'انتظار' },
-                { key: 'preparing', label: 'تجهيز' },
+                { key: 'all',       label: `الكل (${orders.length})` },
+                { key: 'pending',   label: 'انتظار'   },
+                { key: 'preparing', label: 'تجهيز'    },
                 { key: 'ready',     label: 'في الطريق' },
-                { key: 'completed', label: 'مكتمل' },
-                { key: 'rejected',  label: 'مرفوض' },
+                { key: 'completed', label: 'مكتمل'    },
+                { key: 'rejected',  label: 'مرفوض'    },
               ].map(f => (
                 <button key={f.key} onClick={() => setStatusFilter(f.key)}
                   className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
@@ -566,9 +636,7 @@ export default function SuperAdminDashboard() {
                       <p className="font-bold text-sm text-white truncate">{o.client_name}</p>
                     </div>
                     <p className="text-slate-500 text-xs truncate">{o.delivery_address || o.client_phone}</p>
-                    {o.driver_name && (
-                      <p className="text-violet-400 text-xs mt-1">🏍️ {o.driver_name}</p>
-                    )}
+                    {o.driver_name && <p className="text-violet-400 text-xs mt-1">🏍️ {o.driver_name}</p>}
                     <p className="text-slate-600 text-[10px] mt-1 font-mono" dir="ltr">#{o.id.slice(0,8)}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
