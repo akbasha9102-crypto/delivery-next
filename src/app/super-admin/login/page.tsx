@@ -1,46 +1,29 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 
 export default function SuperAdminLogin() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
-      const role = session.user.user_metadata?.role;
-      const superEmail = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
-      if (role === 'super_admin' || (superEmail && session.user.email === superEmail)) {
-        router.replace('/super-admin/dashboard');
-      }
-    });
-  }, [router]);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
 
   const signIn = async () => {
-    if (!email.trim() || !password.trim()) return;
+    if (!username.trim() || !password) return;
     setLoading(true);
     setError('');
-    const { data, error: authErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (authErr || !data.session) {
-      setError('بيانات الدخول غير صحيحة');
+    const res = await fetch('/api/super-admin/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username.trim(), password }),
+    });
+    if (res.ok) {
+      router.replace('/super-admin/dashboard');
+    } else {
+      setError('اسم المستخدم أو كلمة المرور غير صحيحة');
       setLoading(false);
-      return;
     }
-    const role = data.session.user.user_metadata?.role;
-    const superEmail = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
-    const isSuperAdmin = role === 'super_admin' || (superEmail && data.session.user.email === superEmail);
-    if (!isSuperAdmin) {
-      await supabase.auth.signOut();
-      setError('ليس لديك صلاحية الوصول للوحة العليا');
-      setLoading(false);
-      return;
-    }
-    router.replace('/super-admin/dashboard');
   };
 
   return (
@@ -63,13 +46,14 @@ export default function SuperAdminLogin() {
             </div>
           )}
           <div className="mb-4">
-            <label className="block text-slate-300 text-sm font-semibold mb-2">البريد الإلكتروني</label>
+            <label className="block text-slate-300 text-sm font-semibold mb-2">اسم المستخدم</label>
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="admin@platform.com"
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="username"
               dir="ltr"
+              autoComplete="username"
               className="w-full bg-[#0f0f1a] border border-slate-600 rounded-xl px-4 py-3 text-left text-white outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-600"
             />
           </div>
@@ -82,6 +66,7 @@ export default function SuperAdminLogin() {
               onKeyDown={e => e.key === 'Enter' && signIn()}
               placeholder="••••••••"
               dir="ltr"
+              autoComplete="current-password"
               className="w-full bg-[#0f0f1a] border border-slate-600 rounded-xl px-4 py-3 text-left text-white outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-600"
             />
           </div>

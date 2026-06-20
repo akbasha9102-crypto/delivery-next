@@ -66,7 +66,6 @@ export default function SuperAdminDashboard() {
   const [loading,     setLoading]     = useState(true);
   const [tab,         setTab]         = useState<'overview' | 'restaurants' | 'drivers' | 'orders'>('overview');
   const [toggling,    setToggling]    = useState<string | null>(null);
-  const [userEmail,   setUserEmail]   = useState('');
   const lastOrderCount = useRef(0);
 
   const loadAll = useCallback(async () => {
@@ -85,9 +84,6 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => {
     loadAll();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserEmail(session?.user?.email ?? '');
-    });
     // realtime
     const ch = supabase.channel('super-admin-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, loadAll)
@@ -105,7 +101,7 @@ export default function SuperAdminDashboard() {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await fetch('/api/super-admin/auth', { method: 'DELETE' });
     window.location.href = '/super-admin/login';
   };
 
@@ -135,7 +131,7 @@ export default function SuperAdminDashboard() {
             </div>
             <div>
               <p className="text-xs font-black text-violet-400 leading-none">Super Admin</p>
-              <p className="text-[10px] text-slate-500 leading-none mt-0.5 truncate max-w-[140px]">{userEmail}</p>
+              <p className="text-[10px] text-slate-500 leading-none mt-0.5">لوحة التحكم العليا</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
