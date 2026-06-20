@@ -6,6 +6,7 @@ import { AdminBottomNav } from '@/components/BottomNav';
 import { Moon, Sun, ClipboardList, Clock } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
+import { useRestaurant } from '@/context/RestaurantContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null };
@@ -293,6 +294,7 @@ export default function DashboardPage() {
   useEffect(() => { markSeen(); }, [markSeen]);
 
   const { is_closed, opens_at, schedule } = useSettings();
+  const { restaurantId } = useRestaurant();
 
   const todayHours = useMemo(() => {
     if (!schedule?.days) return null;
@@ -324,10 +326,14 @@ export default function DashboardPage() {
     const start = new Date(today + 'T00:00:00').toISOString();
     const end   = new Date(today + 'T23:59:59').toISOString();
 
-    const [ordersRes, itemsRes] = await Promise.all([
-      supabase.from('orders').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }).limit(200),
-      supabase.from('items').select('name, image_url'),
-    ]);
+    let ordersQ = supabase.from('orders').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }).limit(200);
+    let itemsQ  = supabase.from('items').select('name, image_url');
+    if (restaurantId) {
+      ordersQ = ordersQ.eq('restaurant_id', restaurantId) as typeof ordersQ;
+      itemsQ  = itemsQ.eq('restaurant_id',  restaurantId) as typeof itemsQ;
+    }
+
+    const [ordersRes, itemsRes] = await Promise.all([ordersQ, itemsQ]);
 
     const imgMap = new Map<string, string>();
     (itemsRes.data || []).forEach(i => imgMap.set(i.name, i.image_url));
@@ -340,7 +346,7 @@ export default function DashboardPage() {
     setOrders(withItems);
     setLoading(false);
     initialLoadDone.current = true;
-  }, [today]);
+  }, [today, restaurantId]);
 
   useEffect(() => { setLoading(true); fetchOrders(); }, [fetchOrders]);
 

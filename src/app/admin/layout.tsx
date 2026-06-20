@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { NewOrdersProvider } from '@/context/NewOrdersContext';
 import { AdminGuard } from '@/components/AdminGuard';
+import { RestaurantProvider } from '@/context/RestaurantContext';
 
 function makeBellWavUrl(): string | null {
   if (typeof window === 'undefined') return null;
@@ -47,5 +48,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  return <AdminGuard><NewOrdersProvider>{children}</NewOrdersProvider></AdminGuard>;
+  return (
+    <RestaurantProvider>
+      <AdminGuard>
+        <NewOrdersProvider>{children}</NewOrdersProvider>
+      </AdminGuard>
+    </RestaurantProvider>
+  );
 }

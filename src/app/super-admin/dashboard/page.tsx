@@ -9,6 +9,7 @@ type Restaurant = {
   updated_at?: string;
   admin_email?: string | null; admin_password?: string | null;
   subscription_start?: string | null; is_suspended?: boolean | null;
+  restaurant_id?: string | null; slug?: string | null;
 };
 type AuthUser = { id: string; email: string | null; created_at: string };
 type Driver   = { id: string; name: string; phone: string; status: string };
@@ -17,6 +18,14 @@ type Order    = {
   delivery_address: string | null; total_amount: number;
   status: string; created_at: string; driver_name?: string | null;
 };
+
+// توليد slug من اسم المطعم (يتطابق مع منطق الـ API)
+function autoSlug(name: string): string {
+  const noPrefix = name.replace(/^مطعم\s*/u, '').trim();
+  const latin = noPrefix.replace(/[^a-zA-Z0-9\s]/g, '').toLowerCase().trim();
+  if (latin.length >= 2) return latin.replace(/\s+/g, '-');
+  return 'restaurant-' + Date.now();
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COMMISSION = 0.10;
@@ -259,6 +268,19 @@ function RestaurantCard({
             <ToggleSwitch on={!!r.is_suspended} onChange={onToggleSuspended} disabled={toggling} colorOn="#ef4444" />
           </div>
 
+          {/* ── Slug / Menu Link ── */}
+          {r.slug && (
+            <div className="bg-[#0d0d20] rounded-xl px-3 py-2.5 border border-slate-700/40 flex items-center justify-between">
+              <button
+                onClick={() => window.open(`/menu/${r.slug}`, '_blank')}
+                className="text-violet-400 text-xs font-mono hover:underline"
+              >
+                /menu/{r.slug}
+              </button>
+              <p className="text-slate-500 text-[10px]">رابط المنيو</p>
+            </div>
+          )}
+
           {/* ── Preview button ── */}
           <button
             onClick={() => window.open('/api/super-admin/preview', '_blank')}
@@ -282,16 +304,31 @@ export default function SuperAdminDashboard() {
   const [authUsers,   setAuthUsers]   = useState<AuthUser[]>([]);
   const [orders,      setOrders]      = useState<Order[]>([]);
   const [loading,     setLoading]     = useState(true);
-  const [tab,         setTab]         = useState<'overview'|'restaurants'>('overview');
+  const [tab,         setTab]         = useState<'overview'|'restaurants'|'add'>('overview');
   const [toggling,    setToggling]    = useState<string|null>(null);
+
+  // ── نموذج إضافة مطعم ──
+  const [addName,    setAddName]    = useState('');
+  const [addSlug,    setAddSlug]    = useState('');
+  const [addEmail,   setAddEmail]   = useState('');
+  const [addPass,    setAddPass]    = useState('');
+  const [addLoading, setAddLoading] = useState(false);
+  const [addResult,  setAddResult]  = useState<{ok: boolean; msg: string} | null>(null);
 
   const loadAll = useCallback(async () => {
     const today = todayISO();
-    const [{ data: rs }, { data: or }] = await Promise.all([
+    const [{ data: rs }, { data: or }, { data: rests }] = await Promise.all([
       supabase.from('restaurant_settings').select('*').order('updated_at', { ascending: false }),
       supabase.from('orders').select('*').gte('created_at', today+'T00:00:00').order('created_at', { ascending: false }).limit(300),
+      supabase.from('restaurants').select('id, name, slug').order('created_at', { ascending: true }),
     ]);
-    setRestaurants((rs || []) as Restaurant[]);
+    // دمج slug من جدول restaurants مع بيانات restaurant_settings
+    const slugMap = new Map((rests || []).map((r: {id: string; name: string; slug: string}) => [r.id, r.slug]));
+    const merged = (rs || []).map((r: Restaurant) => ({
+      ...r,
+      slug: r.restaurant_id ? (slugMap.get(r.restaurant_id) ?? null) : null,
+    }));
+    setRestaurants(merged as Restaurant[]);
     setOrders((or || []) as Order[]);
     setLoading(false);
   }, []);
@@ -326,6 +363,26 @@ export default function SuperAdminDashboard() {
   const signOut = async () => {
     await fetch('/api/super-admin/auth', { method: 'DELETE' });
     window.location.href = '/super-admin/login';
+  };
+
+  const addRestaurant = async () => {
+    if (!addName.trim() || !addEmail.trim() || !addPass.trim()) return;
+    setAddLoading(true); setAddResult(null);
+    const slug = addSlug.trim() || autoSlug(addName.trim());
+    const res = await fetch('/api/super-admin/restaurants', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: addName.trim(), slug, email: addEmail.trim(), password: addPass.trim() }),
+    }).catch(() => null);
+    const json = await res?.json().catch(() => ({}));
+    if (res?.ok) {
+      setAddResult({ ok: true, msg: `✓ تم إنشاء مطعم "${addName.trim()}" بالـ slug: ${slug}` });
+      setAddName(''); setAddSlug(''); setAddEmail(''); setAddPass('');
+      loadAll();
+    } else {
+      setAddResult({ ok: false, msg: json?.error || 'حدث خطأ' });
+    }
+    setAddLoading(false);
   };
 
   // ── Derived ──────────────────────────────────────────────────────────────
@@ -386,10 +443,11 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="grid grid-cols-2 bg-[#13132b] rounded-2xl p-1 gap-1 border border-white/5">
+        <div className="grid grid-cols-3 bg-[#13132b] rounded-2xl p-1 gap-1 border border-white/5">
           {([
-            { key: 'overview',    label: 'عام',   icon: '📊' },
-            { key: 'restaurants', label: 'مطاعم', icon: '🏪' },
+            { key: 'overview',    label: 'عام',      icon: '📊' },
+            { key: 'restaurants', label: 'مطاعم',    icon: '🏪' },
+            { key: 'add',         label: 'إضافة',    icon: '➕' },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex flex-col items-center py-2.5 rounded-xl text-[11px] font-bold transition-all ${
@@ -446,6 +504,83 @@ export default function SuperAdminDashboard() {
                 onToggleSuspended={() => toggleSuspended(r)}
               />
             ))}
+          </div>
+        )}
+
+        {/* ══ Tab: إضافة مطعم ══ */}
+        {tab === 'add' && (
+          <div className="bg-[#13132b] rounded-2xl border border-white/5 p-5 space-y-4">
+            <p className="text-white font-black text-sm text-right">إضافة مطعم جديد</p>
+
+            {/* اسم المطعم */}
+            <div>
+              <p className="text-slate-500 text-[11px] mb-1.5 text-right">اسم المطعم *</p>
+              <input
+                value={addName}
+                onChange={e => { setAddName(e.target.value); if (!addSlug) setAddSlug(autoSlug(e.target.value)); }}
+                placeholder="مثال: مطعم داري"
+                dir="rtl"
+                className="w-full bg-[#0d0d20] border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 text-sm outline-none focus:border-violet-500/50 placeholder:text-slate-600"
+              />
+            </div>
+
+            {/* الـ Slug */}
+            <div>
+              <p className="text-slate-500 text-[11px] mb-1.5 text-right">الـ Slug (يُولَّد تلقائياً)</p>
+              <div className="flex items-center bg-[#0d0d20] border border-slate-700/50 rounded-xl overflow-hidden focus-within:border-violet-500/50">
+                <span className="px-3 text-slate-600 text-xs border-r border-slate-700/50 py-3 select-none">menu/</span>
+                <input
+                  value={addSlug}
+                  onChange={e => setAddSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                  placeholder="dari"
+                  dir="ltr"
+                  className="flex-1 bg-transparent px-3 py-3 text-violet-300 text-sm outline-none font-mono"
+                />
+              </div>
+            </div>
+
+            {/* الإيميل */}
+            <div>
+              <p className="text-slate-500 text-[11px] mb-1.5 text-right">إيميل صاحب المطعم *</p>
+              <input
+                value={addEmail}
+                onChange={e => setAddEmail(e.target.value)}
+                type="email"
+                placeholder="restaurant@email.com"
+                dir="ltr"
+                className="w-full bg-[#0d0d20] border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 text-sm outline-none focus:border-violet-500/50 placeholder:text-slate-600 font-mono"
+              />
+            </div>
+
+            {/* الباسورد */}
+            <div>
+              <p className="text-slate-500 text-[11px] mb-1.5 text-right">كلمة المرور *</p>
+              <input
+                value={addPass}
+                onChange={e => setAddPass(e.target.value)}
+                type="text"
+                placeholder="كلمة مرور قوية"
+                dir="ltr"
+                className="w-full bg-[#0d0d20] border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 text-sm outline-none focus:border-violet-500/50 placeholder:text-slate-600 font-mono"
+              />
+            </div>
+
+            {/* نتيجة */}
+            {addResult && (
+              <div className={`rounded-xl px-4 py-3 text-sm font-bold text-right ${addResult.ok ? 'bg-green-900/30 border border-green-700/40 text-green-400' : 'bg-red-900/30 border border-red-700/40 text-red-400'}`}>
+                {addResult.msg}
+              </div>
+            )}
+
+            <button
+              onClick={addRestaurant}
+              disabled={addLoading || !addName.trim() || !addEmail.trim() || !addPass.trim()}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black text-sm transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              {addLoading ? (
+                <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> جاري الإنشاء...</>
+              ) : '➕ إنشاء المطعم'}
+            </button>
           </div>
         )}
 

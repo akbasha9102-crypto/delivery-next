@@ -1,6 +1,7 @@
 'use client';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRestaurant } from '@/context/RestaurantContext';
 
 export type DaySchedule  = { enabled: boolean; open: string; close: string };
 export type WeekSchedule = { auto: boolean; days: Record<string, DaySchedule> };
@@ -66,19 +67,22 @@ function hexLighten(hex: string): string {
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [loaded,   setLoaded]   = useState(false);
+  const { restaurantId } = useRestaurant();
 
   const fetchSettings = useCallback(async () => {
-    const { data } = await supabase
-      .from('restaurant_settings')
-      .select('*')
-      .order('updated_at', { ascending: false })
-      .limit(1);
-    if (data?.[0]) {
-      setSettings(data[0] as Settings);
-      writeCache(data[0] as Settings);
+    let q = supabase.from('restaurant_settings').select('*');
+    if (restaurantId) {
+      q = q.eq('restaurant_id', restaurantId) as typeof q;
+    } else {
+      q = q.order('updated_at', { ascending: false }).limit(1) as typeof q;
+    }
+    const { data } = await q.maybeSingle();
+    if (data) {
+      setSettings(data as Settings);
+      writeCache(data as Settings);
     }
     setLoaded(true);
-  }, []);
+  }, [restaurantId]);
 
   useEffect(() => {
     // تحميل من cache فوري لتجنب وميض الإعدادات الافتراضية

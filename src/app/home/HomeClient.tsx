@@ -8,6 +8,7 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Moon, Sun, Plus, Minus, X, ShoppingBag, Trash2, MapPin, MessageCircle } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
+import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/CustomerGuard';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -36,12 +37,20 @@ function getStatus(item: Item): 'available' | 'unavailable' | 'hidden' {
 type Props = {
   initialCategories: Category[];
   initialItems: Item[];
+  restaurantId?: string;
+  restaurantSlug?: string;
 };
 
-export default function HomeClient({ initialCategories, initialItems }: Props) {
+export default function HomeClient({ initialCategories, initialItems, restaurantId, restaurantSlug }: Props) {
   const { dark, toggleDark } = useDarkMode();
   const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total } = useCart();
   const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded, is_closed, opens_at, whatsapp_number, location_url, schedule } = useSettings();
+  const { setRestaurant } = useRestaurant();
+
+  // تسجيل المطعم الحالي في RestaurantContext لكي يصفّي SettingsContext بشكل صحيح
+  useEffect(() => {
+    if (restaurantId) setRestaurant(restaurantId, null);
+  }, [restaurantId, setRestaurant]);
 
   const brandName  = restaurant_name || "المطعم";
   const rawColor   = primary_color || "#000000";
@@ -89,10 +98,13 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
     setDataLoading(true);
     setDataError(null);
     try {
-      const [{ data: cats, error: catsErr }, { data: its, error: itsErr }] = await Promise.all([
-        supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false }),
-        supabase.from('items').select('*').order('name'),
-      ]);
+      let catsQ = supabase.from('categories').select('*').order('sort_order', { ascending: true, nullsFirst: false });
+      let itsQ  = supabase.from('items').select('*').order('name');
+      if (restaurantId) {
+        catsQ = catsQ.eq('restaurant_id', restaurantId) as typeof catsQ;
+        itsQ  = itsQ.eq('restaurant_id',  restaurantId) as typeof itsQ;
+      }
+      const [{ data: cats, error: catsErr }, { data: its, error: itsErr }] = await Promise.all([catsQ, itsQ]);
       if (catsErr) throw catsErr;
       if (itsErr)  throw itsErr;
       setCategories(cats || []);
@@ -150,6 +162,12 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   }, [activeCategory]);
 
   useEffect(() => { setShowCartPanel(cartItems.length > 0); }, [cartItems.length]);
+
+  // حفظ restaurant_id في localStorage لاستخدامه في صفحة السلة
+  useEffect(() => {
+    if (restaurantId) localStorage.setItem('currentRestaurantId', restaurantId);
+    if (restaurantSlug) localStorage.setItem('currentRestaurantSlug', restaurantSlug);
+  }, [restaurantId, restaurantSlug]);
 
   const scrollToCategory = (catId: string) => {
     setActiveCategory(catId);

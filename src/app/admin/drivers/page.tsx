@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { Plus, Trash2, CheckCircle, Circle, Copy, Check, KeyRound, X, RefreshCw, Loader2 } from 'lucide-react';
+import { useRestaurant } from '@/context/RestaurantContext';
 
 type Driver = { id: string; name: string; phone: string; status: string; password?: string | null };
 
@@ -12,6 +13,7 @@ function generatePassword() {
 }
 
 export default function DriversPage() {
+  const { restaurantId } = useRestaurant();
   const [drivers,     setDrivers]     = useState<Driver[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [showAdd,     setShowAdd]     = useState(false);
@@ -26,10 +28,12 @@ export default function DriversPage() {
   const [savingPw,    setSavingPw]    = useState(false);
 
   const fetchDrivers = useCallback(async () => {
-    const { data } = await supabase.from('drivers').select('*').order('created_at', { ascending: false });
+    let q = supabase.from('drivers').select('*').order('created_at', { ascending: false });
+    if (restaurantId) q = q.eq('restaurant_id', restaurantId) as typeof q;
+    const { data } = await q;
     setDrivers(data || []);
     setLoading(false);
-  }, []);
+  }, [restaurantId]);
 
   useEffect(() => {
     fetchDrivers();
@@ -64,6 +68,7 @@ export default function DriversPage() {
       phone: fullPhone,
       password: password.trim(),
       status: 'unavailable',
+      ...(restaurantId ? { restaurant_id: restaurantId } : {}),
     });
     setAdding(false);
     closeAdd();

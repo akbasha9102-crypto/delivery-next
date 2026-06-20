@@ -2,11 +2,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useRestaurant } from '@/context/RestaurantContext';
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [checking,   setChecking]   = useState(true);
-  const [suspended,  setSuspended]  = useState(false);
+  const { setRestaurant } = useRestaurant();
+  const [checking,  setChecking]  = useState(true);
+  const [suspended, setSuspended] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -21,14 +23,35 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.replace('/login'); return; }
 
-      // Check if restaurant is suspended by super admin
-      const { data: rs } = await supabase
-        .from('restaurant_settings')
-        .select('is_suspended')
-        .limit(1)
+      // جلب restaurant_id من جدول restaurants بناءً على owner_id
+      const { data: rest } = await supabase
+        .from('restaurants')
+        .select('id, name')
+        .eq('owner_id', session.user.id)
         .maybeSingle();
 
-      if (rs?.is_suspended) { setSuspended(true); setChecking(false); return; }
+      if (rest) {
+        setRestaurant(rest.id, rest.name);
+
+        // فحص الإيقاف من خلال restaurant_settings المرتبطة بالمطعم
+        const { data: rs } = await supabase
+          .from('restaurant_settings')
+          .select('is_suspended')
+          .eq('restaurant_id', rest.id)
+          .maybeSingle();
+
+        if (rs?.is_suspended) { setSuspended(true); setChecking(false); return; }
+      } else {
+        // fallback: إذا لم يوجد restaurant مرتبط — تحقق من القديم (صف واحد فقط)
+        const { data: rs } = await supabase
+          .from('restaurant_settings')
+          .select('is_suspended, restaurant_id')
+          .limit(1)
+          .maybeSingle();
+
+        if (rs?.is_suspended) { setSuspended(true); setChecking(false); return; }
+        if (rs?.restaurant_id) setRestaurant(rs.restaurant_id, null);
+      }
 
       setChecking(false);
     };
@@ -39,7 +62,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       if (!session) router.replace('/login');
     });
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, [router, setRestaurant]);
 
   if (checking) return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center">

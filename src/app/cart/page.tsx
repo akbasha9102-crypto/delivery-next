@@ -468,12 +468,15 @@ const proceedFromReview = () => {
     setLoading(true);
     saveInfo({ name: name.trim(), nickname: nickname.trim(), phone: phone.trim(), locationDesc: locationDesc.trim(), addressDetails: addressDetails.trim() });
 
+    const restaurantId = localStorage.getItem('currentRestaurantId') || null;
+
     const { data: order, error } = await supabase.from('orders').insert([{
       client_name: nickname.trim() ? `${name.trim()} (${nickname.trim()})` : name.trim(), client_phone: phone.trim(),
       delivery_address: addressDetails.trim() || null,
       client_note: note || null,
       total_amount: grandTotal, status: 'pending',
       ...(clientLat !== null && clientLng !== null ? { client_lat: clientLat, client_lng: clientLng } : {}),
+      ...(restaurantId ? { restaurant_id: restaurantId } : {}),
     }]).select().single();
 
     if (error || !order) { alert('حدث خطأ، حاول مجدداً'); setLoading(false); return; }
