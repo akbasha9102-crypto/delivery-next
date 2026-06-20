@@ -82,12 +82,12 @@ function StatCard({ label, value, sub, icon, gradient }: {
 // ─── Restaurant Card ──────────────────────────────────────────────────────────
 function RestaurantCard({
   r, todayOrders, todayRevenue,
-  onToggleClosed, onToggleSuspended, onSaveCredentials, toggling,
+  onToggleSuspended, onSaveCredentials, toggling,
 }: {
   r: Restaurant;
   todayOrders: number; todayRevenue: number;
-  onToggleClosed: () => void; onToggleSuspended: () => void;
-  onSaveCredentials: (email: string, pass: string) => void;
+  onToggleSuspended: () => void;
+  onSaveCredentials: (email: string, pass: string) => Promise<boolean>;
   toggling: boolean;
 }) {
   const [open,      setOpen]      = useState(false);
@@ -95,11 +95,17 @@ function RestaurantCard({
   const [editEmail, setEditEmail] = useState(r.admin_email ?? '');
   const [editPass,  setEditPass]  = useState(r.admin_password ?? '');
   const [saving,    setSaving]    = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle'|'ok'|'err'>('idle');
+
+  // sync when parent reloads data
+  useState(() => { setEditEmail(r.admin_email ?? ''); setEditPass(r.admin_password ?? ''); });
 
   const handleSave = async () => {
-    setSaving(true);
-    await onSaveCredentials(editEmail, editPass);
+    setSaving(true); setSaveStatus('idle');
+    const ok = await onSaveCredentials(editEmail, editPass);
     setSaving(false);
+    setSaveStatus(ok ? 'ok' : 'err');
+    if (ok) setTimeout(() => setSaveStatus('idle'), 2500);
   };
 
   const handlePreview = () => {
@@ -122,8 +128,8 @@ function RestaurantCard({
         <div className="flex-1 min-w-0 text-right">
           <p className="font-bold text-sm text-white leading-tight truncate">{r.restaurant_name}</p>
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${r.is_suspended ? 'bg-red-500/20 text-red-400' : r.is_closed ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'}`}>
-              {r.is_suspended ? 'موقوف' : r.is_closed ? 'مغلق مؤقتاً' : 'نشط'}
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${r.is_suspended ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+              {r.is_suspended ? 'موقوف' : 'نشط'}
             </span>
             <span className="text-slate-500 text-[10px]">{todayOrders} طلب اليوم</span>
           </div>
@@ -145,30 +151,35 @@ function RestaurantCard({
 
           {/* Credentials */}
           <div className="space-y-2">
-            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">بيانات الدخول</p>
-            <div className="bg-[#0d0d20] rounded-xl p-3 space-y-2.5">
-              <div>
-                <p className="text-slate-500 text-[10px] mb-1">البريد / اليوزر</p>
+            <p className="text-slate-400 text-xs font-bold">بيانات دخول الداشبورد</p>
+            <div className="bg-[#0d0d20] rounded-xl overflow-hidden border border-slate-700/40">
+              {/* Email */}
+              <div className="px-3 py-2.5">
+                <p className="text-slate-500 text-[10px] mb-1.5">البريد / اليوزر</p>
                 <input
                   value={editEmail}
                   onChange={e => setEditEmail(e.target.value)}
                   dir="ltr"
-                  placeholder="admin@restaurant.com"
-                  className="w-full bg-transparent text-slate-200 text-sm outline-none placeholder:text-slate-600"
+                  placeholder="أدخل البريد الإلكتروني أو اسم المستخدم"
+                  className="w-full bg-[#1a1a35] text-slate-100 text-sm outline-none px-3 py-2 rounded-lg placeholder:text-slate-600 border border-slate-600/40 focus:border-violet-500/50 transition-colors"
                 />
               </div>
-              <div className="border-t border-slate-700/40 pt-2.5">
-                <p className="text-slate-500 text-[10px] mb-1">كلمة المرور</p>
-                <div className="flex items-center gap-2">
+              {/* Password */}
+              <div className="px-3 pb-3">
+                <p className="text-slate-500 text-[10px] mb-1.5">كلمة المرور</p>
+                <div className="flex gap-2">
                   <input
                     value={editPass}
                     onChange={e => setEditPass(e.target.value)}
                     type={showPass ? 'text' : 'password'}
                     dir="ltr"
-                    placeholder="••••••••"
-                    className="flex-1 bg-transparent text-slate-200 text-sm outline-none placeholder:text-slate-600"
+                    placeholder="أدخل كلمة المرور"
+                    className="flex-1 bg-[#1a1a35] text-slate-100 text-sm outline-none px-3 py-2 rounded-lg placeholder:text-slate-600 border border-slate-600/40 focus:border-violet-500/50 transition-colors"
                   />
-                  <button onClick={() => setShowPass(v => !v)} className="text-slate-500 hover:text-slate-300 transition-colors">
+                  <button
+                    onClick={() => setShowPass(v => !v)}
+                    className="w-9 h-9 rounded-lg bg-slate-700/50 flex items-center justify-center text-slate-400 hover:text-white transition-colors flex-shrink-0"
+                  >
                     {showPass ? (
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
                     ) : (
@@ -181,46 +192,36 @@ function RestaurantCard({
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full py-2 rounded-xl bg-violet-600/20 text-violet-400 border border-violet-500/30 text-xs font-bold hover:bg-violet-600/30 transition-all active:scale-95 disabled:opacity-50"
+              className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50 ${
+                saveStatus === 'ok'  ? 'bg-green-600/30 text-green-400 border border-green-500/30' :
+                saveStatus === 'err' ? 'bg-red-600/30 text-red-400 border border-red-500/30' :
+                'bg-violet-600/20 text-violet-400 border border-violet-500/30 hover:bg-violet-600/30'
+              }`}
             >
-              {saving ? 'جاري الحفظ...' : 'حفظ بيانات الدخول'}
+              {saving ? 'جاري الحفظ...' : saveStatus === 'ok' ? '✓ تم الحفظ' : saveStatus === 'err' ? '✗ فشل — شغّل الـ Migration أولاً' : 'حفظ بيانات الدخول'}
             </button>
           </div>
 
           {/* Subscription */}
-          <div className="bg-[#0d0d20] rounded-xl p-3">
+          <div className="bg-[#0d0d20] rounded-xl p-3 border border-slate-700/40">
             <p className="text-slate-500 text-[10px] mb-1">تاريخ بدء الاشتراك في داشا</p>
             <p className="text-slate-200 text-sm font-bold">
               {r.subscription_start ? fmtDate(r.subscription_start) : '—'}
             </p>
           </div>
 
-          {/* Toggles */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between bg-[#0d0d20] rounded-xl px-3 py-2.5">
-              <div>
-                <p className="text-slate-200 text-sm font-semibold">إغلاق المطعم مؤقتاً</p>
-                <p className="text-slate-500 text-[10px] mt-0.5">يوقف استقبال الطلبات فقط</p>
-              </div>
-              <ToggleSwitch
-                on={r.is_closed}
-                onChange={onToggleClosed}
-                disabled={toggling || !!r.is_suspended}
-                colorOn="#f59e0b"
-              />
+          {/* Suspend toggle only */}
+          <div className="flex items-center justify-between bg-red-950/30 border border-red-900/30 rounded-xl px-3 py-3">
+            <div>
+              <p className="text-red-300 text-sm font-semibold">تعليق الاشتراك الكامل</p>
+              <p className="text-red-500/70 text-[10px] mt-0.5">يوقف الموقع والداشبورد فوراً</p>
             </div>
-            <div className="flex items-center justify-between bg-red-950/30 border border-red-900/30 rounded-xl px-3 py-2.5">
-              <div>
-                <p className="text-red-300 text-sm font-semibold">تعليق الاشتراك الكامل</p>
-                <p className="text-red-500/70 text-[10px] mt-0.5">يوقف الموقع والداشبورد معاً</p>
-              </div>
-              <ToggleSwitch
-                on={!!r.is_suspended}
-                onChange={onToggleSuspended}
-                disabled={toggling}
-                colorOn="#ef4444"
-              />
-            </div>
+            <ToggleSwitch
+              on={!!r.is_suspended}
+              onChange={onToggleSuspended}
+              disabled={toggling}
+              colorOn="#ef4444"
+            />
           </div>
 
           {/* Preview Dashboard */}
@@ -275,12 +276,6 @@ export default function SuperAdminDashboard() {
   }, [loadAll]);
 
   // ── actions ──
-  const toggleClosed = async (r: Restaurant) => {
-    setToggling(r.id);
-    await supabase.from('restaurant_settings').update({ is_closed: !r.is_closed }).eq('id', r.id);
-    await loadAll(); setToggling(null);
-  };
-
   const toggleSuspended = async (r: Restaurant) => {
     setToggling(r.id);
     const next = !r.is_suspended;
@@ -290,11 +285,12 @@ export default function SuperAdminDashboard() {
     await loadAll(); setToggling(null);
   };
 
-  const saveCredentials = async (r: Restaurant, email: string, pass: string) => {
-    await supabase.from('restaurant_settings')
+  const saveCredentials = async (r: Restaurant, email: string, pass: string): Promise<boolean> => {
+    const { error } = await supabase.from('restaurant_settings')
       .update({ admin_email: email || null, admin_password: pass || null })
       .eq('id', r.id);
     await loadAll();
+    return !error;
   };
 
   const signOut = async () => {
@@ -489,7 +485,6 @@ export default function SuperAdminDashboard() {
                 todayOrders={orders.length}
                 todayRevenue={todayRevenue}
                 toggling={toggling === r.id}
-                onToggleClosed={() => toggleClosed(r)}
                 onToggleSuspended={() => toggleSuspended(r)}
                 onSaveCredentials={(e, p) => saveCredentials(r, e, p)}
               />
