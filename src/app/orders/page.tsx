@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { useSettings } from '@/context/SettingsContext';
+import { CustomerGuard } from '@/components/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
 import {
   ShoppingBag, RefreshCw, X, CheckCircle2, Loader2,
@@ -298,6 +299,7 @@ export default function OrdersPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
+    <CustomerGuard>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
         <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">طلباتي</h1>
@@ -578,5 +580,6 @@ export default function OrdersPage() {
       {/* البار السفلي يختفي عند فتح الـ modal أو الخريطة */}
       {!reorderTarget && !showMap && <ClientBottomNav />}
     </div>
+    </CustomerGuard>
   );
 }

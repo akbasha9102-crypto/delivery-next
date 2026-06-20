@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
+import { CustomerGuard } from '@/components/CustomerGuard';
 import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChevronLeft, Plus, Minus, Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
@@ -509,6 +510,7 @@ const proceedFromReview = () => {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
+    <CustomerGuard>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
         <h1 className="text-xl font-bold text-center" style={{ color: dark ? brandColor : '#111827' }}>سلة المشتريات</h1>
@@ -1266,5 +1268,6 @@ const proceedFromReview = () => {
 
       <ClientBottomNav />
     </div>
+    </CustomerGuard>
   );
 }

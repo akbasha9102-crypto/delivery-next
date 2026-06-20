@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { User, Pencil, Check, Phone } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
+import { CustomerGuard } from '@/components/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
 
 const KEYS = {
@@ -104,6 +105,7 @@ export default function ProfilePage() {
   if (!mounted) return null;
 
   return (
+    <CustomerGuard>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
         <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">معلوماتي</h1>
@@ -146,5 +148,6 @@ export default function ProfilePage() {
 
       <ClientBottomNav />
     </div>
+    </CustomerGuard>
   );
 }

@@ -8,6 +8,7 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Moon, Sun, Plus, Minus, X, ShoppingBag, Trash2, MapPin, MessageCircle } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
+import { CustomerGuard } from '@/components/CustomerGuard';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string };
@@ -177,6 +178,7 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
   const qty = (id: string) => cartItems.find(i => i.id === id)?.quantity || 0;
 
   return (
+    <CustomerGuard>
     <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950 pb-36">
 
       {/* ══ HEADER ══ */}
@@ -576,5 +578,6 @@ export default function HomeClient({ initialCategories, initialItems }: Props) {
       </AnimatePresence>
       <ClientBottomNav />
     </div>
+    </CustomerGuard>
   );
 }

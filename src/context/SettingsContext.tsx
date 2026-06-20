@@ -15,6 +15,7 @@ export type Settings = {
   schedule: WeekSchedule | null;
   whatsapp_number: string | null;
   location_url: string | null;
+  is_suspended?: boolean | null;
 };
 
 const DEFAULTS: Settings = {
@@ -27,6 +28,7 @@ const DEFAULTS: Settings = {
   schedule: null,
   whatsapp_number: null,
   location_url: null,
+  is_suspended: false,
 };
 
 const CACHE_KEY = 'rs_settings_v1';

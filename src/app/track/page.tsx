@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Search, MessageSquare, AlertCircle } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
+import { CustomerGuard } from '@/components/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
 
 const STEPS = [
@@ -507,6 +508,7 @@ export default function TrackPage() {
   const current = order ? stepIndex(order.status) : -1;
 
   return (
+    <CustomerGuard>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
         <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">تتبع طلبك</h1>
@@ -881,5 +883,6 @@ export default function TrackPage() {
 
       <ClientBottomNav />
     </div>
+    </CustomerGuard>
   );
 }
