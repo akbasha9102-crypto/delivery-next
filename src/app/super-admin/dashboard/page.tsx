@@ -405,7 +405,7 @@ export default function SuperAdminDashboard() {
     if (res?.ok) {
       setAddResult({ ok: true, msg: `✓ تم إنشاء مطعم "${addName.trim()}" — اسم المستخدم: ${slug}` });
       setAddName(''); setAddSlug(''); setAddPass('');
-      loadAll();
+      loadAll(); loadAuthUsers();
     } else {
       setAddResult({ ok: false, msg: json?.error || 'حدث خطأ' });
     }
