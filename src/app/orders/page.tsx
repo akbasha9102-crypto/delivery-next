@@ -8,7 +8,7 @@ import { CustomerGuard } from '@/components/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
 import {
   ShoppingBag, RefreshCw, X, CheckCircle2, Loader2,
-  LocateFixed, MapPin,
+  LocateFixed, MapPin, Trash2,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -301,8 +301,18 @@ export default function OrdersPage() {
   return (
     <CustomerGuard>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
+        <button
+          onClick={() => {
+            if (orders.length === 0) return;
+            if (confirm('هل تريد مسح قائمة الطلبات؟')) setOrders([]);
+          }}
+          className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center active:scale-90 transition-all"
+        >
+          <Trash2 size={18} className="text-red-500"/>
+        </button>
         <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">طلباتي</h1>
+        <div className="w-10"/>
       </header>
 
       <div className="px-4 pt-5">
@@ -319,11 +329,16 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {orders.map(order => {
+            {orders.map((order, idx) => {
               const items = itemsMap[order.id] || [];
               const st    = STATUS_LABELS[order.status] || { label: order.status, color: '#9ca3af' };
               return (
-                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                <motion.div
+                  key={order.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.08, type: 'spring', stiffness: 280, damping: 26 }}
+                  className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
                   <div className="px-4 py-3 flex items-center justify-between border-b border-gray-50 dark:border-slate-700">
                     <span className="text-xs font-bold px-2.5 py-1 rounded-full"
                       style={{ backgroundColor: `${st.color}18`, color: st.color }}>
@@ -363,7 +378,7 @@ export default function OrdersPage() {
                       اطلب مجددا
                     </button>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
