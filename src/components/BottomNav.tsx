@@ -1,16 +1,10 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { User, Truck, UtensilsCrossed, ClipboardList, BarChart2, Car, Store, Menu, Archive, ShoppingBag } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
-
-const clientTabs = [
-  { href: '/home',    icon: UtensilsCrossed, label: 'المنيو' },
-  { href: '/track',   icon: Truck,           label: 'تتبع طلبك' },
-  { href: '/orders',  icon: ShoppingBag,     label: 'طلباتي' },
-  { href: '/profile', icon: User,            label: 'معلوماتي' },
-];
 
 const adminTabs = [
   { href: '/admin/dashboard',   icon: ClipboardList,   label: 'الطلبات' },
@@ -22,12 +16,35 @@ const adminTabs = [
 
 export function ClientBottomNav() {
   const path = usePathname();
+  const params = useParams();
   const { is_closed } = useSettings();
+
+  // تذكّر الـ slug الحالي — من الـ params أولاً ثم من localStorage
+  const [savedSlug, setSavedSlug] = useState<string | null>(null);
+  useEffect(() => {
+    const slugFromParams = params?.slug as string | undefined;
+    if (slugFromParams) {
+      localStorage.setItem('currentRestaurantSlug', slugFromParams);
+      setSavedSlug(slugFromParams);
+    } else {
+      setSavedSlug(localStorage.getItem('currentRestaurantSlug'));
+    }
+  }, [params?.slug]);
+
+  const menuSlug = (params?.slug as string | undefined) ?? savedSlug;
+  const menuHref = menuSlug ? `/menu/${menuSlug}` : '/home';
+
+  const clientTabs = [
+    { href: menuHref, icon: UtensilsCrossed, label: 'المنيو' },
+    { href: '/track',   icon: Truck,           label: 'تتبع طلبك' },
+    { href: '/orders',  icon: ShoppingBag,     label: 'طلباتي' },
+    { href: '/profile', icon: User,            label: 'معلوماتي' },
+  ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex z-50">
       {clientTabs.map(({ href, icon: Icon, label }) => {
-        const active = path === href;
+        const active = path === href || (href.startsWith('/menu/') && path.startsWith('/menu/'));
         const disabled = is_closed && href === '/track';
         if (disabled) {
           return (
