@@ -72,6 +72,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [loaded,   setLoaded]   = useState(false);
   const { restaurantId } = useRestaurant();
 
+  // للاستخدام اليدوي عبر refreshSettings فقط
   const fetchSettings = useCallback(async () => {
     let q = supabase.from('restaurant_settings').select('*');
     if (restaurantId) {
@@ -88,11 +89,28 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [restaurantId]);
 
   useEffect(() => {
-    // cache مرتبط بهذا المطعم تحديداً
+    let cancelled = false;
+
     const cached = readCache(restaurantId);
     if (cached) { setSettings(cached); setLoaded(true); }
 
-    fetchSettings();
+    const run = async () => {
+      let q = supabase.from('restaurant_settings').select('*');
+      if (restaurantId) {
+        q = q.eq('restaurant_id', restaurantId).limit(1) as typeof q;
+      } else {
+        q = q.order('updated_at', { ascending: false }).limit(1) as typeof q;
+      }
+      const { data } = await q.maybeSingle();
+      if (cancelled) return;
+      if (data) {
+        setSettings(data as Settings);
+        writeCache(restaurantId, data as Settings);
+      }
+      setLoaded(true);
+    };
+
+    run();
 
     const channel = supabase
       .channel(`settings-live-${restaurantId ?? 'default'}`)
@@ -100,7 +118,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'restaurant_settings' },
         ({ new: row }) => {
-          // تجاهل أحداث مطاعم أخرى
           if (restaurantId && (row as { restaurant_id?: string }).restaurant_id !== restaurantId) return;
           setSettings(row as Settings);
           writeCache(restaurantId, row as Settings);
@@ -117,8 +134,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchSettings, restaurantId]);
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [restaurantId]);
 
   useEffect(() => {
     const root = document.documentElement;
