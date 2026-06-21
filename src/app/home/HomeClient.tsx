@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, Plus, Minus, X, ShoppingBag, Trash2, MapPin, MessageCircle } from 'lucide-react';
+import { Moon, Sun, Plus, Minus, ShoppingBag, Trash2, MapPin, MessageCircle, ChevronDown } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/CustomerGuard';
@@ -561,7 +561,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                       <button
                         onClick={() => setSelectedItem(null)}
                         className="absolute top-4 left-4 w-10 h-10 bg-white/20 backdrop-blur-xl rounded-xl flex items-center justify-center text-white">
-                        <X size={20} />
+                        <ChevronDown size={22} strokeWidth={2.5} />
                       </button>
                    </div>
                    <div className="p-6 sm:p-10 relative pb-24 sm:pb-28">
