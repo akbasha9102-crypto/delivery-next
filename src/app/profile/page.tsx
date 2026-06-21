@@ -115,27 +115,30 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
+    const applySession = (s: typeof session) => {
+      if (!s?.user) return;
+      const meta = s.user.user_metadata as Record<string, string | undefined>;
+      const savedName  = meta?.delivery_name  || meta?.full_name;
+      const savedPhone = meta?.delivery_phone;
+      if (savedName && !localStorage.getItem(KEYS.name)) {
+        setName(savedName);
+        localStorage.setItem(KEYS.name, savedName);
+      }
+      if (savedPhone && !localStorage.getItem(KEYS.phone)) {
+        setPhone(savedPhone);
+        localStorage.setItem(KEYS.phone, savedPhone);
+      }
+    };
+
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
-      if (s?.user) {
-        const googleName = s.user.user_metadata?.full_name as string | undefined;
-        if (googleName && !localStorage.getItem(KEYS.name)) {
-          setName(googleName);
-          localStorage.setItem(KEYS.name, googleName);
-        }
-      }
+      applySession(s);
       setAuthLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      if (s?.user) {
-        const googleName = s.user.user_metadata?.full_name as string | undefined;
-        if (googleName && !localStorage.getItem(KEYS.name)) {
-          setName(googleName);
-          localStorage.setItem(KEYS.name, googleName);
-        }
-      }
+      applySession(s);
     });
 
     return () => subscription.unsubscribe();

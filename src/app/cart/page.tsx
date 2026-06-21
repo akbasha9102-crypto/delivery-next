@@ -100,9 +100,10 @@ export default function CartPage() {
   const grandTotal = total + extrasTotal;
 
   // Google auth state
-  const [session,       setSession]       = useState<Session | null>(null);
-  const [authLoading,   setAuthLoading]   = useState(true);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [session,            setSession]            = useState<Session | null>(null);
+  const [authLoading,        setAuthLoading]        = useState(true);
+  const [googleLoading,      setGoogleLoading]      = useState(false);
+  const [showPostOrderModal, setShowPostOrderModal] = useState(false);
 
   // UI state
   const [showOrderReview,  setShowOrderReview]  = useState(false);
@@ -360,29 +361,33 @@ export default function CartPage() {
 
   // ── Google auth ───────────────────────────────────────────────────────────
 
+  const applySessionData = (s: Session | null) => {
+    if (!s?.user) return;
+    const meta = s.user.user_metadata as Record<string, string | undefined>;
+    const savedName  = meta?.delivery_name  || meta?.full_name;
+    const savedPhone = meta?.delivery_phone;
+    if (savedName && !localStorage.getItem(KEYS.name)) {
+      setName(savedName);
+      localStorage.setItem(KEYS.name, savedName);
+    }
+    if (savedPhone && !localStorage.getItem(KEYS.phone)) {
+      setPhone(savedPhone);
+      localStorage.setItem(KEYS.phone, savedPhone);
+    }
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
-      if (s?.user) {
-        const googleName = s.user.user_metadata?.full_name as string | undefined;
-        if (googleName && !localStorage.getItem(KEYS.name)) {
-          setName(googleName);
-          localStorage.setItem(KEYS.name, googleName);
-        }
-      }
+      applySessionData(s);
       setAuthLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      if (s?.user) {
-        const googleName = s.user.user_metadata?.full_name as string | undefined;
-        if (googleName && !localStorage.getItem(KEYS.name)) {
-          setName(googleName);
-          localStorage.setItem(KEYS.name, googleName);
-        }
-      }
+      applySessionData(s);
     });
     return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const signInWithGoogle = async () => {
@@ -390,6 +395,15 @@ export default function CartPage() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin + '/cart' },
+    });
+  };
+
+  const signInWithGoogleForTracking = async () => {
+    setGoogleLoading(true);
+    localStorage.setItem('pendingProfileSave', '1');
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/track' },
     });
   };
 
@@ -564,7 +578,8 @@ const proceedFromReview = () => {
     localStorage.setItem('lastOrderId', order.id);
     clearCart();
     setLoading(false);
-    router.push('/track');
+    setShowConfirmModal(false);
+    setShowPostOrderModal(true);
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -1349,6 +1364,75 @@ const proceedFromReview = () => {
         formData={{ name, nickname, phone, locationDesc, addressDetails }}
         cartItems={items}
       />
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          مودال ما بعد الطلب — تسجيل دخول أو استمرار كضيف
+      ══════════════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+      {showPostOrderModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[90] flex items-center justify-center px-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)' }}
+        >
+          <motion.div
+            initial={{ scale: 0.82, opacity: 0, y: 30 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.82, opacity: 0, y: 30 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+            className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl relative"
+          >
+            {/* زر الإغلاق */}
+            <button
+              onClick={() => router.push('/track')}
+              className="absolute top-4 left-4 w-9 h-9 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-400 active:scale-90 transition-all z-10"
+            >
+              <X size={17}/>
+            </button>
+
+            {/* المحتوى */}
+            <div className="px-6 pt-8 pb-7 text-center">
+              {/* أيقونة */}
+              <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                   style={{ background: 'linear-gradient(135deg,#22c55e18,#22c55e08)', border: '2px solid #22c55e30' }}>
+                <span className="text-3xl">✅</span>
+              </div>
+
+              <h2 className="font-black text-gray-900 dark:text-white text-xl mb-1">
+                تم إرسال طلبك!
+              </h2>
+              <p className="font-bold text-gray-900 dark:text-slate-100 text-base mb-1">
+                عزيزي {name.split(' ')[0] || 'زبوننا الكريم'} 👋
+              </p>
+              <p className="text-gray-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
+                حتى تتمكن من متابعة طلبك من أي جهاز،<br/>
+                سجّل دخولك بحساب جوجل وستُحفظ معلوماتك تلقائياً.
+              </p>
+
+              {/* زر جوجل */}
+              <button
+                onClick={signInWithGoogleForTracking}
+                disabled={googleLoading}
+                className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl font-black text-sm border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm active:scale-95 transition-all disabled:opacity-60 mb-3"
+              >
+                <GoogleIcon/>
+                {googleLoading ? 'جارٍ التحويل...' : 'تسجيل الدخول بجوجل'}
+              </button>
+
+              {/* استمرار كضيف */}
+              <button
+                onClick={() => router.push('/track')}
+                className="w-full py-3 rounded-2xl font-bold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all border border-gray-100 dark:border-slate-800"
+              >
+                استمرار كضيف
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       <ClientBottomNav />
     </div>

@@ -244,6 +244,22 @@ export default function TrackPage() {
     return { secs, pct, label: `${m}:${s}`, urgent: secs <= 60 };
   }, [order?.created_at, order?.status, tick]);
 
+  // حفظ معلومات التوصيل في حساب جوجل بعد العودة من OAuth
+  useEffect(() => {
+    if (localStorage.getItem('pendingProfileSave') !== '1') return;
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      const deliveryName  = localStorage.getItem('deliveryName')  || '';
+      const deliveryPhone = localStorage.getItem('deliveryPhone') || '';
+      if (deliveryName || deliveryPhone) {
+        await supabase.auth.updateUser({
+          data: { delivery_name: deliveryName, delivery_phone: deliveryPhone },
+        });
+      }
+      localStorage.removeItem('pendingProfileSave');
+    });
+  }, []);
+
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackStep, setFeedbackStep] = useState<'choose' | 'write'>('choose');
   const [feedbackType, setFeedbackType] = useState<'feedback' | 'complaint'>('feedback');
