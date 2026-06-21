@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Search, MessageSquare, AlertCircle } from 'lucide-react';
+import { Search, MessageSquare, AlertCircle, X } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { CustomerGuard } from '@/components/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -811,15 +811,14 @@ export default function TrackPage() {
         )}
       </div>
 
-      {/* زر إعادة البحث — دائماً موجود إلا وقت التحميل */}
-      {!loading && (
+      {/* زر X — يظهر فقط عند عرض طلب نشط */}
+      {!loading && order && (
         <div className="flex justify-center pb-28 pt-2">
           <button
             onClick={() => { setOrder(null); setNotFound(true); setInputPhone(''); }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-gray-400 dark:text-slate-500 text-sm font-medium active:scale-95 transition-all border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-gray-400 dark:text-slate-500 active:scale-95 transition-all border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800"
           >
-            <span className="text-base leading-none">✕</span>
-            <span>تتبع برقم آخر</span>
+            <X size={18}/>
           </button>
         </div>
       )}
