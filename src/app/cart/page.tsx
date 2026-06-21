@@ -654,13 +654,12 @@ const proceedFromReview = () => {
 
             {/* زر الخريطة */}
             {locationConfirmed ? (
-              <div className="rounded-xl px-4 py-3 flex items-center justify-between mt-1"
-                style={{ backgroundColor: `${brandColor}12`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}40` }}>
+              <div className="rounded-xl px-4 py-3 flex items-center justify-between mt-1 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700">
                 <button type="button" onClick={() => { setLocationConfirmed(false); openMap(); }}
                   className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
                   <RefreshCw size={12} /> تغيير
                 </button>
-                <span className="font-semibold text-sm flex items-center gap-1.5" style={{ color: brandColor }}>
+                <span className="font-semibold text-sm flex items-center gap-1.5 text-green-600 dark:text-green-400">
                   <CheckCircle2 size={16} /> تم تحديد موقعك
                 </span>
               </div>
@@ -1415,7 +1414,8 @@ const proceedFromReview = () => {
               <button
                 onClick={signInWithGoogleForTracking}
                 disabled={googleLoading}
-                className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl font-black text-sm border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm active:scale-95 transition-all disabled:opacity-60 mb-3"
+                className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all disabled:opacity-60 mb-3"
+                style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#ffffff', boxShadow: '0 6px 20px #ef444450' }}
               >
                 <GoogleIcon/>
                 {googleLoading ? 'جارٍ التحويل...' : 'تسجيل الدخول بجوجل'}
