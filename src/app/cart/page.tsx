@@ -654,13 +654,13 @@ const proceedFromReview = () => {
 
             {/* زر الخريطة */}
             {locationConfirmed ? (
-              <div className="rounded-xl px-4 py-3 flex items-center justify-between mt-1 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700">
+              <div className="rounded-xl px-4 py-3 flex items-center justify-between mt-1 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                 <button type="button" onClick={() => { setLocationConfirmed(false); openMap(); }}
                   className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
                   <RefreshCw size={12} /> تغيير
                 </button>
-                <span className="font-semibold text-sm flex items-center gap-1.5 text-green-600 dark:text-green-400">
-                  <CheckCircle2 size={16} /> تم تحديد موقعك
+                <span className="flex items-center gap-1.5 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+                  <CheckCircle2 size={14} /> تم تحديد موقعك
                 </span>
               </div>
             ) : (
