@@ -550,14 +550,20 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 const modalTextColor = getTextColor(modalColor);
                 return (
                 <div className="flex flex-col">
-                   <div className="relative h-64 sm:h-72 w-full">
-                      <Image
-                        src={selectedItem.image_url || 'https://placehold.co/600x400/f5f5f5/ccc?text='}
-                        alt={selectedItem.name}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
+                   <div className="relative h-64 sm:h-72 w-full overflow-hidden">
+                      <motion.div
+                        animate={{ scale: 1 + Math.min(qty(selectedItem.id), 5) * 0.05 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                        className="absolute inset-0"
+                      >
+                        <Image
+                          src={selectedItem.image_url || 'https://placehold.co/600x400/f5f5f5/ccc?text='}
+                          alt={selectedItem.name}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </motion.div>
                       <button
                         onClick={() => setSelectedItem(null)}
                         className="absolute top-4 left-4 w-10 h-10 bg-white/20 backdrop-blur-xl rounded-xl flex items-center justify-center text-white">
