@@ -149,10 +149,11 @@ export default function ProfilePage() {
 
   const signInWithGoogle = async () => {
     setGoogleLoading(true);
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/profile' },
-    });
+    const slug = localStorage.getItem('currentRestaurantSlug');
+    const redirectTo = slug
+      ? `${window.location.origin}/menu/${slug}`
+      : `${window.location.origin}/profile`;
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
   };
 
   const signOut = async () => {

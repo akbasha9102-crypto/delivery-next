@@ -392,19 +392,21 @@ export default function CartPage() {
 
   const signInWithGoogle = async () => {
     setGoogleLoading(true);
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/cart' },
-    });
+    const slug = localStorage.getItem('currentRestaurantSlug');
+    const redirectTo = slug
+      ? `${window.location.origin}/menu/${slug}`
+      : `${window.location.origin}/cart`;
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
   };
 
   const signInWithGoogleForTracking = async () => {
     setGoogleLoading(true);
     localStorage.setItem('pendingProfileSave', '1');
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/track' },
-    });
+    const slug = localStorage.getItem('currentRestaurantSlug');
+    const redirectTo = slug
+      ? `${window.location.origin}/menu/${slug}`
+      : `${window.location.origin}/track`;
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
   };
 
   const signOutGoogle = async () => {
