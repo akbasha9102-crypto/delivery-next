@@ -659,8 +659,8 @@ const proceedFromReview = () => {
                   className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
                   <RefreshCw size={12} /> تغيير
                 </button>
-                <span className="flex items-center gap-1.5 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
-                  <CheckCircle2 size={14} /> تم تحديد موقعك
+                <span className="flex items-center gap-2 bg-green-500 text-white text-sm font-bold px-4 py-2.5 rounded-xl">
+                  <CheckCircle2 size={17} /> تم تحديد موقعك
                 </span>
               </div>
             ) : (
