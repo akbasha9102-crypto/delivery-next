@@ -564,26 +564,69 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                         <X size={20} />
                       </button>
                    </div>
-                   <div className="p-6 sm:p-10">
+                   <div className="p-6 sm:p-10 relative pb-24 sm:pb-28">
                       <div className="flex justify-between items-center flex-row-reverse mb-4 sm:mb-6">
                         <h3 className="text-xl sm:text-3xl font-black text-right">{selectedItem.name}</h3>
                         <div className="text-left">
                           <p className="text-xl sm:text-2xl font-black">{selectedItem.price.toLocaleString()} <span className="text-[10px] opacity-40">د.ع</span></p>
                         </div>
                       </div>
-                      <p className="text-gray-500 dark:text-slate-400 text-right leading-relaxed mb-8 sm:mb-10 text-sm sm:text-lg">
+                      <p className="text-gray-500 dark:text-slate-400 text-right leading-relaxed text-sm sm:text-lg">
                         {selectedItem.description || 'لا يوجد وصف متاح لهذا الطلب حالياً.'}
                       </p>
 
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => { handleAdd(selectedItem); setSelectedItem(null); }}
-                        className="w-full py-4 sm:py-6 rounded-[1.5rem] sm:rounded-[2rem] font-black text-base sm:text-lg shadow-2xl flex items-center justify-center gap-3"
-                        style={{ backgroundColor: modalColor, color: modalTextColor }}
-                      >
-                        <Plus size={20} />
-                        إضافة إلى السلة
-                      </motion.button>
+                      {!is_closed && getStatus(selectedItem) === 'available' && (
+                        <div className="absolute bottom-5 right-5">
+                          <AnimatePresence mode="wait">
+                            {qty(selectedItem.id) > 0 ? (
+                              <motion.div
+                                key="modal-counter"
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                className="flex items-center gap-2 p-1 rounded-full shadow-xl bg-red-600"
+                              >
+                                <motion.button
+                                  whileTap={{ scale: 0.8 }}
+                                  onClick={(e) => { e.stopPropagation(); addItem({ id: selectedItem.id, name: selectedItem.name, price: selectedItem.price, image_url: selectedItem.image_url, extras_json: selectedItem.extras_json }); }}
+                                  className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center"
+                                >
+                                  <Plus size={16} strokeWidth={3}/>
+                                </motion.button>
+                                <motion.span
+                                  key={qty(selectedItem.id)}
+                                  initial={{ scale: 1.5, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  className="font-black text-sm w-6 text-center text-white"
+                                >
+                                  {qty(selectedItem.id)}
+                                </motion.span>
+                                <motion.button
+                                  whileTap={{ scale: 0.8 }}
+                                  onClick={(e) => { e.stopPropagation(); decrementItem(selectedItem.id); }}
+                                  className="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center"
+                                >
+                                  <Minus size={16} strokeWidth={3}/>
+                                </motion.button>
+                              </motion.div>
+                            ) : (
+                              <motion.button
+                                key="modal-add-btn"
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={(e) => { e.stopPropagation(); handleAdd(selectedItem); }}
+                                className="flex items-center gap-2 px-6 py-3 rounded-full font-black text-sm shadow-2xl bg-red-600 text-white"
+                              >
+                                <Plus size={18} strokeWidth={3}/>
+                                إضافة للسلة
+                              </motion.button>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )}
                    </div>
                 </div>
                 );
