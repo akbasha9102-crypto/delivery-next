@@ -21,9 +21,9 @@ export type Settings = {
 
 const DEFAULTS: Settings = {
   id: '',
-  restaurant_name: 'مطعم داري - Dari Restaurant',
+  restaurant_name: '',
   primary_color: '#000000',
-  logo_url: 'https://i.imgur.com/Jh7bzNN.jpeg',
+  logo_url: null,
   is_closed: false,
   opens_at: null,
   schedule: null,
@@ -74,13 +74,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   // للاستخدام اليدوي عبر refreshSettings فقط
   const fetchSettings = useCallback(async () => {
-    let q = supabase.from('restaurant_settings').select('*');
-    if (restaurantId) {
-      q = q.eq('restaurant_id', restaurantId).limit(1) as typeof q;
-    } else {
-      q = q.order('updated_at', { ascending: false }).limit(1) as typeof q;
-    }
-    const { data } = await q.maybeSingle();
+    if (!restaurantId) return;
+    const { data } = await supabase
+      .from('restaurant_settings')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .limit(1)
+      .maybeSingle();
     if (data) {
       setSettings(data as Settings);
       writeCache(restaurantId, data as Settings);
@@ -91,16 +91,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    const cached = readCache(restaurantId);
-    if (cached) { setSettings(cached); setLoaded(true); }
+    // فقط نقرأ الـ cache إذا عندنا restaurantId محدد — نتجنب تحميل بيانات مطعم آخر
+    if (restaurantId) {
+      const cached = readCache(restaurantId);
+      if (cached) { setSettings(cached); setLoaded(true); }
+    }
 
     const run = async () => {
-      let q = supabase.from('restaurant_settings').select('*');
-      if (restaurantId) {
-        q = q.eq('restaurant_id', restaurantId).limit(1) as typeof q;
-      } else {
-        q = q.order('updated_at', { ascending: false }).limit(1) as typeof q;
+      if (!restaurantId) {
+        // بدون restaurantId لا نجلب شيء — ننتظر حتى يُعيَّن
+        setLoaded(true);
+        return;
       }
+      let q = supabase.from('restaurant_settings').select('*');
+      q = q.eq('restaurant_id', restaurantId).limit(1) as typeof q;
       const { data } = await q.maybeSingle();
       if (cancelled) return;
       if (data) {
