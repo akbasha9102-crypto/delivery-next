@@ -420,7 +420,7 @@ export default function OrdersPage() {
                       </span>
                       <button
                         onClick={() => setDetailOrder(order)}
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white active:scale-90 transition-all bg-gray-400 dark:bg-slate-500">
+                        className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white active:scale-90 transition-all bg-gray-400 dark:bg-slate-500">
                         !
                       </button>
                     </div>
