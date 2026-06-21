@@ -22,6 +22,7 @@ function EditableRow({
   color,
   pencilColor,
   onSave,
+  maxLength,
 }: {
   label: string;
   value: string;
@@ -30,6 +31,7 @@ function EditableRow({
   color: string;
   pencilColor: string;
   onSave: (v: string) => void;
+  maxLength?: number;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -56,6 +58,7 @@ function EditableRow({
             onChange={e => setDraft(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && commit()}
             dir="rtl"
+            maxLength={maxLength}
             className="flex-1 bg-transparent border-b-2 text-right text-gray-900 dark:text-slate-100 outline-none text-sm py-0.5"
             style={{ borderColor: color }}
           />
@@ -200,7 +203,7 @@ export default function ProfilePage() {
           </div>
           <div className="px-5 pb-2">
             <EditableRow label="الاسم"   value={name}  icon={<User  size={14}/>} color={brandColor} pencilColor={pencilColor} onSave={saveName}  />
-            <EditableRow label="الهاتف"  value={phone} icon={<Phone size={14}/>} color={brandColor} pencilColor={pencilColor} onSave={savePhone} type="tel" />
+            <EditableRow label="الهاتف"  value={phone} icon={<Phone size={14}/>} color={brandColor} pencilColor={pencilColor} onSave={savePhone} type="tel" maxLength={11} />
             {googleEmail && (
               <div className="flex justify-between items-center py-3.5">
                 <span className="text-gray-500 dark:text-slate-400 text-sm font-medium">{googleEmail}</span>
