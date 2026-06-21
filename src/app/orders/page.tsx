@@ -107,6 +107,13 @@ export default function OrdersPage() {
   useEffect(() => { latRef.current = clientLat; }, [clientLat]);
   useEffect(() => { lngRef.current = clientLng; }, [clientLng]);
 
+  // ── تجميد الصفحة عند فتح أي نافذة ─────────────────────────────────────
+  useEffect(() => {
+    const anyOpen = !!reorderTarget || showMap || !!detailOrder;
+    document.body.style.overflow = anyOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [reorderTarget, showMap, detailOrder]);
+
   // ── Fetch orders ─────────────────────────────────────────────────────────
   useEffect(() => {
     const saved = localStorage.getItem('deliveryPhone') || '';
@@ -413,8 +420,7 @@ export default function OrdersPage() {
                       </span>
                       <button
                         onClick={() => setDetailOrder(order)}
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white active:scale-90 transition-all"
-                        style={{ backgroundColor: st.color }}>
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white active:scale-90 transition-all bg-gray-400 dark:bg-slate-500">
                         !
                       </button>
                     </div>
@@ -766,7 +772,7 @@ export default function OrdersPage() {
       </AnimatePresence>
 
       {/* البار السفلي يختفي عند فتح الـ modal أو الخريطة */}
-      {!reorderTarget && !showMap && <ClientBottomNav />}
+      {!reorderTarget && !showMap && !detailOrder && <ClientBottomNav />}
     </div>
     </CustomerGuard>
   );
