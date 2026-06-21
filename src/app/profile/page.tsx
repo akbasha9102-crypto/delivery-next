@@ -173,6 +173,10 @@ export default function ProfilePage() {
             ? 'رقم الهاتف أو كلمة المرور غير صحيحة'
             : error.message
         );
+      } else {
+        // الرقم مضمون من الإيميل نفسه → حفظه دائماً بعد الدخول
+        localStorage.setItem(KEYS.phone, trimPhone);
+        setPhone(trimPhone);
       }
     }
     setPhoneAuthLoading(false);

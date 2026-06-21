@@ -122,11 +122,12 @@ export default function OrdersPage() {
       // إذا الجهاز جديد وما فيه رقم → اجلبه من الحساب المسجّل
       if (!ph) {
         const { data: { session } } = await supabase.auth.getSession();
-        const meta = session?.user?.user_metadata as Record<string, string | undefined> | undefined;
-        if (meta?.delivery_phone) {
-          ph = meta.delivery_phone;
+        if (session?.user?.email?.endsWith('@c.delivery')) {
+          // الرقم محفوظ مباشرة في الإيميل — مضمون
+          ph = session.user.email.replace('@c.delivery', '');
           localStorage.setItem('deliveryPhone', ph);
-          if (meta.delivery_name && !localStorage.getItem('deliveryName'))
+          const meta = session.user.user_metadata as Record<string, string | undefined> | undefined;
+          if (meta?.delivery_name && !localStorage.getItem('deliveryName'))
             localStorage.setItem('deliveryName', meta.delivery_name);
         }
       }
