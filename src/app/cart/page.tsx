@@ -559,6 +559,7 @@ const proceedFromReview = () => {
       delivery_address: addressDetails.trim() || null,
       client_note: note || null,
       total_amount: grandTotal, status: 'pending',
+      ...(session?.user?.id ? { user_id: session.user.id } : {}),
       ...(clientLat !== null && clientLng !== null ? { client_lat: clientLat, client_lng: clientLng } : {}),
       ...(restaurantId ? { restaurant_id: restaurantId } : {}),
     }]).select().single();
