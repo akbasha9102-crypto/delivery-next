@@ -8,7 +8,7 @@ import { CustomerGuard } from '@/components/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
 import {
   ShoppingBag, RefreshCw, X, CheckCircle2, Loader2,
-  LocateFixed, MapPin, Trash2,
+  LocateFixed, MapPin, Trash2, ArrowUpDown,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -65,6 +65,10 @@ export default function OrdersPage() {
   const [reorderTarget, setReorderTarget] = useState<Order | null>(null);
   const [reorderItems,  setReorderItems]  = useState<OrderItem[]>([]);
   const [submitting,    setSubmitting]    = useState(false);
+
+  // ── Sort state ───────────────────────────────────────────────────────────
+  const [sortBy,       setSortBy]       = useState<'newest' | 'oldest' | 'most'>('newest');
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   // ── Map state ────────────────────────────────────────────────────────────
   const [showMap,    setShowMap]    = useState(false);
@@ -297,22 +301,69 @@ export default function OrdersPage() {
     router.push('/track');
   };
 
+  // ── Sorted orders ────────────────────────────────────────────────────────
+  const sortedOrders = [...orders].sort((a, b) => {
+    if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    if (sortBy === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    return b.total_amount - a.total_amount;
+  });
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <CustomerGuard>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <button
-          onClick={() => {
-            if (orders.length === 0) return;
-            if (confirm('هل تريد مسح قائمة الطلبات؟')) setOrders([]);
-          }}
-          className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center active:scale-90 transition-all"
-        >
-          <Trash2 size={18} className="text-red-500"/>
-        </button>
-        <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">طلباتي</h1>
         <div className="w-10"/>
+        <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">طلباتي</h1>
+        <div className="flex items-center gap-2 relative">
+          {/* زر الترتيب */}
+          <button
+            onClick={() => setShowSortMenu(v => !v)}
+            className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-slate-700 flex items-center justify-center active:scale-90 transition-all border border-gray-100 dark:border-slate-600"
+          >
+            <ArrowUpDown size={17} className="text-gray-500 dark:text-slate-300"/>
+          </button>
+          {/* زر الزبالة */}
+          <button
+            onClick={() => {
+              if (orders.length === 0) return;
+              if (confirm('هل تريد مسح قائمة الطلبات؟')) setOrders([]);
+            }}
+            className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center active:scale-90 transition-all"
+          >
+            <Trash2 size={18} className="text-red-500"/>
+          </button>
+          {/* قائمة الترتيب */}
+          <AnimatePresence>
+          {showSortMenu && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: -8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -8 }}
+              transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+              className="absolute top-12 right-0 z-50 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 overflow-hidden min-w-[160px]"
+            >
+              {([
+                { key: 'newest', label: 'الأحدث أولاً' },
+                { key: 'oldest', label: 'الأقدم أولاً' },
+                { key: 'most',   label: 'الأعلى قيمةً' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => { setSortBy(opt.key); setShowSortMenu(false); }}
+                  className="w-full flex items-center justify-between px-4 py-3 text-sm font-bold text-right transition-colors hover:bg-gray-50 dark:hover:bg-slate-700"
+                  dir="rtl"
+                >
+                  <span className={sortBy === opt.key ? 'text-red-500' : 'text-gray-700 dark:text-slate-200'}>
+                    {opt.label}
+                  </span>
+                  {sortBy === opt.key && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"/>}
+                </button>
+              ))}
+            </motion.div>
+          )}
+          </AnimatePresence>
+        </div>
       </header>
 
       <div className="px-4 pt-5">
@@ -329,7 +380,7 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {orders.map((order, idx) => {
+            {sortedOrders.map((order, idx) => {
               const items = itemsMap[order.id] || [];
               const st    = STATUS_LABELS[order.status] || { label: order.status, color: '#9ca3af' };
               return (
