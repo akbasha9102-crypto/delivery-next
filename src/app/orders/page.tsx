@@ -118,8 +118,13 @@ export default function OrdersPage() {
   useEffect(() => {
     const saved = localStorage.getItem('deliveryPhone') || '';
     setPhone(saved);
-    if (saved) fetchOrders(saved);
-    else setLoading(false);
+    if (sessionStorage.getItem('ordersDismissed') === '1') {
+      setLoading(false);
+    } else if (saved) {
+      fetchOrders(saved);
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const fetchOrders = async (ph: string) => {
@@ -349,7 +354,7 @@ export default function OrdersPage() {
           <button
             onClick={() => {
               if (orders.length === 0) return;
-              if (confirm('هل تريد مسح قائمة الطلبات؟')) setOrders([]);
+              if (confirm('هل تريد مسح قائمة الطلبات؟')) { sessionStorage.setItem('ordersDismissed', '1'); setOrders([]); }
             }}
             className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center active:scale-90 transition-all"
           >
