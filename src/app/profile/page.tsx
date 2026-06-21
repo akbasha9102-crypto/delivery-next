@@ -160,12 +160,20 @@ export default function ProfilePage() {
         setAuthError(
           error.message.includes('already registered')
             ? 'هذا الرقم مسجّل، جرّب تسجيل الدخول'
-            : 'حدث خطأ، حاول مجدداً'
+            : error.message
         );
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password: trimPass });
-      if (error) setAuthError('رقم الهاتف أو كلمة المرور غير صحيحة');
+      if (error) {
+        setAuthError(
+          error.message.includes('not confirmed') || error.message.includes('Email not confirmed')
+            ? 'الحساب غير مفعّل — يجب إيقاف "Confirm email" في إعدادات Supabase'
+            : error.message.includes('Invalid login')
+            ? 'رقم الهاتف أو كلمة المرور غير صحيحة'
+            : error.message
+        );
+      }
     }
     setPhoneAuthLoading(false);
   };

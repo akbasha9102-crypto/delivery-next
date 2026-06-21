@@ -403,7 +403,15 @@ export default function CartPage() {
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password: trimPass });
-      if (error) setAuthError(error.message);
+      if (error) {
+        setAuthError(
+          error.message.includes('not confirmed') || error.message.includes('Email not confirmed')
+            ? 'الحساب غير مفعّل — يجب إيقاف "Confirm email" في إعدادات Supabase'
+            : error.message.includes('Invalid login')
+            ? 'رقم الهاتف أو كلمة المرور غير صحيحة'
+            : error.message
+        );
+      }
     }
     setPhoneAuthLoading(false);
   };
