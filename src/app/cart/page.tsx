@@ -5,11 +5,23 @@ import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { CustomerGuard } from '@/components/CustomerGuard';
-import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChevronLeft, Plus, Minus, Check } from 'lucide-react';
+import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChevronLeft, Plus, Minus, Check, LogOut } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import InAppBrowserBanner, { isInAppBrowser } from '@/components/InAppBrowserBanner';
+import type { Session } from '@supabase/supabase-js';
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.85l6.09-6.09C34.46 3.04 29.5 1 24 1 14.82 1 7.03 6.48 3.44 14.28l7.08 5.5C12.29 13.72 17.7 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.5 24.5c0-1.64-.15-3.22-.42-4.75H24v9h12.7c-.55 2.96-2.21 5.47-4.7 7.16l7.22 5.6C43.43 37.17 46.5 31.29 46.5 24.5z"/>
+      <path fill="#FBBC05" d="M10.52 28.22A14.6 14.6 0 0 1 9.5 24c0-1.47.2-2.9.52-4.22l-7.08-5.5A23.94 23.94 0 0 0 0 24c0 3.88.93 7.55 2.56 10.79l7.96-6.57z"/>
+      <path fill="#34A853" d="M24 47c5.5 0 10.12-1.82 13.49-4.95l-7.22-5.6c-1.88 1.26-4.29 2.01-6.27 2.01-6.3 0-11.71-4.22-13.48-9.78l-7.96 6.57C7.03 41.52 14.82 47 24 47z"/>
+    </svg>
+  );
+}
 
 type Extra = { id: string; name: string; price: number };
 
@@ -86,6 +98,11 @@ export default function CartPage() {
   }, 0);
 
   const grandTotal = total + extrasTotal;
+
+  // Google auth state
+  const [session,       setSession]       = useState<Session | null>(null);
+  const [authLoading,   setAuthLoading]   = useState(true);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // UI state
   const [showOrderReview,  setShowOrderReview]  = useState(false);
@@ -341,6 +358,46 @@ export default function CartPage() {
     };
   }, [showConfirmModal, clientLat, clientLng, brandColor]);
 
+  // ── Google auth ───────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      if (s?.user) {
+        const googleName = s.user.user_metadata?.full_name as string | undefined;
+        if (googleName && !localStorage.getItem(KEYS.name)) {
+          setName(googleName);
+          localStorage.setItem(KEYS.name, googleName);
+        }
+      }
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (s?.user) {
+        const googleName = s.user.user_metadata?.full_name as string | undefined;
+        if (googleName && !localStorage.getItem(KEYS.name)) {
+          setName(googleName);
+          localStorage.setItem(KEYS.name, googleName);
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signInWithGoogle = async () => {
+    setGoogleLoading(true);
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/cart' },
+    });
+  };
+
+  const signOutGoogle = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+  };
+
   // ── Load saved info + restore from external-browser redirect ─────────────
 
   useEffect(() => {
@@ -528,6 +585,30 @@ const proceedFromReview = () => {
         {editing && (
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 space-y-3">
             <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right">معلومات الطلب</h3>
+
+            {/* زر تسجيل الدخول بجوجل */}
+            {!authLoading && (
+              session ? (
+                <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
+                  <button onClick={signOutGoogle} className="flex items-center gap-1.5 text-xs text-red-500 font-semibold active:scale-90 transition-all">
+                    <LogOut size={13}/> خروج
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-green-700 dark:text-green-400 truncate max-w-[140px]">{session.user.email}</span>
+                    <GoogleIcon/>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={signInWithGoogle}
+                  disabled={googleLoading}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-slate-100 font-bold text-sm active:scale-95 transition-all disabled:opacity-60"
+                >
+                  <GoogleIcon/>
+                  {googleLoading ? 'جارٍ التحويل...' : 'تسجيل الدخول بجوجل لملء اسمك تلقائياً'}
+                </button>
+              )
+            )}
 
             {/* الاسم */}
             <input type="text" value={name} onChange={e => setName(e.target.value)}
