@@ -399,15 +399,11 @@ export default function CartPage() {
         options: { data: { delivery_phone: trimPhone, delivery_name: name || '' } },
       });
       if (error) {
-        setAuthError(
-          error.message.includes('already registered')
-            ? 'هذا الرقم مسجّل، جرّب تسجيل الدخول'
-            : 'حدث خطأ، حاول مجدداً'
-        );
+        setAuthError(error.message);
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password: trimPass });
-      if (error) setAuthError('رقم الهاتف أو كلمة المرور غير صحيحة');
+      if (error) setAuthError(error.message);
     }
     setPhoneAuthLoading(false);
   };
