@@ -311,7 +311,12 @@ export default function TrackPage() {
   useEffect(() => {
     const saved = localStorage.getItem('deliveryPhone') || '';
     setInputPhone(saved);
-    fetchOrder(saved);
+    if (sessionStorage.getItem('trackDismissed') === '1') {
+      setNotFound(true);
+      setLoading(false);
+    } else {
+      fetchOrder(saved);
+    }
   }, [fetchOrder]);
 
   useEffect(() => {
@@ -550,13 +555,13 @@ export default function TrackPage() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">لا يوجد طلب حالي</h2>
             <p className="text-gray-500 dark:text-slate-400 mb-6 text-sm">ابحث عن طلبك برقم هاتفك</p>
             <div className="flex gap-2 max-w-sm mx-auto">
-              <button onClick={() => fetchOrder(inputPhone)}
+              <button onClick={() => { sessionStorage.removeItem('trackDismissed'); fetchOrder(inputPhone); }}
                 className="px-4 py-3 rounded-xl font-bold active:scale-95 transition-all"
                 style={{ backgroundColor: brandColor, color: textOnBrand }}>
                 <Search size={18}/>
               </button>
               <input value={inputPhone} onChange={e => setInputPhone(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && fetchOrder(inputPhone)}
+                onKeyDown={e => { if (e.key === 'Enter') { sessionStorage.removeItem('trackDismissed'); fetchOrder(inputPhone); } }}
                 placeholder="ادخل رقم هاتفك" dir="rtl"
                 className="flex-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2"
                 style={{ '--tw-ring-color': brandColor } as any}
@@ -825,7 +830,7 @@ export default function TrackPage() {
       {!loading && order && (
         <div className="flex justify-center pb-28 pt-2">
           <button
-            onClick={() => { setOrder(null); setNotFound(true); setInputPhone(''); }}
+            onClick={() => { sessionStorage.setItem('trackDismissed', '1'); setOrder(null); setNotFound(true); setInputPhone(''); }}
             className="w-11 h-11 rounded-full flex items-center justify-center text-gray-400 dark:text-slate-500 active:scale-95 transition-all border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800"
           >
             <X size={18}/>
