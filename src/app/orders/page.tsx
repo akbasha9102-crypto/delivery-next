@@ -46,6 +46,18 @@ function fmtDate(iso: string) {
   return `${day}/${month} - ${h12}:${m} ${ampm}`;
 }
 
+function fmtDateFull(iso: string) {
+  const d = new Date(iso);
+  const days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const dayName = days[d.getDay()];
+  const h = d.getHours();
+  const m = d.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'م' : 'ص';
+  const h12 = h % 12 || 12;
+  return { day: dayName, date: `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`, time: `${h12}:${m} ${ampm}` };
+}
+
 export default function OrdersPage() {
   const router = useRouter();
   const { primary_color } = useSettings();
@@ -65,6 +77,9 @@ export default function OrdersPage() {
   const [reorderTarget, setReorderTarget] = useState<Order | null>(null);
   const [reorderItems,  setReorderItems]  = useState<OrderItem[]>([]);
   const [submitting,    setSubmitting]    = useState(false);
+
+  // ── Detail modal state ───────────────────────────────────────────────────
+  const [detailOrder, setDetailOrder] = useState<Order | null>(null);
 
   // ── Sort state ───────────────────────────────────────────────────────────
   const [sortBy,       setSortBy]       = useState<'newest' | 'oldest' | 'most'>('newest');
@@ -391,10 +406,18 @@ export default function OrdersPage() {
                   transition={{ delay: idx * 0.08, type: 'spring', stiffness: 280, damping: 26 }}
                   className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
                   <div className="px-4 py-3 flex items-center justify-between border-b border-gray-50 dark:border-slate-700">
-                    <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-                      style={{ backgroundColor: `${st.color}18`, color: st.color }}>
-                      {st.label}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                        style={{ backgroundColor: `${st.color}18`, color: st.color }}>
+                        {st.label}
+                      </span>
+                      <button
+                        onClick={() => setDetailOrder(order)}
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white active:scale-90 transition-all"
+                        style={{ backgroundColor: st.color }}>
+                        !
+                      </button>
+                    </div>
                     <div className="text-right">
                       <p className="font-bold text-gray-900 dark:text-white text-sm">
                         {order.total_amount.toLocaleString()} د.ع
@@ -641,6 +664,105 @@ export default function OrdersPage() {
           </motion.div>
         </motion.div>
       )}
+      </AnimatePresence>
+
+      {/* ══ Detail modal ════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+      {detailOrder && (() => {
+        const items = itemsMap[detailOrder.id] || [];
+        const st    = STATUS_LABELS[detailOrder.status] || { label: detailOrder.status, color: '#9ca3af' };
+        const dt    = fmtDateFull(detailOrder.created_at);
+        return (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+            onClick={() => setDetailOrder(null)}>
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 280, damping: 32 }}
+              className="w-full bg-white dark:bg-slate-900 rounded-t-3xl overflow-hidden"
+              onClick={e => e.stopPropagation()}>
+
+              {/* Pill */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-slate-700"/>
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-slate-800">
+                <button onClick={() => setDetailOrder(null)}
+                  className="w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-800 text-gray-500 active:scale-90 transition-all">
+                  <X size={17}/>
+                </button>
+                <p className="font-black text-gray-900 dark:text-white">تفاصيل الطلب</p>
+                <span className="text-xs font-bold px-3 py-1.5 rounded-full"
+                  style={{ backgroundColor: `${st.color}20`, color: st.color }}>
+                  {st.label}
+                </span>
+              </div>
+
+              {/* Body */}
+              <div className="px-5 py-4 space-y-4 overflow-y-auto" style={{ maxHeight: '72vh' }}>
+
+                {/* التاريخ والوقت */}
+                <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-4" dir="rtl">
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mb-2 font-bold">التاريخ والوقت</p>
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-gray-900 dark:text-white text-base">{dt.time}</span>
+                    <span className="text-gray-500 dark:text-slate-400 text-sm font-medium">{dt.day}، {dt.date}</span>
+                  </div>
+                </div>
+
+                {/* معلومات العميل */}
+                <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-4 space-y-3" dir="rtl">
+                  <p className="text-xs text-gray-400 dark:text-slate-500 font-bold">معلومات الطلب</p>
+                  {[
+                    { label: 'الاسم',    value: detailOrder.client_name },
+                    { label: 'الهاتف',   value: detailOrder.client_phone },
+                    { label: 'العنوان',  value: detailOrder.delivery_address || '—' },
+                  ].map(row => (
+                    <div key={row.label} className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-2.5 first:border-0 first:pt-0">
+                      <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">{row.value}</span>
+                      <span className="text-gray-400 dark:text-slate-500 text-xs">{row.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* الأصناف */}
+                <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl overflow-hidden">
+                  <p className="text-xs text-gray-400 dark:text-slate-500 font-bold px-4 pt-4 pb-2" dir="rtl">الأصناف المطلوبة</p>
+                  <div className="divide-y divide-gray-100 dark:divide-slate-700">
+                    {items.map((item, i) => (
+                      <div key={i} className="px-4 py-3 flex items-center justify-between" dir="rtl">
+                        <span className="font-bold text-sm" style={{ color: st.color }}>
+                          {(item.price * item.quantity).toLocaleString()} د.ع
+                        </span>
+                        <span className="text-gray-900 dark:text-slate-100 text-sm font-medium">
+                          {item.item_name} <span className="text-gray-400 font-normal">×{item.quantity}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900" dir="rtl">
+                    <span className="font-black text-lg" style={{ color: st.color }}>
+                      {detailOrder.total_amount.toLocaleString()} د.ع
+                    </span>
+                    <span className="font-bold text-gray-500 dark:text-slate-400 text-sm">المجموع الكلي</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-5 pb-8 pt-3">
+                <button onClick={() => setDetailOrder(null)}
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 active:scale-95 transition-all">
+                  إغلاق
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        );
+      })()}
       </AnimatePresence>
 
       {/* البار السفلي يختفي عند فتح الـ modal أو الخريطة */}
