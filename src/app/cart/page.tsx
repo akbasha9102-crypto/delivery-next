@@ -12,17 +12,6 @@ import { useDarkMode } from '@/context/ThemeContext';
 import InAppBrowserBanner, { isInAppBrowser } from '@/components/InAppBrowserBanner';
 import type { Session } from '@supabase/supabase-js';
 
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-      <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.85l6.09-6.09C34.46 3.04 29.5 1 24 1 14.82 1 7.03 6.48 3.44 14.28l7.08 5.5C12.29 13.72 17.7 9.5 24 9.5z"/>
-      <path fill="#4285F4" d="M46.5 24.5c0-1.64-.15-3.22-.42-4.75H24v9h12.7c-.55 2.96-2.21 5.47-4.7 7.16l7.22 5.6C43.43 37.17 46.5 31.29 46.5 24.5z"/>
-      <path fill="#FBBC05" d="M10.52 28.22A14.6 14.6 0 0 1 9.5 24c0-1.47.2-2.9.52-4.22l-7.08-5.5A23.94 23.94 0 0 0 0 24c0 3.88.93 7.55 2.56 10.79l7.96-6.57z"/>
-      <path fill="#34A853" d="M24 47c5.5 0 10.12-1.82 13.49-4.95l-7.22-5.6c-1.88 1.26-4.29 2.01-6.27 2.01-6.3 0-11.71-4.22-13.48-9.78l-7.96 6.57C7.03 41.52 14.82 47 24 47z"/>
-    </svg>
-  );
-}
-
 type Extra = { id: string; name: string; price: number };
 
 const KEYS = {
@@ -99,10 +88,13 @@ export default function CartPage() {
 
   const grandTotal = total + extrasTotal;
 
-  // Google auth state
+  // Phone auth state
   const [session,            setSession]            = useState<Session | null>(null);
   const [authLoading,        setAuthLoading]        = useState(true);
-  const [googleLoading,      setGoogleLoading]      = useState(false);
+  const [phoneAuthLoading,   setPhoneAuthLoading]   = useState(false);
+  const [authPhone,          setAuthPhone]          = useState('');
+  const [authPassword,       setAuthPassword]       = useState('');
+  const [authError,          setAuthError]          = useState('');
   const [showPostOrderModal, setShowPostOrderModal] = useState(false);
 
   // UI state
@@ -390,26 +382,37 @@ export default function CartPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const signInWithGoogle = async () => {
-    setGoogleLoading(true);
-    const slug = localStorage.getItem('currentRestaurantSlug');
-    const redirectTo = slug
-      ? `${window.location.origin}/menu/${slug}`
-      : `${window.location.origin}/cart`;
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+  const handleAuth = async (mode: 'signin' | 'signup') => {
+    const trimPhone = authPhone.trim();
+    const trimPass  = authPassword.trim();
+    if (!trimPhone || !trimPass) {
+      setAuthError('يرجى إدخال رقم الهاتف وكلمة المرور');
+      return;
+    }
+    setPhoneAuthLoading(true);
+    setAuthError('');
+    const email = `${trimPhone}@c.delivery`;
+    if (mode === 'signup') {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password: trimPass,
+        options: { data: { delivery_phone: trimPhone, delivery_name: name || '' } },
+      });
+      if (error) {
+        setAuthError(
+          error.message.includes('already registered')
+            ? 'هذا الرقم مسجّل، جرّب تسجيل الدخول'
+            : 'حدث خطأ، حاول مجدداً'
+        );
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: trimPass });
+      if (error) setAuthError('رقم الهاتف أو كلمة المرور غير صحيحة');
+    }
+    setPhoneAuthLoading(false);
   };
 
-  const signInWithGoogleForTracking = async () => {
-    setGoogleLoading(true);
-    localStorage.setItem('pendingProfileSave', '1');
-    const slug = localStorage.getItem('currentRestaurantSlug');
-    const redirectTo = slug
-      ? `${window.location.origin}/menu/${slug}`
-      : `${window.location.origin}/track`;
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
-  };
-
-  const signOutGoogle = async () => {
+  const signOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
   };
@@ -603,28 +606,14 @@ const proceedFromReview = () => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 space-y-3">
             <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right">معلومات الطلب</h3>
 
-            {/* زر تسجيل الدخول بجوجل */}
-            {!authLoading && (
-              session ? (
-                <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
-                  <button onClick={signOutGoogle} className="flex items-center gap-1.5 text-xs text-red-500 font-semibold active:scale-90 transition-all">
-                    <LogOut size={13}/> خروج
-                  </button>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-green-700 dark:text-green-400 truncate max-w-[140px]">{session.user.email}</span>
-                    <GoogleIcon/>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={signInWithGoogle}
-                  disabled={googleLoading}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-slate-100 font-bold text-sm active:scale-95 transition-all disabled:opacity-60"
-                >
-                  <GoogleIcon/>
-                  {googleLoading ? 'جارٍ التحويل...' : 'تسجيل الدخول بجوجل لملء اسمك تلقائياً'}
+            {/* حالة الحساب */}
+            {!authLoading && session && (
+              <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
+                <button onClick={signOut} className="flex items-center gap-1.5 text-xs text-red-500 font-semibold active:scale-90 transition-all">
+                  <LogOut size={13}/> خروج
                 </button>
-              )
+                <span className="text-xs font-bold text-green-700 dark:text-green-400">مسجّل الدخول ✓</span>
+              </div>
             )}
 
             {/* الاسم */}
@@ -1407,29 +1396,67 @@ const proceedFromReview = () => {
               <p className="font-bold text-gray-900 dark:text-slate-100 text-base mb-1">
                 عزيزي {name.split(' ')[0] || 'زبوننا الكريم'} 👋
               </p>
-              <p className="text-gray-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
-                حتى تتمكن من متابعة طلبك من أي جهاز،<br/>
-                سجّل دخولك بحساب جوجل وستُحفظ معلوماتك تلقائياً.
-              </p>
+              {session ? (
+                <>
+                  <p className="text-green-600 dark:text-green-400 font-bold text-sm mb-5">✓ أنت مسجّل الدخول</p>
+                  <button
+                    onClick={() => router.push('/track')}
+                    className="w-full py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all"
+                    style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#ffffff' }}
+                  >
+                    متابعة الطلب
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-500 dark:text-slate-400 text-sm leading-relaxed mb-4">
+                    سجّل دخولك لمتابعة طلبك من أي جهاز وحفظ معلوماتك.
+                  </p>
 
-              {/* زر جوجل */}
-              <button
-                onClick={signInWithGoogleForTracking}
-                disabled={googleLoading}
-                className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all disabled:opacity-60 mb-3"
-                style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#ffffff', boxShadow: '0 6px 20px #ef444450' }}
-              >
-                <GoogleIcon/>
-                {googleLoading ? 'جارٍ التحويل...' : 'تسجيل الدخول بجوجل'}
-              </button>
+                  <div className="space-y-2.5 mb-3 text-right">
+                    <input
+                      value={authPhone}
+                      onChange={e => setAuthPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
+                      placeholder="رقم الهاتف"
+                      type="tel"
+                      dir="rtl"
+                      className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none text-sm"
+                    />
+                    <input
+                      value={authPassword}
+                      onChange={e => setAuthPassword(e.target.value)}
+                      placeholder="كلمة المرور"
+                      type="password"
+                      className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none text-sm"
+                    />
+                    {authError && <p className="text-xs text-red-500">{authError}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleAuth('signin')}
+                        disabled={phoneAuthLoading}
+                        className="flex-1 py-3 rounded-xl font-black text-sm active:scale-95 transition-all disabled:opacity-60"
+                        style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#ffffff' }}
+                      >
+                        {phoneAuthLoading ? '...' : 'دخول'}
+                      </button>
+                      <button
+                        onClick={() => handleAuth('signup')}
+                        disabled={phoneAuthLoading}
+                        className="flex-1 py-3 rounded-xl font-bold text-sm border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 active:scale-95 transition-all disabled:opacity-60"
+                      >
+                        إنشاء حساب
+                      </button>
+                    </div>
+                  </div>
 
-              {/* استمرار كضيف */}
-              <button
-                onClick={() => router.push('/track')}
-                className="w-full py-3 rounded-2xl font-bold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all border border-gray-100 dark:border-slate-800"
-              >
-                استمرار كضيف
-              </button>
+                  <button
+                    onClick={() => router.push('/track')}
+                    className="w-full py-3 rounded-2xl font-bold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all border border-gray-100 dark:border-slate-800"
+                  >
+                    استمرار كضيف
+                  </button>
+                </>
+              )}
             </div>
           </motion.div>
         </motion.div>

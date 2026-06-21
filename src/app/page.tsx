@@ -9,9 +9,9 @@ export default function RootPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        const provider = session.user.app_metadata?.provider;
-        if (provider === 'google') {
-          // زبون سجّل بجوجل → نرجعه للمنيو
+        const email = session.user.email || '';
+        if (email.endsWith('@c.delivery')) {
+          // زبون سجّل بالهاتف → نرجعه للمنيو
           const slug = localStorage.getItem('currentRestaurantSlug');
           if (slug) router.replace(`/menu/${slug}`);
           else router.replace('/home');
