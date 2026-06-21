@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { Search, MessageSquare, AlertCircle, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { CustomerGuard } from '@/components/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -536,7 +537,15 @@ export default function TrackPage() {
             <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: brandColor, borderTopColor: 'transparent' }}/>
           </div>
         ) : notFound ? (
-          <div className="text-center mt-16">
+          <AnimatePresence mode="wait">
+          <motion.div
+            key="search-box"
+            initial={{ opacity: 0, y: 40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+            className="text-center mt-16"
+          >
             <div className="text-6xl mb-4">📦</div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">لا يوجد طلب حالي</h2>
             <p className="text-gray-500 dark:text-slate-400 mb-6 text-sm">ابحث عن طلبك برقم هاتفك</p>
@@ -553,7 +562,8 @@ export default function TrackPage() {
                 style={{ '--tw-ring-color': brandColor } as any}
               />
             </div>
-          </div>
+          </motion.div>
+          </AnimatePresence>
         ) : order?.status === 'rejected' ? (
           <div className="max-w-lg mx-auto mt-10 text-center space-y-4" style={{ animation: 'status-enter 0.5s ease-out' }}>
             <div className="text-7xl">❌</div>
