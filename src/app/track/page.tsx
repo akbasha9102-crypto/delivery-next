@@ -309,14 +309,30 @@ export default function TrackPage() {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem('deliveryPhone') || '';
-    setInputPhone(saved);
-    if (sessionStorage.getItem('trackDismissed') === '1') {
-      setNotFound(true);
-      setLoading(false);
-    } else {
-      fetchOrder(saved);
-    }
+    const run = async () => {
+      let saved = localStorage.getItem('deliveryPhone') || '';
+
+      // إذا الجهاز جديد وما فيه رقم → اجلبه من الحساب المسجّل
+      if (!saved) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const meta = session?.user?.user_metadata as Record<string, string | undefined> | undefined;
+        if (meta?.delivery_phone) {
+          saved = meta.delivery_phone;
+          localStorage.setItem('deliveryPhone', saved);
+          if (meta.delivery_name && !localStorage.getItem('deliveryName'))
+            localStorage.setItem('deliveryName', meta.delivery_name);
+        }
+      }
+
+      setInputPhone(saved);
+      if (sessionStorage.getItem('trackDismissed') === '1') {
+        setNotFound(true);
+        setLoading(false);
+      } else {
+        fetchOrder(saved);
+      }
+    };
+    run();
   }, [fetchOrder]);
 
   useEffect(() => {

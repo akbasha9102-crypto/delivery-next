@@ -116,15 +116,31 @@ export default function OrdersPage() {
 
   // ── Fetch orders ─────────────────────────────────────────────────────────
   useEffect(() => {
-    const saved = localStorage.getItem('deliveryPhone') || '';
-    setPhone(saved);
-    if (sessionStorage.getItem('ordersDismissed') === '1') {
-      setLoading(false);
-    } else if (saved) {
-      fetchOrders(saved);
-    } else {
-      setLoading(false);
-    }
+    const run = async () => {
+      let ph = localStorage.getItem('deliveryPhone') || '';
+
+      // إذا الجهاز جديد وما فيه رقم → اجلبه من الحساب المسجّل
+      if (!ph) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const meta = session?.user?.user_metadata as Record<string, string | undefined> | undefined;
+        if (meta?.delivery_phone) {
+          ph = meta.delivery_phone;
+          localStorage.setItem('deliveryPhone', ph);
+          if (meta.delivery_name && !localStorage.getItem('deliveryName'))
+            localStorage.setItem('deliveryName', meta.delivery_name);
+        }
+      }
+
+      setPhone(ph);
+      if (sessionStorage.getItem('ordersDismissed') === '1') {
+        setLoading(false);
+      } else if (ph) {
+        fetchOrders(ph);
+      } else {
+        setLoading(false);
+      }
+    };
+    run();
   }, []);
 
   const fetchOrders = async (ph: string) => {
