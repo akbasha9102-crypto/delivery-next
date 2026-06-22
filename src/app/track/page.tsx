@@ -211,9 +211,7 @@ export default function TrackPage() {
     return L > 0.179 ? '#000000' : '#ffffff';
   })();
 
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const order = orders.find(o => o.id === selectedOrderId) ?? null;
+  const [order, setOrder] = useState<Order | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [inputPhone, setInputPhone] = useState('');
   const [loading, setLoading] = useState(true);
@@ -279,26 +277,33 @@ export default function TrackPage() {
   const trackRouteLineRef    = useRef<any>(null);
   const trackRouteLastFetch  = useRef<number>(0);
 
-  const fetchOrders = useCallback(async (phone: string) => {
+  const fetchOrder = useCallback(async (phone: string) => {
     if (!phone) { setLoading(false); setNotFound(true); return; }
     setLoading(true);
-    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const [{ data: active }, { data: recent }] = await Promise.all([
-      supabase.from('orders').select('*')
-        .eq('client_phone', phone)
-        .not('status', 'in', '("completed","rejected")')
-        .order('created_at', { ascending: false }),
-      supabase.from('orders').select('*')
-        .eq('client_phone', phone)
-        .in('status', ['completed', 'rejected'])
-        .gte('created_at', since24h)
-        .order('created_at', { ascending: false }),
-    ]);
-    const all: Order[] = [...(active || []), ...(recent || [])];
-    if (all.length === 0) {
-      setOrders([]); setNotFound(true);
+    const { data: active } = await supabase
+      .from('orders').select('*')
+      .eq('client_phone', phone)
+      .neq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(1).maybeSingle();
+    if (active) {
+      setOrder(active); setNotFound(false);
+      setAlreadySentFeedback(false);
     } else {
-      setOrders(all); setNotFound(false);
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: completed } = await supabase
+        .from('orders').select('*')
+        .eq('client_phone', phone)
+        .eq('status', 'completed')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(1).maybeSingle();
+      if (completed) {
+        setOrder(completed); setNotFound(false);
+        setAlreadySentFeedback(!!localStorage.getItem(`fb_sent_${completed.id}`));
+      } else {
+        setOrder(null); setNotFound(true);
+      }
     }
     setLoading(false);
   }, []);
@@ -319,45 +324,22 @@ export default function TrackPage() {
       }
 
       setInputPhone(saved);
-      fetchOrders(saved);
+      fetchOrder(saved);
     };
     run();
-  }, [fetchOrders]);
+  }, [fetchOrder]);
 
-  const activeOrderIdsKey = useMemo(
-    () => orders.filter(o => !['completed','rejected'].includes(o.status)).map(o => o.id).join(','),
-    [orders]
-  );
-
-  // Auto-select first order
   useEffect(() => {
-    if (orders.length === 0) { setSelectedOrderId(null); return; }
-    setSelectedOrderId(prev => (prev && orders.find(o => o.id === prev)) ? prev : orders[0].id);
-  }, [orders]);
-
-  // Sync feedback flag when selected order changes
-  useEffect(() => {
-    setAlreadySentFeedback(order?.id ? !!localStorage.getItem(`fb_sent_${order.id}`) : false);
+    if (!order) return;
+    const channel = supabase.channel(`track-order-${order.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${order.id}` },
+        async () => {
+          const { data } = await supabase.from('orders').select('*').eq('id', order.id).single();
+          if (data) setOrder(data as Order);
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [order?.id]);
-
-  // Reset extra time estimate when switching orders
-  useEffect(() => { setExtraMins(0); }, [selectedOrderId]);
-
-  // Realtime for all active orders
-  useEffect(() => {
-    const activeIds = activeOrderIdsKey.split(',').filter(Boolean);
-    if (!activeIds.length) return;
-    const channels = activeIds.map(oid =>
-      supabase.channel(`track-${oid}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${oid}` },
-          async () => {
-            const { data } = await supabase.from('orders').select('*').eq('id', oid).single();
-            if (data) setOrders(prev => prev.map(o => o.id === oid ? data as Order : o));
-          })
-        .subscribe()
-    );
-    return () => { channels.forEach(c => supabase.removeChannel(c)); };
-  }, [activeOrderIdsKey]);
 
   // keep a stable ref to the current order id so polling closures don't go stale
   orderIdRef.current = order?.id ?? null;
@@ -488,30 +470,30 @@ export default function TrackPage() {
     });
   }, [order?.status, order?.driver_lat, order?.driver_lng]);
 
-  // Polling fallback every 3s for all active orders
+  // Polling fallback every 3s
   useEffect(() => {
-    const activeIds = activeOrderIdsKey.split(',').filter(Boolean);
-    if (!activeIds.length) return;
+    if (!order?.id || order.status === 'completed' || order.status === 'rejected') return;
     const id = setInterval(async () => {
-      const { data } = await supabase.from('orders').select('*').in('id', activeIds);
-      if (data) setOrders(prev => prev.map(o => {
-        const upd = (data as Order[]).find(d => d.id === o.id);
-        return upd ?? o;
-      }));
+      const currentId = orderIdRef.current;
+      if (!currentId) return;
+      const { data } = await supabase.from('orders').select('*').eq('id', currentId).single();
+      if (data) setOrder(data as Order);
     }, 3000);
     return () => clearInterval(id);
-  }, [activeOrderIdsKey]);
+  }, [order?.id, order?.status]);
 
-  // Re-fetch all on tab visible
+  // Re-fetch on tab visible
   useEffect(() => {
-    const onVisible = () => {
+    const onVisible = async () => {
       if (document.visibilityState !== 'visible') return;
-      const phone = localStorage.getItem('deliveryPhone') || inputPhone;
-      if (phone) fetchOrders(phone);
+      const currentId = orderIdRef.current;
+      if (!currentId) return;
+      const { data } = await supabase.from('orders').select('*').eq('id', currentId).single();
+      if (data) setOrder(data as Order);
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [fetchOrders, inputPhone]);
+  }, []);
 
   const submitFeedback = async () => {
     if (!feedbackText.trim() || !order) return;
@@ -568,7 +550,7 @@ export default function TrackPage() {
           <div className="flex justify-center mt-20">
             <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: brandColor, borderTopColor: 'transparent' }}/>
           </div>
-        ) : orders.length === 0 ? (
+        ) : notFound ? (
           <div className="text-center mt-24">
             <div className="text-6xl mb-4">📦</div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">لا يوجد طلب حالي</h2>
@@ -595,54 +577,6 @@ export default function TrackPage() {
           </div>
         ) : order && (
           <div className="space-y-4 max-w-lg mx-auto">
-
-            {/* ── كارتات الطلبات المتعددة ── */}
-            {orders.length > 1 && (
-              <div className="space-y-2">
-                {orders.map((o, idx) => {
-                  const sIdx = o.status === 'pickup' ? 1 : STEPS.findIndex(s => s.key === o.status);
-                  const step = STEPS[sIdx >= 0 ? sIdx : 0];
-                  const isSelected = o.id === selectedOrderId;
-                  const statusStyle: Record<string, { color: string; bg: string; border: string }> = {
-                    pending:   { color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-                    preparing: { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-                    ready:     { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-                    completed: { color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
-                    rejected:  { color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-                  };
-                  const ss = statusStyle[o.status] ?? statusStyle.completed;
-                  return (
-                    <button key={o.id}
-                      onClick={() => setSelectedOrderId(o.id)}
-                      className="w-full text-right rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.98]"
-                      style={{
-                        backgroundColor: isSelected ? ss.bg : (dark ? '#1e293b' : 'white'),
-                        border: `2px solid ${isSelected ? ss.border : (dark ? '#334155' : '#f3f4f6')}`,
-                        boxShadow: isSelected ? `0 4px 16px ${ss.color}20` : 'none',
-                      }}
-                    >
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl"
-                           style={{ backgroundColor: `${ss.color}15` }}>
-                        {step?.icon ?? '📦'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-black text-sm" style={{ color: ss.color }}>{step?.label ?? o.status}</span>
-                          <span className="font-black text-sm text-gray-900 dark:text-white whitespace-nowrap">
-                            {o.total_amount.toLocaleString()} <span className="text-xs font-bold text-gray-400">د.ع</span>
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
-                          طلب #{orders.length - idx} · {new Date(o.created_at).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      {isSelected && <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: ss.color }}/>}
-                    </button>
-                  );
-                })}
-                <div className="border-t border-gray-100 dark:border-slate-700 pt-1"/>
-              </div>
-            )}
             <style>{`
               @keyframes line-fill-rtl {
                 0%   { width: 0% }
