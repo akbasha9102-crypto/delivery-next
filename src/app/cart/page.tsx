@@ -1403,45 +1403,26 @@ const proceedFromReview = () => {
                   عزيزي {name.split(' ')[0] || 'زبوننا الكريم'} 👋
                 </p>
 
-                {session ? (
-                  <>
-                    <p className="text-green-600 dark:text-green-400 font-bold text-sm mb-5">✓ أنت مسجّل الدخول</p>
-                    <button
-                      onClick={() => router.push('/track')}
-                      className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all bg-blue-600 text-white"
-                    >
-                      متابعة الطلب
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {/* الرسالة الترويجية */}
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl px-4 py-4 mb-5 text-right">
-                      <p className="text-blue-800 dark:text-blue-300 font-bold text-sm leading-relaxed">
-                        📱 لمتابعة طلبك من جميع الأجهزة سوّي لك حساب!
-                      </p>
-                      <p className="text-blue-500 dark:text-blue-400 text-xs mt-1">
-                        حساب مجاني — رقم هاتفك + كلمة مرور فقط
-                      </p>
-                    </div>
-
-                    {/* زر إنشاء حساب */}
-                    <button
-                      onClick={() => setPostOrderStep('signup')}
-                      className="w-full py-4 rounded-2xl font-black text-base mb-3 active:scale-95 transition-all bg-blue-600 text-white"
-                    >
-                      إنشاء حساب
-                    </button>
-
-                    {/* استمرار كضيف */}
-                    <button
-                      onClick={() => router.push('/track')}
-                      className="w-full py-3.5 rounded-2xl font-bold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all border border-gray-200 dark:border-slate-700"
-                    >
-                      الاستمرار كضيف
-                    </button>
-                  </>
-                )}
+                <div className="space-y-3 mt-2">
+                  <button
+                    onClick={() => session ? router.push('/track') : setPostOrderStep('signup')}
+                    className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all bg-blue-600 text-white"
+                  >
+                    إنشاء حساب
+                  </button>
+                  <button
+                    onClick={() => router.push('/track')}
+                    className="w-full py-3.5 rounded-2xl font-bold text-sm active:scale-95 transition-all border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200"
+                  >
+                    متابعة طلبي
+                  </button>
+                  <button
+                    onClick={() => router.push('/track')}
+                    className="w-full py-3 rounded-2xl font-bold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all"
+                  >
+                    الاستمرار كضيف
+                  </button>
+                </div>
               </div>
             )}
 
