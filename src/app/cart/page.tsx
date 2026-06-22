@@ -137,6 +137,7 @@ export default function CartPage() {
   const pendingConfirmRef      = useRef(false); // after map → open confirm modal
   const gpsWatchRef            = useRef<number | null>(null);
   const gpsStopTimerRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const postOrderTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── GPS helpers ──────────────────────────────────────────────────────────
 
@@ -602,6 +603,18 @@ const proceedFromReview = () => {
     setSignupDone(false);
     setShowPostOrderModal(true);
   };
+
+  // ── مؤقت الإغلاق التلقائي لمودال ما بعد الطلب (7 ثواني) ─────────────────
+  useEffect(() => {
+    if (!showPostOrderModal) return;
+    postOrderTimerRef.current = setTimeout(() => {
+      setShowPostOrderModal(false);
+      router.push('/track');
+    }, 7000);
+    return () => {
+      if (postOrderTimerRef.current) { clearTimeout(postOrderTimerRef.current); postOrderTimerRef.current = null; }
+    };
+  }, [showPostOrderModal, router]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -1394,9 +1407,9 @@ const proceedFromReview = () => {
             {postOrderStep === 'choice' && (
               <div className="px-6 pt-8 pb-7 text-center">
                 {/* نجاح */}
-                <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                     style={{ background: 'linear-gradient(135deg,#22c55e18,#22c55e08)', border: '2px solid #22c55e30' }}>
-                  <span className="text-3xl">✅</span>
+                <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+                     style={{ background: 'linear-gradient(135deg,#22c55e25,#22c55e10)', border: '2px solid #22c55e50' }}>
+                  <CheckCircle2 size={36} className="text-green-500"/>
                 </div>
                 <h2 className="font-black text-gray-900 dark:text-white text-xl mb-1">تم إرسال طلبك!</h2>
                 <p className="font-bold text-gray-900 dark:text-slate-100 text-base mb-4">
@@ -1410,13 +1423,19 @@ const proceedFromReview = () => {
 
                 <div className="space-y-3">
                   <button
-                    onClick={() => session ? router.push('/track') : setPostOrderStep('signup')}
+                    onClick={() => {
+                      if (postOrderTimerRef.current) { clearTimeout(postOrderTimerRef.current); postOrderTimerRef.current = null; }
+                      if (session) router.push('/track'); else setPostOrderStep('signup');
+                    }}
                     className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all bg-blue-600 text-white"
                   >
                     إنشاء حساب ومتابعة طلبي
                   </button>
                   <button
-                    onClick={() => router.push('/track')}
+                    onClick={() => {
+                      if (postOrderTimerRef.current) { clearTimeout(postOrderTimerRef.current); postOrderTimerRef.current = null; }
+                      router.push('/track');
+                    }}
                     className="w-full py-3.5 rounded-2xl font-bold text-sm active:scale-95 transition-all border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300"
                   >
                     متابعة طلبي والاستمرار كضيف
