@@ -95,9 +95,10 @@ export default function CartPage() {
   const [authPhone,          setAuthPhone]          = useState('');
   const [authPassword,       setAuthPassword]       = useState('');
   const [authError,          setAuthError]          = useState('');
-  const [showPostOrderModal, setShowPostOrderModal] = useState(false);
-  const [postOrderStep,      setPostOrderStep]      = useState<'choice' | 'signup'>('choice');
-  const [signupDone,         setSignupDone]         = useState(false);
+  const [showPostOrderModal,  setShowPostOrderModal]  = useState(false);
+  const [postOrderStep,       setPostOrderStep]       = useState<'choice' | 'signup'>('choice');
+  const [signupDone,          setSignupDone]          = useState(false);
+  const [postOrderCountdown,  setPostOrderCountdown]  = useState(7);
 
   // UI state
   const [showOrderReview,  setShowOrderReview]  = useState(false);
@@ -606,15 +607,20 @@ const proceedFromReview = () => {
 
   // ── مؤقت الإغلاق التلقائي لمودال ما بعد الطلب (7 ثواني) ─────────────────
   useEffect(() => {
-    if (!showPostOrderModal) return;
+    if (!showPostOrderModal || postOrderStep !== 'choice') return;
+    setPostOrderCountdown(7);
+    const interval = setInterval(() => {
+      setPostOrderCountdown(prev => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
     postOrderTimerRef.current = setTimeout(() => {
       setShowPostOrderModal(false);
       router.push('/track');
     }, 7000);
     return () => {
+      clearInterval(interval);
       if (postOrderTimerRef.current) { clearTimeout(postOrderTimerRef.current); postOrderTimerRef.current = null; }
     };
-  }, [showPostOrderModal, router]);
+  }, [showPostOrderModal, postOrderStep, router]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -1397,160 +1403,203 @@ const proceedFromReview = () => {
           style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
         >
           <motion.div
-            initial={{ scale: 0.82, opacity: 0, y: 30 }}
+            initial={{ scale: 0.78, opacity: 0, y: 40 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.82, opacity: 0, y: 30 }}
-            transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-            className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
+            exit={{ scale: 0.78, opacity: 0, y: 40 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+            className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden"
+            style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06)' }}
           >
             {/* ── شاشة الاختيار ── */}
             {postOrderStep === 'choice' && (
-              <div className="px-6 pt-8 pb-7 text-center">
-                {/* نجاح */}
-                <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-                     style={{ background: 'linear-gradient(135deg,#22c55e25,#22c55e10)', border: '2px solid #22c55e50' }}>
-                  <CheckCircle2 size={36} className="text-green-500"/>
-                </div>
-                <h2 className="font-black text-gray-900 dark:text-white text-xl mb-1">تم إرسال طلبك!</h2>
-                <p className="font-bold text-gray-900 dark:text-slate-100 text-base mb-4">
-                  عزيزي {name.split(' ')[0] || 'زبوننا الكريم'} 👋
-                </p>
+              <>
+                {/* ─── Banner أخضر علوي ─── */}
+                <div className="relative overflow-hidden text-center" style={{ background: 'linear-gradient(145deg,#15803d,#22c55e)', padding: '36px 24px 48px' }}>
+                  {/* دوائر خلفية زخرفية */}
+                  <div style={{ position:'absolute', top:-30, right:-30, width:130, height:130, borderRadius:'50%', background:'rgba(255,255,255,0.07)', pointerEvents:'none' }}/>
+                  <div style={{ position:'absolute', bottom:-40, left:-20, width:110, height:110, borderRadius:'50%', background:'rgba(255,255,255,0.05)', pointerEvents:'none' }}/>
+                  <div style={{ position:'absolute', top:10, left:30, width:60, height:60, borderRadius:'50%', background:'rgba(255,255,255,0.04)', pointerEvents:'none' }}/>
 
-                {/* كلام توضيحي */}
-                <p className="text-gray-500 dark:text-slate-400 text-sm leading-relaxed mb-5 mt-1">
-                  أنشئ حساباً مجانياً بثوانٍ لتتابع طلبك من أي جهاز وتوفّر وقتك في طلباتك القادمة، أو استمر بدون حساب.
-                </p>
+                  {/* أيقونة النجاح مع حلقة نابضة */}
+                  <div className="relative inline-flex items-center justify-center mb-4">
+                    <div className="absolute" style={{ width:88, height:88, borderRadius:'50%', background:'rgba(255,255,255,0.12)', animation:'ping 2s cubic-bezier(0,0,0.2,1) infinite' }}/>
+                    <div style={{ width:72, height:72, borderRadius:'50%', background:'rgba(255,255,255,0.22)', border:'2.5px solid rgba(255,255,255,0.5)', display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(4px)' }}>
+                      <CheckCircle2 size={38} color="white" strokeWidth={2.5}/>
+                    </div>
+                  </div>
 
-                <div className="space-y-3">
-                  <button
-                    onClick={() => {
-                      if (postOrderTimerRef.current) { clearTimeout(postOrderTimerRef.current); postOrderTimerRef.current = null; }
-                      if (session) router.push('/track'); else setPostOrderStep('signup');
-                    }}
-                    className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all bg-blue-600 text-white"
-                  >
-                    إنشاء حساب ومتابعة طلبي
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (postOrderTimerRef.current) { clearTimeout(postOrderTimerRef.current); postOrderTimerRef.current = null; }
-                      router.push('/track');
-                    }}
-                    className="w-full py-3.5 rounded-2xl font-bold text-sm active:scale-95 transition-all border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300"
-                  >
-                    متابعة طلبي والاستمرار كضيف
-                  </button>
+                  <h2 style={{ color:'white', fontWeight:900, fontSize:22, marginBottom:6, letterSpacing:-0.3 }}>تم إرسال طلبك!</h2>
+                  <p style={{ color:'rgba(255,255,255,0.88)', fontWeight:700, fontSize:15 }}>
+                    أهلاً {name.split(' ')[0] || 'زبوننا الكريم'} 👋
+                  </p>
                 </div>
-              </div>
+
+                {/* ─── شريط العداد التنازلي ─── */}
+                <div style={{ height:4, background:'#f1f5f9' }} className="dark:bg-slate-800">
+                  <div style={{ height:'100%', background:'linear-gradient(90deg,#22c55e,#16a34a)', width:`${(postOrderCountdown / 7) * 100}%`, transition:'width 1s linear', borderRadius:'0 2px 2px 0' }}/>
+                </div>
+
+                {/* ─── المحتوى ─── */}
+                <div className="px-6 pt-5 pb-6">
+                  <p className="text-gray-500 dark:text-slate-400 text-sm leading-relaxed mb-5 text-center">
+                    أنشئ حساباً مجانياً لتتابع طلبك من أي جهاز وتوفّر وقتك في طلباتك القادمة.
+                  </p>
+
+                  <div className="space-y-3">
+                    {/* زر إنشاء الحساب */}
+                    <button
+                      onClick={() => {
+                        if (postOrderTimerRef.current) { clearTimeout(postOrderTimerRef.current); postOrderTimerRef.current = null; }
+                        if (session) router.push('/track'); else setPostOrderStep('signup');
+                      }}
+                      className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all flex items-center justify-center gap-2"
+                      style={{ background:'linear-gradient(135deg,#2563eb,#3b82f6)', color:'white', boxShadow:'0 8px 24px rgba(59,130,246,0.4)' }}
+                    >
+                      <UserCircle size={20}/>
+                      إنشاء حساب ومتابعة طلبي
+                    </button>
+
+                    {/* زر الضيف مع العداد */}
+                    <button
+                      onClick={() => {
+                        if (postOrderTimerRef.current) { clearTimeout(postOrderTimerRef.current); postOrderTimerRef.current = null; }
+                        router.push('/track');
+                      }}
+                      className="w-full py-3.5 rounded-2xl font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-2 border dark:border-slate-700 border-gray-200 text-gray-500 dark:text-slate-400"
+                    >
+                      متابعة كضيف
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-black"
+                        style={{ background:'#f1f5f9', color:'#6b7280', minWidth:24 }}>
+                        {postOrderCountdown}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* ── شاشة إنشاء الحساب ── */}
             {postOrderStep === 'signup' && (
-              <div className="px-6 pt-6 pb-7">
-                {/* رأس الشاشة */}
-                <div className="flex items-center gap-3 mb-5">
+              <>
+                {/* Banner أزرق مصغّر */}
+                <div className="relative overflow-hidden flex items-center gap-3 px-5 py-5" style={{ background:'linear-gradient(135deg,#1d4ed8,#3b82f6)' }}>
+                  <div style={{ position:'absolute', top:-20, right:-20, width:90, height:90, borderRadius:'50%', background:'rgba(255,255,255,0.08)', pointerEvents:'none' }}/>
                   <button
                     onClick={() => { setPostOrderStep('choice'); setAuthError(''); }}
-                    className="w-9 h-9 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-500 active:scale-90 transition-all flex-shrink-0"
+                    className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 active:scale-90 transition-all"
+                    style={{ background:'rgba(255,255,255,0.18)', border:'1.5px solid rgba(255,255,255,0.3)' }}
                   >
-                    <ChevronLeft size={18} style={{ transform: 'rotate(180deg)' }}/>
+                    <ChevronLeft size={18} color="white" style={{ transform:'rotate(180deg)' }}/>
                   </button>
                   <div className="flex-1 text-right">
-                    <h3 className="font-black text-gray-900 dark:text-white text-lg">إنشاء حساب</h3>
-                    <p className="text-xs text-gray-400 dark:text-slate-500">رقم هاتفك + كلمة مرور فقط</p>
+                    <h3 style={{ color:'white', fontWeight:900, fontSize:18 }}>إنشاء حساب</h3>
+                    <p style={{ color:'rgba(255,255,255,0.75)', fontSize:12 }}>رقم هاتفك + كلمة مرور فقط</p>
+                  </div>
+                  <div style={{ width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <UserCircle size={20} color="white"/>
                   </div>
                 </div>
 
-                {signupDone ? (
-                  <div className="text-center py-4">
-                    <div className="w-16 h-16 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center mx-auto mb-3">
-                      <CheckCircle2 size={34} className="text-green-500"/>
+                <div className="px-6 pt-5 pb-6">
+                  {signupDone ? (
+                    <div className="text-center py-4">
+                      <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+                        style={{ background:'linear-gradient(135deg,#dcfce7,#bbf7d0)', border:'2px solid #86efac' }}>
+                        <CheckCircle2 size={40} className="text-green-600"/>
+                      </div>
+                      <h3 className="font-black text-gray-900 dark:text-white text-xl mb-2">تم إنشاء حسابك!</h3>
+                      <p className="text-gray-400 dark:text-slate-500 text-sm mb-6">يمكنك الآن متابعة طلبك من أي جهاز</p>
+                      <button
+                        onClick={() => router.push('/track')}
+                        className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all"
+                        style={{ background:'linear-gradient(135deg,#16a34a,#22c55e)', color:'white', boxShadow:'0 8px 24px rgba(34,197,94,0.35)' }}
+                      >
+                        متابعة الطلب
+                      </button>
                     </div>
-                    <h3 className="font-black text-gray-900 dark:text-white text-lg mb-1">تم إنشاء حسابك!</h3>
-                    <p className="text-gray-400 text-sm mb-5">يمكنك الآن متابعة طلبك من أي جهاز</p>
-                    <button
-                      onClick={() => router.push('/track')}
-                      className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all bg-blue-600 text-white"
-                    >
-                      متابعة الطلب
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* رقم الهاتف — مُعبّأ تلقائياً */}
-                    <div>
-                      <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5 text-right">رقم الهاتف</p>
-                      <div className="flex items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl overflow-hidden">
-                        <div className="flex items-center gap-1.5 px-3 py-3 border-r border-blue-200 dark:border-blue-700 flex-shrink-0">
-                          <span className="text-base leading-none">🇮🇶</span>
-                          <span className="text-sm font-bold text-blue-400">+964</span>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* رقم الهاتف */}
+                      <div>
+                        <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-2 text-right">رقم الهاتف</p>
+                        <div className="flex items-center rounded-xl overflow-hidden"
+                          style={{ background:'#eff6ff', border:'1.5px solid #bfdbfe' }}>
+                          <div className="flex items-center gap-1.5 px-3 py-3 border-r border-blue-200 flex-shrink-0">
+                            <span className="text-base leading-none">🇮🇶</span>
+                            <span className="text-sm font-bold text-blue-500">+964</span>
+                          </div>
+                          <input
+                            value={authPhone}
+                            onChange={e => setAuthPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
+                            type="tel"
+                            dir="rtl"
+                            className="flex-1 bg-transparent px-3 py-3 text-right text-gray-900 outline-none font-bold text-sm"
+                          />
                         </div>
+                      </div>
+
+                      {/* كلمة المرور */}
+                      <div>
+                        <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-2 text-right">كلمة المرور</p>
                         <input
-                          value={authPhone}
-                          onChange={e => setAuthPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
-                          type="tel"
-                          dir="rtl"
-                          className="flex-1 bg-transparent px-3 py-3 text-right text-gray-900 dark:text-slate-100 outline-none font-bold text-sm"
+                          value={authPassword}
+                          onChange={e => setAuthPassword(e.target.value)}
+                          placeholder="اختر كلمة مرور"
+                          type="password"
+                          className="w-full rounded-xl px-4 py-3 text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none text-sm"
+                          style={{ background:'#f8fafc', border:'1.5px solid #e2e8f0' }}
                         />
                       </div>
+
+                      {authError && (
+                        <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-3 py-2.5">
+                          <X size={14} className="text-red-500 flex-shrink-0"/>
+                          <p className="text-xs text-red-600 dark:text-red-400 text-right flex-1">{authError}</p>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={async () => {
+                          const trimPhone = authPhone.trim();
+                          const trimPass  = authPassword.trim();
+                          if (!trimPhone || !trimPass) { setAuthError('يرجى إدخال رقم الهاتف وكلمة المرور'); return; }
+                          setPhoneAuthLoading(true);
+                          setAuthError('');
+                          const email = `${trimPhone}@c.delivery`;
+                          const { error } = await supabase.auth.signUp({
+                            email,
+                            password: trimPass,
+                            options: { data: { delivery_phone: trimPhone, delivery_name: name || '' } },
+                          });
+                          setPhoneAuthLoading(false);
+                          if (error) {
+                            setAuthError(
+                              error.message.includes('already registered')
+                                ? 'هذا الرقم مسجّل بالفعل — جرّب تسجيل الدخول من صفحة معلوماتي'
+                                : error.message
+                            );
+                          } else {
+                            localStorage.setItem(KEYS.phone, trimPhone);
+                            setSignupDone(true);
+                          }
+                        }}
+                        disabled={phoneAuthLoading}
+                        className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                        style={{ background:'linear-gradient(135deg,#2563eb,#3b82f6)', color:'white', boxShadow:'0 8px 24px rgba(59,130,246,0.35)' }}
+                      >
+                        {phoneAuthLoading ? <Loader2 size={20} className="animate-spin"/> : 'إنشاء الحساب'}
+                      </button>
+
+                      <button
+                        onClick={() => router.push('/track')}
+                        className="w-full py-3 rounded-2xl font-semibold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all"
+                      >
+                        الاستمرار كضيف
+                      </button>
                     </div>
-
-                    {/* كلمة المرور */}
-                    <div>
-                      <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5 text-right">كلمة المرور</p>
-                      <input
-                        value={authPassword}
-                        onChange={e => setAuthPassword(e.target.value)}
-                        placeholder="اختر كلمة مرور"
-                        type="password"
-                        className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none text-sm"
-                      />
-                    </div>
-
-                    {authError && (
-                      <p className="text-xs text-red-500 text-right bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{authError}</p>
-                    )}
-
-                    <button
-                      onClick={async () => {
-                        const trimPhone = authPhone.trim();
-                        const trimPass  = authPassword.trim();
-                        if (!trimPhone || !trimPass) { setAuthError('يرجى إدخال رقم الهاتف وكلمة المرور'); return; }
-                        setPhoneAuthLoading(true);
-                        setAuthError('');
-                        const email = `${trimPhone}@c.delivery`;
-                        const { error } = await supabase.auth.signUp({
-                          email,
-                          password: trimPass,
-                          options: { data: { delivery_phone: trimPhone, delivery_name: name || '' } },
-                        });
-                        setPhoneAuthLoading(false);
-                        if (error) {
-                          setAuthError(
-                            error.message.includes('already registered')
-                              ? 'هذا الرقم مسجّل بالفعل — جرّب تسجيل الدخول من صفحة معلوماتي'
-                              : error.message
-                          );
-                        } else {
-                          localStorage.setItem(KEYS.phone, trimPhone);
-                          setSignupDone(true);
-                        }
-                      }}
-                      disabled={phoneAuthLoading}
-                      className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all disabled:opacity-60 bg-blue-600 text-white"
-                    >
-                      {phoneAuthLoading ? <Loader2 size={20} className="animate-spin mx-auto"/> : 'إنشاء الحساب'}
-                    </button>
-
-                    <button
-                      onClick={() => router.push('/track')}
-                      className="w-full py-3 rounded-2xl font-bold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all"
-                    >
-                      الاستمرار كضيف
-                    </button>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              </>
             )}
           </motion.div>
         </motion.div>
