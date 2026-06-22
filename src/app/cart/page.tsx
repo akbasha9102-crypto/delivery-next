@@ -1403,24 +1403,23 @@ const proceedFromReview = () => {
                   عزيزي {name.split(' ')[0] || 'زبوننا الكريم'} 👋
                 </p>
 
-                <div className="space-y-3 mt-2">
+                {/* كلام توضيحي */}
+                <p className="text-gray-500 dark:text-slate-400 text-sm leading-relaxed mb-5 mt-1">
+                  أنشئ حساباً مجانياً بثوانٍ لتتابع طلبك من أي جهاز وتوفّر وقتك في طلباتك القادمة، أو استمر بدون حساب.
+                </p>
+
+                <div className="space-y-3">
                   <button
                     onClick={() => session ? router.push('/track') : setPostOrderStep('signup')}
                     className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all bg-blue-600 text-white"
                   >
-                    إنشاء حساب
+                    إنشاء حساب ومتابعة طلبي
                   </button>
                   <button
                     onClick={() => router.push('/track')}
-                    className="w-full py-3.5 rounded-2xl font-bold text-sm active:scale-95 transition-all border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200"
+                    className="w-full py-3.5 rounded-2xl font-bold text-sm active:scale-95 transition-all border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300"
                   >
-                    متابعة طلبي
-                  </button>
-                  <button
-                    onClick={() => router.push('/track')}
-                    className="w-full py-3 rounded-2xl font-bold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all"
-                  >
-                    الاستمرار كضيف
+                    متابعة طلبي والاستمرار كضيف
                   </button>
                 </div>
               </div>
