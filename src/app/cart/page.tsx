@@ -96,6 +96,8 @@ export default function CartPage() {
   const [authPassword,       setAuthPassword]       = useState('');
   const [authError,          setAuthError]          = useState('');
   const [showPostOrderModal, setShowPostOrderModal] = useState(false);
+  const [postOrderStep,      setPostOrderStep]      = useState<'choice' | 'signup'>('choice');
+  const [signupDone,         setSignupDone]         = useState(false);
 
   // UI state
   const [showOrderReview,  setShowOrderReview]  = useState(false);
@@ -593,6 +595,11 @@ const proceedFromReview = () => {
     clearCart();
     setLoading(false);
     setShowConfirmModal(false);
+    setAuthPhone(phone.trim());
+    setAuthPassword('');
+    setAuthError('');
+    setPostOrderStep('choice');
+    setSignupDone(false);
     setShowPostOrderModal(true);
   };
 
@@ -1365,7 +1372,7 @@ const proceedFromReview = () => {
       />
 
       {/* ══════════════════════════════════════════════════════════════════════
-          مودال ما بعد الطلب — تسجيل دخول أو استمرار كضيف
+          مودال ما بعد الطلب — إنشاء حساب أو استمرار كضيف
       ══════════════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
       {showPostOrderModal && (
@@ -1374,99 +1381,178 @@ const proceedFromReview = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[90] flex items-center justify-center px-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)' }}
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
         >
           <motion.div
             initial={{ scale: 0.82, opacity: 0, y: 30 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.82, opacity: 0, y: 30 }}
             transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-            className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl relative"
+            className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
           >
-            {/* زر الإغلاق */}
-            <button
-              onClick={() => router.push('/track')}
-              className="absolute top-4 left-4 w-9 h-9 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-400 active:scale-90 transition-all z-10"
-            >
-              <X size={17}/>
-            </button>
+            {/* ── شاشة الاختيار ── */}
+            {postOrderStep === 'choice' && (
+              <div className="px-6 pt-8 pb-7 text-center">
+                {/* نجاح */}
+                <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                     style={{ background: 'linear-gradient(135deg,#22c55e18,#22c55e08)', border: '2px solid #22c55e30' }}>
+                  <span className="text-3xl">✅</span>
+                </div>
+                <h2 className="font-black text-gray-900 dark:text-white text-xl mb-1">تم إرسال طلبك!</h2>
+                <p className="font-bold text-gray-900 dark:text-slate-100 text-base mb-4">
+                  عزيزي {name.split(' ')[0] || 'زبوننا الكريم'} 👋
+                </p>
 
-            {/* المحتوى */}
-            <div className="px-6 pt-8 pb-7 text-center">
-              {/* أيقونة */}
-              <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                   style={{ background: 'linear-gradient(135deg,#22c55e18,#22c55e08)', border: '2px solid #22c55e30' }}>
-                <span className="text-3xl">✅</span>
-              </div>
-
-              <h2 className="font-black text-gray-900 dark:text-white text-xl mb-1">
-                تم إرسال طلبك!
-              </h2>
-              <p className="font-bold text-gray-900 dark:text-slate-100 text-base mb-1">
-                عزيزي {name.split(' ')[0] || 'زبوننا الكريم'} 👋
-              </p>
-              {session ? (
-                <>
-                  <p className="text-green-600 dark:text-green-400 font-bold text-sm mb-5">✓ أنت مسجّل الدخول</p>
-                  <button
-                    onClick={() => router.push('/track')}
-                    className="w-full py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all"
-                    style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#ffffff' }}
-                  >
-                    متابعة الطلب
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-gray-500 dark:text-slate-400 text-sm leading-relaxed mb-4">
-                    سجّل دخولك لمتابعة طلبك من أي جهاز وحفظ معلوماتك.
-                  </p>
-
-                  <div className="space-y-2.5 mb-3 text-right">
-                    <input
-                      value={authPhone}
-                      onChange={e => setAuthPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
-                      placeholder="رقم الهاتف"
-                      type="tel"
-                      dir="rtl"
-                      className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none text-sm"
-                    />
-                    <input
-                      value={authPassword}
-                      onChange={e => setAuthPassword(e.target.value)}
-                      placeholder="كلمة المرور"
-                      type="password"
-                      className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none text-sm"
-                    />
-                    {authError && <p className="text-xs text-red-500">{authError}</p>}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAuth('signin')}
-                        disabled={phoneAuthLoading}
-                        className="flex-1 py-3 rounded-xl font-black text-sm active:scale-95 transition-all disabled:opacity-60"
-                        style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#ffffff' }}
-                      >
-                        {phoneAuthLoading ? '...' : 'دخول'}
-                      </button>
-                      <button
-                        onClick={() => handleAuth('signup')}
-                        disabled={phoneAuthLoading}
-                        className="flex-1 py-3 rounded-xl font-bold text-sm border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 active:scale-95 transition-all disabled:opacity-60"
-                      >
-                        إنشاء حساب
-                      </button>
+                {session ? (
+                  <>
+                    <p className="text-green-600 dark:text-green-400 font-bold text-sm mb-5">✓ أنت مسجّل الدخول</p>
+                    <button
+                      onClick={() => router.push('/track')}
+                      className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all bg-blue-600 text-white"
+                    >
+                      متابعة الطلب
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* الرسالة الترويجية */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl px-4 py-4 mb-5 text-right">
+                      <p className="text-blue-800 dark:text-blue-300 font-bold text-sm leading-relaxed">
+                        📱 لمتابعة طلبك من جميع الأجهزة سوّي لك حساب!
+                      </p>
+                      <p className="text-blue-500 dark:text-blue-400 text-xs mt-1">
+                        حساب مجاني — رقم هاتفك + كلمة مرور فقط
+                      </p>
                     </div>
-                  </div>
 
+                    {/* زر إنشاء حساب */}
+                    <button
+                      onClick={() => setPostOrderStep('signup')}
+                      className="w-full py-4 rounded-2xl font-black text-base mb-3 active:scale-95 transition-all bg-blue-600 text-white"
+                    >
+                      إنشاء حساب
+                    </button>
+
+                    {/* استمرار كضيف */}
+                    <button
+                      onClick={() => router.push('/track')}
+                      className="w-full py-3.5 rounded-2xl font-bold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all border border-gray-200 dark:border-slate-700"
+                    >
+                      الاستمرار كضيف
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ── شاشة إنشاء الحساب ── */}
+            {postOrderStep === 'signup' && (
+              <div className="px-6 pt-6 pb-7">
+                {/* رأس الشاشة */}
+                <div className="flex items-center gap-3 mb-5">
                   <button
-                    onClick={() => router.push('/track')}
-                    className="w-full py-3 rounded-2xl font-bold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all border border-gray-100 dark:border-slate-800"
+                    onClick={() => { setPostOrderStep('choice'); setAuthError(''); }}
+                    className="w-9 h-9 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-500 active:scale-90 transition-all flex-shrink-0"
                   >
-                    استمرار كضيف
+                    <ChevronLeft size={18} style={{ transform: 'rotate(180deg)' }}/>
                   </button>
-                </>
-              )}
-            </div>
+                  <div className="flex-1 text-right">
+                    <h3 className="font-black text-gray-900 dark:text-white text-lg">إنشاء حساب</h3>
+                    <p className="text-xs text-gray-400 dark:text-slate-500">رقم هاتفك + كلمة مرور فقط</p>
+                  </div>
+                </div>
+
+                {signupDone ? (
+                  <div className="text-center py-4">
+                    <div className="w-16 h-16 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center mx-auto mb-3">
+                      <CheckCircle2 size={34} className="text-green-500"/>
+                    </div>
+                    <h3 className="font-black text-gray-900 dark:text-white text-lg mb-1">تم إنشاء حسابك!</h3>
+                    <p className="text-gray-400 text-sm mb-5">يمكنك الآن متابعة طلبك من أي جهاز</p>
+                    <button
+                      onClick={() => router.push('/track')}
+                      className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all bg-blue-600 text-white"
+                    >
+                      متابعة الطلب
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* رقم الهاتف — مُعبّأ تلقائياً */}
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5 text-right">رقم الهاتف</p>
+                      <div className="flex items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl overflow-hidden">
+                        <div className="flex items-center gap-1.5 px-3 py-3 border-r border-blue-200 dark:border-blue-700 flex-shrink-0">
+                          <span className="text-base leading-none">🇮🇶</span>
+                          <span className="text-sm font-bold text-blue-400">+964</span>
+                        </div>
+                        <input
+                          value={authPhone}
+                          onChange={e => setAuthPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
+                          type="tel"
+                          dir="rtl"
+                          className="flex-1 bg-transparent px-3 py-3 text-right text-gray-900 dark:text-slate-100 outline-none font-bold text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* كلمة المرور */}
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5 text-right">كلمة المرور</p>
+                      <input
+                        value={authPassword}
+                        onChange={e => setAuthPassword(e.target.value)}
+                        placeholder="اختر كلمة مرور"
+                        type="password"
+                        className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none text-sm"
+                      />
+                    </div>
+
+                    {authError && (
+                      <p className="text-xs text-red-500 text-right bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{authError}</p>
+                    )}
+
+                    <button
+                      onClick={async () => {
+                        const trimPhone = authPhone.trim();
+                        const trimPass  = authPassword.trim();
+                        if (!trimPhone || !trimPass) { setAuthError('يرجى إدخال رقم الهاتف وكلمة المرور'); return; }
+                        setPhoneAuthLoading(true);
+                        setAuthError('');
+                        const email = `${trimPhone}@c.delivery`;
+                        const { error } = await supabase.auth.signUp({
+                          email,
+                          password: trimPass,
+                          options: { data: { delivery_phone: trimPhone, delivery_name: name || '' } },
+                        });
+                        setPhoneAuthLoading(false);
+                        if (error) {
+                          setAuthError(
+                            error.message.includes('already registered')
+                              ? 'هذا الرقم مسجّل بالفعل — جرّب تسجيل الدخول من صفحة معلوماتي'
+                              : error.message
+                          );
+                        } else {
+                          localStorage.setItem(KEYS.phone, trimPhone);
+                          setSignupDone(true);
+                        }
+                      }}
+                      disabled={phoneAuthLoading}
+                      className="w-full py-4 rounded-2xl font-black text-base active:scale-95 transition-all disabled:opacity-60 bg-blue-600 text-white"
+                    >
+                      {phoneAuthLoading ? <Loader2 size={20} className="animate-spin mx-auto"/> : 'إنشاء الحساب'}
+                    </button>
+
+                    <button
+                      onClick={() => router.push('/track')}
+                      className="w-full py-3 rounded-2xl font-bold text-sm text-gray-400 dark:text-slate-500 active:scale-95 transition-all"
+                    >
+                      الاستمرار كضيف
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}
