@@ -211,7 +211,9 @@ export default function TrackPage() {
     return L > 0.179 ? '#000000' : '#ffffff';
   })();
 
-  const [order, setOrder] = useState<Order | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const order = orders.find(o => o.id === selectedOrderId) ?? null;
   const [notFound, setNotFound] = useState(false);
   const [inputPhone, setInputPhone] = useState('');
   const [loading, setLoading] = useState(true);
@@ -277,33 +279,26 @@ export default function TrackPage() {
   const trackRouteLineRef    = useRef<any>(null);
   const trackRouteLastFetch  = useRef<number>(0);
 
-  const fetchOrder = useCallback(async (phone: string) => {
+  const fetchOrders = useCallback(async (phone: string) => {
     if (!phone) { setLoading(false); setNotFound(true); return; }
     setLoading(true);
-    const { data: active } = await supabase
-      .from('orders').select('*')
-      .eq('client_phone', phone)
-      .neq('status', 'completed')
-      .order('created_at', { ascending: false })
-      .limit(1).maybeSingle();
-    if (active) {
-      setOrder(active); setNotFound(false);
-      setAlreadySentFeedback(false);
-    } else {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data: completed } = await supabase
-        .from('orders').select('*')
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [{ data: active }, { data: recent }] = await Promise.all([
+      supabase.from('orders').select('*')
         .eq('client_phone', phone)
-        .eq('status', 'completed')
-        .gte('created_at', since)
-        .order('created_at', { ascending: false })
-        .limit(1).maybeSingle();
-      if (completed) {
-        setOrder(completed); setNotFound(false);
-        setAlreadySentFeedback(!!localStorage.getItem(`fb_sent_${completed.id}`));
-      } else {
-        setOrder(null); setNotFound(true);
-      }
+        .not('status', 'in', '("completed","rejected")')
+        .order('created_at', { ascending: false }),
+      supabase.from('orders').select('*')
+        .eq('client_phone', phone)
+        .in('status', ['completed', 'rejected'])
+        .gte('created_at', since24h)
+        .order('created_at', { ascending: false }),
+    ]);
+    const all: Order[] = [...(active || []), ...(recent || [])];
+    if (all.length === 0) {
+      setOrders([]); setNotFound(true);
+    } else {
+      setOrders(all); setNotFound(false);
     }
     setLoading(false);
   }, []);
@@ -312,11 +307,9 @@ export default function TrackPage() {
     const run = async () => {
       let saved = localStorage.getItem('deliveryPhone') || '';
 
-      // إذا الجهاز جديد وما فيه رقم → اجلبه من الحساب المسجّل
       if (!saved) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user?.email?.endsWith('@c.delivery')) {
-          // الرقم محفوظ مباشرة في الإيميل — مضمون
           saved = session.user.email.replace('@c.delivery', '');
           localStorage.setItem('deliveryPhone', saved);
           const meta = session.user.user_metadata as Record<string, string | undefined> | undefined;
@@ -330,23 +323,46 @@ export default function TrackPage() {
         setNotFound(true);
         setLoading(false);
       } else {
-        fetchOrder(saved);
+        fetchOrders(saved);
       }
     };
     run();
-  }, [fetchOrder]);
+  }, [fetchOrders]);
 
+  const activeOrderIdsKey = useMemo(
+    () => orders.filter(o => !['completed','rejected'].includes(o.status)).map(o => o.id).join(','),
+    [orders]
+  );
+
+  // Auto-select first order
   useEffect(() => {
-    if (!order) return;
-    const channel = supabase.channel(`track-order-${order.id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${order.id}` },
-        async () => {
-          const { data } = await supabase.from('orders').select('*').eq('id', order.id).single();
-          if (data) setOrder(data as Order);
-        })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    if (orders.length === 0) { setSelectedOrderId(null); return; }
+    setSelectedOrderId(prev => (prev && orders.find(o => o.id === prev)) ? prev : orders[0].id);
+  }, [orders]);
+
+  // Sync feedback flag when selected order changes
+  useEffect(() => {
+    setAlreadySentFeedback(order?.id ? !!localStorage.getItem(`fb_sent_${order.id}`) : false);
   }, [order?.id]);
+
+  // Reset extra time estimate when switching orders
+  useEffect(() => { setExtraMins(0); }, [selectedOrderId]);
+
+  // Realtime for all active orders
+  useEffect(() => {
+    const activeIds = activeOrderIdsKey.split(',').filter(Boolean);
+    if (!activeIds.length) return;
+    const channels = activeIds.map(oid =>
+      supabase.channel(`track-${oid}`)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${oid}` },
+          async () => {
+            const { data } = await supabase.from('orders').select('*').eq('id', oid).single();
+            if (data) setOrders(prev => prev.map(o => o.id === oid ? data as Order : o));
+          })
+        .subscribe()
+    );
+    return () => { channels.forEach(c => supabase.removeChannel(c)); };
+  }, [activeOrderIdsKey]);
 
   // keep a stable ref to the current order id so polling closures don't go stale
   orderIdRef.current = order?.id ?? null;
@@ -477,31 +493,30 @@ export default function TrackPage() {
     });
   }, [order?.status, order?.driver_lat, order?.driver_lng]);
 
-  // Polling fallback — every 3 s for all active statuses so driver name/phone
-  // appear quickly even when the realtime event is missed or delayed.
+  // Polling fallback every 3s for all active orders
   useEffect(() => {
-    if (!order?.id || order.status === 'completed' || order.status === 'rejected') return;
+    const activeIds = activeOrderIdsKey.split(',').filter(Boolean);
+    if (!activeIds.length) return;
     const id = setInterval(async () => {
-      const currentId = orderIdRef.current;
-      if (!currentId) return;
-      const { data } = await supabase.from('orders').select('*').eq('id', currentId).single();
-      if (data) setOrder(data as Order);
+      const { data } = await supabase.from('orders').select('*').in('id', activeIds);
+      if (data) setOrders(prev => prev.map(o => {
+        const upd = (data as Order[]).find(d => d.id === o.id);
+        return upd ?? o;
+      }));
     }, 3000);
     return () => clearInterval(id);
-  }, [order?.id, order?.status]);
+  }, [activeOrderIdsKey]);
 
-  // Re-fetch immediately when the tab becomes visible (user switches back).
+  // Re-fetch all on tab visible
   useEffect(() => {
-    const onVisible = async () => {
+    const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
-      const currentId = orderIdRef.current;
-      if (!currentId) return;
-      const { data } = await supabase.from('orders').select('*').eq('id', currentId).single();
-      if (data) setOrder(data as Order);
+      const phone = localStorage.getItem('deliveryPhone') || inputPhone;
+      if (phone) fetchOrders(phone);
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, []);
+  }, [fetchOrders, inputPhone]);
 
   const submitFeedback = async () => {
     if (!feedbackText.trim() || !order) return;
@@ -572,13 +587,13 @@ export default function TrackPage() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">لا يوجد طلب حالي</h2>
             <p className="text-gray-500 dark:text-slate-400 mb-6 text-sm">ابحث عن طلبك برقم هاتفك</p>
             <div className="flex gap-2 max-w-sm mx-auto">
-              <button onClick={() => { sessionStorage.removeItem('trackDismissed'); fetchOrder(inputPhone); }}
+              <button onClick={() => { sessionStorage.removeItem('trackDismissed'); fetchOrders(inputPhone); }}
                 className="px-4 py-3 rounded-xl font-bold active:scale-95 transition-all"
                 style={{ backgroundColor: brandColor, color: textOnBrand }}>
                 <Search size={18}/>
               </button>
               <input value={inputPhone} onChange={e => setInputPhone(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { sessionStorage.removeItem('trackDismissed'); fetchOrder(inputPhone); } }}
+                onKeyDown={e => { if (e.key === 'Enter') { sessionStorage.removeItem('trackDismissed'); fetchOrders(inputPhone); } }}
                 placeholder="ادخل رقم هاتفك" dir="rtl"
                 className="flex-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2"
                 style={{ '--tw-ring-color': brandColor } as any}
@@ -586,7 +601,7 @@ export default function TrackPage() {
             </div>
           </motion.div>
           </AnimatePresence>
-        ) : order?.status === 'rejected' ? (
+        ) : orders.length === 0 ? null : order?.status === 'rejected' ? (
           <div className="max-w-lg mx-auto mt-10 text-center space-y-4" style={{ animation: 'status-enter 0.5s ease-out' }}>
             <div className="text-7xl">❌</div>
             <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border-2 border-red-200 dark:border-red-800">
@@ -607,6 +622,54 @@ export default function TrackPage() {
           </div>
         ) : order && (
           <div className="space-y-4 max-w-lg mx-auto">
+
+            {/* ── كارتات الطلبات المتعددة ── */}
+            {orders.length > 1 && (
+              <div className="space-y-2">
+                {orders.map((o, idx) => {
+                  const sIdx = o.status === 'pickup' ? 1 : STEPS.findIndex(s => s.key === o.status);
+                  const step = STEPS[sIdx >= 0 ? sIdx : 0];
+                  const isSelected = o.id === selectedOrderId;
+                  const statusStyle: Record<string, { color: string; bg: string; border: string }> = {
+                    pending:   { color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+                    preparing: { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+                    ready:     { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+                    completed: { color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
+                    rejected:  { color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                  };
+                  const ss = statusStyle[o.status] ?? statusStyle.completed;
+                  return (
+                    <button key={o.id}
+                      onClick={() => setSelectedOrderId(o.id)}
+                      className="w-full text-right rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.98]"
+                      style={{
+                        backgroundColor: isSelected ? ss.bg : (dark ? '#1e293b' : 'white'),
+                        border: `2px solid ${isSelected ? ss.border : (dark ? '#334155' : '#f3f4f6')}`,
+                        boxShadow: isSelected ? `0 4px 16px ${ss.color}20` : 'none',
+                      }}
+                    >
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl"
+                           style={{ backgroundColor: `${ss.color}15` }}>
+                        {step?.icon ?? '📦'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-black text-sm" style={{ color: ss.color }}>{step?.label ?? o.status}</span>
+                          <span className="font-black text-sm text-gray-900 dark:text-white whitespace-nowrap">
+                            {o.total_amount.toLocaleString()} <span className="text-xs font-bold text-gray-400">د.ع</span>
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
+                          طلب #{orders.length - idx} · {new Date(o.created_at).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      {isSelected && <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: ss.color }}/>}
+                    </button>
+                  );
+                })}
+                <div className="border-t border-gray-100 dark:border-slate-700 pt-1"/>
+              </div>
+            )}
             <style>{`
               @keyframes line-fill-rtl {
                 0%   { width: 0% }
@@ -847,7 +910,7 @@ export default function TrackPage() {
       {!loading && order && (
         <div className="flex justify-center pb-28 pt-2">
           <button
-            onClick={() => { sessionStorage.setItem('trackDismissed', '1'); setOrder(null); setNotFound(true); setInputPhone(''); }}
+            onClick={() => { sessionStorage.setItem('trackDismissed', '1'); setOrders([]); setSelectedOrderId(null); setNotFound(true); setInputPhone(''); }}
             className="w-11 h-11 rounded-full flex items-center justify-center text-gray-400 dark:text-slate-500 active:scale-95 transition-all border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800"
           >
             <X size={18}/>
