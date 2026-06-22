@@ -14,14 +14,16 @@ const DEFAULT_WEEK: WeekSchedule = {
   days: Object.fromEntries([0,1,2,3,4,5,6].map(d => [String(d), { enabled: d < 5, open: '10:00', close: '23:00' } as DaySchedule])),
 };
 
-function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose }: {
+function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, refreshSettings }: {
   schedule: WeekSchedule | null;
   settingsId: string;
   onSaved: (s: WeekSchedule) => void;
   onClose: () => void;
+  refreshSettings: () => Promise<void>;
 }) {
   const [sched,  setSched]  = useState<WeekSchedule>(initSchedule ?? DEFAULT_WEEK);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => { setSched(initSchedule ?? DEFAULT_WEEK); }, [initSchedule]);
 
@@ -29,10 +31,17 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose }:
     setSched(prev => ({ ...prev, days: { ...prev.days, [key]: { ...prev.days[key], [field]: val } } }));
 
   const handleSave = async () => {
-    if (!settingsId) return;
+    if (!settingsId) { setSaveError('لم يتم تحميل إعدادات المطعم بعد'); return; }
     setSaving(true);
-    await supabase.from('restaurant_settings').update({ schedule: sched }).eq('id', settingsId);
+    setSaveError(null);
+    const { error } = await supabase.from('restaurant_settings').update({ schedule: sched }).eq('id', settingsId);
+    if (error) {
+      setSaveError('فشل الحفظ: ' + error.message);
+      setSaving(false);
+      return;
+    }
     onSaved(sched);
+    await refreshSettings();
     setSaving(false);
     onClose();
   };
@@ -86,6 +95,9 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose }:
           </div>
         </div>
         <div className="px-5 pt-3 flex-shrink-0">
+          {saveError && (
+            <p className="text-red-500 text-xs text-center mb-2 font-bold">{saveError}</p>
+          )}
           <button onClick={handleSave} disabled={saving}
             className="w-full py-4 rounded-2xl bg-black text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60">
             {saving ? 'جاري الحفظ...' : 'حفظ الجدولة'}
@@ -540,6 +552,7 @@ export default function SettingsPage() {
           settingsId={settingsId}
           onSaved={setScheduleLocal}
           onClose={() => setShowSchedule(false)}
+          refreshSettings={refreshSettings}
         />
       )}
 
