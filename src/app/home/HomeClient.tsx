@@ -292,7 +292,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
           ) : isClosingSoon ? (
             <span>يغلق الساعة {formatCloseTimeFull(todayHours?.close ?? null)} • سارع بالطلب</span>
           ) : (
-            <span>مفتوح{todayHours ? ` • يغلق ${todayHours.close}` : ''}</span>
+            <span>مفتوح{todayHours ? ` • يغلق ${formatOpenTime(todayHours.close)}` : ''}</span>
           )}
         </div>
       )}
