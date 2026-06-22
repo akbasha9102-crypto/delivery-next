@@ -27,6 +27,14 @@ function formatOpenTime(time: string | null): string {
   return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
+function formatCloseTimeFull(time: string | null): string {
+  if (!time) return '';
+  const [h, m] = time.split(':').map(Number);
+  const period = h >= 12 ? 'مساءً' : 'صباحاً';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
 function getStatus(item: Item): 'available' | 'unavailable' | 'hidden' {
   if (item.item_status === 'unavailable') return 'unavailable';
   if (item.item_status === 'hidden')      return 'hidden';
@@ -78,6 +86,16 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
     const day = schedule.days[String(new Date().getDay())];
     if (!day?.enabled) return null;
     return { open: day.open, close: day.close };
+  })();
+
+  const isClosingSoon = (() => {
+    if (!todayHours || is_closed) return false;
+    const now = new Date();
+    const [closeH, closeM] = todayHours.close.split(':').map(Number);
+    const closeMinutes = closeH * 60 + closeM;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const diff = closeMinutes - nowMinutes;
+    return diff > 0 && diff <= 60;
   })();
 
   const [categories,   setCategories]   = useState<Category[]>(initialCategories);
@@ -255,10 +273,24 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
       {/* ══ شريط الحالة والوقت ══ */}
       {settingsLoaded && (
-        <div className={`flex items-center justify-center gap-2 py-1.5 text-xs font-bold ${is_closed ? 'bg-red-50 dark:bg-red-900/20 text-red-500' : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'}`}>
-          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${is_closed ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`} />
+        <div className={`flex items-center justify-center gap-2 py-1.5 text-xs font-bold ${
+          is_closed
+            ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
+            : isClosingSoon
+              ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400'
+              : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+            is_closed
+              ? 'bg-red-500'
+              : isClosingSoon
+                ? 'bg-yellow-500 animate-pulse'
+                : 'bg-green-500 animate-pulse'
+          }`} />
           {is_closed ? (
             <span>مغلق{opens_at ? ` • يفتح ${opens_at}` : ''}</span>
+          ) : isClosingSoon ? (
+            <span>يغلق الساعة {formatCloseTimeFull(todayHours?.close ?? null)} • سارع بالطلب</span>
           ) : (
             <span>مفتوح{todayHours ? ` • يغلق ${todayHours.close}` : ''}</span>
           )}
