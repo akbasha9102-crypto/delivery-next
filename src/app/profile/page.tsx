@@ -236,7 +236,7 @@ export default function ProfilePage() {
           session ? (
             <button
               onClick={signOut}
-              className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold text-sm active:scale-95 transition-all"
+              className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl bg-red-600 text-white font-bold text-sm active:scale-95 transition-all"
             >
               <LogOut size={18} />
               تسجيل الخروج
@@ -278,8 +278,7 @@ export default function ProfilePage() {
                 <button
                   onClick={handleAuth}
                   disabled={phoneAuthLoading}
-                  className="w-full py-3 rounded-xl font-black text-white text-sm active:scale-95 transition-all disabled:opacity-60"
-                  style={{ background: `linear-gradient(135deg,${brandColor}dd,${brandColor})` }}
+                  className="w-full py-3 rounded-xl font-black text-white text-sm active:scale-95 transition-all disabled:opacity-60 bg-blue-600"
                 >
                   {phoneAuthLoading ? '...' : authMode === 'signin' ? 'دخول' : 'إنشاء حساب'}
                 </button>
