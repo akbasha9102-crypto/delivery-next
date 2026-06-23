@@ -653,16 +653,6 @@ const proceedFromReview = () => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 space-y-3">
             <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right">معلومات الطلب</h3>
 
-            {/* حالة الحساب */}
-            {!authLoading && session && (
-              <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
-                <button onClick={signOut} className="flex items-center gap-1.5 text-xs text-red-500 font-semibold active:scale-90 transition-all">
-                  <LogOut size={13}/> خروج
-                </button>
-                <span className="text-xs font-bold text-green-700 dark:text-green-400">مسجّل الدخول ✓</span>
-              </div>
-            )}
-
             {/* الاسم */}
             <input type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder="الاسم *" dir="rtl"
