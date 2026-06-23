@@ -52,6 +52,16 @@ type Props = {
 export default function HomeClient({ initialCategories, initialItems, restaurantId, restaurantSlug }: Props) {
   const { dark, toggleDark } = useDarkMode();
   const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total } = useCart();
+  const [priceFlash, setPriceFlash] = useState(false);
+  const prevTotal = useRef(total);
+  useEffect(() => {
+    if (total > prevTotal.current) {
+      setPriceFlash(true);
+      const t = setTimeout(() => setPriceFlash(false), 600);
+      return () => clearTimeout(t);
+    }
+    prevTotal.current = total;
+  }, [total]);
   const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded, is_closed, opens_at, whatsapp_number, location_url, schedule } = useSettings();
   const { setRestaurant } = useRestaurant();
 
@@ -538,7 +548,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                  </button>
                  <div className="text-right">
                    <p className="text-[10px] font-black opacity-30 uppercase tracking-widest">السلة</p>
-                   <p className="font-black text-xl">{total.toLocaleString()} د.ع</p>
+                   <p className="font-black text-xl transition-colors duration-500" style={{ color: priceFlash ? '#dc2626' : '' }}>{total.toLocaleString()} د.ع</p>
                  </div>
                </div>
                <Link href="/cart" className="px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform bg-red-600 text-white">
