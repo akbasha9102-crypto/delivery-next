@@ -28,6 +28,33 @@ const ABU_KHASEEB_CENTER: [number, number] = [30.4632, 47.9769];
 
 type SavedInfo = { name: string; nickname: string; phone: string; locationDesc: string; addressDetails: string };
 
+// ── مواقع محفوظة ─────────────────────────────────────────────────────────────
+type SavedLocation = { id: string; lat: number; lng: number; address: string; savedAt: number };
+const SAVED_LOCS_KEY = 'savedLocations_v1';
+const MAX_SAVED_LOCS = 5;
+
+function loadSavedLocations(): SavedLocation[] {
+  try {
+    const raw = localStorage.getItem(SAVED_LOCS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistSavedLocation(loc: SavedLocation) {
+  const existing = loadSavedLocations();
+  const filtered = existing.filter(l =>
+    Math.abs(l.lat - loc.lat) > 0.0001 || Math.abs(l.lng - loc.lng) > 0.0001
+  );
+  localStorage.setItem(SAVED_LOCS_KEY, JSON.stringify([loc, ...filtered].slice(0, MAX_SAVED_LOCS)));
+}
+
+function deleteSavedLocation(id: string) {
+  const updated = loadSavedLocations().filter(l => l.id !== id);
+  localStorage.setItem(SAVED_LOCS_KEY, JSON.stringify(updated));
+}
+
 function loadSaved(): SavedInfo | null {
   const name  = localStorage.getItem(KEYS.name)  || '';
   const phone = localStorage.getItem(KEYS.phone) || '';
@@ -125,6 +152,7 @@ export default function CartPage() {
   const [editingConfirmAddress, setEditingConfirmAddress] = useState(false);
   const [editingConfirmPhone,   setEditingConfirmPhone]   = useState(false);
   const hasSavedInfoRef = useRef(false);
+  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
 
   // map state
   const [clientLat, setClientLat] = useState<number | null>(null);
@@ -270,6 +298,12 @@ export default function CartPage() {
     setGpsLocating(false);
     setGpsAccuracy(null);
     setEditingFromConfirm(false);
+    // حفظ الموقع الجديد
+    if (clientLat !== null && clientLng !== null) {
+      const loc: SavedLocation = { id: Date.now().toString(), lat: clientLat, lng: clientLng, address: addressDetails.trim(), savedAt: Date.now() };
+      persistSavedLocation(loc);
+      setSavedLocations(loadSavedLocations());
+    }
     if (pendingConfirmRef.current) {
       pendingConfirmRef.current = false;
       setShowConfirmModal(true);
@@ -493,6 +527,8 @@ export default function CartPage() {
     }
   }, []);
 
+  useEffect(() => { setSavedLocations(loadSavedLocations()); }, []);
+
   // فتح المراجعة قبل أي رسم حتى لا يظهر وميض الصفحة
   useLayoutEffect(() => {
     if (items.length > 0 && !editing) {
@@ -692,12 +728,50 @@ const proceedFromReview = () => {
                 </span>
               </div>
             ) : (
-              <button type="button" onClick={openMap}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
-                style={{ backgroundColor: '#ef4444', color: '#ffffff', boxShadow: '0 4px 14px #ef444450' }}>
-                <MapPin size={17} />
-                اضغط هنا لتحديد الموقع
-              </button>
+              <div className="space-y-2">
+                {/* كروت المواقع المحفوظة */}
+                {savedLocations.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 text-right mb-1.5 uppercase tracking-wider">مواقع سابقة</p>
+                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-row-reverse">
+                      {savedLocations.map(loc => (
+                        <div key={loc.id} className="flex-shrink-0 flex items-center bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setClientLat(loc.lat);
+                              setClientLng(loc.lng);
+                              if (loc.address) setAddressDetails(loc.address);
+                              setLocationConfirmed(true);
+                            }}
+                            className="flex items-center gap-2 px-3 py-2.5 active:scale-95 transition-all"
+                          >
+                            <div className="w-6 h-6 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
+                              <MapPin size={12} className="text-red-500" />
+                            </div>
+                            <p className="text-xs font-bold text-gray-700 dark:text-slate-200 max-w-[110px] truncate text-right">
+                              {loc.address || `${loc.lat.toFixed(4)}° ${loc.lng.toFixed(4)}°`}
+                            </p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { deleteSavedLocation(loc.id); setSavedLocations(loadSavedLocations()); }}
+                            className="pr-2 pl-3 py-2.5 text-gray-300 dark:text-slate-600 active:text-red-400 transition-colors"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button type="button" onClick={openMap}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
+                  style={{ backgroundColor: '#ef4444', color: '#ffffff', boxShadow: '0 4px 14px #ef444450' }}>
+                  <MapPin size={17} />
+                  اضغط هنا لتحديد الموقع
+                </button>
+              </div>
             )}
 
             {/* تفاصيل العنوان */}
