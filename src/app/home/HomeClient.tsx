@@ -223,7 +223,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
     if (!selectedItem) { prevModalPrice.current = 0; return; }
     const extras = getExtras(selectedItem);
     const extrasSum = extras.filter(e => selectedModalExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
-    const dp = selectedItem.price + extrasSum;
+    const quantity = cartItems.find(i => i.id === selectedItem.id)?.quantity || 0;
+    const dp = quantity * (selectedItem.price + extrasSum);
     if (dp > prevModalPrice.current) {
       setModalPriceFlash(true);
       const t = setTimeout(() => setModalPriceFlash(false), 700);
@@ -231,7 +232,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
       return () => clearTimeout(t);
     }
     prevModalPrice.current = dp;
-  }, [selectedModalExtras, selectedItem]);
+  }, [selectedModalExtras, selectedItem, cartItems]);
 
   const handleAdd = (item: Item) => {
     if (getStatus(item) !== 'available') return;
@@ -693,7 +694,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                           {(() => {
                             const extras = getExtras(selectedItem);
                             const extrasSum = extras.filter(e => selectedModalExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
-                            return (selectedItem.price + extrasSum).toLocaleString();
+                            return (qty(selectedItem.id) * (selectedItem.price + extrasSum)).toLocaleString();
                           })()} <span className="text-[10px] opacity-40">د.ع</span>
                         </motion.p>
                       </div>
