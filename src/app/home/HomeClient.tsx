@@ -548,7 +548,11 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                  </button>
                  <div className="text-right">
                    <p className="text-[10px] font-black opacity-30 uppercase tracking-widest">السلة</p>
-                   <p className="font-black text-xl transition-colors duration-500" style={{ color: priceFlash ? '#dc2626' : '' }}>{total.toLocaleString()} د.ع</p>
+                   <motion.p
+                     className="font-black text-xl"
+                     animate={priceFlash ? { color: ['#dc2626', '#dc2626', '#000000'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
+                     transition={{ duration: 0.7, ease: 'easeOut' }}
+                   >{total.toLocaleString()} د.ع</motion.p>
                  </div>
                </div>
                <Link href="/cart" className="px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform bg-red-600 text-white">
