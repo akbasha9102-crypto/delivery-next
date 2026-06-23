@@ -545,7 +545,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                  </div>
                </div>
                <Link href="/cart" className="px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform bg-red-600 text-white">
-                 إتمام الطلب
+                 التالي
                </Link>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2 flex-row-reverse scrollbar-hide">
