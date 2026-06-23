@@ -195,6 +195,11 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   useEffect(() => { setShowCartPanel(cartItems.length > 0); }, [cartItems.length]);
   useEffect(() => { setSelectedModalExtras(new Set()); }, [selectedItem]);
 
+  useEffect(() => {
+    document.body.style.overflow = showCartDrawer ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [showCartDrawer]);
+
   // حفظ restaurant_id في localStorage لاستخدامه في صفحة السلة
   useEffect(() => {
     if (restaurantId) localStorage.setItem('currentRestaurantId', restaurantId);
@@ -235,9 +240,9 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
     prevModalPrice.current = dp;
   }, [selectedModalExtras, selectedItem, cartItems]);
 
-  const handleAdd = (item: Item) => {
+  const handleAdd = (item: Item, selectedExtrasNames?: string[]) => {
     if (getStatus(item) !== 'available') return;
-    addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url, extras_json: item.extras_json });
+    addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url, extras_json: item.extras_json, selected_extras_names: selectedExtrasNames });
   };
 
   const qty = (id: string) => cartItems.find(i => i.id === id)?.quantity || 0;
@@ -583,10 +588,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 className="relative w-12 h-12 rounded-2xl flex items-center justify-center bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm"
               >
                 <ShoppingCart size={22} className="text-gray-600 dark:text-slate-300" />
-                <span
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white shadow"
-                  style={{ backgroundColor: brandColor }}
-                >
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white shadow bg-red-500">
                   {cartItems.reduce((s, i) => s + i.quantity, 0)}
                 </span>
               </motion.button>
@@ -665,20 +667,29 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                         </div>
                       )}
 
-                      {/* الاسم والسعر */}
+                      {/* الاسم والسعر والإضافات */}
                       <div className="flex-1 text-right min-w-0">
                         <p className="font-black text-sm truncate text-gray-900 dark:text-white">{item.name}</p>
                         <p className="text-xs text-gray-400 dark:text-slate-500 font-bold mt-0.5">
                           {(item.price * item.quantity).toLocaleString()} د.ع
                         </p>
+                        {item.selected_extras_names && item.selected_extras_names.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5 justify-end">
+                            {item.selected_extras_names.map((name, i) => (
+                              <span key={i} className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 px-2 py-0.5 rounded-full font-bold">
+                                + {name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* أزرار التحكم */}
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <button
-                          onClick={() => addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url, extras_json: item.extras_json })}
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-white shadow-sm active:scale-90"
-                          style={{ backgroundColor: brandColor }}
+                          onClick={() => addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url, extras_json: item.extras_json, selected_extras_names: item.selected_extras_names })}
+                          className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm active:scale-90"
+                          style={{ backgroundColor: brandColor, color: getTextColor(brandColor) }}
                         >
                           <Plus size={14} strokeWidth={3} />
                         </button>
@@ -705,7 +716,11 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
               <div className="px-5 py-4 border-t border-gray-100 dark:border-slate-800 flex-shrink-0">
                 <div className="flex justify-between items-center flex-row-reverse mb-4">
                   <span className="text-sm font-black text-gray-400">المجموع الكلي</span>
-                  <span className="font-black text-xl">{total.toLocaleString()} د.ع</span>
+                  <motion.span
+                    className="font-black text-xl"
+                    animate={priceFlash ? { color: ['#dc2626', '#dc2626', dark ? '#ffffff' : '#111827'], scale: [1, 1.18, 1, 1.08, 1] } : {}}
+                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                  >{total.toLocaleString()} د.ع</motion.span>
                 </div>
                 <Link
                   href="/cart"
@@ -844,7 +859,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                               >
                                 <motion.button
                                   whileTap={{ scale: 0.8 }}
-                                  onClick={(e) => { e.stopPropagation(); addItem({ id: selectedItem.id, name: selectedItem.name, price: selectedItem.price, image_url: selectedItem.image_url, extras_json: selectedItem.extras_json }); }}
+                                  onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const selectedNames = extras.filter(ex => selectedModalExtras.has(ex.id)).map(ex => ex.name); addItem({ id: selectedItem.id, name: selectedItem.name, price: selectedItem.price, image_url: selectedItem.image_url, extras_json: selectedItem.extras_json, selected_extras_names: selectedNames.length > 0 ? selectedNames : undefined }); }}
                                   className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center"
                                 >
                                   <Plus size={16} strokeWidth={3}/>
@@ -875,7 +890,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                 exit={{ opacity: 0, scale: 0.8 }}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={(e) => { e.stopPropagation(); handleAdd(selectedItem); }}
+                                onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const selectedNames = extras.filter(ex => selectedModalExtras.has(ex.id)).map(ex => ex.name); handleAdd(selectedItem, selectedNames.length > 0 ? selectedNames : undefined); }}
                                 className="flex items-center gap-2 px-6 py-3 rounded-full font-black text-sm shadow-2xl"
                                 style={{ backgroundColor: modalColor, color: modalTextColor }}
                               >

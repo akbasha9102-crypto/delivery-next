@@ -14,6 +14,7 @@ type CartItem = {
   image_url: string | null;
   quantity: number;
   extras_json?: string;
+  selected_extras_names?: string[];
 };
 
 type Ctx = {
