@@ -62,6 +62,9 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
     }
     prevTotal.current = total;
   }, [total]);
+
+  const [modalPriceFlash, setModalPriceFlash] = useState(false);
+  const prevModalPrice = useRef(0);
   const { restaurant_name, primary_color, logo_url, loaded: settingsLoaded, is_closed, opens_at, whatsapp_number, location_url, schedule } = useSettings();
   const { setRestaurant } = useRestaurant();
 
@@ -215,6 +218,20 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   const getExtras = (item: Item): Extra[] => {
     try { return JSON.parse(item.extras_json || '[]'); } catch { return []; }
   };
+
+  useEffect(() => {
+    if (!selectedItem) { prevModalPrice.current = 0; return; }
+    const extras = getExtras(selectedItem);
+    const extrasSum = extras.filter(e => selectedModalExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
+    const dp = selectedItem.price + extrasSum;
+    if (dp > prevModalPrice.current) {
+      setModalPriceFlash(true);
+      const t = setTimeout(() => setModalPriceFlash(false), 700);
+      prevModalPrice.current = dp;
+      return () => clearTimeout(t);
+    }
+    prevModalPrice.current = dp;
+  }, [selectedModalExtras, selectedItem]);
 
   const handleAdd = (item: Item) => {
     if (getStatus(item) !== 'available') return;
@@ -665,6 +682,21 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                           </>
                         );
                       })()}
+
+                      <div className="absolute bottom-5 left-5 flex flex-col items-start">
+                        <p className="text-[10px] font-black opacity-30 uppercase tracking-widest mb-0.5">المجموع</p>
+                        <motion.p
+                          className="font-black text-2xl"
+                          animate={modalPriceFlash ? { color: ['#dc2626', '#dc2626', '#000000'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
+                          transition={{ duration: 0.7, ease: 'easeOut' }}
+                        >
+                          {(() => {
+                            const extras = getExtras(selectedItem);
+                            const extrasSum = extras.filter(e => selectedModalExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
+                            return (selectedItem.price + extrasSum).toLocaleString();
+                          })()} <span className="text-[10px] opacity-40">د.ع</span>
+                        </motion.p>
+                      </div>
 
                       {!is_closed && getStatus(selectedItem) === 'available' && (
                         <div className="absolute bottom-5 right-5">
