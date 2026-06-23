@@ -74,6 +74,8 @@ export default function CartPage() {
 
   // extras selection per item in review
   const [itemSelectedExtras, setItemSelectedExtras] = useState<Record<string, Set<string>>>({});
+  const [cartPriceFlash, setCartPriceFlash] = useState(false);
+  const prevGrandTotal = useRef(0);
 
   const getExtras = (extrasJson?: string): Extra[] => {
     try { return JSON.parse(extrasJson || '[]'); } catch { return []; }
@@ -87,6 +89,16 @@ export default function CartPage() {
   }, 0);
 
   const grandTotal = total + extrasTotal;
+
+  useEffect(() => {
+    if (grandTotal > prevGrandTotal.current) {
+      setCartPriceFlash(true);
+      const t = setTimeout(() => setCartPriceFlash(false), 700);
+      prevGrandTotal.current = grandTotal;
+      return () => clearTimeout(t);
+    }
+    prevGrandTotal.current = grandTotal;
+  }, [grandTotal]);
 
   // Phone auth state
   const [session,            setSession]            = useState<Session | null>(null);
@@ -937,7 +949,12 @@ const proceedFromReview = () => {
               {/* Total */}
               <div className="rounded-xl px-4 py-3 flex items-center justify-between"
                 style={{ background: 'linear-gradient(135deg,#ef444412,#ef444406)', border: '1.5px solid #ef444435' }}>
-                <span className="font-black text-xl" style={{ color: '#ef4444' }}>{grandTotal.toLocaleString()} د.ع</span>
+                <motion.span
+                  className="font-black text-xl"
+                  animate={cartPriceFlash ? { color: ['#dc2626', '#dc2626', '#ef4444'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
+                  transition={{ duration: 0.7, ease: 'easeOut' }}
+                  style={{ color: '#ef4444' }}
+                >{grandTotal.toLocaleString()} د.ع</motion.span>
                 <span className="font-black text-gray-900 dark:text-white text-sm">المجموع</span>
               </div>
             </div>
