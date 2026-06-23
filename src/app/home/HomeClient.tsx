@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, Plus, Minus, ShoppingBag, Trash2, MapPin, MessageCircle, ChevronDown, Check } from 'lucide-react';
+import { Moon, Sun, Plus, Minus, ShoppingBag, ShoppingCart, Trash2, MapPin, MessageCircle, ChevronDown, Check, X } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/CustomerGuard';
@@ -118,6 +118,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   const [activeCategory,   setActiveCategory]   = useState('all');
   const [showClosedToast,  setShowClosedToast]  = useState(false);
   const [showCartPanel,  setShowCartPanel]  = useState(false);
+  const [showCartDrawer, setShowCartDrawer] = useState(false);
 
   const [selectedItem,        setSelectedItem]        = useState<Item | null>(null);
   const [selectedModalExtras, setSelectedModalExtras] = useState<Set<string>>(new Set());
@@ -548,44 +549,174 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
         </div>
       </div>
 
+      {/* ══ شريط السلة السفلي ══ */}
       <AnimatePresence>
         {showCartPanel && (
           <motion.div
             initial={{ y: 200, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 200, opacity: 0 }}
-            className="fixed bottom-20 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-gray-200/50 dark:border-slate-700/50 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] rounded-[2.5rem] p-6 z-40">
-            <div className="flex items-center justify-between mb-6 flex-row-reverse">
-               <div className="flex items-center gap-3">
-                 <button
-                   onClick={() => { if(confirm('هل تريد إفراغ السلة بالكامل؟')) clearCart(); }}
-                   className="w-10 h-10 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl flex items-center justify-center transition-colors hover:bg-red-100 dark:hover:bg-red-900/40"
-                   title="إفراغ السلة"
-                 >
-                   <Trash2 size={20} />
-                 </button>
-                 <div className="text-right">
-                   <p className="text-[10px] font-black opacity-30 uppercase tracking-widest">السلة</p>
-                   <motion.p
-                     className="font-black text-xl"
-                     animate={priceFlash ? { color: ['#dc2626', '#dc2626', '#000000'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
-                     transition={{ duration: 0.7, ease: 'easeOut' }}
-                   >{total.toLocaleString()} د.ع</motion.p>
-                 </div>
-               </div>
-               <Link href="/cart" className="px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform bg-red-600 text-white">
-                 التالي
-               </Link>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2 flex-row-reverse scrollbar-hide">
-              {cartItems.map(item => (
-                <motion.div layout initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} key={item.id} className="bg-gray-50 dark:bg-slate-800 px-4 py-2 rounded-xl flex items-center gap-2 border border-gray-100 dark:border-slate-700 whitespace-nowrap">
-                   <span className="font-black text-xs">{item.quantity}×</span>
-                   <span className="text-xs font-bold opacity-70">{item.name}</span>
-                </motion.div>
-              ))}
+            className="fixed bottom-20 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-gray-200/50 dark:border-slate-700/50 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] rounded-[2.5rem] px-5 py-4 z-40">
+            <div className="flex items-center justify-between flex-row-reverse">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { if(confirm('هل تريد إفراغ السلة بالكامل؟')) clearCart(); }}
+                  className="w-10 h-10 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl flex items-center justify-center transition-colors hover:bg-red-100 dark:hover:bg-red-900/40"
+                  title="إفراغ السلة"
+                >
+                  <Trash2 size={18} />
+                </button>
+                <div className="text-right">
+                  <p className="text-[10px] font-black opacity-30 uppercase tracking-widest">السلة</p>
+                  <motion.p
+                    className="font-black text-xl"
+                    animate={priceFlash ? { color: ['#dc2626', '#dc2626', '#000000'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
+                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                  >{total.toLocaleString()} د.ع</motion.p>
+                </div>
+              </div>
+
+              {/* أيقونة السلة */}
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowCartDrawer(true)}
+                className="relative w-12 h-12 rounded-2xl flex items-center justify-center bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm"
+              >
+                <ShoppingCart size={22} className="text-gray-600 dark:text-slate-300" />
+                <span
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white shadow"
+                  style={{ backgroundColor: brandColor }}
+                >
+                  {cartItems.reduce((s, i) => s + i.quantity, 0)}
+                </span>
+              </motion.button>
+
+              <Link href="/cart" className="px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform bg-red-600 text-white">
+                التالي
+              </Link>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══ درج تفاصيل السلة ══ */}
+      <AnimatePresence>
+        {showCartDrawer && (
+          <div className="fixed inset-0 z-[55] flex flex-col justify-end">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCartDrawer(false)}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              className="relative bg-white dark:bg-slate-900 rounded-t-[2.5rem] max-h-[78vh] flex flex-col shadow-2xl"
+            >
+              {/* المقبض */}
+              <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+                <div className="w-12 h-1.5 rounded-full bg-gray-200 dark:bg-slate-700" />
+              </div>
+
+              {/* الرأس */}
+              <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 dark:border-slate-800 flex-row-reverse flex-shrink-0">
+                <h3 className="text-lg font-black">سلة التسوق</h3>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400 font-bold">
+                    {cartItems.reduce((s, i) => s + i.quantity, 0)} عنصر
+                  </span>
+                  <button
+                    onClick={() => setShowCartDrawer(false)}
+                    className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center"
+                  >
+                    <X size={18} className="text-gray-500" />
+                  </button>
+                </div>
+              </div>
+
+              {/* قائمة العناصر */}
+              <div className="flex-1 overflow-y-auto px-5 py-1">
+                <AnimatePresence initial={false}>
+                  {cartItems.map(item => (
+                    <motion.div
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex items-center gap-3 py-3.5 border-b border-gray-50 dark:border-slate-800 flex-row-reverse overflow-hidden"
+                    >
+                      {/* صورة */}
+                      {item.image_url ? (
+                        <Image
+                          src={item.image_url}
+                          alt={item.name}
+                          width={52} height={52}
+                          className="w-13 h-13 rounded-2xl object-cover flex-shrink-0"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-slate-800 flex-shrink-0 flex items-center justify-center">
+                          <ShoppingBag size={18} className="opacity-30" />
+                        </div>
+                      )}
+
+                      {/* الاسم والسعر */}
+                      <div className="flex-1 text-right min-w-0">
+                        <p className="font-black text-sm truncate text-gray-900 dark:text-white">{item.name}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 font-bold mt-0.5">
+                          {(item.price * item.quantity).toLocaleString()} د.ع
+                        </p>
+                      </div>
+
+                      {/* أزرار التحكم */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={() => addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url, extras_json: item.extras_json })}
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white shadow-sm active:scale-90"
+                          style={{ backgroundColor: brandColor }}
+                        >
+                          <Plus size={14} strokeWidth={3} />
+                        </button>
+                        <span className="font-black text-sm w-5 text-center">{item.quantity}</span>
+                        <button
+                          onClick={() => decrementItem(item.id)}
+                          className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center active:scale-90"
+                        >
+                          <Minus size={14} strokeWidth={3} className="text-gray-600 dark:text-slate-300" />
+                        </button>
+                        <button
+                          onClick={() => removeItem(item.id)}
+                          className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center mr-1 active:scale-90"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              {/* الذيل: المجموع + زر المتابعة */}
+              <div className="px-5 py-4 border-t border-gray-100 dark:border-slate-800 flex-shrink-0">
+                <div className="flex justify-between items-center flex-row-reverse mb-4">
+                  <span className="text-sm font-black text-gray-400">المجموع الكلي</span>
+                  <span className="font-black text-xl">{total.toLocaleString()} د.ع</span>
+                </div>
+                <Link
+                  href="/cart"
+                  onClick={() => setShowCartDrawer(false)}
+                  className="block w-full py-4 rounded-2xl font-black text-sm text-center shadow-xl bg-red-600 text-white active:scale-95 transition-transform"
+                >
+                  متابعة الطلب
+                </Link>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
