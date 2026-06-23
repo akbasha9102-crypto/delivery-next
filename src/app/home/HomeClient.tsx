@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, Plus, Minus, ShoppingBag, Trash2, MapPin, MessageCircle, ChevronDown } from 'lucide-react';
+import { Moon, Sun, Plus, Minus, ShoppingBag, Trash2, MapPin, MessageCircle, ChevronDown, Check } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/CustomerGuard';
@@ -106,7 +106,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   const [showClosedToast,  setShowClosedToast]  = useState(false);
   const [showCartPanel,  setShowCartPanel]  = useState(false);
 
-  const [selectedItem,   setSelectedItem]   = useState<Item | null>(null);
+  const [selectedItem,        setSelectedItem]        = useState<Item | null>(null);
+  const [selectedModalExtras, setSelectedModalExtras] = useState<Set<string>>(new Set());
 
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const pillsRef    = useRef<HTMLDivElement>(null);
@@ -178,6 +179,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   }, [activeCategory]);
 
   useEffect(() => { setShowCartPanel(cartItems.length > 0); }, [cartItems.length]);
+  useEffect(() => { setSelectedModalExtras(new Set()); }, [selectedItem]);
 
   // حفظ restaurant_id في localStorage لاستخدامه في صفحة السلة
   useEffect(() => {
@@ -603,15 +605,55 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                       </button>
                    </div>
                    <div className="p-6 sm:p-10 relative pb-24 sm:pb-28">
-                      <div className="flex justify-between items-center flex-row-reverse mb-4 sm:mb-6">
-                        <h3 className="text-xl sm:text-3xl font-black text-right">{selectedItem.name}</h3>
-                        <div className="text-left">
-                          <p className="text-xl sm:text-2xl font-black">{selectedItem.price.toLocaleString()} <span className="text-[10px] opacity-40">د.ع</span></p>
-                        </div>
-                      </div>
-                      <p className="text-gray-500 dark:text-slate-400 text-right leading-relaxed text-sm sm:text-lg">
-                        {selectedItem.description || 'لا يوجد وصف متاح لهذا الطلب حالياً.'}
-                      </p>
+                      {(() => {
+                        const modalExtras = getExtras(selectedItem);
+                        const extrasSum = modalExtras.filter(e => selectedModalExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
+                        const displayPrice = selectedItem.price + extrasSum;
+                        return (
+                          <>
+                            <div className="flex justify-between items-center flex-row-reverse mb-4 sm:mb-6">
+                              <h3 className="text-xl sm:text-3xl font-black text-right">{selectedItem.name}</h3>
+                              <div className="text-left">
+                                <p className="text-xl sm:text-2xl font-black">{displayPrice.toLocaleString()} <span className="text-[10px] opacity-40">د.ع</span></p>
+                              </div>
+                            </div>
+                            <p className="text-gray-500 dark:text-slate-400 text-right leading-relaxed text-sm sm:text-lg">
+                              {selectedItem.description || 'لا يوجد وصف متاح لهذا الطلب حالياً.'}
+                            </p>
+
+                            {modalExtras.length > 0 && (
+                              <div className="mt-4 sm:mt-6" dir="rtl">
+                                <p className="text-xs font-black text-gray-400 dark:text-slate-500 mb-2 uppercase tracking-wider">الإضافات</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {modalExtras.map(e => {
+                                    const on = selectedModalExtras.has(e.id);
+                                    return (
+                                      <motion.button
+                                        key={e.id}
+                                        whileTap={{ scale: 0.93 }}
+                                        onClick={() => setSelectedModalExtras(prev => {
+                                          const next = new Set(prev);
+                                          on ? next.delete(e.id) : next.add(e.id);
+                                          return next;
+                                        })}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all"
+                                        style={on
+                                          ? { backgroundColor: modalColor, borderColor: modalColor, color: modalTextColor }
+                                          : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }
+                                        }
+                                      >
+                                        {on ? <Check size={11} strokeWidth={3}/> : <Plus size={11} strokeWidth={2.5}/>}
+                                        {e.name}
+                                        {e.price > 0 && <span className="opacity-75">+{e.price.toLocaleString()}</span>}
+                                      </motion.button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
 
                       {!is_closed && getStatus(selectedItem) === 'available' && (
                         <div className="absolute bottom-5 right-5">
@@ -622,7 +664,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                 initial={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.8 }}
-                                className="flex items-center gap-2 p-1 rounded-full shadow-xl bg-red-600"
+                                className="flex items-center gap-2 p-1 rounded-full shadow-xl"
+                                style={{ backgroundColor: modalColor }}
                               >
                                 <motion.button
                                   whileTap={{ scale: 0.8 }}
@@ -635,14 +678,16 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                   key={qty(selectedItem.id)}
                                   initial={{ scale: 1.5, opacity: 0 }}
                                   animate={{ scale: 1, opacity: 1 }}
-                                  className="font-black text-sm w-6 text-center text-white"
+                                  className="font-black text-sm w-6 text-center"
+                                  style={{ color: modalTextColor }}
                                 >
                                   {qty(selectedItem.id)}
                                 </motion.span>
                                 <motion.button
                                   whileTap={{ scale: 0.8 }}
                                   onClick={(e) => { e.stopPropagation(); decrementItem(selectedItem.id); }}
-                                  className="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center"
+                                  className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
+                                  style={{ color: modalTextColor }}
                                 >
                                   <Minus size={16} strokeWidth={3}/>
                                 </motion.button>
@@ -656,7 +701,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={(e) => { e.stopPropagation(); handleAdd(selectedItem); }}
-                                className="flex items-center gap-2 px-6 py-3 rounded-full font-black text-sm shadow-2xl bg-red-600 text-white"
+                                className="flex items-center gap-2 px-6 py-3 rounded-full font-black text-sm shadow-2xl"
+                                style={{ backgroundColor: modalColor, color: modalTextColor }}
                               >
                                 <Plus size={18} strokeWidth={3}/>
                                 إضافة للسلة
