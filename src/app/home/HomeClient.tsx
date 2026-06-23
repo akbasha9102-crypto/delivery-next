@@ -540,9 +540,6 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                    <p className="text-[10px] font-black opacity-30 uppercase tracking-widest">السلة</p>
                    <p className="font-black text-xl">{total.toLocaleString()} د.ع</p>
                  </div>
-                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl" style={{ backgroundColor: brandColor, color: textOnBrand }}>
-                    <ShoppingBag size={22} />
-                 </div>
                </div>
                <Link href="/cart" className="px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform bg-red-600 text-white">
                  التالي
