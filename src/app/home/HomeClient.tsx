@@ -564,13 +564,6 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
             className="fixed bottom-20 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-gray-200/50 dark:border-slate-700/50 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] rounded-[2.5rem] px-5 py-4 z-40">
             <div className="flex items-center justify-between flex-row-reverse">
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => { if(confirm('هل تريد إفراغ السلة بالكامل؟')) clearCart(); }}
-                  className="w-10 h-10 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl flex items-center justify-center transition-colors hover:bg-red-100 dark:hover:bg-red-900/40"
-                  title="إفراغ السلة"
-                >
-                  <Trash2 size={18} />
-                </button>
                 <div className="text-right">
                   <p className="text-[10px] font-black opacity-30 uppercase tracking-widest">السلة</p>
                   <motion.p
@@ -626,11 +619,21 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
               {/* الرأس */}
               <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 dark:border-slate-800 flex-row-reverse flex-shrink-0">
-                <h3 className="text-lg font-black">سلة التسوق</h3>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-black">سلة التسوق</h3>
                   <span className="text-xs text-gray-400 font-bold">
-                    {cartItems.reduce((s, i) => s + i.quantity, 0)} عنصر
+                    ({cartItems.reduce((s, i) => s + i.quantity, 0)})
                   </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    whileTap={{ scale: 0.88 }}
+                    onClick={() => { if(confirm('هل تريد إفراغ السلة بالكامل؟')) { clearCart(); setShowCartDrawer(false); } }}
+                    className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center active:scale-90"
+                    title="إفراغ السلة"
+                  >
+                    <Trash2 size={17} />
+                  </motion.button>
                   <button
                     onClick={() => setShowCartDrawer(false)}
                     className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center"
