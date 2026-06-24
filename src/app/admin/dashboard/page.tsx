@@ -3,13 +3,22 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, ClipboardList, Clock } from 'lucide-react';
+import { Moon, Sun, ClipboardList, Clock, MessageCircle, X } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null };
+type OrderMessage = { id: string; order_id: string; sender: 'customer' | 'restaurant'; message: string; is_read: boolean; created_at: string };
+
+const RESTAURANT_QUICK_REPLIES = [
+  { icon: '🍳', text: 'طلبك قيد التجهيز الآن' },
+  { icon: '🏍️', text: 'طلبك على الطريق إليك' },
+  { icon: '⏳', text: 'آسفين على التأخير، سيوصل قريباً' },
+  { icon: '📞', text: 'سنتصل بك خلال دقائق' },
+  { icon: '✅', text: 'طلبك سيصلك خلال ١٠ دقائق' },
+];
 
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز', color: '#f59e0b', dot: 'bg-yellow-400',  btnColor: '#3b82f6' },
@@ -312,6 +321,15 @@ export default function DashboardPage() {
   const [newOrderFlash, setNewOrderFlash] = useState(false);
   const [tick,          setTick]          = useState(0);
 
+  // ── رسائل الزبائن ──
+  const [unreadCount,   setUnreadCount]   = useState(0);
+  const [showMsgsPanel, setShowMsgsPanel] = useState(false);
+  const [allConvos,     setAllConvos]     = useState<{ order: Order; lastMsg: OrderMessage; unread: number }[]>([]);
+  const [chatOrder,     setChatOrder]     = useState<Order | null>(null);
+  const [chatMessages,  setChatMessages]  = useState<OrderMessage[]>([]);
+  const [sendingReply,  setSendingReply]  = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
   const initialLoadDone = useRef(false);
 
   // تحديث كل ثانية لعرض العداد التنازلي
@@ -405,6 +423,81 @@ export default function DashboardPage() {
     }
   };
 
+  // ── منطق الرسائل ──
+  const fetchUnread = useCallback(async () => {
+    if (!restaurantId) return;
+    const { count } = await supabase.from('order_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('restaurant_id', restaurantId).eq('sender', 'customer').eq('is_read', false);
+    setUnreadCount(count || 0);
+  }, [restaurantId]);
+
+  const fetchAllConvos = useCallback(async () => {
+    if (!restaurantId) return;
+    const { data: msgs } = await supabase.from('order_messages')
+      .select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false });
+    if (!msgs?.length) { setAllConvos([]); return; }
+    const byOrder: Record<string, OrderMessage[]> = {};
+    msgs.forEach(m => { if (!byOrder[m.order_id]) byOrder[m.order_id] = []; byOrder[m.order_id].push(m); });
+    const result = Object.entries(byOrder).map(([orderId, orderMsgs]) => {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return null;
+      return { order, lastMsg: orderMsgs[0], unread: orderMsgs.filter(m => m.sender === 'customer' && !m.is_read).length };
+    }).filter(Boolean) as { order: Order; lastMsg: OrderMessage; unread: number }[];
+    result.sort((a, b) => new Date(b.lastMsg.created_at).getTime() - new Date(a.lastMsg.created_at).getTime());
+    setAllConvos(result);
+  }, [restaurantId, orders]);
+
+  useEffect(() => { fetchUnread(); }, [fetchUnread]);
+  useEffect(() => { if (showMsgsPanel) fetchAllConvos(); }, [showMsgsPanel, fetchAllConvos]);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    const ch = supabase.channel('dash-msgs-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_messages', filter: `restaurant_id=eq.${restaurantId}` },
+        () => { fetchUnread(); fetchAllConvos(); })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [restaurantId, fetchUnread, fetchAllConvos]);
+
+  useEffect(() => {
+    if (!chatOrder) return;
+    const ch = supabase.channel(`dash-chat-${chatOrder.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_messages', filter: `order_id=eq.${chatOrder.id}` },
+        async (payload) => {
+          setChatMessages(prev => [...prev, payload.new as OrderMessage]);
+          if ((payload.new as OrderMessage).sender === 'customer') {
+            await supabase.from('order_messages').update({ is_read: true }).eq('id', (payload.new as OrderMessage).id);
+            fetchUnread();
+          }
+          setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [chatOrder, fetchUnread]);
+
+  const openOrderChat = useCallback(async (order: Order) => {
+    setChatOrder(order);
+    const { data } = await supabase.from('order_messages').select('*')
+      .eq('order_id', order.id).order('created_at', { ascending: true });
+    setChatMessages((data as OrderMessage[]) || []);
+    await supabase.from('order_messages').update({ is_read: true })
+      .eq('order_id', order.id).eq('sender', 'customer').eq('is_read', false);
+    fetchUnread(); fetchAllConvos();
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+  }, [fetchUnread, fetchAllConvos]);
+
+  const sendReply = async (text: string) => {
+    if (!chatOrder || !restaurantId || sendingReply) return;
+    setSendingReply(true);
+    await supabase.from('order_messages').insert({
+      order_id: chatOrder.id, restaurant_id: restaurantId,
+      sender: 'restaurant', message: text, is_read: true,
+    });
+    setSendingReply(false);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+  };
+
   const counts = { pending: 0, preparing: 0, delivery: 0, completed: 0 };
   orders.forEach(o => {
     if (o.status === 'pending')   counts.pending++;
@@ -429,7 +522,18 @@ export default function DashboardPage() {
           <ClipboardList size={18} className="text-[#f97316]" />
           <p className="font-bold text-gray-900 dark:text-slate-100">الطلبات</p>
         </div>
-        <div className="w-10" />
+        <button
+          onClick={() => setShowMsgsPanel(true)}
+          className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold text-sm active:scale-95 transition-all border border-blue-200 dark:border-blue-800"
+        >
+          <MessageCircle size={16} />
+          <span>رسائل</span>
+          {unreadCount > 0 && (
+            <span className="min-w-[20px] h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold px-1">
+              {unreadCount}
+            </span>
+          )}
+        </button>
       </header>
 
       {/* شريط الحالة والوقت */}
@@ -620,6 +724,122 @@ export default function DashboardPage() {
 
       {selectedOrder && (
         <DeliveryModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+      )}
+
+      {/* لوحة قائمة المحادثات */}
+      {showMsgsPanel && !chatOrder && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
+             onClick={() => setShowMsgsPanel(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-w-lg"
+               style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+               onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+              <button onClick={() => setShowMsgsPanel(false)}
+                className="p-1.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
+                <X size={16} />
+              </button>
+              <div className="text-right">
+                <p className="font-bold text-gray-900 dark:text-white text-base">رسائل الزبائن 💬</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">
+                  {unreadCount > 0 ? `${unreadCount} رسالة غير مقروءة` : 'كل الرسائل مقروءة'}
+                </p>
+              </div>
+              <div className="w-9" />
+            </div>
+            <div className="flex-1 overflow-y-auto" dir="rtl">
+              {allConvos.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="text-5xl mb-3">💬</div>
+                  <p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد رسائل بعد</p>
+                  <p className="text-gray-300 dark:text-slate-600 text-sm mt-1">ستظهر رسائل الزبائن هنا</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-50 dark:divide-slate-700">
+                  {allConvos.map(({ order, lastMsg, unread }) => (
+                    <button key={order.id} onClick={() => openOrderChat(order)}
+                      className="w-full flex items-center gap-3 px-5 py-4 active:bg-gray-50 dark:active:bg-slate-700/50 transition-all text-right">
+                      <div className="relative flex-shrink-0">
+                        <div className="w-11 h-11 rounded-full bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center text-xl">👤</div>
+                        {unread > 0 && (
+                          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                            {unread}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-0.5">
+                          <span className="text-xs text-gray-400 dark:text-slate-500">
+                            {new Date(lastMsg.created_at).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <p className={`font-bold text-sm ${unread > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-slate-300'}`}>
+                            {order.client_name}
+                          </p>
+                        </div>
+                        <p className={`text-sm truncate text-right ${unread > 0 ? 'text-gray-700 dark:text-slate-300 font-medium' : 'text-gray-400 dark:text-slate-500'}`}>
+                          {lastMsg.sender === 'restaurant' ? 'أنت: ' : ''}{lastMsg.message}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال محادثة زبون */}
+      {chatOrder && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
+             onClick={() => setChatOrder(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-w-lg"
+               style={{ maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+               onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+              <button onClick={() => setChatOrder(null)}
+                className="p-1.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
+                <X size={16} />
+              </button>
+              <div className="text-right">
+                <p className="font-bold text-gray-900 dark:text-white">{chatOrder.client_name}</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">{chatOrder.client_phone}</p>
+              </div>
+              <div className="text-2xl">💬</div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[120px]" dir="rtl">
+              {chatMessages.length === 0 && (
+                <p className="text-center text-gray-400 dark:text-slate-500 text-sm mt-8">لا توجد رسائل</p>
+              )}
+              {chatMessages.map(m => (
+                <div key={m.id} className={`flex ${m.sender === 'customer' ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm font-medium ${
+                    m.sender === 'customer'
+                      ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-200 rounded-tr-sm'
+                      : 'bg-blue-600 text-white rounded-tl-sm'
+                  }`}>
+                    {m.message}
+                    <p className={`text-xs mt-1 ${m.sender === 'customer' ? 'text-orange-400' : 'text-blue-200'}`}>
+                      {m.sender === 'customer' ? 'الزبون' : 'المطعم'} · {new Date(m.created_at).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="px-4 pb-6 pt-3 border-t border-gray-100 dark:border-slate-700 flex-shrink-0">
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right font-medium mb-2">ردود جاهزة:</p>
+              <div className="space-y-2">
+                {RESTAURANT_QUICK_REPLIES.map(r => (
+                  <button key={r.text} onClick={() => sendReply(r.text)} disabled={sendingReply}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 font-medium text-sm active:scale-95 transition-all disabled:opacity-60 text-right">
+                    <span className="text-lg flex-shrink-0">{r.icon}</span>
+                    <span className="flex-1">{r.text}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
