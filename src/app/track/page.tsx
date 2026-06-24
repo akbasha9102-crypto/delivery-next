@@ -183,12 +183,26 @@ type Order = {
   id: string; client_name: string; client_phone: string;
   delivery_address: string | null; total_amount: number;
   status: string; created_at: string;
+  restaurant_id?: string;
   driver_id?: string | null;
   driver_name?: string | null; driver_phone?: string | null;
   driver_arrived?: boolean | null;
   driver_lat?: number | null; driver_lng?: number | null;
   client_lat?: number | null; client_lng?: number | null;
 };
+
+type OrderMessage = {
+  id: string;
+  sender: 'customer' | 'restaurant';
+  message: string;
+  created_at: string;
+};
+
+const CUSTOMER_QUICK_MSGS = [
+  { icon: '⏰', text: 'أحس طلبي تأخر، متى يوصل؟' },
+  { icon: '❓', text: 'ما أعرف حالة طلبي' },
+  { icon: '📦', text: 'هل بدأتم تجهيز طلبي؟' },
+];
 
 
 const MOTO_ICON_HTML = `<div style="width:46px;height:46px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 4px 16px rgba(37,99,235,0.45);display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;">🏍️</div>`;
@@ -293,6 +307,44 @@ export default function TrackPage() {
       localStorage.removeItem('pendingProfileSave');
     });
   }, []);
+
+  // ── حالة محادثة التأخير ──
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [chatMessages, setChatMessages] = useState<OrderMessage[]>([]);
+  const [sendingMsg, setSendingMsg] = useState(false);
+  const [chatSent, setChatSent] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // تحميل رسائل المحادثة عند فتح المودال
+  useEffect(() => {
+    if (!showChatModal || !order?.id) return;
+    supabase.from('order_messages').select('*').eq('order_id', order.id)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => { if (data) setChatMessages(data as OrderMessage[]); });
+    const ch = supabase.channel(`chat-${order.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_messages', filter: `order_id=eq.${order.id}` },
+        (payload) => {
+          setChatMessages(prev => [...prev, payload.new as OrderMessage]);
+          setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [showChatModal, order?.id]);
+
+  const sendCustomerMessage = async (text: string) => {
+    if (!order?.id || !order.restaurant_id || sendingMsg) return;
+    setSendingMsg(true);
+    await supabase.from('order_messages').insert({
+      order_id: order.id,
+      restaurant_id: order.restaurant_id,
+      sender: 'customer',
+      message: text,
+      is_read: false,
+    });
+    setSendingMsg(false);
+    setChatSent(true);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+  };
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackStep, setFeedbackStep] = useState<'choose' | 'write'>('choose');
@@ -790,6 +842,15 @@ export default function TrackPage() {
                       </div>
                       <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{STEPS[current]?.label}</p>
                       <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
+                      {(order.status === 'pending' || order.status === 'preparing') && (
+                        <button
+                          onClick={() => { setShowChatModal(true); setChatSent(false); }}
+                          className="mt-4 flex items-center gap-2 mx-auto px-5 py-2.5 rounded-2xl border-2 border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 font-bold text-sm active:scale-95 transition-all"
+                        >
+                          <MessageSquare size={16}/>
+                          <span>حسيت طلبك تأخر؟ تواصل مع المطعم</span>
+                        </button>
+                      )}
                       {order.status === 'completed' && !alreadySentFeedback && (
                         <button
                           onClick={() => { setShowFeedbackModal(true); setFeedbackStep('choose'); setFeedbackDone(false); setFeedbackText(''); }}
@@ -877,6 +938,80 @@ export default function TrackPage() {
         )}
       </div>
 
+
+      {/* مودال محادثة التأخير */}
+      {showChatModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
+             onClick={() => setShowChatModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-w-lg pb-safe"
+               style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+               onClick={e => e.stopPropagation()}>
+            {/* رأس المودال */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+              <button onClick={() => setShowChatModal(false)}
+                className="p-1.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
+                <X size={16} />
+              </button>
+              <div className="text-right">
+                <p className="font-bold text-gray-900 dark:text-white text-base">تواصل مع المطعم</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">الردود تظهر هنا مباشرة</p>
+              </div>
+              <div className="text-2xl">💬</div>
+            </div>
+
+            {/* منطقة الرسائل */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[140px]" dir="rtl">
+              {chatMessages.length === 0 && !chatSent && (
+                <p className="text-center text-gray-400 dark:text-slate-500 text-sm mt-6">
+                  اختر رسالة من الأسفل لإرسالها للمطعم
+                </p>
+              )}
+              {chatMessages.map(m => (
+                <div key={m.id} className={`flex ${m.sender === 'customer' ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm font-medium ${
+                    m.sender === 'customer'
+                      ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-200 rounded-tr-sm'
+                      : 'bg-gray-900 dark:bg-slate-600 text-white rounded-tl-sm'
+                  }`}>
+                    {m.message}
+                    <p className={`text-xs mt-1 ${m.sender === 'customer' ? 'text-orange-400' : 'text-gray-400'}`}>
+                      {m.sender === 'customer' ? 'أنت' : 'المطعم'} · {new Date(m.created_at).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* رسائل جاهزة */}
+            <div className="px-4 pb-6 pt-3 border-t border-gray-100 dark:border-slate-700 flex-shrink-0 space-y-2">
+              {chatSent && chatMessages.filter(m => m.sender === 'customer').length > 0 ? (
+                <div className="text-center py-3">
+                  <p className="text-sm text-green-600 dark:text-green-400 font-bold">✓ تم إرسال رسالتك للمطعم</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">سيردّ عليك قريباً، الرد يظهر هنا مباشرة</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right font-medium">اختر رسالة:</p>
+                  <div className="space-y-2">
+                    {CUSTOMER_QUICK_MSGS.map(msg => (
+                      <button
+                        key={msg.text}
+                        onClick={() => sendCustomerMessage(msg.text)}
+                        disabled={sendingMsg}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-200 font-medium text-sm active:scale-95 transition-all disabled:opacity-60 text-right"
+                      >
+                        <span className="text-lg flex-shrink-0">{msg.icon}</span>
+                        <span className="flex-1">{msg.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Feedback Modal */}
       {showFeedbackModal && (

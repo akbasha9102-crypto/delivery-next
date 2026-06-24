@@ -1,12 +1,21 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Send, ChevronDown, MapPin, X, Locate } from 'lucide-react';
+import { Send, ChevronDown, MapPin, X, Locate, MessageCircle } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; client_lat: number | null; client_lng: number | null };
+type OrderMessage = { id: string; order_id: string; sender: 'customer' | 'restaurant'; message: string; is_read: boolean; created_at: string };
+
+const RESTAURANT_QUICK_REPLIES = [
+  { icon: '🍳', text: 'طلبك قيد التجهيز الآن' },
+  { icon: '🏍️', text: 'طلبك على الطريق إليك' },
+  { icon: '⏳', text: 'آسفين على التأخير، سيوصل قريباً' },
+  { icon: '📞', text: 'سنتصل بك خلال دقائق' },
+  { icon: '✅', text: 'طلبك سيصلك خلال ١٠ دقائق' },
+];
 
 function MapModal({ order, onClose }: { order: Order; onClose: () => void }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -163,6 +172,13 @@ export default function OrdersPage() {
   const [sending, setSending] = useState<Record<string, boolean>>({});
   const [mapOrder, setMapOrder] = useState<Order | null>(null);
 
+  // ── رسائل الزبائن ──
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [chatOrder, setChatOrder] = useState<Order | null>(null);
+  const [chatMessages, setChatMessages] = useState<OrderMessage[]>([]);
+  const [sendingReply, setSendingReply] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
   const fetchOrders = useCallback(async () => {
     if (!restaurantId) { setLoading(false); return; }
     const q = supabase.from('orders').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false }).limit(100);
@@ -234,11 +250,117 @@ export default function OrdersPage() {
     fetchOrders();
   };
 
+  // جلب عدد الرسائل غير المقروءة + real-time
+  const fetchUnread = useCallback(async () => {
+    if (!restaurantId) return;
+    const { count } = await supabase.from('order_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('restaurant_id', restaurantId)
+      .eq('sender', 'customer')
+      .eq('is_read', false);
+    setUnreadCount(count || 0);
+  }, [restaurantId]);
+
+  useEffect(() => { fetchUnread(); }, [fetchUnread]);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    const ch = supabase.channel('admin-msgs-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_messages',
+          filter: `restaurant_id=eq.${restaurantId}` },
+        () => fetchUnread())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'order_messages',
+          filter: `restaurant_id=eq.${restaurantId}` },
+        () => fetchUnread())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [restaurantId, fetchUnread]);
+
+  // فتح محادثة طلب معين
+  const openOrderChat = useCallback(async (order: Order) => {
+    setChatOrder(order);
+    const { data } = await supabase.from('order_messages').select('*')
+      .eq('order_id', order.id).order('created_at', { ascending: true });
+    setChatMessages((data as OrderMessage[]) || []);
+    // تعليم الرسائل كمقروءة
+    await supabase.from('order_messages').update({ is_read: true })
+      .eq('order_id', order.id).eq('sender', 'customer').eq('is_read', false);
+    fetchUnread();
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+  }, [fetchUnread]);
+
+  // real-time للمحادثة المفتوحة
+  useEffect(() => {
+    if (!chatOrder) return;
+    const ch = supabase.channel(`admin-chat-${chatOrder.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_messages',
+          filter: `order_id=eq.${chatOrder.id}` },
+        async (payload) => {
+          setChatMessages(prev => [...prev, payload.new as OrderMessage]);
+          // تعليم كمقروء إذا من الزبون
+          if ((payload.new as OrderMessage).sender === 'customer') {
+            await supabase.from('order_messages').update({ is_read: true })
+              .eq('id', (payload.new as OrderMessage).id);
+            fetchUnread();
+          }
+          setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [chatOrder, fetchUnread]);
+
+  // إرسال رد المطعم
+  const sendReply = async (text: string) => {
+    if (!chatOrder || !restaurantId || sendingReply) return;
+    setSendingReply(true);
+    await supabase.from('order_messages').insert({
+      order_id: chatOrder.id,
+      restaurant_id: restaurantId,
+      sender: 'restaurant',
+      message: text,
+      is_read: true,
+    });
+    setSendingReply(false);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+  };
+
+  // الطلبات التي فيها رسائل غير مقروءة
+  const ordersWithUnread = useMemo(() => new Set<string>(), []);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    supabase.from('order_messages').select('order_id')
+      .eq('restaurant_id', restaurantId).eq('sender', 'customer').eq('is_read', false)
+      .then(({ data }) => {
+        ordersWithUnread.clear();
+        data?.forEach(r => ordersWithUnread.add(r.order_id));
+      });
+  }, [restaurantId, unreadCount, ordersWithUnread]);
+
   const filtered = orders.filter(o => o.status === tab);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 stagger-0">
+        {/* شريط رسائل الزبائن */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 dark:border-slate-700">
+          <div className="w-10" />
+          <h1 className="font-bold text-gray-900 dark:text-white text-base">الطلبات</h1>
+          <button
+            onClick={() => {
+              const orderWithMsg = orders.find(o => ordersWithUnread.has(o.id)) || orders[0];
+              if (orderWithMsg) openOrderChat(orderWithMsg);
+            }}
+            className="relative p-2 rounded-xl bg-gray-50 dark:bg-slate-700 text-gray-500 dark:text-slate-400 active:scale-90 transition-all"
+          >
+            <MessageCircle size={20} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold px-1 animate-bounce">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
         <div className="flex border-b border-gray-100 dark:border-slate-700">
           {TABS.map(t => {
             const cfg = STATUS[t.id];
@@ -279,7 +401,19 @@ export default function OrdersPage() {
                   <div className="p-4">
                     {/* Client + price */}
                     <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
-                      <p className="text-green-500 font-bold text-lg">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-green-500 font-bold text-lg">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
+                        <button
+                          onClick={() => openOrderChat(order)}
+                          className="relative p-1.5 rounded-xl bg-gray-50 dark:bg-slate-700 text-gray-400 dark:text-slate-500 active:scale-90 transition-all"
+                          title="رسائل الزبون"
+                        >
+                          <MessageCircle size={16} />
+                          {ordersWithUnread.has(order.id) && (
+                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+                          )}
+                        </button>
+                      </div>
                       <div className="text-right">
                         <p className="font-bold text-gray-900 dark:text-slate-100 text-base">{order.client_name}</p>
                         <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{order.client_phone}{order.delivery_address ? ` — ${order.delivery_address}` : ''}</p>
@@ -360,6 +494,71 @@ export default function OrdersPage() {
 
       <AdminBottomNav />
       {mapOrder && <MapModal order={mapOrder} onClose={() => setMapOrder(null)} />}
+
+      {/* مودال محادثة الزبون */}
+      {chatOrder && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
+             onClick={() => setChatOrder(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-w-lg"
+               style={{ maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+               onClick={e => e.stopPropagation()}>
+            {/* رأس المودال */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+              <button onClick={() => setChatOrder(null)}
+                className="p-1.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
+                <X size={16} />
+              </button>
+              <div className="text-right">
+                <p className="font-bold text-gray-900 dark:text-white text-base">{chatOrder.client_name}</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">{chatOrder.client_phone}</p>
+              </div>
+              <div className="text-2xl">💬</div>
+            </div>
+
+            {/* منطقة الرسائل */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[120px]" dir="rtl">
+              {chatMessages.length === 0 && (
+                <p className="text-center text-gray-400 dark:text-slate-500 text-sm mt-8">
+                  لا توجد رسائل بعد
+                </p>
+              )}
+              {chatMessages.map(m => (
+                <div key={m.id} className={`flex ${m.sender === 'customer' ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm font-medium ${
+                    m.sender === 'customer'
+                      ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-200 rounded-tr-sm'
+                      : 'bg-blue-600 text-white rounded-tl-sm'
+                  }`}>
+                    {m.message}
+                    <p className={`text-xs mt-1 ${m.sender === 'customer' ? 'text-orange-400' : 'text-blue-200'}`}>
+                      {m.sender === 'customer' ? 'الزبون' : 'المطعم'} · {new Date(m.created_at).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* ردود جاهزة */}
+            <div className="px-4 pb-6 pt-3 border-t border-gray-100 dark:border-slate-700 flex-shrink-0">
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right font-medium mb-2">ردود جاهزة:</p>
+              <div className="space-y-2">
+                {RESTAURANT_QUICK_REPLIES.map(r => (
+                  <button
+                    key={r.text}
+                    onClick={() => sendReply(r.text)}
+                    disabled={sendingReply}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 font-medium text-sm active:scale-95 transition-all disabled:opacity-60 text-right"
+                  >
+                    <span className="text-lg flex-shrink-0">{r.icon}</span>
+                    <span className="flex-1">{r.text}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
