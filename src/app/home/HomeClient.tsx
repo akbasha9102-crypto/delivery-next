@@ -119,6 +119,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   const [showClosedToast,  setShowClosedToast]  = useState(false);
   const [showCartPanel,  setShowCartPanel]  = useState(false);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
+  const scrollLockPos = useRef<number | null>(null);
 
   const [selectedItem,        setSelectedItem]        = useState<Item | null>(null);
   const [selectedModalExtras, setSelectedModalExtras] = useState<Set<string>>(new Set());
@@ -203,26 +204,25 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
   useEffect(() => {
     if (showCartDrawer) {
-      const scrollY = window.scrollY;
+      scrollLockPos.current = window.scrollY;
       document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
+      document.body.style.top = `-${scrollLockPos.current}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
-    } else {
-      const scrollY = parseFloat(document.body.style.top || '0') * -1;
+    } else if (scrollLockPos.current !== null) {
+      const pos = scrollLockPos.current;
+      scrollLockPos.current = null;
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflow = '';
-      window.scrollTo(0, scrollY);
+      window.scrollTo(0, pos);
     }
     return () => {
-      const scrollY = parseFloat(document.body.style.top || '0') * -1;
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflow = '';
-      if (scrollY) window.scrollTo(0, scrollY);
     };
   }, [showCartDrawer]);
 
