@@ -725,9 +725,12 @@ const proceedFromReview = () => {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
+  const anyModalOpen = showOrderReview || showOrderSummary || showSaved || showMap || showConfirmModal || showPostOrderModal || showPreciseModal || showPermissionModal;
+
   return (
     <CustomerGuard>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
+      <div style={{ visibility: anyModalOpen ? 'hidden' : 'visible' }}>
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
         <h1 className="text-xl font-bold text-center" style={{ color: dark ? brandColor : '#111827' }}>سلة المشتريات</h1>
       </header>
@@ -858,6 +861,8 @@ const proceedFromReview = () => {
             </button>
           )}
         </div>
+      </div>
+      <ClientBottomNav />
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -1774,7 +1779,6 @@ const proceedFromReview = () => {
       )}
       </AnimatePresence>
 
-      <ClientBottomNav />
     </div>
     </CustomerGuard>
   );
