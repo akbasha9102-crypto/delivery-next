@@ -948,7 +948,7 @@ const proceedFromReview = () => {
                       const selected = itemSelectedExtras[item.id] || new Set<string>();
                       return (
                         <div className="px-3 pb-2 pt-1">
-                          <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right mb-1.5">الإضافات</p>
+                          <p className="text-[10px] font-bold text-right mb-1.5" style={{ color: '#ef4444' }}>الإضافات:</p>
                           <div className="flex flex-wrap gap-1.5 justify-end">
                             {extras.map(e => {
                               const on = selected.has(e.id);
