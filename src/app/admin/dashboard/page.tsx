@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, ClipboardList, Clock, MessageCircle, X } from 'lucide-react';
+import { Moon, Sun, ClipboardList, Clock, MessageCircle, X, HelpCircle } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
@@ -328,6 +328,7 @@ export default function DashboardPage() {
   const [chatOrder,     setChatOrder]     = useState<Order | null>(null);
   const [chatMessages,  setChatMessages]  = useState<OrderMessage[]>([]);
   const [sendingReply,  setSendingReply]  = useState(false);
+  const [infoOrder,     setInfoOrder]     = useState<Order | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const initialLoadDone = useRef(false);
@@ -756,30 +757,40 @@ export default function DashboardPage() {
               ) : (
                 <div className="divide-y divide-gray-50 dark:divide-slate-700">
                   {allConvos.map(({ order, lastMsg, unread }) => (
-                    <button key={order.id} onClick={() => openOrderChat(order)}
-                      className="w-full flex items-center gap-3 px-5 py-4 active:bg-gray-50 dark:active:bg-slate-700/50 transition-all text-right">
-                      <div className="relative flex-shrink-0">
-                        <div className="w-11 h-11 rounded-full bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center text-xl">👤</div>
-                        {unread > 0 && (
-                          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                            {unread}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center mb-0.5">
-                          <span className="text-xs text-gray-400 dark:text-slate-500">
-                            {new Date(lastMsg.created_at).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          <p className={`font-bold text-sm ${unread > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-slate-300'}`}>
-                            {order.client_name}
+                    <div key={order.id} className="flex items-center gap-2 px-4 py-3">
+                      {/* زر معلومات الطلب */}
+                      <button
+                        onClick={e => { e.stopPropagation(); setInfoOrder(order); }}
+                        className="flex-shrink-0 p-1.5 rounded-full text-gray-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 active:scale-90 transition-all"
+                      >
+                        <HelpCircle size={18} />
+                      </button>
+                      {/* صف المحادثة */}
+                      <button onClick={() => openOrderChat(order)}
+                        className="flex-1 flex items-center gap-3 active:bg-gray-50 dark:active:bg-slate-700/50 rounded-2xl px-2 py-1 transition-all text-right min-w-0">
+                        <div className="relative flex-shrink-0">
+                          <div className="w-11 h-11 rounded-full bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center text-xl">👤</div>
+                          {unread > 0 && (
+                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                              {unread}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center mb-0.5">
+                            <span className="text-xs text-gray-400 dark:text-slate-500">
+                              {new Date(lastMsg.created_at).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <p className={`font-bold text-sm ${unread > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-slate-300'}`}>
+                              {order.client_name}
+                            </p>
+                          </div>
+                          <p className={`text-sm truncate text-right ${unread > 0 ? 'text-gray-700 dark:text-slate-300 font-medium' : 'text-gray-400 dark:text-slate-500'}`}>
+                            {lastMsg.sender === 'restaurant' ? 'أنت: ' : ''}{lastMsg.message}
                           </p>
                         </div>
-                        <p className={`text-sm truncate text-right ${unread > 0 ? 'text-gray-700 dark:text-slate-300 font-medium' : 'text-gray-400 dark:text-slate-500'}`}>
-                          {lastMsg.sender === 'restaurant' ? 'أنت: ' : ''}{lastMsg.message}
-                        </p>
-                      </div>
-                    </button>
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -789,6 +800,67 @@ export default function DashboardPage() {
       )}
 
       {/* مودال محادثة زبون */}
+      {/* مودال معلومات الطلب */}
+      {infoOrder && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4"
+             onClick={() => setInfoOrder(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm p-5"
+               onClick={e => e.stopPropagation()}>
+            {/* رأس */}
+            <div className="flex items-center justify-between mb-4">
+              <button onClick={() => setInfoOrder(null)}
+                className="p-1.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
+                <X size={15} />
+              </button>
+              <p className="font-bold text-gray-900 dark:text-white">تفاصيل الطلب</p>
+              <div className="text-xl">📋</div>
+            </div>
+
+            {/* معلومات الزبون */}
+            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl p-4 mb-3 space-y-2.5" dir="rtl">
+              {[
+                { label: 'الاسم',     value: infoOrder.client_name },
+                { label: 'الهاتف',    value: infoOrder.client_phone },
+                { label: 'المنطقة',   value: infoOrder.delivery_address || '—' },
+                { label: 'الإجمالي', value: `${infoOrder.total_amount.toLocaleString()} د.ع` },
+                { label: 'الحالة',    value: STATUS[infoOrder.status as keyof typeof STATUS]?.label || infoOrder.status },
+                { label: 'الوقت',    value: new Date(infoOrder.created_at).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' }) },
+              ].map(row => (
+                <div key={row.label} className="flex justify-between items-center">
+                  <span className="font-semibold text-gray-900 dark:text-white text-sm">{row.value}</span>
+                  <span className="text-gray-400 dark:text-slate-500 text-xs">{row.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* عناصر الطلب */}
+            {infoOrder.items && infoOrder.items.length > 0 && (
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl p-4" dir="rtl">
+                <p className="text-xs text-gray-400 dark:text-slate-500 font-medium mb-2">عناصر الطلب</p>
+                <div className="space-y-1.5">
+                  {infoOrder.items.map(item => (
+                    <div key={item.id} className="flex justify-between items-center">
+                      <span className="text-orange-500 font-semibold text-sm">{(item.price * item.quantity).toLocaleString()} د.ع</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-gray-800 dark:text-slate-200 text-sm">{item.item_name}</span>
+                        <span className="bg-white dark:bg-slate-600 text-gray-500 dark:text-slate-300 text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">{item.quantity}×</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {infoOrder.client_note && (
+              <div className="mt-3 bg-amber-50 dark:bg-amber-950/30 rounded-2xl px-4 py-3 text-right">
+                <p className="text-xs text-amber-500 font-medium mb-0.5">ملاحظة الزبون</p>
+                <p className="text-amber-800 dark:text-amber-200 text-sm">{infoOrder.client_note}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {chatOrder && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
              onClick={() => setChatOrder(null)}>
@@ -804,7 +876,12 @@ export default function DashboardPage() {
                 <p className="font-bold text-gray-900 dark:text-white">{chatOrder.client_name}</p>
                 <p className="text-xs text-gray-400 dark:text-slate-500">{chatOrder.client_phone}</p>
               </div>
-              <div className="text-2xl">💬</div>
+              <button
+                onClick={() => setInfoOrder(chatOrder)}
+                className="p-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-400 active:scale-90 transition-all"
+              >
+                <HelpCircle size={20} />
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[120px]" dir="rtl">
               {chatMessages.length === 0 && (
