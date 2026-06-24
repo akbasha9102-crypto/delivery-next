@@ -603,16 +603,21 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 </div>
               </div>
 
-              {/* أيقونة السلة */}
+              {/* أيقونة السلة / إغلاق */}
               <motion.button
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setShowCartDrawer(true)}
+                onClick={() => setShowCartDrawer(v => !v)}
                 className="relative w-12 h-12 rounded-2xl flex items-center justify-center bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm"
               >
-                <ShoppingCart size={22} className="text-gray-600 dark:text-slate-300" />
-                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white shadow bg-red-500">
-                  {cartItems.reduce((s, i) => s + i.quantity, 0)}
-                </span>
+                {showCartDrawer
+                  ? <X size={22} className="text-gray-600 dark:text-slate-300" />
+                  : <>
+                      <ShoppingCart size={22} className="text-gray-600 dark:text-slate-300" />
+                      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white shadow bg-red-500">
+                        {cartItems.reduce((s, i) => s + i.quantity, 0)}
+                      </span>
+                    </>
+                }
               </motion.button>
 
               <Link href="/cart" className="px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform bg-red-600 text-white">
