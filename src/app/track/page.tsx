@@ -217,6 +217,32 @@ export default function TrackPage() {
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
   const [driverPhone, setDriverPhone] = useState<string | null>(null);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | null>(null);
+  const prevStatusRef = useRef<string | null>(null);
+
+  // تحقق من إذن الإشعارات عند التحميل
+  useEffect(() => {
+    if (typeof Notification !== 'undefined') {
+      setNotifPermission(Notification.permission);
+    }
+  }, []);
+
+  // إرسال إشعار عند تغيير حالة الطلب
+  useEffect(() => {
+    if (!order) return;
+    if (prevStatusRef.current === null) { prevStatusRef.current = order.status; return; }
+    if (prevStatusRef.current === order.status) return;
+    prevStatusRef.current = order.status;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    const STATUS_LABELS: Record<string, { title: string; body: string }> = {
+      preparing: { title: '🍳 طلبك قيد التجهيز', body: 'يعمل الطاقم الآن على تجهيز طلبك' },
+      ready:     { title: '🏍️ طلبك في الطريق!', body: 'السائق في طريقه إليك' },
+      completed: { title: '🎉 تم التوصيل!',      body: 'وصل طلبك بنجاح. شكراً لطلبك!' },
+      rejected:  { title: '❌ تم رفض الطلب',     body: 'عذراً، لم نتمكن من قبول طلبك' },
+    };
+    const info = STATUS_LABELS[order.status];
+    if (info) new Notification(info.title, { body: info.body, icon: '/favicon.ico' });
+  }, [order?.status]);
 
   // Keep driverPhone in sync — use order.driver_phone if set,
   // otherwise look it up from the drivers table via driver_id.
@@ -535,6 +561,12 @@ export default function TrackPage() {
     return `${h12}:${m} ${ampm}`;
   };
 
+  const requestNotifPermission = async () => {
+    if (typeof Notification === 'undefined') return;
+    const result = await Notification.requestPermission();
+    setNotifPermission(result);
+  };
+
   const stepIndex = (s: string) => s === 'pickup' ? 1 : STEPS.findIndex(x => x.key === s);
   const current = order ? stepIndex(order.status) : -1;
 
@@ -577,6 +609,24 @@ export default function TrackPage() {
           </div>
         ) : order && (
           <div className="space-y-4 max-w-lg mx-auto">
+
+            {/* ── بانر تفعيل الإشعارات ── */}
+            {notifPermission === 'default' && !['completed', 'rejected'].includes(order.status) && (
+              <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3" dir="rtl">
+                <div className="text-2xl flex-shrink-0">🔔</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-amber-800 dark:text-amber-300 text-sm leading-tight">فعّل الإشعارات</p>
+                  <p className="text-amber-600 dark:text-amber-500 text-xs mt-0.5 leading-snug">احصل على تنبيه فوري عند تغيير حالة طلبك</p>
+                </div>
+                <button
+                  onClick={requestNotifPermission}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-bold active:scale-95 transition-all whitespace-nowrap"
+                >
+                  تفعيل
+                </button>
+              </div>
+            )}
+
             <style>{`
               @keyframes line-fill-rtl {
                 0%   { width: 0% }
