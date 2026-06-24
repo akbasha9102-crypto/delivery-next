@@ -196,6 +196,12 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   useEffect(() => { setSelectedModalExtras(new Set()); }, [selectedItem]);
 
   useEffect(() => {
+    if (!showClosedToast) return;
+    const t = setTimeout(() => setShowClosedToast(false), 2000);
+    return () => clearTimeout(t);
+  }, [showClosedToast]);
+
+  useEffect(() => {
     document.body.style.overflow = showCartDrawer ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [showCartDrawer]);
@@ -240,9 +246,9 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
     prevModalPrice.current = dp;
   }, [selectedModalExtras, selectedItem, cartItems]);
 
-  const handleAdd = (item: Item, selectedExtrasNames?: string[]) => {
+  const handleAdd = (item: Item, selectedExtrasNames?: string[], extrasPrice = 0) => {
     if (getStatus(item) !== 'available') return;
-    addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url, extras_json: item.extras_json, selected_extras_names: selectedExtrasNames });
+    addItem({ id: item.id, name: item.name, price: item.price + extrasPrice, image_url: item.image_url, extras_json: item.extras_json, selected_extras_names: selectedExtrasNames });
   };
 
   const qty = (id: string) => cartItems.find(i => i.id === id)?.quantity || 0;
@@ -885,7 +891,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                               >
                                 <motion.button
                                   whileTap={{ scale: 0.8 }}
-                                  onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const selectedNames = extras.filter(ex => selectedModalExtras.has(ex.id)).map(ex => ex.name); addItem({ id: selectedItem.id, name: selectedItem.name, price: selectedItem.price, image_url: selectedItem.image_url, extras_json: selectedItem.extras_json, selected_extras_names: selectedNames.length > 0 ? selectedNames : undefined }); }}
+                                  onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const sel = extras.filter(ex => selectedModalExtras.has(ex.id)); const selectedNames = sel.map(ex => ex.name); const extrasPrice = sel.reduce((s, ex) => s + ex.price, 0); addItem({ id: selectedItem.id, name: selectedItem.name, price: selectedItem.price + extrasPrice, image_url: selectedItem.image_url, extras_json: selectedItem.extras_json, selected_extras_names: selectedNames.length > 0 ? selectedNames : undefined }); }}
                                   className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center"
                                 >
                                   <Plus size={16} strokeWidth={3}/>
@@ -916,7 +922,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                 exit={{ opacity: 0, scale: 0.8 }}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const selectedNames = extras.filter(ex => selectedModalExtras.has(ex.id)).map(ex => ex.name); handleAdd(selectedItem, selectedNames.length > 0 ? selectedNames : undefined); }}
+                                onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const sel = extras.filter(ex => selectedModalExtras.has(ex.id)); const selectedNames = sel.map(ex => ex.name); const extrasPrice = sel.reduce((s, ex) => s + ex.price, 0); handleAdd(selectedItem, selectedNames.length > 0 ? selectedNames : undefined, extrasPrice); }}
                                 className="flex items-center gap-2 px-6 py-3 rounded-full font-black text-sm shadow-2xl"
                                 style={{ backgroundColor: modalColor, color: modalTextColor }}
                               >
@@ -933,6 +939,19 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
               })()}
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showClosedToast && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 dark:bg-slate-700 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-black whitespace-nowrap"
+          >
+            🔒 المطعم مغلق حالياً
+          </motion.div>
         )}
       </AnimatePresence>
       <ClientBottomNav />
