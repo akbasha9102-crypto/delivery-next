@@ -315,6 +315,14 @@ export default function TrackPage() {
   const [chatSent, setChatSent] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // تجميد الخلفية ومنع التمرير وإخفاء البار السفلي عند فتح المودال
+  useEffect(() => {
+    if (!showChatModal) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [showChatModal]);
+
   // تحميل رسائل المحادثة + polling كل 4 ثواني كبديل للـ Realtime
   useEffect(() => {
     if (!showChatModal || !order?.id) return;
@@ -960,7 +968,7 @@ export default function TrackPage() {
 
       {/* مودال محادثة التأخير */}
       {showChatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4"
              onClick={() => setShowChatModal(false)}>
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg"
                style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
@@ -1163,7 +1171,7 @@ export default function TrackPage() {
         )}
       </AnimatePresence>
 
-      <ClientBottomNav />
+      {!showChatModal && <ClientBottomNav />}
     </div>
     </CustomerGuard>
   );
