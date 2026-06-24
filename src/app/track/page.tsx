@@ -287,6 +287,22 @@ export default function TrackPage() {
     });
   }, []);
 
+  const [showStatusBanner, setShowStatusBanner] = useState(false);
+  const [bannerMsg, setBannerMsg] = useState<{ icon: string; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!order) return;
+    const BANNER_LABELS: Record<string, { icon: string; text: string }> = {
+      pending:   { icon: '⏳', text: 'تم استلام طلبك، بانتظار القبول' },
+      preparing: { icon: '🍳', text: 'طلبك قيد التجهيز الآن' },
+      ready:     { icon: '🏍️', text: 'طلبك في الطريق إليك' },
+      completed: { icon: '🎉', text: 'تم توصيل طلبك بنجاح' },
+      rejected:  { icon: '❌', text: 'تم رفض طلبك' },
+    };
+    const info = BANNER_LABELS[order.status];
+    if (info) { setBannerMsg(info); setShowStatusBanner(true); }
+  }, [order?.status]);
+
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackStep, setFeedbackStep] = useState<'choose' | 'write'>('choose');
   const [feedbackType, setFeedbackType] = useState<'feedback' | 'complaint'>('feedback');
@@ -576,6 +592,31 @@ export default function TrackPage() {
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
         <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">تتبع طلبك</h1>
       </header>
+
+      <AnimatePresence>
+        {showStatusBanner && bannerMsg && (
+          <motion.div
+            key="status-banner"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+            className="fixed top-[65px] left-0 right-0 z-30 px-4 pt-2"
+            dir="rtl"
+          >
+            <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl px-4 py-3 shadow-lg">
+              <span className="text-xl flex-shrink-0">{bannerMsg.icon}</span>
+              <p className="flex-1 font-bold text-gray-900 dark:text-white text-sm">{bannerMsg.text}</p>
+              <button
+                onClick={() => setShowStatusBanner(false)}
+                className="flex-shrink-0 p-1.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-400 active:scale-90 transition-all"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="px-4 pt-5 pb-24">
         {loading ? (
