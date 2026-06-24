@@ -894,9 +894,10 @@ const proceedFromReview = () => {
                 <p className="font-black text-gray-900 dark:text-white text-sm">مراجعة طلبك</p>
                 <p className="text-[10px] text-gray-400 dark:text-slate-500">{items.length} وجبة · {total.toLocaleString()} د.ع</p>
               </div>
-              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#ef444420' }}>
-                <ShoppingBag size={17} style={{ color: '#ef4444' }}/>
-              </div>
+              <button onClick={() => { if (confirm('هل تريد حذف كل شيء؟')) { clearCart(); setShowOrderReview(false); if (reviewAutoOpenedRef.current) { reviewAutoOpenedRef.current = false; router.back(); } } }}
+                className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-all" style={{ backgroundColor: '#ef444420' }}>
+                <Trash2 size={17} style={{ color: '#ef4444' }}/>
+              </button>
             </div>
 
             {/* Scrollable body — items first */}
@@ -948,7 +949,7 @@ const proceedFromReview = () => {
                       const selected = itemSelectedExtras[item.id] || new Set<string>();
                       return (
                         <div className="px-3 pb-2 pt-1">
-                          <p className="text-[10px] font-bold text-right mb-1.5" style={{ color: '#ef4444' }}>الإضافات:</p>
+                          <p className="text-xs font-bold text-right mb-1.5" style={{ color: '#ef4444' }}>الإضافات:</p>
                           <div className="flex flex-wrap gap-1.5 justify-end">
                             {extras.map(e => {
                               const on = selected.has(e.id);
