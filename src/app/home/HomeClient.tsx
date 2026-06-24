@@ -660,6 +660,12 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowCartDrawer(false)}
+                    className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center"
+                  >
+                    <X size={18} className="text-gray-500" />
+                  </button>
                   <motion.button
                     whileTap={{ scale: 0.88 }}
                     onClick={() => { if(confirm('هل تريد إفراغ السلة بالكامل؟')) { clearCart(); setShowCartDrawer(false); } }}
@@ -668,12 +674,6 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                   >
                     <Trash2 size={17} />
                   </motion.button>
-                  <button
-                    onClick={() => setShowCartDrawer(false)}
-                    className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center"
-                  >
-                    <X size={18} className="text-gray-500" />
-                  </button>
                 </div>
               </div>
 
