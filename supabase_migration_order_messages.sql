@@ -22,3 +22,6 @@ create policy "allow_update_order_messages" on order_messages
 
 create index if not exists order_messages_order_id_idx on order_messages(order_id);
 create index if not exists order_messages_restaurant_unread_idx on order_messages(restaurant_id, is_read) where is_read = false;
+
+-- تفعيل Realtime على الجدول
+alter publication supabase_realtime add table order_messages;

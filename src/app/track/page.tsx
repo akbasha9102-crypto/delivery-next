@@ -315,20 +315,35 @@ export default function TrackPage() {
   const [chatSent, setChatSent] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // تحميل رسائل المحادثة عند فتح المودال
+  // تحميل رسائل المحادثة + polling كل 4 ثواني كبديل للـ Realtime
   useEffect(() => {
     if (!showChatModal || !order?.id) return;
-    supabase.from('order_messages').select('*').eq('order_id', order.id)
-      .order('created_at', { ascending: true })
-      .then(({ data }) => { if (data) setChatMessages(data as OrderMessage[]); });
-    const ch = supabase.channel(`chat-${order.id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_messages', filter: `order_id=eq.${order.id}` },
-        (payload) => {
-          setChatMessages(prev => [...prev, payload.new as OrderMessage]);
-          setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
-        })
+    const orderId = order.id;
+
+    const loadMsgs = async () => {
+      const { data } = await supabase.from('order_messages').select('*')
+        .eq('order_id', orderId).order('created_at', { ascending: true });
+      if (data) {
+        setChatMessages(data as OrderMessage[]);
+        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
+      }
+    };
+
+    loadMsgs();
+
+    // Realtime (يشتغل لو الجدول مضاف للـ publication)
+    const ch = supabase.channel(`chat-${orderId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_messages', filter: `order_id=eq.${orderId}` },
+        () => { loadMsgs(); })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+
+    // polling كل 4 ثواني كبديل موثوق
+    const poll = setInterval(loadMsgs, 4000);
+
+    return () => {
+      supabase.removeChannel(ch);
+      clearInterval(poll);
+    };
   }, [showChatModal, order?.id]);
 
   const sendCustomerMessage = async (text: string) => {
@@ -341,6 +356,10 @@ export default function TrackPage() {
       message: text,
       is_read: false,
     });
+    // تحميل الرسائل بعد الإرسال مباشرة
+    const { data } = await supabase.from('order_messages').select('*')
+      .eq('order_id', order.id).order('created_at', { ascending: true });
+    if (data) setChatMessages(data as OrderMessage[]);
     setSendingMsg(false);
     setChatSent(true);
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
