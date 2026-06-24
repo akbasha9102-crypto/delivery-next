@@ -632,6 +632,12 @@ export default function TrackPage() {
                 >
                   تفعيل
                 </button>
+                <button
+                  onClick={() => setNotifPermission('denied')}
+                  className="flex-shrink-0 p-1 rounded-full text-amber-400 dark:text-amber-600 active:scale-90 transition-all"
+                >
+                  <X size={15} />
+                </button>
               </div>
             )}
 
@@ -953,13 +959,13 @@ export default function TrackPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-6"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
             onClick={() => setShowIOSModal(false)}
           >
             <motion.div
-              initial={{ y: 80, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
+              initial={{ scale: 0.88, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.88, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 320, damping: 30 }}
               className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg p-6"
               onClick={e => e.stopPropagation()}
