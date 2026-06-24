@@ -135,6 +135,24 @@ const TABS = [
   { id: 'completed' as const, name: 'مكتمل' },
 ];
 
+const PUSH_MESSAGES: Record<string, { title: string; body: string; tag: string }> = {
+  preparing: {
+    title: 'طلبك قيد التجهيز 🍳',
+    body: 'مرحباً! بدأنا تجهيز طلبك الآن',
+    tag: 'order-preparing',
+  },
+  ready: {
+    title: 'طلبك جاهز! 🎉',
+    body: 'طلبك اكتمل وجاهز للتسليم',
+    tag: 'order-ready',
+  },
+  completed: {
+    title: 'تم التسليم ✅',
+    body: 'وصل طلبك بنجاح. شكراً لاختيارك إيانا!',
+    tag: 'order-completed',
+  },
+};
+
 export default function OrdersPage() {
   const { restaurantId } = useRestaurant();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -177,6 +195,17 @@ export default function OrdersPage() {
     const next = STATUS[order.status].next;
     if (!next) return;
     await supabase.from('orders').update({ status: next }).eq('id', order.id);
+    const msg = PUSH_MESSAGES[next];
+    if (msg) {
+      fetch('/api/push/notify-customer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET!,
+        },
+        body: JSON.stringify({ order_id: order.id, ...msg }),
+      }).catch(() => {});
+    }
     fetchOrders();
   };
 

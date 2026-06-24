@@ -12,6 +12,46 @@ import { useDarkMode } from '@/context/ThemeContext';
 import InAppBrowserBanner, { isInAppBrowser } from '@/components/InAppBrowserBanner';
 import type { Session } from '@supabase/supabase-js';
 
+function detectPushContext(): 'ios-pwa' | 'ios-browser' | 'android' | 'unsupported' {
+  if (typeof window === 'undefined') return 'unsupported';
+  const ua = navigator.userAgent;
+  const isIos = /iphone|ipad|ipod/i.test(ua);
+  const isInStandalone =
+    'standalone' in navigator &&
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  if (isIos && isInStandalone) return 'ios-pwa';
+  if (isIos) return 'ios-browser';
+  if ('PushManager' in window && 'serviceWorker' in navigator) return 'android';
+  return 'unsupported';
+}
+
+async function registerCustomerPush(
+  orderId: string
+): Promise<'subscribed' | 'denied' | 'skipped'> {
+  if (detectPushContext() !== 'android') return 'skipped';
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    if (Notification.permission === 'denied') return 'denied';
+    if (Notification.permission === 'default') {
+      const result = await Notification.requestPermission();
+      if (result !== 'granted') return 'denied';
+    }
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    });
+    await fetch('/api/push/subscribe-customer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: orderId, subscription: sub.toJSON() }),
+    });
+    return 'subscribed';
+  } catch {
+    return 'skipped';
+  }
+}
+
 type Extra = { id: string; name: string; price: number };
 
 const KEYS = {
@@ -138,6 +178,7 @@ export default function CartPage() {
   const [postOrderStep,       setPostOrderStep]       = useState<'choice' | 'signup'>('choice');
   const [signupDone,          setSignupDone]          = useState(false);
   const [postOrderCountdown,  setPostOrderCountdown]  = useState(7);
+  const [pushResult, setPushResult] = useState<'subscribed' | 'denied' | 'ios-prompt' | null>(null);
 
   // UI state
   const [showOrderReview,  setShowOrderReview]  = useState(false);
@@ -642,6 +683,15 @@ const proceedFromReview = () => {
     }
 
     localStorage.setItem('lastOrderId', order.id);
+    // إشعارات push بعد نجاح الطلب
+    const pushCtx = detectPushContext();
+    if (pushCtx === 'ios-browser') {
+      setPushResult('ios-prompt');
+    } else {
+      registerCustomerPush(order.id).then(res => {
+        if (res !== 'skipped') setPushResult(res);
+      });
+    }
     clearCart();
     setLoading(false);
     setShowConfirmModal(false);
@@ -1519,6 +1569,40 @@ const proceedFromReview = () => {
                 <div style={{ height:4, background:'#f1f5f9' }} className="dark:bg-slate-800">
                   <div style={{ height:'100%', background:'linear-gradient(90deg,#22c55e,#16a34a)', width:`${(postOrderCountdown / 7) * 100}%`, transition:'width 1s linear', borderRadius:'0 2px 2px 0' }}/>
                 </div>
+
+                {/* ─── إشعارات Push ─── */}
+                {pushResult === 'ios-prompt' && (
+                  <div className="mx-4 mt-3 rounded-2xl overflow-hidden border border-blue-100 dark:border-blue-900 bg-blue-50 dark:bg-blue-950">
+                    <div className="px-4 pt-4 pb-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">🔔</span>
+                        <p className="font-black text-blue-900 dark:text-blue-200 text-sm">استقبل إشعارات تحديث طلبك</p>
+                      </div>
+                      <div className="space-y-1.5 text-right">
+                        <p className="text-xs text-blue-800 dark:text-blue-300">
+                          <span className="font-black">1.</span> اضغط زر المشاركة <span className="font-black">⬆️</span> في Safari
+                        </p>
+                        <p className="text-xs text-blue-800 dark:text-blue-300">
+                          <span className="font-black">2.</span> اختر <strong>&quot;إضافة إلى الشاشة الرئيسية&quot;</strong>
+                        </p>
+                        <p className="text-xs text-blue-800 dark:text-blue-300">
+                          <span className="font-black">3.</span> افتح التطبيق من الشاشة الرئيسية
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setPushResult(null)}
+                      className="w-full py-2.5 text-center text-xs text-blue-500 font-semibold border-t border-blue-100 dark:border-blue-900"
+                    >
+                      فهمت، شكراً
+                    </button>
+                  </div>
+                )}
+                {pushResult === 'denied' && (
+                  <p className="text-center text-xs text-gray-400 dark:text-slate-500 px-5 mt-2">
+                    الإشعارات مرفوضة — يمكنك تفعيلها من إعدادات المتصفح لاحقاً
+                  </p>
+                )}
 
                 {/* ─── المحتوى ─── */}
                 <div className="px-6 pt-5 pb-6">

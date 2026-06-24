@@ -2,7 +2,7 @@
   "name": "CulinaShare",
   "short_name": "CulinaShare",
   "description": "منصة التوصيل",
-  "start_url": "/driver/dashboard",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
