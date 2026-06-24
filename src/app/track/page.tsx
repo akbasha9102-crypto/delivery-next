@@ -218,10 +218,17 @@ export default function TrackPage() {
   const [tick, setTick] = useState(0);
   const [driverPhone, setDriverPhone] = useState<string | null>(null);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | null>(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showIOSModal, setShowIOSModal] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
 
-  // تحقق من إذن الإشعارات عند التحميل
+  // تحقق من البيئة وإذن الإشعارات عند التحميل
   useEffect(() => {
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || !!(window.navigator as any).standalone;
+    setIsIOS(ios);
+    setIsStandalone(standalone);
     if (typeof Notification !== 'undefined') {
       setNotifPermission(Notification.permission);
     }
@@ -578,6 +585,7 @@ export default function TrackPage() {
   };
 
   const requestNotifPermission = async () => {
+    if (isIOS && !isStandalone) { setShowIOSModal(true); return; }
     if (typeof Notification === 'undefined') return;
     const result = await Notification.requestPermission();
     setNotifPermission(result);
@@ -652,7 +660,7 @@ export default function TrackPage() {
           <div className="space-y-4 max-w-lg mx-auto">
 
             {/* ── بانر تفعيل الإشعارات ── */}
-            {notifPermission === 'default' && !['completed', 'rejected'].includes(order.status) && (
+            {(isIOS ? !isStandalone : notifPermission === 'default') && !['completed', 'rejected'].includes(order.status) && (
               <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3" dir="rtl">
                 <div className="text-2xl flex-shrink-0">🔔</div>
                 <div className="flex-1 min-w-0">
@@ -977,6 +985,64 @@ export default function TrackPage() {
           </div>
         </div>
       )}
+
+      {/* iOS PWA Instructions Modal */}
+      <AnimatePresence>
+        {showIOSModal && (
+          <motion.div
+            key="ios-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-6"
+            onClick={() => setShowIOSModal(false)}
+          >
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+              className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg p-6"
+              onClick={e => e.stopPropagation()}
+              dir="rtl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-black text-lg text-gray-900 dark:text-white">تفعيل الإشعارات على iPhone</h2>
+                <button onClick={() => setShowIOSModal(false)}
+                  className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 active:scale-90 transition-all">
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="text-gray-500 dark:text-slate-400 text-sm mb-5 leading-relaxed">
+                على iPhone تحتاج إلى إضافة الموقع كتطبيق في الشاشة الرئيسية أولاً حتى تشتغل الإشعارات:
+              </p>
+              <div className="space-y-4 mb-6">
+                {[
+                  { n: '١', title: 'اضغط زر المشاركة في Safari', sub: 'الأيقونة ⬆️ أسفل الشاشة' },
+                  { n: '٢', title: 'اختر "إضافة إلى الشاشة الرئيسية"', sub: 'Add to Home Screen' },
+                  { n: '٣', title: 'افتح التطبيق من الشاشة الرئيسية', sub: 'ثم افتح هذه الصفحة مجدداً وفعّل الإشعارات' },
+                ].map(step => (
+                  <div key={step.n} className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-black text-sm">
+                      {step.n}
+                    </div>
+                    <div className="pt-0.5">
+                      <p className="font-bold text-gray-900 dark:text-white text-sm leading-snug">{step.title}</p>
+                      <p className="text-gray-400 dark:text-slate-500 text-xs mt-0.5">{step.sub}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowIOSModal(false)}
+                className="w-full py-3.5 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-sm active:scale-95 transition-all"
+              >
+                فهمت
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ClientBottomNav />
     </div>
