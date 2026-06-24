@@ -941,10 +941,10 @@ export default function TrackPage() {
 
       {/* مودال محادثة التأخير */}
       {showChatModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
              onClick={() => setShowChatModal(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-w-lg pb-safe"
-               style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg"
+               style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
                onClick={e => e.stopPropagation()}>
             {/* رأس المودال */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
