@@ -207,6 +207,7 @@ export default function CartPage() {
   const [showPreciseModal,    setShowPreciseModal]    = useState(false);
   const [showInAppBanner,     setShowInAppBanner]     = useState(false);
   const pendingOpenMapRef = useRef<(() => void) | null>(null);
+  const reviewAutoOpenedRef = useRef(false);
 
   // refs
   const preciseTimerRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -573,6 +574,7 @@ export default function CartPage() {
   // فتح المراجعة قبل أي رسم حتى لا يظهر وميض الصفحة
   useLayoutEffect(() => {
     if (items.length > 0 && !editing) {
+      reviewAutoOpenedRef.current = true;
       setShowOrderReview(true);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -588,6 +590,7 @@ export default function CartPage() {
 
   const openOrderReview = () => {
     if (items.length === 0) { alert('السلة فارغة'); return; }
+    reviewAutoOpenedRef.current = false;
     setShowOrderReview(true);
   };
 
@@ -878,7 +881,7 @@ const proceedFromReview = () => {
 
             {/* Header sticky */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
-              <button onClick={() => setShowOrderReview(false)}
+              <button onClick={() => { setShowOrderReview(false); if (reviewAutoOpenedRef.current) { reviewAutoOpenedRef.current = false; router.back(); } }}
                 className="w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-800 text-gray-500 active:scale-90">
                 <X size={17}/>
               </button>
