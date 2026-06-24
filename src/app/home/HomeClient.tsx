@@ -429,12 +429,12 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                     return (
                       <motion.div
                         key={item.id}
-                        whileHover={{ y: -8 }}
+                        whileHover={is_closed ? {} : { y: -8 }}
                         onClick={() => {
                           if (is_closed) setShowClosedToast(true);
                           else setSelectedItem(item);
                         }}
-                        className={`group rounded-[1.8rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${!catCardColor ? 'bg-white dark:bg-slate-900' : ''} ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}
+                        className={`relative group rounded-[1.8rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${!catCardColor ? 'bg-white dark:bg-slate-900' : ''} ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}
                         style={catCardColor ? { backgroundColor: catCardColor } : undefined}>
 
                         {/* Image Wrapper */}
@@ -449,17 +449,16 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                               width={400} height={300}
                               className={`w-full h-32 sm:h-56 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
                               unoptimized
-
                             />
                           </motion.div>
                           <AnimatePresence>
-                            {(is_closed || status !== 'available') && (
+                            {!is_closed && status !== 'available' && (
                               <motion.div
                                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                                 className="absolute inset-0 flex items-center justify-center bg-black/20">
                                 <div className="bg-white px-5 py-2.5 rounded-2xl shadow-2xl transform -rotate-2">
                                   <p className="text-gray-900 text-sm font-black tracking-widest">
-                                    {is_closed ? 'مغلق' : status === 'unavailable' ? 'غير متوفر' : 'انتهى'}
+                                    {status === 'unavailable' ? 'غير متوفر' : 'انتهى'}
                                   </p>
                                 </div>
                               </motion.div>
@@ -536,14 +535,38 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                 </AnimatePresence>
                               </div>
                             ) : (
-                              <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-100 dark:bg-slate-700 rounded-xl text-center">
-                                <span className="text-xs sm:text-sm font-black text-gray-500 dark:text-slate-300">
-                                  {is_closed ? 'مغلق' : status === 'unavailable' ? 'غير متوفر' : 'انتهى'}
-                                </span>
-                              </div>
+                              !is_closed && (
+                                <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-100 dark:bg-slate-700 rounded-xl text-center">
+                                  <span className="text-xs sm:text-sm font-black text-gray-500 dark:text-slate-300">
+                                    {status === 'unavailable' ? 'غير متوفر' : 'انتهى'}
+                                  </span>
+                                </div>
+                              )
                             )}
                           </div>
                         </div>
+
+                        {/* ── تضليل المطعم المغلق ── */}
+                        <AnimatePresence>
+                          {is_closed && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              className="absolute inset-0 z-10 flex items-center justify-center"
+                              style={{ backgroundColor: 'rgba(30,30,30,0.52)' }}
+                            >
+                              <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-3 rounded-2xl shadow-2xl text-center mx-3">
+                                <p className="text-gray-900 dark:text-white text-xs sm:text-sm font-black tracking-wide">🔒 مغلق</p>
+                                {opens_at && (
+                                  <p className="text-gray-500 dark:text-slate-400 text-[9px] sm:text-[11px] font-bold mt-1">
+                                    سيفتح {opens_at}
+                                  </p>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </motion.div>
                     );
                   })}
