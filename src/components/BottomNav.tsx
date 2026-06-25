@@ -35,7 +35,7 @@ export function ClientBottomNav() {
   const menuHref = menuSlug ? `/menu/${menuSlug}` : '/home';
 
   const clientTabs = [
-    { href: menuHref, icon: UtensilsCrossed, label: 'المنيو' },
+    { href: menuHref, icon: UtensilsCrossed, label: 'قائمة الطعام' },
     { href: '/track',   icon: Truck,           label: 'تتبع طلبك' },
     { href: '/orders',  icon: ShoppingBag,     label: 'طلباتي' },
     { href: '/profile', icon: User,            label: 'معلوماتي' },

@@ -287,9 +287,11 @@ export default function ProfilePage() {
           )
         )}
 
-        <p className="text-center text-xs text-gray-400 dark:text-slate-600 pb-2">
-          {session ? 'أنت مسجّل الدخول بحسابك' : 'معلوماتك محفوظة على جهازك فقط'}
-        </p>
+        {session && (
+          <p className="text-center text-xs text-gray-400 dark:text-slate-600 pb-2">
+            أنت مسجّل الدخول بحسابك
+          </p>
+        )}
       </div>
 
       <ClientBottomNav />
