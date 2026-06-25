@@ -618,7 +618,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                   <p className="text-[10px] font-black opacity-30 uppercase tracking-widest">السلة</p>
                   <motion.p
                     className="font-black text-xl"
-                    animate={priceFlash ? { color: ['#dc2626', '#dc2626', '#000000'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
+                    animate={priceFlash ? { color: ['#dc2626', '#dc2626', dark ? '#ffffff' : '#000000'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
                     transition={{ duration: 0.7, ease: 'easeOut' }}
                   >{total.toLocaleString()} د.ع</motion.p>
                 </div>
