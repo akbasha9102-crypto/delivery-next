@@ -183,7 +183,6 @@ type Order = {
   id: string; client_name: string; client_phone: string;
   delivery_address: string | null; total_amount: number;
   status: string; created_at: string;
-  restaurant_id?: string;
   driver_id?: string | null;
   driver_name?: string | null; driver_phone?: string | null;
   driver_arrived?: boolean | null;
@@ -191,25 +190,12 @@ type Order = {
   client_lat?: number | null; client_lng?: number | null;
 };
 
-type OrderMessage = {
-  id: string;
-  sender: 'customer' | 'restaurant';
-  message: string;
-  created_at: string;
-};
-
-const CUSTOMER_QUICK_MSGS = [
-  { icon: '⏰', text: 'أحس طلبي تأخر، متى يوصل؟' },
-  { icon: '❓', text: 'ما أعرف حالة طلبي' },
-  { icon: '📦', text: 'هل بدأتم تجهيز طلبي؟' },
-];
-
 
 const MOTO_ICON_HTML = `<div style="width:46px;height:46px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 4px 16px rgba(37,99,235,0.45);display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;">🏍️</div>`;
 
 export default function TrackPage() {
   const { dark } = useDarkMode();
-  const { primary_color } = useSettings();
+  const { primary_color, whatsapp_number } = useSettings();
   
   const rawColor   = primary_color || "#e67e22";
   const isTooDark  = rawColor === '#000000' || rawColor.toLowerCase() === '#121212';
@@ -307,71 +293,6 @@ export default function TrackPage() {
       localStorage.removeItem('pendingProfileSave');
     });
   }, []);
-
-  // ── حالة محادثة التأخير ──
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [chatMessages, setChatMessages] = useState<OrderMessage[]>([]);
-  const [sendingMsg, setSendingMsg] = useState(false);
-  const [chatSent, setChatSent] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  // تجميد الخلفية ومنع التمرير وإخفاء البار السفلي عند فتح المودال
-  useEffect(() => {
-    if (!showChatModal) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, [showChatModal]);
-
-  // تحميل رسائل المحادثة + polling كل 4 ثواني كبديل للـ Realtime
-  useEffect(() => {
-    if (!showChatModal || !order?.id) return;
-    const orderId = order.id;
-
-    const loadMsgs = async () => {
-      const { data } = await supabase.from('order_messages').select('*')
-        .eq('order_id', orderId).order('created_at', { ascending: true });
-      if (data) {
-        setChatMessages(data as OrderMessage[]);
-        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
-      }
-    };
-
-    loadMsgs();
-
-    // Realtime (يشتغل لو الجدول مضاف للـ publication)
-    const ch = supabase.channel(`chat-${orderId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_messages', filter: `order_id=eq.${orderId}` },
-        () => { loadMsgs(); })
-      .subscribe();
-
-    // polling كل 4 ثواني كبديل موثوق
-    const poll = setInterval(loadMsgs, 4000);
-
-    return () => {
-      supabase.removeChannel(ch);
-      clearInterval(poll);
-    };
-  }, [showChatModal, order?.id]);
-
-  const sendCustomerMessage = async (text: string) => {
-    if (!order?.id || !order.restaurant_id || sendingMsg) return;
-    setSendingMsg(true);
-    await supabase.from('order_messages').insert({
-      order_id: order.id,
-      restaurant_id: order.restaurant_id,
-      sender: 'customer',
-      message: text,
-      is_read: false,
-    });
-    // تحميل الرسائل بعد الإرسال مباشرة
-    const { data } = await supabase.from('order_messages').select('*')
-      .eq('order_id', order.id).order('created_at', { ascending: true });
-    if (data) setChatMessages(data as OrderMessage[]);
-    setSendingMsg(false);
-    setChatSent(true);
-    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
-  };
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackStep, setFeedbackStep] = useState<'choose' | 'write'>('choose');
@@ -869,15 +790,6 @@ export default function TrackPage() {
                       </div>
                       <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{STEPS[current]?.label}</p>
                       <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
-                      {(order.status === 'pending' || order.status === 'preparing') && (
-                        <button
-                          onClick={() => { setShowChatModal(true); setChatSent(false); }}
-                          className="mt-4 flex items-center gap-2 mx-auto px-5 py-2.5 rounded-2xl border-2 border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 font-bold text-sm active:scale-95 transition-all"
-                        >
-                          <MessageSquare size={16}/>
-                          <span>حسيت طلبك تأخر؟ تواصل مع المطعم</span>
-                        </button>
-                      )}
                       {order.status === 'completed' && !alreadySentFeedback && (
                         <button
                           onClick={() => { setShowFeedbackModal(true); setFeedbackStep('choose'); setFeedbackDone(false); setFeedbackText(''); }}
@@ -908,6 +820,37 @@ export default function TrackPage() {
                         </p>
                         {extraMins > 0 && <p className="text-xs text-amber-500 mt-0.5">⏳ تم تمديد الوقت التقديري</p>}
                       </div>
+                    </div>
+                  )}
+
+                  {/* بانر تأخر الطلب — يظهر فقط عند قيد التجهيز وبعد تجاوز الوقت */}
+                  {order.status === 'preparing' && extraMins > 0 && (
+                    <div
+                      className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-5 text-center"
+                      style={{ animation: 'status-enter 0.5s ease-out' }}
+                      dir="rtl"
+                    >
+                      <div className="text-4xl mb-2">⏰</div>
+                      <p className="font-black text-amber-800 dark:text-amber-200 text-base mb-1">
+                        حسيت طلبك تأخر؟
+                      </p>
+                      <p className="text-amber-600 dark:text-amber-400 text-sm mb-4">
+                        تواصل وي المطعم
+                      </p>
+                      {whatsapp_number && (
+                        <a
+                          href={`https://wa.me/${whatsapp_number.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white active:scale-95 transition-all"
+                          style={{ backgroundColor: '#25D366' }}
+                        >
+                          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                          </svg>
+                          تواصل الحين
+                        </a>
+                      )}
                     </div>
                   )}
 
@@ -965,80 +908,6 @@ export default function TrackPage() {
         )}
       </div>
 
-
-      {/* مودال محادثة التأخير */}
-      {showChatModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4"
-             onClick={() => setShowChatModal(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg"
-               style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
-               onClick={e => e.stopPropagation()}>
-            {/* رأس المودال */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
-              <button onClick={() => setShowChatModal(false)}
-                className="p-1.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
-                <X size={16} />
-              </button>
-              <div className="text-right">
-                <p className="font-bold text-gray-900 dark:text-white text-base">تواصل مع المطعم</p>
-                <p className="text-xs text-gray-400 dark:text-slate-500">الردود تظهر هنا مباشرة</p>
-              </div>
-              <div className="text-2xl">💬</div>
-            </div>
-
-            {/* منطقة الرسائل */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[140px]" dir="rtl">
-              {chatMessages.length === 0 && !chatSent && (
-                <p className="text-center text-gray-400 dark:text-slate-500 text-sm mt-6">
-                  اختر رسالة من الأسفل لإرسالها للمطعم
-                </p>
-              )}
-              {chatMessages.map(m => (
-                <div key={m.id} className={`flex ${m.sender === 'customer' ? 'justify-start' : 'justify-end'}`}>
-                  <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm font-medium ${
-                    m.sender === 'customer'
-                      ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-200 rounded-tr-sm'
-                      : 'bg-gray-900 dark:bg-slate-600 text-white rounded-tl-sm'
-                  }`}>
-                    {m.message}
-                    <p className={`text-xs mt-1 ${m.sender === 'customer' ? 'text-orange-400' : 'text-gray-400'}`}>
-                      {m.sender === 'customer' ? 'أنت' : 'المطعم'} · {new Date(m.created_at).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* رسائل جاهزة */}
-            <div className="px-4 pb-6 pt-3 border-t border-gray-100 dark:border-slate-700 flex-shrink-0 space-y-2">
-              {chatSent && chatMessages.filter(m => m.sender === 'customer').length > 0 ? (
-                <div className="text-center py-3">
-                  <p className="text-sm text-green-600 dark:text-green-400 font-bold">✓ تم إرسال رسالتك للمطعم</p>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">سيردّ عليك قريباً، الرد يظهر هنا مباشرة</p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right font-medium">اختر رسالة:</p>
-                  <div className="space-y-2">
-                    {CUSTOMER_QUICK_MSGS.map(msg => (
-                      <button
-                        key={msg.text}
-                        onClick={() => sendCustomerMessage(msg.text)}
-                        disabled={sendingMsg}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-200 font-medium text-sm active:scale-95 transition-all disabled:opacity-60 text-right"
-                      >
-                        <span className="text-lg flex-shrink-0">{msg.icon}</span>
-                        <span className="flex-1">{msg.text}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Feedback Modal */}
       {showFeedbackModal && (
@@ -1171,7 +1040,7 @@ export default function TrackPage() {
         )}
       </AnimatePresence>
 
-      {!showChatModal && <ClientBottomNav />}
+      <ClientBottomNav />
     </div>
     </CustomerGuard>
   );
