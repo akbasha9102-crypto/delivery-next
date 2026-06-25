@@ -194,9 +194,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   }, [activeCategory]);
 
   useEffect(() => { setShowCartPanel(cartItems.length > 0); }, [cartItems.length]);
-  useEffect(() => {
-    if (showCartPanel) window.scrollBy({ top: 88, behavior: 'smooth' });
-  }, [showCartPanel]);
+  useEffect(() => { /* cart panel appears without scrolling */ }, [showCartPanel]);
   useEffect(() => { setSelectedModalExtras(new Set()); }, [selectedItem]);
 
   useEffect(() => {
