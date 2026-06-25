@@ -7,6 +7,7 @@ import { Moon, Sun, ClipboardList, Clock } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
+import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null };
@@ -310,6 +311,8 @@ export default function DashboardPage() {
   const [filter,        setFilter]        = useState<'pending'|'preparing'|'delivery'|'completed'>('pending');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [newOrderFlash, setNewOrderFlash] = useState(false);
+  const [islandExpanded, setIslandExpanded] = useState(false);
+  const islandControls = useAnimation();
   const [tick,          setTick]          = useState(0);
 
 
@@ -353,7 +356,9 @@ export default function DashboardPage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
         if (initialLoadDone.current) {
           setNewOrderFlash(true);
-          setTimeout(() => setNewOrderFlash(false), 4000);
+          setIslandExpanded(false);
+          setTimeout(() => setIslandExpanded(true), 220);
+          setTimeout(() => setNewOrderFlash(false), 4500);
         }
         fetchOrders();
       })
@@ -448,12 +453,60 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* إشعار طلب جديد */}
-      {newOrderFlash && (
-        <div className="bg-green-500 py-3 text-center animate-pulse">
-          <p className="text-white font-bold">🔔 طلب جديد وصل!</p>
-        </div>
-      )}
+      {/* إشعار طلب جديد — Dynamic Island */}
+      <AnimatePresence>
+        {newOrderFlash && (
+          <motion.div
+            key="new-order-notif"
+            initial={{ width: 110, height: 34, borderRadius: 34, opacity: 0, y: -16, x: '-50%' }}
+            animate={{
+              width: islandExpanded ? 300 : 110,
+              height: islandExpanded ? 58 : 34,
+              borderRadius: islandExpanded ? 26 : 34,
+              opacity: 1,
+              y: 0,
+              x: '-50%',
+            }}
+            exit={{ width: 110, height: 34, borderRadius: 34, opacity: 0, y: -16, x: '-50%' }}
+            transition={{
+              width:        { duration: 0.4, ease: [0.34, 1.15, 0.64, 1] },
+              height:       { duration: 0.4, ease: [0.34, 1.15, 0.64, 1] },
+              borderRadius: { duration: 0.4, ease: [0.34, 1.15, 0.64, 1] },
+              opacity:      { duration: 0.2 },
+              y:            { duration: 0.25, ease: [0.34, 1.56, 0.64, 1] },
+            }}
+            className="fixed top-3 left-1/2 z-[100] overflow-hidden flex items-center justify-center bg-[#120f00] shadow-[0_6px_28px_rgba(251,191,36,0.3),0_2px_8px_rgba(0,0,0,0.4)]"
+          >
+            <AnimatePresence>
+              {islandExpanded && (
+                <motion.div
+                  key="island-content"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.2, ease: 'backOut', delay: 0.05 }}
+                  className="flex items-center gap-2.5 px-4 w-full"
+                >
+                  <motion.span
+                    animate={{ rotate: [0, -15, 15, -10, 10, 0] }}
+                    transition={{ duration: 0.5, delay: 0.15, ease: 'easeInOut' }}
+                    className="text-lg leading-none select-none"
+                  >🔔</motion.span>
+                  <div className="flex-1 text-right">
+                    <p className="text-yellow-400 font-black text-[13px] leading-tight">طلب جديد وصل!</p>
+                    <p className="text-yellow-300/50 text-[10px] leading-tight mt-0.5">اضغط للمراجعة</p>
+                  </div>
+                  <motion.div
+                    animate={{ scale: [1, 1.4, 1, 1.3, 1] }}
+                    transition={{ duration: 0.8, delay: 0.3, ease: 'easeInOut' }}
+                    className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_6px_2px_rgba(251,191,36,0.7)] flex-shrink-0"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* إحصاء */}
       <div className="grid grid-cols-2 gap-2 px-3 pt-3 pb-2">
