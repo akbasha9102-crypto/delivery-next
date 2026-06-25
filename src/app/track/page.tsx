@@ -933,8 +933,15 @@ export default function TrackPage() {
       {showFeedbackModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
              onClick={() => !feedbackSending && setShowFeedbackModal(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg p-6 pb-8"
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg p-6 pb-8 relative"
                onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => !feedbackSending && setShowFeedbackModal(false)}
+              disabled={feedbackSending}
+              className="absolute top-4 left-4 p-1.5 rounded-full text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 active:scale-90 transition-all"
+            >
+              <X size={18} />
+            </button>
             {feedbackDone ? (
               <div className="text-center py-6">
                 <div className="text-5xl mb-3">🙏</div>
