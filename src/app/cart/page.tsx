@@ -1002,7 +1002,11 @@ const proceedFromReview = () => {
                   <span className="font-black text-white text-xs">التالي</span>
                 </div>
                 <div className="text-right">
-                  <p className="font-black text-white text-base leading-tight">{grandTotal.toLocaleString()} <span className="text-[10px] font-bold opacity-80">د.ع</span></p>
+                  <motion.p
+                    className="font-black text-white text-base leading-tight"
+                    animate={cartPriceFlash ? { color: ['#ffffff', '#ffd700', '#ffffff'], scale: [1, 1.2, 1, 1.1, 1] } : {}}
+                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                  >{grandTotal.toLocaleString()} <span className="text-[10px] font-bold opacity-80">د.ع</span></motion.p>
                   <p className="text-[9px] text-white/70 font-bold">المجموع الكلي</p>
                 </div>
               </button>
