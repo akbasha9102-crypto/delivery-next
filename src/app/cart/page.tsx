@@ -1330,7 +1330,7 @@ const proceedFromReview = () => {
                 {loading ? <Loader2 size={20} className="animate-spin"/> : <CheckCircle2 size={20}/>}
                 {loading ? 'جاري الإرسال...' : 'تأكيد وإرسال الطلب'}
               </button>
-              <button onClick={() => setShowConfirmModal(false)} disabled={loading}
+              <button onClick={() => { setShowConfirmModal(false); setEditing(true); }} disabled={loading}
                 className="w-full py-3.5 rounded-2xl font-semibold text-sm border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 transition-all active:scale-95">
                 تعديل
               </button>
