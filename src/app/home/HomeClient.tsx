@@ -624,6 +624,13 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                     transition={{ duration: 0.7, ease: 'easeOut' }}
                   >{total.toLocaleString()} د.ع</motion.p>
                 </div>
+                <motion.button
+                  whileTap={{ scale: 0.88 }}
+                  onClick={() => { if (confirm('هل تريد حذف كل شيء؟')) clearCart(); }}
+                  className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center"
+                >
+                  <Trash2 size={17} className="text-red-500" />
+                </motion.button>
               </div>
 
               {/* أيقونة السلة / إغلاق */}
