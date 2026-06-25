@@ -648,7 +648,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 }
               </motion.button>
 
-              <Link href="/cart" className="px-8 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform bg-red-600 text-white">
+              <Link href="/cart" className="px-8 py-4 rounded-2xl font-black text-base shadow-xl active:scale-95 transition-transform bg-red-600 text-white">
                 التالي
               </Link>
             </div>
