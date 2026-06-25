@@ -417,8 +417,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
         {dataLoading && categories.length === 0 && (
           <div className="grid grid-cols-2 gap-3 px-1 pt-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white dark:bg-slate-900 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 animate-pulse">
-                <div className="m-2 rounded-[1.6rem] h-44 sm:h-56 bg-gray-100 dark:bg-slate-800"/>
+              <div key={i} className="bg-white dark:bg-slate-900 rounded-[1.8rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 animate-pulse">
+                <div className="m-2 rounded-[1.4rem] h-32 sm:h-56 bg-gray-100 dark:bg-slate-800"/>
                 <div className="p-3 sm:p-6 space-y-2">
                   <div className="h-4 bg-gray-100 dark:bg-slate-800 rounded-full w-3/4 mr-auto"/>
                   <div className="h-3 bg-gray-50 dark:bg-slate-700 rounded-full w-1/2 mr-auto"/>
@@ -461,11 +461,11 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                           if (is_closed) setShowClosedToast(true);
                           else setSelectedItem(item);
                         }}
-                        className={`relative group rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${!catCardColor ? 'bg-white dark:bg-slate-900' : ''} ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}
+                        className={`relative group rounded-[1.8rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${!catCardColor ? 'bg-white dark:bg-slate-900' : ''} ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}
                         style={catCardColor ? { backgroundColor: catCardColor } : undefined}>
 
                         {/* Image Wrapper */}
-                        <div className="relative flex-shrink-0 overflow-hidden m-2 rounded-[1.6rem] sm:rounded-[2.2rem]">
+                        <div className="relative flex-shrink-0 overflow-hidden m-2 rounded-[1.4rem] sm:rounded-[2.2rem]">
                           <motion.div
                             animate={{ scale: 1 + Math.min(count, 5) * 0.05 }}
                             transition={{ type: 'spring', stiffness: 300, damping: 15 }}
@@ -474,7 +474,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                               src={item.image_url || 'https://placehold.co/400x300/f5f5f5/ccc?text='}
                               alt={item.name}
                               width={400} height={300}
-                              className={`w-full h-44 sm:h-56 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
+                              className={`w-full h-32 sm:h-56 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
                               unoptimized
                             />
                           </motion.div>
@@ -494,26 +494,26 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                         </div>
 
                         {/* Details */}
-                        <div className="p-4 sm:p-6 flex flex-col flex-1">
-                          <p className="font-black text-base sm:text-xl text-gray-900 dark:text-slate-100 text-right leading-tight mb-1 sm:mb-2">
+                        <div className="p-3 sm:p-6 flex flex-col flex-1">
+                          <p className="font-black text-sm sm:text-xl text-gray-900 dark:text-slate-100 text-right leading-tight mb-1 sm:mb-2">
                             {item.name}
                           </p>
                           {item.description && (
-                            <p className="text-xs sm:text-xs text-gray-400 dark:text-slate-500 text-right mb-2 sm:mb-6 line-clamp-2 leading-relaxed font-medium">
+                            <p className="text-[10px] sm:text-xs text-gray-400 dark:text-slate-500 text-right mb-2 sm:mb-6 line-clamp-1 sm:line-clamp-2 leading-relaxed font-medium">
                               {item.description}
                             </p>
                           )}
 
                           <div className="mt-auto flex flex-col sm:flex-row-reverse sm:items-center sm:justify-between gap-2 sm:gap-4">
                             <div className="text-right flex-shrink-0">
-                              <p className="font-black text-lg sm:text-2xl text-black dark:text-white">
+                              <p className="font-black text-base sm:text-2xl text-black dark:text-white">
                                 {item.price.toLocaleString()}
                               </p>
-                              <p className="text-[9px] sm:text-[10px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>
+                              <p className="text-[8px] sm:text-[10px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>
                             </div>
 
                             {isAvailable ? (
-                              <div className="relative h-10 sm:h-12 flex items-center justify-end sm:justify-start">
+                              <div className="relative h-8 sm:h-12 flex items-center justify-end sm:justify-start">
                                 <AnimatePresence mode="wait">
                                   {count > 0 ? (
                                     <motion.div
@@ -526,23 +526,23 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
-                                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
-                                        <Plus size={15} strokeWidth={3}/>
+                                        className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
+                                        <Plus size={14} strokeWidth={3}/>
                                       </motion.button>
                                       <motion.span
                                         key={count}
                                         initial={{ scale: 1.5, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
-                                        className="font-black text-sm sm:text-base w-5 text-center"
+                                        className="font-black text-xs sm:text-base w-4 sm:w-5 text-center"
                                         style={{ color: catTextColor }}>
                                         {count}
                                       </motion.span>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={(e) => { e.stopPropagation(); decrementItem(item.id); }}
-                                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 flex items-center justify-center"
+                                        className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white/10 flex items-center justify-center"
                                         style={{ color: catTextColor }}>
-                                        <Minus size={15} strokeWidth={3}/>
+                                        <Minus size={14} strokeWidth={3}/>
                                       </motion.button>
                                     </motion.div>
                                   ) : (
@@ -554,7 +554,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                       whileHover={{ scale: 1.05 }}
                                       whileTap={{ scale: 0.95 }}
                                       onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-                                      className="h-10 sm:h-12 px-5 sm:px-7 rounded-full font-black text-sm sm:text-sm shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap"
+                                      className="h-10 sm:h-12 px-5 sm:px-7 rounded-full font-black text-xs sm:text-sm shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap"
                                       style={{ backgroundColor: catColor, color: catTextColor }}>
                                       إضافة
                                     </motion.button>
