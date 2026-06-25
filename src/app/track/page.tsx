@@ -733,7 +733,7 @@ export default function TrackPage() {
                 </div>
               );
 
-              /* ── حالة "في الطريق": خريطة → شريط → سائق → تفاصيل ── */
+              /* ── حالة "في الطريق": خريطة → سائق → وصل → تفاصيل → شريط ── */
               if (order.status === 'ready') return (
                 <>
                   {/* الخريطة */}
@@ -764,11 +764,6 @@ export default function TrackPage() {
                         </div>
                       )}
                     </div>
-                  </div>
-
-                  {/* شريط حالة الطلب */}
-                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
-                    {timeline}
                   </div>
 
                   {/* بطاقة السائق */}
@@ -825,6 +820,11 @@ export default function TrackPage() {
                         <span className="text-gray-500 dark:text-slate-400 text-sm">{row.label}</span>
                       </div>
                     ))}
+                  </div>
+
+                  {/* شريط حالة الطلب — في الأسفل */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
+                    {timeline}
                   </div>
                 </>
               );
