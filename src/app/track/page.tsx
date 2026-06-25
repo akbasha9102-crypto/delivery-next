@@ -583,25 +583,26 @@ export default function TrackPage() {
     <CustomerGuard>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="w-9 h-9"/>
+        <div className="relative flex items-center justify-center">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">تتبع طلبك</h1>
-          <AnimatePresence>
-            {notifBannerDismissed && order && !['completed','rejected'].includes(order.status) && (isIOS ? !isStandalone : notifPermission === 'default') && (
-              <motion.button
-                key="bell-icon"
-                initial={{ scale: 0, opacity: 0, y: -10 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 420, damping: 22 }}
-                onClick={() => setNotifBannerDismissed(false)}
-                className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-all"
-                style={{ background: '#f59e0b', boxShadow: '0 4px 12px rgba(245,158,11,0.45)' }}
-              >
-                <Bell size={17} color="white" fill="white"/>
-              </motion.button>
-            )}
-          </AnimatePresence>
+          <div className="absolute left-0">
+            <AnimatePresence>
+              {notifBannerDismissed && order && !['completed','rejected'].includes(order.status) && (isIOS ? !isStandalone : notifPermission === 'default') && (
+                <motion.button
+                  key="bell-icon"
+                  initial={{ scale: 0, opacity: 0, y: -10 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+                  onClick={requestNotifPermission}
+                  className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-all"
+                  style={{ background: '#f59e0b', boxShadow: '0 4px 12px rgba(245,158,11,0.45)' }}
+                >
+                  <Bell size={17} color="white" fill="white"/>
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </header>
 
