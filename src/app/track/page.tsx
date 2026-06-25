@@ -294,6 +294,7 @@ export default function TrackPage() {
     });
   }, []);
 
+  const [notifBannerDismissed, setNotifBannerDismissed] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackStep, setFeedbackStep] = useState<'choose' | 'write'>('choose');
   const [feedbackType, setFeedbackType] = useState<'feedback' | 'complaint'>('feedback');
@@ -619,7 +620,7 @@ export default function TrackPage() {
           <div className="space-y-4 max-w-lg mx-auto">
 
             {/* ── بانر تفعيل الإشعارات ── */}
-            {(isIOS ? !isStandalone : notifPermission === 'default') && !['completed', 'rejected'].includes(order.status) && (
+            {!notifBannerDismissed && (isIOS ? !isStandalone : notifPermission === 'default') && !['completed', 'rejected'].includes(order.status) && (
               <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3" dir="rtl">
                 <div className="text-2xl flex-shrink-0">🔔</div>
                 <div className="flex-1 min-w-0">
@@ -633,7 +634,7 @@ export default function TrackPage() {
                   تفعيل
                 </button>
                 <button
-                  onClick={() => setNotifPermission('denied')}
+                  onClick={() => setNotifBannerDismissed(true)}
                   className="flex-shrink-0 p-1 rounded-full text-amber-400 dark:text-amber-600 active:scale-90 transition-all"
                 >
                   <X size={15} />
