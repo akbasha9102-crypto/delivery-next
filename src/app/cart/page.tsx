@@ -743,7 +743,14 @@ const proceedFromReview = () => {
         {/* ── فورم معلومات الطلب ── */}
         {editing && (
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 space-y-3">
-            <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right">معلومات الطلب</h3>
+            <div className="flex items-center justify-between">
+              <button onClick={() => { setEditing(false); setShowOrderReview(true); }}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
+                <ChevronLeft size={18} style={{ transform: 'rotate(180deg)' }}/>
+              </button>
+              <h3 className="font-bold text-gray-900 dark:text-slate-100">معلومات الطلب</h3>
+              <div className="w-8"/>
+            </div>
 
             {/* الاسم */}
             <input type="text" value={name} onChange={e => setName(e.target.value)}
