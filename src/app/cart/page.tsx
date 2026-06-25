@@ -990,9 +990,12 @@ const proceedFromReview = () => {
                 );
               })}
 
-              {/* Total + زر التالي */}
+            </div>
+
+            {/* Footer ثابت — المجموع الكلي + زر التالي */}
+            <div className="flex-shrink-0 px-4 pb-5 pt-3 border-t border-gray-100 dark:border-slate-700">
               <button onClick={proceedFromReview}
-                className="w-full rounded-xl px-4 py-2.5 flex items-center justify-between transition-all active:scale-95"
+                className="w-full rounded-xl px-4 py-3 flex items-center justify-between transition-all active:scale-95"
                 style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 12px #ef444440' }}>
                 <div className="flex items-center gap-1">
                   <ChevronLeft size={15} className="text-white"/>
@@ -1003,8 +1006,6 @@ const proceedFromReview = () => {
                   <p className="text-[9px] text-white/70 font-bold">المجموع الكلي</p>
                 </div>
               </button>
-
-              <div className="h-2"/>
             </div>
           </motion.div>
         </motion.div>
