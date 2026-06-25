@@ -732,7 +732,15 @@ const proceedFromReview = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <div style={{ visibility: anyModalOpen ? 'hidden' : 'visible' }}>
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
-        <h1 className="text-xl font-bold text-center" style={{ color: dark ? brandColor : '#111827' }}>سلة المشتريات</h1>
+        <div className="flex items-center justify-center gap-2">
+          {editing && (
+            <button onClick={() => { setEditing(false); setShowOrderReview(true); }}
+              className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
+              <ChevronLeft size={18} style={{ transform: 'rotate(180deg)' }}/>
+            </button>
+          )}
+          <h1 className="text-xl font-bold text-center" style={{ color: dark ? brandColor : '#111827' }}>سلة المشتريات</h1>
+        </div>
       </header>
 
       <div className="px-4 pt-4 space-y-4">
@@ -743,14 +751,7 @@ const proceedFromReview = () => {
         {/* ── فورم معلومات الطلب ── */}
         {editing && (
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 space-y-3">
-            <div className="flex items-center justify-between">
-              <button onClick={() => { setEditing(false); setShowOrderReview(true); }}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
-                <ChevronLeft size={18} style={{ transform: 'rotate(180deg)' }}/>
-              </button>
-              <h3 className="font-bold text-gray-900 dark:text-slate-100">معلومات الطلب</h3>
-              <div className="w-8"/>
-            </div>
+            <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right">معلومات الطلب</h3>
 
             {/* الاسم */}
             <input type="text" value={name} onChange={e => setName(e.target.value)}
