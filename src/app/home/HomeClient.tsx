@@ -816,14 +816,14 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] sm:rounded-[3.5rem] shadow-2xl overflow-hidden"
+              className="relative w-full max-w-lg rounded-[2.5rem] sm:rounded-[3.5rem] shadow-2xl"
             >
               {(() => {
                 const modalCat = categories.find(c => c.id === selectedItem.category_id);
                 const modalColor = (dark && modalCat?.color_dark) ? modalCat.color_dark : (modalCat?.color || brandColor);
                 const modalTextColor = getTextColor(modalColor);
                 return (
-                <div className="flex flex-col">
+                <div className="flex flex-col bg-white dark:bg-slate-900 rounded-[2.5rem] sm:rounded-[3.5rem] overflow-hidden">
                    <div className="relative h-64 sm:h-72 w-full overflow-hidden">
                       <motion.div
                         animate={{ scale: 1 + Math.min(qty(selectedItem.id), 5) * 0.05 }}
