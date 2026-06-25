@@ -275,7 +275,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
   return (
     <CustomerGuard>
-    <div className={`min-h-screen bg-gray-50/50 dark:bg-slate-950 ${showCartPanel ? 'pb-56' : 'pb-36'}`}>
+    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950" style={{ paddingBottom: showCartPanel ? '14rem' : '9rem', transition: 'padding-bottom 0.35s ease' }}>
 
       {/* ══ HEADER ══ */}
       <motion.header
