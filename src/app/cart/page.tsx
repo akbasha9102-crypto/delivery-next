@@ -983,7 +983,7 @@ const proceedFromReview = () => {
                         onChange={e => setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
                         placeholder="ملاحظة خاصة لهذه الوجبة... (مثل: حار، بدون بصل)" dir="rtl"
                         className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-1"
-                        style={{ '--tw-ring-color': '#ef4444' } as React.CSSProperties}
+                        style={{ '--tw-ring-color': '#ef4444', fontSize: 16 } as React.CSSProperties}
                       />
                     </div>
                   </div>
