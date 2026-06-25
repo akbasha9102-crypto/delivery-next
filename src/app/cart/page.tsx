@@ -26,6 +26,39 @@ const KEYS = {
 const BASRA_CENTER: [number, number]      = [30.5085, 47.7804];
 const ABU_KHASEEB_CENTER: [number, number] = [30.4632, 47.9769];
 
+const DRINKS = [
+  {
+    id: 'drink_pepsi',
+    name: 'بيبسي',
+    price: 1000,
+    gradient: 'linear-gradient(145deg,#0d2875,#1a3a9e,#1e48c8)',
+    topColor: '#1e48c8',
+    shadowColor: '#08174d',
+    accentLine: '#e53935',
+    symbol: '●',
+  },
+  {
+    id: 'drink_7up',
+    name: 'سفن أب',
+    price: 1000,
+    gradient: 'linear-gradient(145deg,#145a14,#1e7e1e,#28a428)',
+    topColor: '#28a428',
+    shadowColor: '#0a300a',
+    accentLine: '#c8e66c',
+    symbol: '7',
+  },
+  {
+    id: 'drink_hayj',
+    name: 'هيج',
+    price: 1000,
+    gradient: 'linear-gradient(145deg,#7b1fa2,#9c27b0,#ba39d4)',
+    topColor: '#ba39d4',
+    shadowColor: '#3a0a4a',
+    accentLine: '#f9e04b',
+    symbol: '⚡',
+  },
+] as const;
+
 
 type SavedInfo = { name: string; nickname: string; phone: string; locationDesc: string; addressDetails: string };
 
@@ -953,6 +986,74 @@ const proceedFromReview = () => {
 
             {/* Footer ثابت — المجموع الكلي + زر التالي */}
             <div className="flex-shrink-0 px-4 pb-5 pt-3 border-t border-gray-100 dark:border-slate-700">
+
+              {/* ── مشروبات غازية — إضافة سريعة ── */}
+              <div className="mb-3">
+                <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 text-right mb-2 tracking-wide uppercase">أضف مشروب؟</p>
+                <div className="flex gap-2 justify-end">
+                  {DRINKS.map(drink => {
+                    const qty = items.find(i => i.id === drink.id)?.quantity ?? 0;
+                    return (
+                      <div key={drink.id} className="flex flex-col items-center gap-1.5" style={{ width: 72 }}>
+                        {/* بطاقة المشروب ثلاثية الأبعاد */}
+                        <div
+                          className="w-full rounded-2xl overflow-hidden select-none"
+                          style={{
+                            boxShadow: `0 6px 0 ${drink.shadowColor}, 0 9px 18px ${drink.shadowColor}80`,
+                            background: drink.gradient,
+                          }}
+                        >
+                          {/* شريط لوني علوي */}
+                          <div style={{ height: 3, background: drink.accentLine, opacity: 0.9 }} />
+                          {/* محتوى الكارت */}
+                          <div className="flex flex-col items-center justify-center py-2 px-1 gap-0.5">
+                            <span className="text-white font-black text-base leading-none" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                              {drink.symbol}
+                            </span>
+                            <span className="text-white font-black text-[9px] leading-tight text-center" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>
+                              {drink.name}
+                            </span>
+                            <span className="font-bold text-[8px] leading-tight" style={{ color: drink.accentLine }}>
+                              {drink.price.toLocaleString()} د.ع
+                            </span>
+                          </div>
+                          {/* شريط لوني سفلي */}
+                          <div style={{ height: 2, background: drink.accentLine, opacity: 0.6 }} />
+                        </div>
+                        {/* أزرار الكمية */}
+                        {qty === 0 ? (
+                          <button
+                            onClick={() => addItem({ id: drink.id, name: drink.name, price: drink.price, image_url: null })}
+                            className="w-full h-6 rounded-xl flex items-center justify-center active:scale-90 transition-all"
+                            style={{ background: drink.gradient, boxShadow: `0 3px 0 ${drink.shadowColor}` }}
+                          >
+                            <Plus size={11} className="text-white" />
+                          </button>
+                        ) : (
+                          <div className="flex items-center justify-between w-full gap-1">
+                            <button
+                              onClick={() => decrementItem(drink.id)}
+                              className="flex-1 h-6 rounded-xl flex items-center justify-center active:scale-90 transition-all"
+                              style={{ background: '#fee2e2' }}
+                            >
+                              <Minus size={10} style={{ color: '#ef4444' }} />
+                            </button>
+                            <span className="font-black text-xs text-gray-800 dark:text-white w-4 text-center">{qty}</span>
+                            <button
+                              onClick={() => addItem({ id: drink.id, name: drink.name, price: drink.price, image_url: null })}
+                              className="flex-1 h-6 rounded-xl flex items-center justify-center active:scale-90 transition-all"
+                              style={{ background: drink.gradient }}
+                            >
+                              <Plus size={10} className="text-white" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <button onClick={proceedFromReview}
                 className="w-full rounded-xl px-4 py-3 flex items-center justify-between transition-all active:scale-95"
                 style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 12px #ef444440' }}>
