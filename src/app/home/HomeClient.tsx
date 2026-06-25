@@ -361,11 +361,11 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
       )}
 
       {/* ══ CATEGORY PILLS (Sticky at top-0) ══ */}
-      <div className="sticky top-0 z-40 px-0 sm:px-4 py-4 bg-gray-50/95 dark:bg-slate-950/95 backdrop-blur-md shadow-sm border-b border-gray-100 dark:border-slate-800">
-        <div ref={pillsRef} className={`flex gap-3 overflow-x-auto scrollbar-hide flex-row-reverse pb-2 px-4 ${is_closed ? 'pointer-events-none opacity-50' : ''}`}>
+      <div className="sticky top-0 z-40 bg-gray-50/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-800">
+        <div ref={pillsRef} className={`flex gap-2.5 overflow-x-auto scrollbar-hide flex-row-reverse px-4 py-3 ${is_closed ? 'pointer-events-none opacity-50' : ''}`}>
           {dataLoading && categories.length === 0 && (
             Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-10 w-20 bg-gray-200 dark:bg-slate-700 rounded-[1.2rem] animate-pulse flex-shrink-0"/>
+              <div key={i} className="h-9 w-20 bg-gray-200 dark:bg-slate-700 rounded-2xl animate-pulse flex-shrink-0"/>
             ))
           )}
           {[{ id: 'all', name: 'الكل' } as Category, ...categories].map((cat, idx) => {
@@ -376,15 +376,15 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
               <motion.button
                 key={cat.id}
                 data-cat={cat.id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 + idx * 0.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.93 }}
                 onClick={() => scrollToCategory(cat.id)}
-                className={`px-6 py-2.5 rounded-[1.2rem] text-sm font-black whitespace-nowrap transition-all duration-300 flex-shrink-0 border ${
+                className={`px-5 py-2 rounded-2xl text-sm font-black whitespace-nowrap transition-all duration-300 flex-shrink-0 border ${
                   isActive
-                  ? 'shadow-[0_10px_20px_rgba(0,0,0,0.15)] scale-105'
-                  : 'bg-white/70 dark:bg-slate-800/70 backdrop-blur-md text-gray-500 dark:text-white border-gray-100 dark:border-slate-700 hover:bg-gray-50 shadow-sm'
+                  ? 'shadow-md scale-[1.04]'
+                  : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-300 border-gray-150 dark:border-slate-700 shadow-sm'
                 }`}
                 style={isActive ? { backgroundColor: catColor, borderColor: catColor, color: catTextColor } : {}}
               >
