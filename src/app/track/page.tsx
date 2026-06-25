@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { MessageSquare, X } from 'lucide-react';
+import { MessageSquare, X, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { CustomerGuard } from '@/components/CustomerGuard';
@@ -583,7 +583,26 @@ export default function TrackPage() {
     <CustomerGuard>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
-        <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">تتبع طلبك</h1>
+        <div className="flex items-center justify-between">
+          <div className="w-9 h-9"/>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">تتبع طلبك</h1>
+          <AnimatePresence>
+            {notifBannerDismissed && order && !['completed','rejected'].includes(order.status) && (isIOS ? !isStandalone : notifPermission === 'default') && (
+              <motion.button
+                key="bell-icon"
+                initial={{ scale: 0, opacity: 0, y: -10 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+                onClick={() => setNotifBannerDismissed(false)}
+                className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-all"
+                style={{ background: '#f59e0b', boxShadow: '0 4px 12px rgba(245,158,11,0.45)' }}
+              >
+                <Bell size={17} color="white" fill="white"/>
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
       </header>
 
       <div className="px-4 pt-5 pb-24">
@@ -620,27 +639,36 @@ export default function TrackPage() {
           <div className="space-y-4 max-w-lg mx-auto">
 
             {/* ── بانر تفعيل الإشعارات ── */}
-            {!notifBannerDismissed && (isIOS ? !isStandalone : notifPermission === 'default') && !['completed', 'rejected'].includes(order.status) && (
-              <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3" dir="rtl">
-                <div className="text-2xl flex-shrink-0">🔔</div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-amber-800 dark:text-amber-300 text-sm leading-tight">فعّل الإشعارات</p>
-                  <p className="text-amber-600 dark:text-amber-500 text-xs mt-0.5 leading-snug">احصل على تنبيه فوري عند تغيير حالة طلبك</p>
-                </div>
-                <button
-                  onClick={requestNotifPermission}
-                  className="flex-shrink-0 px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-bold active:scale-95 transition-all whitespace-nowrap"
+            <AnimatePresence>
+              {!notifBannerDismissed && (isIOS ? !isStandalone : notifPermission === 'default') && !['completed', 'rejected'].includes(order.status) && (
+                <motion.div
+                  key="notif-banner"
+                  initial={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -60, scale: 0.85 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                  className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3"
+                  dir="rtl"
                 >
-                  تفعيل
-                </button>
-                <button
-                  onClick={() => setNotifBannerDismissed(true)}
-                  className="flex-shrink-0 p-1 rounded-full text-amber-400 dark:text-amber-600 active:scale-90 transition-all"
-                >
-                  <X size={15} />
-                </button>
-              </div>
-            )}
+                  <div className="text-2xl flex-shrink-0">🔔</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-amber-800 dark:text-amber-300 text-sm leading-tight">فعّل الإشعارات</p>
+                    <p className="text-amber-600 dark:text-amber-500 text-xs mt-0.5 leading-snug">احصل على تنبيه فوري عند تغيير حالة طلبك</p>
+                  </div>
+                  <button
+                    onClick={requestNotifPermission}
+                    className="flex-shrink-0 px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-bold active:scale-95 transition-all whitespace-nowrap"
+                  >
+                    تفعيل
+                  </button>
+                  <button
+                    onClick={() => setNotifBannerDismissed(true)}
+                    className="flex-shrink-0 p-1 rounded-full text-amber-400 dark:text-amber-600 active:scale-90 transition-all"
+                  >
+                    <X size={15} />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <style>{`
               @keyframes line-fill-rtl {
