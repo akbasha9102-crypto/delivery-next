@@ -583,6 +583,23 @@ export default function TrackPage() {
     <CustomerGuard>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
+        <style>{`
+          @keyframes bell-ring {
+            0%   { transform: rotate(0deg) }
+            12%  { transform: rotate(22deg) }
+            28%  { transform: rotate(-18deg) }
+            42%  { transform: rotate(14deg) }
+            56%  { transform: rotate(-10deg) }
+            70%  { transform: rotate(6deg) }
+            84%  { transform: rotate(-3deg) }
+            100% { transform: rotate(0deg) }
+          }
+          @keyframes bell-glow-pulse {
+            0%   { box-shadow: 0 4px 12px rgba(245,158,11,0.5) }
+            50%  { box-shadow: 0 4px 24px rgba(245,158,11,0.85), 0 0 0 7px rgba(245,158,11,0.18) }
+            100% { box-shadow: 0 4px 12px rgba(245,158,11,0.5) }
+          }
+        `}</style>
         <div className="relative flex items-center justify-center">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">تتبع طلبك</h1>
           <div className="absolute left-0">
@@ -590,15 +607,20 @@ export default function TrackPage() {
               {notifBannerDismissed && order && !['completed','rejected'].includes(order.status) && (isIOS ? !isStandalone : notifPermission === 'default') && (
                 <motion.button
                   key="bell-icon"
-                  initial={{ scale: 0, opacity: 0, y: -10 }}
-                  animate={{ scale: 1, opacity: 1, y: 0 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+                  initial={{ scale: 0, opacity: 0, y: 32, rotate: -25 }}
+                  animate={{ scale: 1, opacity: 1, y: 0, rotate: 0 }}
+                  exit={{ scale: 0, opacity: 0, y: -16, rotate: 15 }}
+                  transition={{ type: 'spring', stiffness: 340, damping: 16, mass: 0.8 }}
                   onClick={requestNotifPermission}
-                  className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-all"
-                  style={{ background: '#f59e0b', boxShadow: '0 4px 12px rgba(245,158,11,0.45)' }}
+                  className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90"
+                  style={{
+                    background: 'linear-gradient(135deg,#f59e0b,#d97706)',
+                    animation: 'bell-glow-pulse 1.8s ease-in-out 0.5s 2',
+                  }}
                 >
-                  <Bell size={17} color="white" fill="white"/>
+                  <span style={{ display:'inline-flex', animation:'bell-ring 0.75s ease-out 0.45s' }}>
+                    <Bell size={17} color="white" fill="white"/>
+                  </span>
                 </motion.button>
               )}
             </AnimatePresence>
