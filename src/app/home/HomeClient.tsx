@@ -854,7 +854,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                             <div className="flex justify-between items-center flex-row-reverse mb-4 sm:mb-6">
                               <h3 className="text-xl sm:text-3xl font-black text-right">{selectedItem.name}</h3>
                               <div className="text-left">
-                                <p className="text-xl sm:text-2xl font-black">{displayPrice.toLocaleString()} <span className="text-[10px] opacity-40">د.ع</span></p>
+                                <p className="text-xl sm:text-2xl font-black dark:text-white">{displayPrice.toLocaleString()} <span className="text-[10px] opacity-40">د.ع</span></p>
                               </div>
                             </div>
                             <p className="text-gray-500 dark:text-slate-400 text-right leading-relaxed text-sm sm:text-lg">
@@ -898,8 +898,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                       <div className="absolute bottom-5 left-5 flex flex-col items-start">
                         <p className="text-[10px] font-black opacity-30 uppercase tracking-widest mb-0.5">المجموع</p>
                         <motion.p
-                          className="font-black text-2xl"
-                          animate={modalPriceFlash ? { color: ['#dc2626', '#dc2626', '#000000'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
+                          className="font-black text-2xl dark:text-white"
+                          animate={modalPriceFlash ? { color: ['#dc2626', '#dc2626', dark ? '#ffffff' : '#000000'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
                           transition={{ duration: 0.7, ease: 'easeOut' }}
                         >
                           {(() => {
