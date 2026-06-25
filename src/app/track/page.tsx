@@ -938,7 +938,7 @@ export default function TrackPage() {
             <button
               onClick={() => !feedbackSending && setShowFeedbackModal(false)}
               disabled={feedbackSending}
-              className="absolute top-4 left-4 p-1.5 rounded-full text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 active:scale-90 transition-all"
+              className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 active:scale-90 transition-all"
             >
               <X size={18} />
             </button>
@@ -959,7 +959,7 @@ export default function TrackPage() {
                 <div className="flex gap-3" dir="rtl">
                   <button
                     onClick={() => { setFeedbackType('feedback'); setFeedbackStep('write'); }}
-                    className="flex-1 flex flex-col items-center gap-3 py-7 rounded-3xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 active:scale-95 transition-all"
+                    className="flex-1 flex flex-col items-center gap-3 py-7 rounded-3xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 transition-all"
                   >
                     <span className="text-4xl">💡</span>
                     <span className="font-black text-blue-600 dark:text-blue-400 text-base">ملاحظة</span>
@@ -967,7 +967,7 @@ export default function TrackPage() {
                   </button>
                   <button
                     onClick={() => { setFeedbackType('complaint'); setFeedbackStep('write'); }}
-                    className="flex-1 flex flex-col items-center gap-3 py-7 rounded-3xl border-2 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 active:scale-95 transition-all"
+                    className="flex-1 flex flex-col items-center gap-3 py-7 rounded-3xl border-2 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 transition-all"
                   >
                     <span className="text-4xl">⚠️</span>
                     <span className="font-black text-red-600 dark:text-red-400 text-base">شكوى</span>
