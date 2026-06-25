@@ -848,7 +848,6 @@ export default function TrackPage() {
                           سيصلك طلبك عند الساعة{' '}
                           <span className="text-orange-500">{fmtEta(estimatedAt)}</span>
                         </p>
-                        {extraMins > 0 && <p className="text-xs text-amber-500 mt-0.5">⏳ تم تمديد الوقت التقديري</p>}
                       </div>
                     </div>
                   )}
