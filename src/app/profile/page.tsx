@@ -154,11 +154,13 @@ export default function ProfilePage() {
   const [addGpsLocating, setAddGpsLocating] = useState(false);
   const [addGpsAccuracy, setAddGpsAccuracy] = useState<number | null>(null);
 
-  const addMapRef         = useRef<HTMLDivElement>(null);
-  const addMapInstanceRef = useRef<any>(null);
-  const addGpsWatchRef    = useRef<number | null>(null);
-  const addPendingFlyRef  = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
-  const addPreciseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const addMapRef              = useRef<HTMLDivElement>(null);
+  const addMapInstanceRef      = useRef<any>(null);
+  const addGpsWatchRef         = useRef<number | null>(null);
+  const addPendingFlyRef       = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const addPreciseTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const addReverseTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const addManuallyEditedRef   = useRef(false);
 
   useEffect(() => {
     setName(localStorage.getItem(KEYS.name)  || '');
@@ -270,7 +272,29 @@ export default function ProfilePage() {
         }).addTo(map);
         setTimeout(() => map.invalidateSize({ pan: false }), 100);
         setTimeout(() => map.invalidateSize({ pan: false }), 500);
-        map.on('moveend', () => { const c = map.getCenter(); setAddMapLat(c.lat); setAddMapLng(c.lng); });
+        map.on('moveend', () => {
+          const c = map.getCenter();
+          setAddMapLat(c.lat);
+          setAddMapLng(c.lng);
+          if (addReverseTimerRef.current) clearTimeout(addReverseTimerRef.current);
+          addReverseTimerRef.current = setTimeout(async () => {
+            if (addManuallyEditedRef.current) return;
+            try {
+              const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${c.lat}&lon=${c.lng}&format=json&accept-language=ar`,
+                { headers: { 'Accept-Language': 'ar' } }
+              );
+              const data = await res.json();
+              const addr = data.address || {};
+              const parts = [
+                addr.road || addr.pedestrian || addr.footway,
+                addr.neighbourhood || addr.suburb || addr.village || addr.town || addr.city_district,
+              ].filter(Boolean);
+              const suggestion = parts.length > 0 ? parts.join('، ') : (data.display_name || '').split(',')[0].trim();
+              if (suggestion && !addManuallyEditedRef.current) setAddAddressText(suggestion);
+            } catch { /* ignore */ }
+          }, 800);
+        });
         if (addPendingFlyRef.current) {
           const { lat, lng, accuracy } = addPendingFlyRef.current;
           map.setView([lat, lng], accuracy < 100 ? 17 : 14);
@@ -295,6 +319,7 @@ export default function ProfilePage() {
   }, [showAddMap]);
 
   const openAddMap = () => {
+    addManuallyEditedRef.current = false;
     setAddMapLat(BASRA_CENTER[0]);
     setAddMapLng(BASRA_CENTER[1]);
     setAddAddressText('');
@@ -303,6 +328,7 @@ export default function ProfilePage() {
 
   const closeAddMap = () => {
     stopAddGps();
+    if (addReverseTimerRef.current) { clearTimeout(addReverseTimerRef.current); addReverseTimerRef.current = null; }
     if (addMapInstanceRef.current) { addMapInstanceRef.current.remove(); addMapInstanceRef.current = null; }
     addPendingFlyRef.current = null;
     setShowAddMap(false);
@@ -593,6 +619,7 @@ export default function ProfilePage() {
                             }}
                             dir="rtl"
                             className="flex-1 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-slate-100 outline-none text-right"
+                            style={{ fontSize: 16 }}
                           />
                         </div>
                       ) : (
@@ -638,7 +665,7 @@ export default function ProfilePage() {
             <button
               onClick={() => { setShowAddressPanel(false); openAddMap(); }}
               className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
-              style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}cc)`, color: '#fff', boxShadow: `0 6px 20px ${brandColor}40` }}
+              style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff', boxShadow: '0 6px 20px #ef444440' }}
             >
               <Plus size={18}/>
               إضافة عنوان جديد
@@ -736,7 +763,7 @@ export default function ProfilePage() {
             <input
               type="text"
               value={addAddressText}
-              onChange={e => setAddAddressText(e.target.value)}
+              onChange={e => { addManuallyEditedRef.current = true; setAddAddressText(e.target.value); }}
               placeholder="وصف العنوان — مثال: بجانب الجامع الكبير"
               dir="rtl"
               className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none text-sm"
