@@ -563,7 +563,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                       whileTap={{ scale: 0.95 }}
                                       onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
                                       className="h-10 sm:h-12 px-5 sm:px-7 rounded-full font-black text-xs sm:text-sm shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap"
-                                      style={{ backgroundColor: catColor, color: catTextColor }}>
+                                      style={{ backgroundColor: dark ? '#ffffff' : catColor, color: dark ? '#000000' : catTextColor }}>
                                       إضافة
                                     </motion.button>
                                   )}
