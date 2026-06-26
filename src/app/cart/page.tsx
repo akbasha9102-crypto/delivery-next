@@ -1647,9 +1647,10 @@ const proceedFromReview = () => {
                           placeholder="كلمة المرور"
                           type="password"
                           autoFocus
-                          className="w-full rounded-xl px-4 py-3 text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none text-sm"
-                          style={{ background:'#f8fafc', border:'1.5px solid #e2e8f0' }}
+                          className="w-full rounded-xl px-4 py-3 text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none"
+                          style={{ background:'#f8fafc', border:'1.5px solid #e2e8f0', fontSize: 16 }}
                         />
+                        <p className="text-xs text-gray-400 dark:text-slate-500 text-right mt-1.5">يجب أن تكون كلمة المرور ٦ أحرف أو أرقام على الأقل</p>
                       </div>
 
                       {authError && (
