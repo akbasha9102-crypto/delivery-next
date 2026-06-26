@@ -153,16 +153,13 @@ export default function ProfilePage() {
   const [addAddressText, setAddAddressText] = useState('');
   const [addGpsLocating, setAddGpsLocating] = useState(false);
   const [addGpsAccuracy,      setAddGpsAccuracy]      = useState<number | null>(null);
-  const [addGeocodingLoading, setAddGeocodingLoading] = useState(false);
+  const [addNameError, setAddNameError] = useState(false);
 
   const addMapRef              = useRef<HTMLDivElement>(null);
   const addMapInstanceRef      = useRef<any>(null);
   const addGpsWatchRef         = useRef<number | null>(null);
   const addPendingFlyRef       = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
   const addPreciseTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const addReverseTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const addManuallyEditedRef   = useRef(false);
-  const addGeocodedOnceRef     = useRef(false);
 
   useEffect(() => {
     setName(localStorage.getItem(KEYS.name)  || '');
@@ -213,26 +210,6 @@ export default function ProfilePage() {
 
   // ── GPS helpers ───────────────────────────────────────────────────────────
 
-  const fetchAreaName = async (lat: number, lng: number) => {
-    if (addManuallyEditedRef.current) return;
-    setAddGeocodingLoading(true);
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=ar`,
-        { headers: { 'Accept-Language': 'ar' } }
-      );
-      const data = await res.json();
-      if (addManuallyEditedRef.current) return;
-      const addr = data.address || {};
-      const area = addr.neighbourhood || addr.suburb || addr.city_district || addr.village || addr.town || addr.county || '';
-      const road = addr.road || addr.pedestrian || addr.footway || '';
-      const suggestion = area ? (road ? `${road}، ${area}` : area) : (data.display_name || '').split(',')[0].trim();
-      if (suggestion) setAddAddressText(suggestion);
-    } catch { /* ignore */ } finally {
-      setAddGeocodingLoading(false);
-    }
-  };
-
   const stopAddGps = () => {
     if (addGpsWatchRef.current !== null) {
       navigator.geolocation.clearWatch(addGpsWatchRef.current);
@@ -251,15 +228,7 @@ export default function ProfilePage() {
       (pos) => {
         const { latitude, longitude, accuracy } = pos.coords;
         setAddGpsAccuracy(Math.round(accuracy));
-        if (accuracy < best) {
-          best = accuracy;
-          onPos(latitude, longitude, accuracy);
-          // جلب اسم المنطقة فور أول قراءة GPS دقيقة
-          if (!addGeocodedOnceRef.current) {
-            addGeocodedOnceRef.current = true;
-            fetchAreaName(latitude, longitude);
-          }
-        }
+        if (accuracy < best) { best = accuracy; onPos(latitude, longitude, accuracy); }
         if (accuracy <= 30) { stopAddGps(); setAddGpsLocating(false); }
       },
       () => setAddGpsLocating(false),
@@ -269,7 +238,6 @@ export default function ProfilePage() {
 
   const locateAddMe = () => {
     if (!addMapInstanceRef.current) return;
-    addGeocodedOnceRef.current = false;
     startAddGps((lat, lng, accuracy) => {
       if (!addMapInstanceRef.current) return;
       const zoom = accuracy < 30 ? 18 : accuracy < 100 ? 17 : accuracy < 500 ? 16 : accuracy < 2000 ? 14 : 13;
@@ -303,13 +271,7 @@ export default function ProfilePage() {
         }).addTo(map);
         setTimeout(() => map.invalidateSize({ pan: false }), 100);
         setTimeout(() => map.invalidateSize({ pan: false }), 500);
-        map.on('moveend', () => {
-          const c = map.getCenter();
-          setAddMapLat(c.lat);
-          setAddMapLng(c.lng);
-          if (addReverseTimerRef.current) clearTimeout(addReverseTimerRef.current);
-          addReverseTimerRef.current = setTimeout(() => fetchAreaName(c.lat, c.lng), 400);
-        });
+        map.on('moveend', () => { const c = map.getCenter(); setAddMapLat(c.lat); setAddMapLng(c.lng); });
         if (addPendingFlyRef.current) {
           const { lat, lng, accuracy } = addPendingFlyRef.current;
           map.setView([lat, lng], accuracy < 100 ? 17 : 14);
@@ -334,18 +296,15 @@ export default function ProfilePage() {
   }, [showAddMap]);
 
   const openAddMap = () => {
-    addManuallyEditedRef.current = false;
-    addGeocodedOnceRef.current   = false;
     setAddMapLat(BASRA_CENTER[0]);
     setAddMapLng(BASRA_CENTER[1]);
     setAddAddressText('');
-    setAddGeocodingLoading(false);
+    setAddNameError(false);
     setShowAddMap(true);
   };
 
   const closeAddMap = () => {
     stopAddGps();
-    if (addReverseTimerRef.current) { clearTimeout(addReverseTimerRef.current); addReverseTimerRef.current = null; }
     if (addMapInstanceRef.current) { addMapInstanceRef.current.remove(); addMapInstanceRef.current = null; }
     addPendingFlyRef.current = null;
     setShowAddMap(false);
@@ -354,6 +313,7 @@ export default function ProfilePage() {
   };
 
   const confirmAddLocation = () => {
+    if (!addAddressText.trim()) { setAddNameError(true); return; }
     stopAddGps();
     if (addMapInstanceRef.current) { addMapInstanceRef.current.remove(); addMapInstanceRef.current = null; }
     addPendingFlyRef.current = null;
@@ -778,20 +738,18 @@ export default function ProfilePage() {
           {/* Footer */}
           <div className="px-4 pt-3 pb-7 flex-shrink-0 bg-white dark:bg-slate-900 space-y-2.5" style={{ boxShadow:'0 -1px 0 rgba(0,0,0,0.06)' }}>
             <div className="relative">
-              {addGeocodingLoading && (
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10">
-                  <Loader2 size={15} className="animate-spin text-gray-400"/>
-                </div>
-              )}
               <input
                 type="text"
                 value={addAddressText}
-                onChange={e => { addManuallyEditedRef.current = true; setAddAddressText(e.target.value); }}
-                placeholder={addGeocodingLoading ? 'جاري تحديد المنطقة...' : 'اسم العنوان — مثال: حي الجمهورية'}
+                onChange={e => { setAddAddressText(e.target.value); if (addNameError) setAddNameError(false); }}
+                placeholder="اسم العنوان — مثال: بيتي، العمل *"
                 dir="rtl"
                 style={{ fontSize: 16 }}
-                className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none"
+                className={`w-full bg-gray-50 dark:bg-slate-800 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none border-2 transition-colors ${addNameError ? 'border-red-500 shake' : 'border-gray-200 dark:border-slate-600'}`}
               />
+              {addNameError && (
+                <p className="text-xs text-red-500 text-right mt-1 pr-1">يرجى كتابة اسم للعنوان</p>
+              )}
             </div>
             <button
               onClick={confirmAddLocation}
