@@ -431,8 +431,8 @@ export default function ProfilePage() {
             </div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-900 dark:text-slate-100">العناوين</span>
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${brandColor}18` }}>
-                <MapPin size={16} style={{ color: brandColor }}/>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#ef444418' }}>
+                <MapPin size={16} style={{ color: '#ef4444' }}/>
               </div>
             </div>
           </div>
