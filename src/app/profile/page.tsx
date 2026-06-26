@@ -152,7 +152,8 @@ export default function ProfilePage() {
   const [addMapLng,      setAddMapLng]      = useState<number | null>(null);
   const [addAddressText, setAddAddressText] = useState('');
   const [addGpsLocating, setAddGpsLocating] = useState(false);
-  const [addGpsAccuracy, setAddGpsAccuracy] = useState<number | null>(null);
+  const [addGpsAccuracy,      setAddGpsAccuracy]      = useState<number | null>(null);
+  const [addGeocodingLoading, setAddGeocodingLoading] = useState(false);
 
   const addMapRef              = useRef<HTMLDivElement>(null);
   const addMapInstanceRef      = useRef<any>(null);
@@ -161,6 +162,7 @@ export default function ProfilePage() {
   const addPreciseTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addReverseTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addManuallyEditedRef   = useRef(false);
+  const addGeocodedOnceRef     = useRef(false);
 
   useEffect(() => {
     setName(localStorage.getItem(KEYS.name)  || '');
@@ -211,6 +213,26 @@ export default function ProfilePage() {
 
   // ── GPS helpers ───────────────────────────────────────────────────────────
 
+  const fetchAreaName = async (lat: number, lng: number) => {
+    if (addManuallyEditedRef.current) return;
+    setAddGeocodingLoading(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=ar`,
+        { headers: { 'Accept-Language': 'ar' } }
+      );
+      const data = await res.json();
+      if (addManuallyEditedRef.current) return;
+      const addr = data.address || {};
+      const area = addr.neighbourhood || addr.suburb || addr.city_district || addr.village || addr.town || addr.county || '';
+      const road = addr.road || addr.pedestrian || addr.footway || '';
+      const suggestion = area ? (road ? `${road}، ${area}` : area) : (data.display_name || '').split(',')[0].trim();
+      if (suggestion) setAddAddressText(suggestion);
+    } catch { /* ignore */ } finally {
+      setAddGeocodingLoading(false);
+    }
+  };
+
   const stopAddGps = () => {
     if (addGpsWatchRef.current !== null) {
       navigator.geolocation.clearWatch(addGpsWatchRef.current);
@@ -229,7 +251,15 @@ export default function ProfilePage() {
       (pos) => {
         const { latitude, longitude, accuracy } = pos.coords;
         setAddGpsAccuracy(Math.round(accuracy));
-        if (accuracy < best) { best = accuracy; onPos(latitude, longitude, accuracy); }
+        if (accuracy < best) {
+          best = accuracy;
+          onPos(latitude, longitude, accuracy);
+          // جلب اسم المنطقة فور أول قراءة GPS دقيقة
+          if (!addGeocodedOnceRef.current) {
+            addGeocodedOnceRef.current = true;
+            fetchAreaName(latitude, longitude);
+          }
+        }
         if (accuracy <= 30) { stopAddGps(); setAddGpsLocating(false); }
       },
       () => setAddGpsLocating(false),
@@ -239,6 +269,7 @@ export default function ProfilePage() {
 
   const locateAddMe = () => {
     if (!addMapInstanceRef.current) return;
+    addGeocodedOnceRef.current = false;
     startAddGps((lat, lng, accuracy) => {
       if (!addMapInstanceRef.current) return;
       const zoom = accuracy < 30 ? 18 : accuracy < 100 ? 17 : accuracy < 500 ? 16 : accuracy < 2000 ? 14 : 13;
@@ -277,23 +308,7 @@ export default function ProfilePage() {
           setAddMapLat(c.lat);
           setAddMapLng(c.lng);
           if (addReverseTimerRef.current) clearTimeout(addReverseTimerRef.current);
-          addReverseTimerRef.current = setTimeout(async () => {
-            if (addManuallyEditedRef.current) return;
-            try {
-              const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?lat=${c.lat}&lon=${c.lng}&format=json&accept-language=ar`,
-                { headers: { 'Accept-Language': 'ar' } }
-              );
-              const data = await res.json();
-              const addr = data.address || {};
-              const parts = [
-                addr.road || addr.pedestrian || addr.footway,
-                addr.neighbourhood || addr.suburb || addr.village || addr.town || addr.city_district,
-              ].filter(Boolean);
-              const suggestion = parts.length > 0 ? parts.join('، ') : (data.display_name || '').split(',')[0].trim();
-              if (suggestion && !addManuallyEditedRef.current) setAddAddressText(suggestion);
-            } catch { /* ignore */ }
-          }, 800);
+          addReverseTimerRef.current = setTimeout(() => fetchAreaName(c.lat, c.lng), 400);
         });
         if (addPendingFlyRef.current) {
           const { lat, lng, accuracy } = addPendingFlyRef.current;
@@ -320,9 +335,11 @@ export default function ProfilePage() {
 
   const openAddMap = () => {
     addManuallyEditedRef.current = false;
+    addGeocodedOnceRef.current   = false;
     setAddMapLat(BASRA_CENTER[0]);
     setAddMapLng(BASRA_CENTER[1]);
     setAddAddressText('');
+    setAddGeocodingLoading(false);
     setShowAddMap(true);
   };
 
@@ -760,14 +777,22 @@ export default function ProfilePage() {
 
           {/* Footer */}
           <div className="px-4 pt-3 pb-7 flex-shrink-0 bg-white dark:bg-slate-900 space-y-2.5" style={{ boxShadow:'0 -1px 0 rgba(0,0,0,0.06)' }}>
-            <input
-              type="text"
-              value={addAddressText}
-              onChange={e => { addManuallyEditedRef.current = true; setAddAddressText(e.target.value); }}
-              placeholder="وصف العنوان — مثال: بجانب الجامع الكبير"
-              dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none text-sm"
-            />
+            <div className="relative">
+              {addGeocodingLoading && (
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10">
+                  <Loader2 size={15} className="animate-spin text-gray-400"/>
+                </div>
+              )}
+              <input
+                type="text"
+                value={addAddressText}
+                onChange={e => { addManuallyEditedRef.current = true; setAddAddressText(e.target.value); }}
+                placeholder={addGeocodingLoading ? 'جاري تحديد المنطقة...' : 'اسم العنوان — مثال: حي الجمهورية'}
+                dir="rtl"
+                style={{ fontSize: 16 }}
+                className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none"
+              />
+            </div>
             <button
               onClick={confirmAddLocation}
               className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-95 flex items-center justify-center gap-2"
