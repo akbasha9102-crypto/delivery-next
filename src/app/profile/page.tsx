@@ -9,8 +9,11 @@ import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 
 const KEYS = {
-  name:  'deliveryName',
-  phone: 'deliveryPhone',
+  name:           'deliveryName',
+  phone:          'deliveryPhone',
+  nickname:       'deliveryNickname',
+  addressDetails: 'deliveryAddressDetails',
+  locationDesc:   'deliveryLocationDesc',
 };
 
 function EditableRow({
@@ -114,15 +117,19 @@ export default function ProfilePage() {
     const applySession = (s: typeof session) => {
       if (!s?.user) return;
       const meta = s.user.user_metadata as Record<string, string | undefined>;
-      const savedName  = meta?.delivery_name  || meta?.full_name;
-      const savedPhone = meta?.delivery_phone;
-      if (savedName && !localStorage.getItem(KEYS.name)) {
-        setName(savedName);
-        localStorage.setItem(KEYS.name, savedName);
-      }
-      if (savedPhone && !localStorage.getItem(KEYS.phone)) {
-        setPhone(savedPhone);
-        localStorage.setItem(KEYS.phone, savedPhone);
+      const fields: Array<[string, keyof typeof KEYS, string | undefined]> = [
+        ['name',           'name',           meta?.delivery_name     || meta?.full_name],
+        ['phone',          'phone',          meta?.delivery_phone],
+        ['nickname',       'nickname',       meta?.delivery_nickname],
+        ['addressDetails', 'addressDetails', meta?.delivery_address],
+        ['locationDesc',   'locationDesc',   meta?.delivery_location],
+      ];
+      for (const [setter, key, val] of fields) {
+        if (val && !localStorage.getItem(KEYS[key])) {
+          localStorage.setItem(KEYS[key], val);
+          if (setter === 'name')  setName(val);
+          if (setter === 'phone') setPhone(val);
+        }
       }
     };
 

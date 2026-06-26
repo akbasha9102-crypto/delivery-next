@@ -1623,7 +1623,7 @@ const proceedFromReview = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {/* رقم الهاتف */}
+                      {/* رقم الهاتف — للعرض فقط، مأخوذ من الطلب تلقائياً */}
                       <div>
                         <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-2 text-right">رقم الهاتف</p>
                         <div className="flex items-center rounded-xl overflow-hidden"
@@ -1632,24 +1632,21 @@ const proceedFromReview = () => {
                             <span className="text-base leading-none">🇮🇶</span>
                             <span className="text-sm font-bold text-blue-500">+964</span>
                           </div>
-                          <input
-                            value={authPhone}
-                            onChange={e => setAuthPhone(e.target.value.replace(/\D/g,'').slice(0,11))}
-                            type="tel"
-                            dir="rtl"
-                            className="flex-1 bg-transparent px-3 py-3 text-right text-gray-900 outline-none font-bold text-sm"
-                          />
+                          <span className="flex-1 px-3 py-3 text-right text-gray-900 font-bold text-sm select-all">
+                            {authPhone}
+                          </span>
                         </div>
                       </div>
 
                       {/* كلمة المرور */}
                       <div>
-                        <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-2 text-right">كلمة المرور</p>
+                        <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-2 text-right">اختر كلمة مرور</p>
                         <input
                           value={authPassword}
                           onChange={e => setAuthPassword(e.target.value)}
-                          placeholder="اختر كلمة مرور"
+                          placeholder="كلمة المرور"
                           type="password"
+                          autoFocus
                           className="w-full rounded-xl px-4 py-3 text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none text-sm"
                           style={{ background:'#f8fafc', border:'1.5px solid #e2e8f0' }}
                         />
@@ -1666,14 +1663,22 @@ const proceedFromReview = () => {
                         onClick={async () => {
                           const trimPhone = authPhone.trim();
                           const trimPass  = authPassword.trim();
-                          if (!trimPhone || !trimPass) { setAuthError('يرجى إدخال رقم الهاتف وكلمة المرور'); return; }
+                          if (!trimPhone || !trimPass) { setAuthError('يرجى إدخال كلمة المرور'); return; }
                           setPhoneAuthLoading(true);
                           setAuthError('');
                           const email = `${trimPhone}@c.delivery`;
                           const { error } = await supabase.auth.signUp({
                             email,
                             password: trimPass,
-                            options: { data: { delivery_phone: trimPhone, delivery_name: name || '' } },
+                            options: {
+                              data: {
+                                delivery_phone:   trimPhone,
+                                delivery_name:    name.trim() || '',
+                                delivery_nickname: nickname.trim() || '',
+                                delivery_address: addressDetails.trim() || '',
+                                delivery_location: locationDesc.trim() || '',
+                              },
+                            },
                           });
                           setPhoneAuthLoading(false);
                           if (error) {
