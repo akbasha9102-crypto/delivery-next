@@ -533,7 +533,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
-                                        className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-black text-black dark:text-white flex items-center justify-center">
+                                        className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-white text-black dark:text-black flex items-center justify-center">
                                         <Plus size={14} strokeWidth={3}/>
                                       </motion.button>
                                       <motion.span
