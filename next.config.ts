@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    staleTimes: {
+      dynamic: 120, // يحتفظ بصفحة المنيو في cache المتصفح لمدة دقيقتين
+    },
+  },
 };
 
 export default nextConfig;

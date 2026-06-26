@@ -2,6 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import HomeClient from '@/app/home/HomeClient';
 
+export const revalidate = 60; // يعيد بناء الصفحة كل 60 ثانية على السيرفر
+
 type Props = { params: Promise<{ slug: string }> };
 
 export default async function MenuPage({ params }: Props) {
