@@ -895,6 +895,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                         );
                       })()}
 
+                      {qty(selectedItem.id) > 0 && (
                       <div className="absolute bottom-5 left-5 flex flex-col items-start">
                         <p className="text-[10px] font-black opacity-30 uppercase tracking-widest mb-0.5">المجموع</p>
                         <motion.p
@@ -909,6 +910,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                           })()} <span className="text-[10px] opacity-40">د.ع</span>
                         </motion.p>
                       </div>
+                      )}
 
                       {!is_closed && getStatus(selectedItem) === 'available' && (
                         <div className="absolute bottom-5 right-5">
