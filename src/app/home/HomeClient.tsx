@@ -534,7 +534,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                         whileTap={{ scale: 0.8 }}
                                         onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
                                         className="w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center"
-                                        style={{ backgroundColor: catTextColor, color: catColor }}>
+                                        style={{ backgroundColor: dark ? '#ffffff' : catTextColor, color: dark ? '#000000' : catColor }}>
                                         <Plus size={14} strokeWidth={3}/>
                                       </motion.button>
                                       <motion.span
