@@ -119,6 +119,13 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   const [showClosedToast,  setShowClosedToast]  = useState(false);
   const [showCartPanel,  setShowCartPanel]  = useState(false);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
   const scrollLockPos = useRef<number | null>(null);
 
   const [selectedItem,        setSelectedItem]        = useState<Item | null>(null);
@@ -276,7 +283,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
   return (
     <CustomerGuard>
-    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950" style={{ paddingBottom: showCartPanel ? '14rem' : '9rem', transition: 'padding-bottom 0.35s ease' }}>
+    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950" style={isDesktop ? { paddingRight: '70px', paddingBottom: showCartPanel ? '10rem' : '2rem', transition: 'padding-bottom 0.35s ease' } : { paddingBottom: showCartPanel ? '14rem' : '9rem', transition: 'padding-bottom 0.35s ease' }}>
 
       {/* ══ HEADER ══ */}
       <motion.header

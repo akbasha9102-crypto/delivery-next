@@ -42,20 +42,20 @@ export function ClientBottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex z-50 md:top-0 md:bottom-0 md:left-auto md:w-[70px] md:flex-col md:border-t-0 md:border-l">
       {clientTabs.map(({ href, icon: Icon, label }) => {
         const active = path === href || (href.startsWith('/menu/') && path.startsWith('/menu/'));
         const disabled = is_closed && href === '/track';
         if (disabled) {
           return (
-            <div key={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 opacity-35">
+            <div key={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 opacity-35 md:flex-none md:w-full md:py-5">
               <Icon size={22} className="text-gray-400 dark:text-gray-500" />
               <span className="text-xs font-medium text-gray-400 dark:text-gray-500">{label}</span>
             </div>
           );
         }
         return (
-          <Link key={href} href={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all active:scale-90 relative">
+          <Link key={href} href={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all active:scale-90 relative md:flex-none md:w-full md:py-5">
             <Icon size={22} className={active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'} />
             <span className={`text-xs font-medium ${active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>{label}</span>
           </Link>

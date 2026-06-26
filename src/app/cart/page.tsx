@@ -680,7 +680,7 @@ const proceedFromReview = () => {
 
   return (
     <CustomerGuard>
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32 md:pr-[70px]">
       <div style={{ visibility: anyModalOpen ? 'hidden' : 'visible' }}>
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
         <div className="relative flex items-center justify-center">

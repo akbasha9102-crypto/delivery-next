@@ -581,7 +581,7 @@ export default function TrackPage() {
 
   return (
     <CustomerGuard>
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-32 md:pr-[70px]">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4">
         <style>{`
           @keyframes bell-ring {
