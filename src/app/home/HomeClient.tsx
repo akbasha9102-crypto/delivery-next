@@ -388,7 +388,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 transition={{ delay: 0.1 + idx * 0.05 }}
                 whileTap={{ scale: 0.93 }}
                 onClick={() => scrollToCategory(cat.id)}
-                className={`px-4 py-1.5 rounded-[1.2rem] text-sm font-black whitespace-nowrap transition-all duration-300 flex-shrink-0 ${
+                className={`px-5 py-2.5 rounded-[1.2rem] text-base font-black whitespace-nowrap transition-all duration-300 flex-shrink-0 ${
                   isActive
                   ? 'shadow-md scale-[1.04]'
                   : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-300 shadow-sm'
