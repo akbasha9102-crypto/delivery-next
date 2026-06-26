@@ -393,7 +393,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                   ? 'shadow-md scale-[1.04]'
                   : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-300 shadow-sm'
                 }`}
-                style={isActive ? { backgroundColor: catColor, color: catTextColor } : {}}
+                style={isActive ? { backgroundColor: dark ? '#ffffff' : catColor, color: dark ? '#000000' : catTextColor } : {}}
               >
                 {cat.name}
               </motion.button>
