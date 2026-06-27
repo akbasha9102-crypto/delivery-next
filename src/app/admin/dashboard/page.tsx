@@ -721,11 +721,26 @@ export default function DashboardPage() {
                       </svg>
                     </button>
                     <div className="flex-1 min-w-0 text-right">
-                      <p className="font-bold text-gray-900 dark:text-white text-sm truncate">
-                        {order.items?.map(i => `${i.quantity}× ${i.item_name}`).join('، ')}
-                      </p>
+                      {/* الوجبات مع السعر */}
+                      <div className="space-y-0.5">
+                        {order.items?.map(item => (
+                          <div key={item.id} className="flex items-center justify-end gap-2">
+                            <span className="text-[#f97316] font-bold text-xs">{(item.price * item.quantity).toLocaleString()} <span className="text-gray-400 font-normal">د.ع</span></span>
+                            <span className="font-bold text-gray-900 dark:text-white text-sm truncate">{item.quantity}× {item.item_name}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {/* العنوان مع أيقونة الموقع */}
                       {order.delivery_address && (
-                        <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.delivery_address}</p>
+                        <div className="flex items-center justify-end gap-1.5 mt-1">
+                          <button
+                            onClick={e => { e.stopPropagation(); setLocationOrder(order); }}
+                            className="flex-shrink-0 text-blue-500 active:scale-90 transition-transform"
+                          >
+                            <MapPin size={14} />
+                          </button>
+                          <p className="text-xs text-gray-900 dark:text-white font-medium truncate">{order.delivery_address}</p>
+                        </div>
                       )}
                     </div>
                   </div>
