@@ -634,7 +634,8 @@ export default function DashboardPage() {
       </AnimatePresence>
 
       {/* تابس الفلتر */}
-      <div className="flex items-center gap-1 px-3 py-3 overflow-x-auto scrollbar-none">
+      <div className="flex justify-center px-3 py-3 overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-1">
         {(['pending','preparing','pickup','delivery','completed'] as const).map((tab, idx, arr) => {
           const isActive = filter === tab;
           const count    = counts[tab] || 0;
@@ -658,6 +659,7 @@ export default function DashboardPage() {
               )]
             : btn;
         })}
+        </div>
       </div>
 
       {/* الطلبات */}
