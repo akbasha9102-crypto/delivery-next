@@ -775,12 +775,14 @@ export default function DashboardPage() {
                           <p className="font-bold text-gray-900 dark:text-white text-right text-sm">{order.client_name}</p>
                           {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                         </div>
-                        <button onClick={() => handleAction(order)} className="w-full py-2.5 text-white font-bold text-sm active:opacity-80 bg-orange-500">
-                          جاهز للتسليم
-                        </button>
                       </motion.div>
                     )}
                   </AnimatePresence>
+
+                  {/* زر جاهز للتسليم — دائماً ظاهر */}
+                  <button onClick={() => handleAction(order)} className="w-full py-2 text-white font-bold text-sm active:opacity-80 bg-orange-500">
+                    جاهز للتسليم ✓
+                  </button>
                 </div>
               );
             })}
