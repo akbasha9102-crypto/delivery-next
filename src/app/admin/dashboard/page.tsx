@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, ClipboardList, Clock } from 'lucide-react';
+import { Moon, Sun, ClipboardList, Clock, ChevronLeft } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
@@ -521,18 +521,21 @@ export default function DashboardPage() {
       </div>
 
       {/* تابس الفلتر */}
-      <div className="grid grid-cols-4 gap-1.5 px-3 pb-3">
-        {(['pending','preparing','delivery','completed'] as const).map(tab => {
+      <div className="flex items-center px-3 pb-3">
+        {(['pending','preparing','delivery','completed'] as const).flatMap((tab, idx) => {
           const isActive = filter === tab;
           const count    = counts[tab] || 0;
           const labels   = { pending: 'واردة', preparing: 'قيد التجهيز', delivery: 'قيد التوصيل', completed: 'مكتمل' };
-          return (
+          const btn = (
             <button key={tab} onClick={() => setFilter(tab)}
-              className={`py-2.5 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+              className={`flex-1 py-2.5 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
               <span className="block">{labels[tab]}</span>
               {count > 0 && <span className={`block text-[11px] mt-0.5 font-black ${isActive ? 'text-white/80' : 'text-[#f97316]'}`}>{count}</span>}
             </button>
           );
+          return idx < 3
+            ? [btn, <ChevronLeft key={`arrow-${idx}`} size={12} className="flex-shrink-0 mx-0.5 text-gray-300 dark:text-slate-600" />]
+            : [btn];
         })}
       </div>
 
