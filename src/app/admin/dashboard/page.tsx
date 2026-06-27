@@ -705,7 +705,12 @@ export default function DashboardPage() {
             {filtered.map(order => {
               const isOpen = expandedOrders.has(order.id);
               return (
-                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                <div key={order.id} className="relative bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                  {/* أيقونة السائق في الزاوية */}
+                  <div className={`absolute top-2 left-2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-white text-base shadow ${order.driver_id ? 'bg-green-500' : 'bg-red-500'}`}
+                    title={order.driver_id ? `السائق: ${order.driver_name}` : 'لا يوجد سائق'}>
+                    🏍️
+                  </div>
                   <div className="h-1.5 bg-blue-400" />
                   {/* الصف الرئيسي — الوجبة + العنوان + السهم */}
                   <div className="flex items-center gap-2 px-3 py-2.5">
