@@ -508,20 +508,8 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* إحصاء */}
-      <div className="grid grid-cols-2 gap-2 px-3 pt-3 pb-2">
-        <div className="rounded-2xl p-2.5 text-center border" style={{ backgroundColor: 'rgba(156,163,175,0.08)', borderColor: 'rgba(156,163,175,0.25)' }}>
-          <p className="font-bold text-2xl" style={{ color: '#9ca3af' }}>{counts.completed}</p>
-          <p className="text-xs mt-0.5 opacity-75" style={{ color: '#9ca3af' }}>مكتمل</p>
-        </div>
-        <div className="rounded-2xl px-4 py-2.5 text-center border bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800">
-          <p className="text-orange-500 font-bold text-xl">{todayRevenue.toLocaleString()} <span className="text-xs font-normal text-orange-400">د.ع</span></p>
-          <p className="text-orange-400 text-xs mt-0.5 font-bold">إجمالي اليوم</p>
-        </div>
-      </div>
-
       {/* تابس الفلتر */}
-      <div className="flex items-center px-3 pb-3">
+      <div className="flex items-center px-3 py-3">
         {(['pending','preparing','delivery','completed'] as const).flatMap((tab, idx) => {
           const isActive = filter === tab;
           const count    = counts[tab] || 0;
@@ -534,7 +522,12 @@ export default function DashboardPage() {
             </button>
           );
           return idx < 3
-            ? [btn, <ChevronLeft key={`arrow-${idx}`} size={12} className="flex-shrink-0 mx-0.5 text-gray-300 dark:text-slate-600" />]
+            ? [btn, (
+                <div key={`arrow-${idx}`} className="flex items-center flex-shrink-0 mx-0.5">
+                  <div className="h-px w-4 bg-gray-200 dark:bg-slate-600" />
+                  <ChevronLeft size={10} className="text-gray-300 dark:text-slate-600 -ml-1" />
+                </div>
+              )]
             : [btn];
         })}
       </div>
