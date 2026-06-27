@@ -708,28 +708,12 @@ export default function DashboardPage() {
               return (
                 <div key={order.id} className="relative bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
                   {/* أيقونة السائق في الزاوية */}
-                  <div className="absolute top-2 left-2 z-10">
-                    <button
-                      onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-base shadow active:scale-90 transition-transform ${order.driver_id ? 'bg-green-500' : 'bg-red-500'}`}
-                    >
-                      🏍️
-                    </button>
-                    {driverPopup === order.id && (
-                      <div className="absolute top-9 left-0 bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-gray-100 dark:border-slate-600 p-3 min-w-[160px] z-20">
-                        {order.driver_id ? (
-                          <>
-                            <p className="font-bold text-gray-900 dark:text-white text-sm text-right">{order.driver_name}</p>
-                            {order.driver_phone && (
-                              <a href={`tel:${order.driver_phone}`} className="block text-blue-500 text-xs font-medium text-right mt-1 dir-ltr" dir="ltr">{order.driver_phone}</a>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-red-500 text-xs font-bold text-right">لا يوجد سائق بعد</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
+                    className={`absolute top-2 left-2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-white text-base shadow active:scale-90 transition-transform ${order.driver_id ? 'bg-green-500' : 'bg-red-500'}`}
+                  >
+                    🏍️
+                  </button>
                   <div className="h-1.5 bg-blue-400" />
                   {/* الصف الرئيسي — الوجبة + العنوان + السهم */}
                   <div className="flex items-center gap-2 px-3 py-2.5">
@@ -1026,6 +1010,45 @@ export default function DashboardPage() {
       {locationOrder && (
         <LocationModal order={locationOrder} onClose={() => setLocationOrder(null)} />
       )}
+
+      {/* مودال معلومات السائق */}
+      {driverPopup && (() => {
+        const o = filtered.find(x => x.id === driverPopup);
+        if (!o) return null;
+        return (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-6" onClick={() => setDriverPopup(null)}>
+            <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm p-6 relative shadow-2xl" onClick={e => e.stopPropagation()}>
+              {/* زر الإغلاق */}
+              <button onClick={() => setDriverPopup(null)} className="absolute top-4 left-4 w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-gray-500 dark:text-slate-300 active:scale-90 transition-transform">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              </button>
+              {o.driver_id ? (
+                <div className="text-right space-y-4">
+                  <div className="flex items-center justify-end gap-3">
+                    <div>
+                      <p className="text-lg font-black text-gray-900 dark:text-white">{o.driver_name}</p>
+                      <p className="text-xs text-green-500 font-bold mt-0.5">سائق مخصص لهذا الطلب ✓</p>
+                    </div>
+                    <div className="w-14 h-14 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-3xl">🏍️</div>
+                  </div>
+                  {o.driver_phone && (
+                    <a href={`tel:${o.driver_phone}`} dir="ltr"
+                      className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-blue-500 text-white font-bold text-lg active:opacity-80 transition-opacity">
+                      📞 {o.driver_phone}
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center space-y-3 py-2">
+                  <div className="text-5xl">🏍️</div>
+                  <p className="text-red-500 font-black text-lg">لا يوجد سائق بعد</p>
+                  <p className="text-gray-400 dark:text-slate-500 text-sm">لم يقبل أي سائق هذا الطلب حتى الآن</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
