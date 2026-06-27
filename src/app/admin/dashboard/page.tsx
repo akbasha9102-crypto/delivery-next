@@ -452,6 +452,7 @@ export default function DashboardPage() {
   const [islandExpanded, setIslandExpanded] = useState(false);
   const islandControls = useAnimation();
   const [tick,          setTick]          = useState(0);
+  const [driverPopup,   setDriverPopup]   = useState<string | null>(null);
 
 
   const initialLoadDone = useRef(false);
@@ -707,9 +708,27 @@ export default function DashboardPage() {
               return (
                 <div key={order.id} className="relative bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
                   {/* أيقونة السائق في الزاوية */}
-                  <div className={`absolute top-2 left-2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-white text-base shadow ${order.driver_id ? 'bg-green-500' : 'bg-red-500'}`}
-                    title={order.driver_id ? `السائق: ${order.driver_name}` : 'لا يوجد سائق'}>
-                    🏍️
+                  <div className="absolute top-2 left-2 z-10">
+                    <button
+                      onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-base shadow active:scale-90 transition-transform ${order.driver_id ? 'bg-green-500' : 'bg-red-500'}`}
+                    >
+                      🏍️
+                    </button>
+                    {driverPopup === order.id && (
+                      <div className="absolute top-9 left-0 bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-gray-100 dark:border-slate-600 p-3 min-w-[160px] z-20">
+                        {order.driver_id ? (
+                          <>
+                            <p className="font-bold text-gray-900 dark:text-white text-sm text-right">{order.driver_name}</p>
+                            {order.driver_phone && (
+                              <a href={`tel:${order.driver_phone}`} className="block text-blue-500 text-xs font-medium text-right mt-1 dir-ltr" dir="ltr">{order.driver_phone}</a>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-red-500 text-xs font-bold text-right">لا يوجد سائق بعد</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="h-1.5 bg-blue-400" />
                   {/* الصف الرئيسي — الوجبة + العنوان + السهم */}
