@@ -502,14 +502,14 @@ export default function DashboardPage() {
           const labels   = { pending: 'واردة', preparing: 'قيد التجهيز', delivery: 'قيد التوصيل', completed: 'مكتمل' };
           const btn = (
             <button key={tab} onClick={() => setFilter(tab)}
-              className={`flex-1 py-2.5 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+              className={`flex-1 py-2.5 rounded-2xl text-xs font-bold text-center border-2 transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-900 dark:border-white text-gray-600 dark:text-slate-300'}`}>
               <span className="block">{labels[tab]}</span>
               {count > 0 && <span className={`block text-[11px] mt-0.5 font-black ${isActive ? 'text-white/80' : 'text-[#f97316]'}`}>{count}</span>}
             </button>
           );
           return idx < 3
             ? [btn, (
-                <svg key={`arrow-${idx}`} className="flex-shrink-0 mx-1 text-gray-300 dark:text-slate-600" width="18" height="8" viewBox="0 0 18 8" fill="none">
+                <svg key={`arrow-${idx}`} className="flex-shrink-0 mx-1 text-gray-800 dark:text-white" width="18" height="8" viewBox="0 0 18 8" fill="none">
                   <path d="M17 4H1M5 1L1 4L5 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               )]
