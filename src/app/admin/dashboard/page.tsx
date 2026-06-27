@@ -59,9 +59,23 @@ function calcBearing(lat1: number, lng1: number, lat2: number, lng2: number): nu
 }
 
 function LocationModal({ order, onClose }: { order: Order; onClose: () => void }) {
-  const mapRef        = useRef<HTMLDivElement>(null);
+  const mapRef         = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const routeLineRef   = useRef<any>(null);
+  const [myPos, setMyPos] = useState<[number, number] | null>(null);
+  const [locErr, setLocErr] = useState(false);
 
+  // جلب موقع المطعم (الجهاز الحالي)
+  useEffect(() => {
+    if (!navigator.geolocation) { setLocErr(true); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => setMyPos([pos.coords.latitude, pos.coords.longitude]),
+      ()  => setLocErr(true),
+      { enableHighAccuracy: true, timeout: 6000 }
+    );
+  }, []);
+
+  // تهيئة الخريطة
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current || !order.client_lat || !order.client_lng) return;
     const link = document.createElement('link');
@@ -72,22 +86,75 @@ function LocationModal({ order, onClose }: { order: Order; onClose: () => void }
       const L = (mod as any).default ?? mod;
       if (!mapRef.current || mapInstanceRef.current) return;
       const map = L.map(mapRef.current, { attributionControl: false, zoomControl: true })
-        .setView([order.client_lat!, order.client_lng!], 16);
+        .setView([order.client_lat!, order.client_lng!], 14);
       mapInstanceRef.current = map;
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-      const iconHtml = `<div style="width:32px;height:38px;position:relative">
-        <div style="width:32px;height:32px;background:#ef4444;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3)"></div>
-        <span style="position:absolute;top:4px;left:0;width:32px;text-align:center;font-size:14px">📍</span>
-      </div>`;
-      const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [32, 38], iconAnchor: [16, 38] });
-      L.marker([order.client_lat!, order.client_lng!], { icon }).addTo(map)
+
+      // ماركر الزبون (أحمر)
+      const custIcon = L.divIcon({
+        html: `<div style="width:32px;height:38px;position:relative">
+          <div style="width:32px;height:32px;background:#ef4444;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3)"></div>
+          <span style="position:absolute;top:4px;left:0;width:32px;text-align:center;font-size:13px">🏠</span>
+        </div>`,
+        className: '', iconSize: [32, 38], iconAnchor: [16, 38],
+      });
+      L.marker([order.client_lat!, order.client_lng!], { icon: custIcon }).addTo(map)
         .bindPopup(`<b dir="rtl">${order.client_name}</b>${order.delivery_address ? `<br><small>${order.delivery_address}</small>` : ''}`, { offset: [0, -20] })
         .openPopup();
     });
     return () => {
-      if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; }
+      if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; routeLineRef.current = null; }
     };
   }, [order.client_lat, order.client_lng, order.client_name, order.delivery_address]);
+
+  // رسم الخط والماركر بعد جلب موقعي
+  useEffect(() => {
+    if (!mapInstanceRef.current || !myPos || !order.client_lat || !order.client_lng) return;
+    import('leaflet').then(mod => {
+      const L = (mod as any).default ?? mod;
+      if (!mapInstanceRef.current) return;
+
+      // ماركر المطعم (أزرق)
+      const restIcon = L.divIcon({
+        html: `<div style="width:32px;height:38px;position:relative">
+          <div style="width:32px;height:32px;background:#2563eb;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3)"></div>
+          <span style="position:absolute;top:4px;left:0;width:32px;text-align:center;font-size:13px">🍽️</span>
+        </div>`,
+        className: '', iconSize: [32, 38], iconAnchor: [16, 38],
+      });
+      L.marker(myPos, { icon: restIcon }).addTo(mapInstanceRef.current)
+        .bindPopup('<b>موقعك (المطعم)</b>');
+
+      // Fit الخريطة على الموقعين
+      mapInstanceRef.current.fitBounds(
+        L.latLngBounds(myPos, [order.client_lat!, order.client_lng!]),
+        { padding: [50, 50] }
+      );
+
+      // جلب المسار عبر OSRM
+      const [rLat, rLng] = myPos;
+      const [cLat, cLng] = [order.client_lat!, order.client_lng!];
+      fetch(`https://router.project-osrm.org/route/v1/driving/${rLng},${rLat};${cLng},${cLat}?overview=full&geometries=geojson`)
+        .then(r => r.json())
+        .then(json => {
+          const coords = json.routes?.[0]?.geometry?.coordinates?.map(
+            ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+          );
+          if (!coords?.length || !mapInstanceRef.current) return;
+          routeLineRef.current = L.polyline(coords, {
+            color: '#2563eb', weight: 5, opacity: 0.85,
+          }).addTo(mapInstanceRef.current);
+          routeLineRef.current.bringToBack();
+        })
+        .catch(() => {
+          // إذا فشل OSRM ارسم خط مباشر
+          if (mapInstanceRef.current)
+            L.polyline([myPos, [order.client_lat!, order.client_lng!]], {
+              color: '#2563eb', weight: 4, opacity: 0.7, dashArray: '8 6',
+            }).addTo(mapInstanceRef.current);
+        });
+    });
+  }, [myPos, order.client_lat, order.client_lng]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end" onClick={onClose}>
@@ -101,14 +168,26 @@ function LocationModal({ order, onClose }: { order: Order; onClose: () => void }
           </div>
         </div>
         {order.client_lat && order.client_lng ? (
-          <div ref={mapRef} style={{ height: 360 }} className="w-full" />
+          <div className="relative">
+            <div ref={mapRef} style={{ height: 380 }} className="w-full" />
+            {!myPos && !locErr && (
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-slate-800/90 rounded-xl px-3 py-1.5 text-xs text-gray-500 shadow">
+                📡 جاري تحديد موقع المطعم...
+              </div>
+            )}
+            {locErr && (
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-slate-800/90 rounded-xl px-3 py-1.5 text-xs text-red-400 shadow">
+                ⚠️ تعذر تحديد موقعك
+              </div>
+            )}
+          </div>
         ) : (
           <div className="h-40 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-700 mx-4 mb-4 rounded-2xl">
             <p className="text-3xl mb-2">📍</p>
-            <p className="text-gray-400 text-sm">لا يوجد موقع GPS</p>
+            <p className="text-gray-400 text-sm">لا يوجد موقع GPS للزبون</p>
           </div>
         )}
-        <div className="h-safe-bottom pb-4" />
+        <div className="pb-6" />
       </div>
     </div>
   );
