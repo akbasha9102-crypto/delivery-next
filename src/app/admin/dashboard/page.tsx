@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, ClipboardList, Clock, ChevronLeft } from 'lucide-react';
+import { Moon, Sun, ClipboardList, Clock, ChevronLeft, MapPin } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
@@ -586,67 +586,67 @@ export default function DashboardPage() {
                   ) : (
                     <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
                   )}
-                  <div className="p-4">
-                    {/* الطلبيات والأسعار — خط كبير وواضح */}
-                    <div className="mb-3 space-y-2.5">
+                  <div className="px-3 py-2.5">
+                    {/* المجموع الكلي — في الأعلى */}
+                    <div className="flex justify-between items-center pb-2 mb-2 border-b border-gray-100 dark:border-slate-700">
+                      <span className="text-green-500 font-black text-xl">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></span>
+                      {!countdown && wait && (
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: wait.color }} />
+                          <span className="text-xs font-bold" style={{ color: wait.color }}>{wait.text}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* الأصناف — تحت المجموع */}
+                    <div className="mb-2 space-y-1.5">
                       {order.items?.map(item => {
                         const img = imageMap.get(item.item_name);
                         return (
                           <div key={item.id} className="flex justify-between items-center">
-                            <span className="text-[#f97316] font-black text-xl">{(item.price * item.quantity).toLocaleString()} <span className="text-sm font-normal text-gray-400">د.ع</span></span>
-                            <div className="flex items-center gap-2">
-                              {img && <img src={img} alt={item.item_name} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />}
-                              <span className="text-gray-900 dark:text-slate-100 font-bold text-lg">{item.item_name}</span>
-                              <span className="bg-[#f97316] text-white text-sm font-black w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">{item.quantity}×</span>
+                            <span className="text-[#f97316] font-bold text-sm">{(item.price * item.quantity).toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span></span>
+                            <div className="flex items-center gap-1.5">
+                              {img && <img src={img} alt={item.item_name} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />}
+                              <span className="text-gray-800 dark:text-slate-200 font-semibold text-sm">{item.item_name}</span>
+                              <span className="bg-[#f97316] text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">{item.quantity}×</span>
                             </div>
                           </div>
                         );
                       })}
                     </div>
 
-                    {/* المجموع الكلي */}
-                    <div className="flex justify-between items-center pb-3 mb-3 border-b border-gray-100 dark:border-slate-700">
-                      <span className="text-green-500 font-black text-2xl">{order.total_amount.toLocaleString()} <span className="text-sm text-gray-400 font-normal">د.ع</span></span>
-                      {!countdown && wait && (
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: wait.color }} />
-                          <span className="text-xs font-bold" style={{ color: wait.color }}>{wait.text}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* الموقع + زر الخريطة */}
+                    {/* الموقع + أيقونة الخريطة */}
                     {order.delivery_address && (
-                      <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
                         <a
                           href={order.client_lat && order.client_lng
                             ? `https://maps.google.com/?q=${order.client_lat},${order.client_lng}`
                             : `https://maps.google.com/?q=${encodeURIComponent(order.delivery_address)}`}
                           target="_blank" rel="noopener noreferrer"
                           onClick={e => e.stopPropagation()}
-                          className="flex-shrink-0 bg-blue-500 active:bg-blue-600 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all active:scale-95"
+                          className="flex-shrink-0 bg-blue-500 active:bg-blue-600 text-white p-1.5 rounded-lg transition-all active:scale-95"
                         >
-                          🗺️ خريطة
+                          <MapPin size={16} />
                         </a>
-                        <p className="text-sm text-gray-500 dark:text-slate-400 text-right">📍 {order.delivery_address}</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 text-right">📍 {order.delivery_address}</p>
                       </div>
                     )}
 
                     {/* رقم الزبون */}
                     {order.client_phone && (
-                      <p className="text-sm text-gray-600 dark:text-slate-300 text-right mb-1.5" dir="ltr">📞 {order.client_phone}</p>
+                      <p className="text-xs text-gray-600 dark:text-slate-300 text-right mb-1" dir="ltr">📞 {order.client_phone}</p>
                     )}
 
                     {/* اسم الزبون */}
-                    <p className="font-bold text-gray-900 dark:text-white text-right mb-2 text-base">{order.client_name}</p>
+                    <p className="font-bold text-gray-900 dark:text-white text-right text-sm mb-1">{order.client_name}</p>
 
-                    {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
+                    {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
 
                     {order.driver_name && (
-                      <div className="mt-2 w-full flex items-center bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2 gap-2">
-                        <span className="text-xl">🏍️</span>
+                      <div className="mt-1.5 w-full flex items-center bg-blue-50 dark:bg-blue-900/20 rounded-xl px-2.5 py-1.5 gap-2">
+                        <span className="text-base">🏍️</span>
                         <div className="text-right">
-                          <p className="text-blue-700 dark:text-blue-300 font-bold text-sm">{order.driver_name}</p>
+                          <p className="text-blue-700 dark:text-blue-300 font-bold text-xs">{order.driver_name}</p>
                           <p className="text-blue-500 text-xs" dir="ltr">{order.driver_phone}</p>
                         </div>
                       </div>
