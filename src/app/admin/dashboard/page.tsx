@@ -438,20 +438,6 @@ export default function DashboardPage() {
         <div className="w-10" />
       </header>
 
-      {/* شريط الحالة والوقت */}
-      <div className={`flex items-center justify-between px-4 py-2 text-xs font-bold ${is_closed ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'}`}>
-        <div className="flex items-center gap-1.5">
-          <Clock size={12} />
-          {todayHours
-            ? <span>{todayHours.open} – {todayHours.close}</span>
-            : opens_at ? <span>يفتح {opens_at}</span> : <span>—</span>
-          }
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-full ${is_closed ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`} />
-          <span>{is_closed ? 'المطعم مغلق' : 'المطعم مفتوح'}</span>
-        </div>
-      </div>
 
       {/* إشعار طلب جديد — Dynamic Island */}
       <AnimatePresence>
