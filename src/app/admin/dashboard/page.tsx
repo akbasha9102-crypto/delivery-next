@@ -634,15 +634,15 @@ export default function DashboardPage() {
       </AnimatePresence>
 
       {/* تابس الفلتر */}
-      <div className="flex justify-center px-3 py-3 overflow-x-auto scrollbar-none">
-        <div className="flex items-center gap-1">
+      <div className="flex px-3 py-3 overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-1 w-full">
         {(['pending','preparing','pickup','delivery','completed'] as const).map((tab, idx, arr) => {
           const isActive = filter === tab;
           const count    = counts[tab] || 0;
           const labels   = { pending: 'واردة', preparing: 'التجهيز', pickup: 'انتظار السائق', delivery: 'التوصيل', completed: 'مكتمل' };
           const btn = (
             <button key={tab} onClick={() => setFilter(tab)}
-              className={`flex-shrink-0 py-2 px-3 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-white'}`}>
+              className={`flex-1 min-w-[60px] py-2 px-2 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-white'}`}>
               <span className="block">{labels[tab]}</span>
               {count > 0 && (
                 <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-black mt-1 ${isActive ? 'bg-white text-[#f97316]' : 'bg-[#f97316] text-white'}`}>
