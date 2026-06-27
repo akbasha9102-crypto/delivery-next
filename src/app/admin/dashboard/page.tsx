@@ -446,6 +446,8 @@ export default function DashboardPage() {
   const [filter,        setFilter]        = useState<'pending'|'preparing'|'delivery'|'completed'>('pending');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [locationOrder, setLocationOrder] = useState<Order | null>(null);
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const toggleExpand = (id: string) => setExpandedOrders(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   const [newOrderFlash, setNewOrderFlash] = useState(false);
   const [islandExpanded, setIslandExpanded] = useState(false);
   const islandControls = useAnimation();
@@ -693,6 +695,95 @@ export default function DashboardPage() {
                 </div>
               </button>
             ))}
+          </div>
+        ) : filter === 'preparing' ? (
+          /* ═══ تاب قيد التجهيز — كارت مضغوط مع سهم للتوسيع ═══ */
+          <div className="space-y-2 max-w-3xl mx-auto">
+            {filtered.map(order => {
+              const isOpen = expandedOrders.has(order.id);
+              return (
+                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                  <div className="h-1.5 bg-blue-400" />
+                  {/* الصف الرئيسي — الوجبة + العنوان + السهم */}
+                  <div className="flex items-center gap-2 px-3 py-2.5">
+                    <button
+                      onClick={() => toggleExpand(order.id)}
+                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 transition-all active:scale-90"
+                    >
+                      <svg
+                        width="14" height="14" viewBox="0 0 14 14" fill="none"
+                        className={`text-gray-500 dark:text-slate-300 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                      >
+                        <path d="M2 5l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                    <div className="flex-1 min-w-0 text-right">
+                      <p className="font-bold text-gray-900 dark:text-white text-sm truncate">
+                        {order.items?.map(i => `${i.quantity}× ${i.item_name}`).join('، ')}
+                      </p>
+                      {order.delivery_address && (
+                        <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.delivery_address}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* التفاصيل الكاملة — تظهر عند الضغط */}
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        key="details"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-3 pb-2 border-t border-gray-100 dark:border-slate-700 pt-2 space-y-1.5">
+                          {/* المجموع */}
+                          <div className="flex justify-between items-center">
+                            <span className="text-green-500 font-black text-lg">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></span>
+                            <span className="text-xs text-blue-500 font-bold">قيد التجهيز</span>
+                          </div>
+                          {/* الأصناف */}
+                          <div className="space-y-1">
+                            {order.items?.map(item => {
+                              const img = imageMap.get(item.item_name);
+                              return (
+                                <div key={item.id} className="flex justify-between items-center">
+                                  <span className="text-[#f97316] font-bold text-sm">{(item.price * item.quantity).toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span></span>
+                                  <div className="flex items-center gap-1.5">
+                                    {img && <img src={img} alt={item.item_name} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />}
+                                    <span className="text-gray-800 dark:text-slate-200 font-semibold text-sm">{item.item_name}</span>
+                                    <span className="bg-[#f97316] text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">{item.quantity}×</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {/* الموقع */}
+                          {order.delivery_address && (
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-gray-500 dark:text-slate-400">{order.delivery_address}</p>
+                              <button onClick={e => { e.stopPropagation(); setLocationOrder(order); }} className="flex-shrink-0 bg-blue-500 text-white p-1.5 rounded-lg active:scale-95">
+                                <MapPin size={14} />
+                              </button>
+                            </div>
+                          )}
+                          {/* الهاتف */}
+                          {order.client_phone && <p className="text-xs text-gray-600 dark:text-slate-300 text-right" dir="ltr">📞 {order.client_phone}</p>}
+                          {/* الاسم */}
+                          <p className="font-bold text-gray-900 dark:text-white text-right text-sm">{order.client_name}</p>
+                          {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
+                        </div>
+                        <button onClick={() => handleAction(order)} className="w-full py-2.5 text-white font-bold text-sm active:opacity-80 bg-orange-500">
+                          جاهز للتسليم
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         ) : (
           /* ═══ عرض الطلبات العادي ═══ */
