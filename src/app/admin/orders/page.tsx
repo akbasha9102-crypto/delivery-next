@@ -349,7 +349,7 @@ export default function OrdersPage() {
   const filtered = orders.filter(o => o.status === tab);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 stagger-0">
         {/* شريط رسائل الزبائن */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 dark:border-slate-700">

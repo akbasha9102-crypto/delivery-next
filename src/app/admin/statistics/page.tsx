@@ -146,7 +146,7 @@ export default function StatisticsPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24" style={{ backgroundColor: s.bg }}>
+    <div className="min-h-screen pb-24 md:pb-0 md:mr-[70px]" style={{ backgroundColor: s.bg }}>
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b px-4 py-4 flex items-center justify-between" style={{ backgroundColor: s.surface, borderColor: s.border }}>

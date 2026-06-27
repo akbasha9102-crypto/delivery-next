@@ -139,7 +139,7 @@ export default function ArchivePage() {
   const totalDriverRevenue = driverGroups.reduce((s, g) => s + g.total, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-28">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-28 md:pb-0 md:mr-[70px]">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
         <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
           <ChevronRight size={20} className="text-gray-500 dark:text-slate-400" />

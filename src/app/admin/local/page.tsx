@@ -106,7 +106,7 @@ export default function LocalPOSPage() {
   };
 
   return (
-    <div className="min-h-screen pb-32" style={{ backgroundColor: s.bg }}>
+    <div className="min-h-screen pb-32 md:pb-0 md:mr-[70px]" style={{ backgroundColor: s.bg }}>
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b px-4 py-3 flex items-center justify-between"
