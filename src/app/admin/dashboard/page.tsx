@@ -509,10 +509,9 @@ export default function DashboardPage() {
           );
           return idx < 3
             ? [btn, (
-                <div key={`arrow-${idx}`} className="flex items-center flex-shrink-0 mx-0.5">
-                  <div className="h-px w-4 bg-gray-200 dark:bg-slate-600" />
-                  <ChevronLeft size={10} className="text-gray-300 dark:text-slate-600 -ml-1" />
-                </div>
+                <svg key={`arrow-${idx}`} className="flex-shrink-0 mx-1 text-gray-300 dark:text-slate-600" width="18" height="8" viewBox="0 0 18 8" fill="none">
+                  <path d="M17 4H1M5 1L1 4L5 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               )]
             : [btn];
         })}
