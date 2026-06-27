@@ -58,6 +58,62 @@ function calcBearing(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
 }
 
+function LocationModal({ order, onClose }: { order: Order; onClose: () => void }) {
+  const mapRef        = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current || !order.client_lat || !order.client_lng) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+    import('leaflet').then(mod => {
+      const L = (mod as any).default ?? mod;
+      if (!mapRef.current || mapInstanceRef.current) return;
+      const map = L.map(mapRef.current, { attributionControl: false, zoomControl: true })
+        .setView([order.client_lat!, order.client_lng!], 16);
+      mapInstanceRef.current = map;
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      const iconHtml = `<div style="width:32px;height:38px;position:relative">
+        <div style="width:32px;height:32px;background:#ef4444;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3)"></div>
+        <span style="position:absolute;top:4px;left:0;width:32px;text-align:center;font-size:14px">📍</span>
+      </div>`;
+      const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [32, 38], iconAnchor: [16, 38] });
+      L.marker([order.client_lat!, order.client_lng!], { icon }).addTo(map)
+        .bindPopup(`<b dir="rtl">${order.client_name}</b>${order.delivery_address ? `<br><small>${order.delivery_address}</small>` : ''}`, { offset: [0, -20] })
+        .openPopup();
+    });
+    return () => {
+      if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; }
+    };
+  }, [order.client_lat, order.client_lng, order.client_name, order.delivery_address]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full" onClick={e => e.stopPropagation()}>
+        <div className="w-12 h-1.5 bg-gray-300 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-3" />
+        <div className="flex items-center justify-between px-5 pb-3">
+          <button onClick={onClose} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
+          <div className="text-right">
+            <p className="font-bold text-gray-900 dark:text-white">{order.client_name}</p>
+            {order.delivery_address && <p className="text-xs text-gray-400 mt-0.5">{order.delivery_address}</p>}
+          </div>
+        </div>
+        {order.client_lat && order.client_lng ? (
+          <div ref={mapRef} style={{ height: 360 }} className="w-full" />
+        ) : (
+          <div className="h-40 flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-700 mx-4 mb-4 rounded-2xl">
+            <p className="text-3xl mb-2">📍</p>
+            <p className="text-gray-400 text-sm">لا يوجد موقع GPS</p>
+          </div>
+        )}
+        <div className="h-safe-bottom pb-4" />
+      </div>
+    </div>
+  );
+}
+
 function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => void }) {
   const mapRef              = useRef<HTMLDivElement>(null);
   const mapInstanceRef      = useRef<any>(null);
@@ -310,6 +366,7 @@ export default function DashboardPage() {
   const [loading,       setLoading]       = useState(true);
   const [filter,        setFilter]        = useState<'pending'|'preparing'|'delivery'|'completed'>('pending');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [locationOrder, setLocationOrder] = useState<Order | null>(null);
   const [newOrderFlash, setNewOrderFlash] = useState(false);
   const [islandExpanded, setIslandExpanded] = useState(false);
   const islandControls = useAnimation();
@@ -619,16 +676,12 @@ export default function DashboardPage() {
                     {order.delivery_address && (
                       <div className="flex items-center gap-2 mb-1.5 justify-start">
                         <p className="text-xs text-gray-500 dark:text-slate-400 text-right">{order.delivery_address}</p>
-                        <a
-                          href={order.client_lat && order.client_lng
-                            ? `https://maps.google.com/?q=${order.client_lat},${order.client_lng}`
-                            : `https://maps.google.com/?q=${encodeURIComponent(order.delivery_address)}`}
-                          target="_blank" rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
+                        <button
+                          onClick={e => { e.stopPropagation(); setLocationOrder(order); }}
                           className="flex-shrink-0 bg-blue-500 active:bg-blue-600 text-white p-1.5 rounded-lg transition-all active:scale-95"
                         >
                           <MapPin size={16} />
-                        </a>
+                        </button>
                       </div>
                     )}
 
@@ -680,6 +733,10 @@ export default function DashboardPage() {
 
       {selectedOrder && (
         <DeliveryModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+      )}
+
+      {locationOrder && (
+        <LocationModal order={locationOrder} onClose={() => setLocationOrder(null)} />
       )}
     </div>
   );
