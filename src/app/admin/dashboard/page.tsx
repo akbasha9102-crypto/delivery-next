@@ -634,12 +634,12 @@ export default function DashboardPage() {
       </AnimatePresence>
 
       {/* تابس الفلتر */}
-      <div className="flex gap-2 px-3 py-3 overflow-x-auto scrollbar-none">
-        {(['pending','preparing','pickup','delivery','completed'] as const).map(tab => {
+      <div className="flex items-center gap-1 px-3 py-3 overflow-x-auto scrollbar-none">
+        {(['pending','preparing','pickup','delivery','completed'] as const).map((tab, idx, arr) => {
           const isActive = filter === tab;
           const count    = counts[tab] || 0;
           const labels   = { pending: 'واردة', preparing: 'التجهيز', pickup: 'انتظار السائق', delivery: 'التوصيل', completed: 'مكتمل' };
-          return (
+          const btn = (
             <button key={tab} onClick={() => setFilter(tab)}
               className={`flex-shrink-0 py-2 px-3 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-white'}`}>
               <span className="block">{labels[tab]}</span>
@@ -650,6 +650,13 @@ export default function DashboardPage() {
               )}
             </button>
           );
+          return idx < arr.length - 1
+            ? [btn, (
+                <svg key={`arrow-${idx}`} className="flex-shrink-0 text-gray-400 dark:text-slate-500" width="16" height="8" viewBox="0 0 18 8" fill="none">
+                  <path d="M17 4H1M5 1L1 4L5 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )]
+            : btn;
         })}
       </div>
 
