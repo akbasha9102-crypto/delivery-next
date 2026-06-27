@@ -502,7 +502,7 @@ export default function DashboardPage() {
           const labels   = { pending: 'واردة', preparing: 'قيد التجهيز', delivery: 'قيد التوصيل', completed: 'مكتمل' };
           const btn = (
             <button key={tab} onClick={() => setFilter(tab)}
-              className={`flex-1 py-2.5 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-400 dark:border-slate-500 text-gray-600 dark:text-slate-300'}`}>
+              className={`flex-1 py-2.5 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-400 dark:border-slate-500 text-gray-900 dark:text-white'}`}>
               <span className="block">{labels[tab]}</span>
               {count > 0 && <span className={`block text-[11px] mt-0.5 font-black ${isActive ? 'text-white/80' : 'text-[#f97316]'}`}>{count}</span>}
             </button>
