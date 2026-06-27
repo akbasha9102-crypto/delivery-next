@@ -617,7 +617,7 @@ export default function DashboardPage() {
 
                     {/* الموقع + أيقونة الخريطة */}
                     {order.delivery_address && (
-                      <div className="flex items-center gap-2 mb-1.5 justify-end">
+                      <div className="flex items-center gap-2 mb-1.5 justify-start">
                         <p className="text-xs text-gray-500 dark:text-slate-400 text-right">📍 {order.delivery_address}</p>
                         <a
                           href={order.client_lat && order.client_lng
