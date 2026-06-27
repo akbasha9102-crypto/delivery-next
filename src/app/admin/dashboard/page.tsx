@@ -443,7 +443,7 @@ export default function DashboardPage() {
   const [orders,        setOrders]        = useState<Order[]>([]);
   const [imageMap,      setImageMap]      = useState<Map<string, string>>(new Map());
   const [loading,       setLoading]       = useState(true);
-  const [filter,        setFilter]        = useState<'pending'|'preparing'|'delivery'|'completed'>('pending');
+  const [filter,        setFilter]        = useState<'pending'|'preparing'|'pickup'|'delivery'|'completed'>('pending');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [locationOrder, setLocationOrder] = useState<Order | null>(null);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
@@ -549,17 +549,18 @@ export default function DashboardPage() {
     }
   };
 
-  const counts = { pending: 0, preparing: 0, delivery: 0, completed: 0 };
+  const counts = { pending: 0, preparing: 0, pickup: 0, delivery: 0, completed: 0 };
   orders.forEach(o => {
-    if (o.status === 'pending')   counts.pending++;
+    if (o.status === 'pending')        counts.pending++;
     else if (o.status === 'preparing') counts.preparing++;
-    else if (o.status === 'pickup' || o.status === 'ready') counts.delivery++;
+    else if (o.status === 'pickup')    counts.pickup++;
+    else if (o.status === 'ready')     counts.delivery++;
     else if (o.status === 'completed') counts.completed++;
   });
   const todayRevenue = orders.filter(o => o.status === 'completed').reduce((s, o) => s + o.total_amount, 0);
-  const filtered = filter === 'delivery'
-    ? orders.filter(o => o.status === 'pickup' || o.status === 'ready')
-    : orders.filter(o => o.status === filter);
+  const filtered = orders.filter(o =>
+    filter === 'delivery' ? o.status === 'ready' : o.status === filter
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
@@ -633,14 +634,14 @@ export default function DashboardPage() {
       </AnimatePresence>
 
       {/* تابس الفلتر */}
-      <div className="flex items-center px-3 py-3">
-        {(['pending','preparing','delivery','completed'] as const).flatMap((tab, idx) => {
+      <div className="flex gap-2 px-3 py-3 overflow-x-auto scrollbar-none">
+        {(['pending','preparing','pickup','delivery','completed'] as const).map(tab => {
           const isActive = filter === tab;
           const count    = counts[tab] || 0;
-          const labels   = { pending: 'واردة', preparing: 'قيد التجهيز', delivery: 'قيد التوصيل', completed: 'مكتمل' };
-          const btn = (
+          const labels   = { pending: 'واردة', preparing: 'التجهيز', pickup: 'انتظار السائق', delivery: 'التوصيل', completed: 'مكتمل' };
+          return (
             <button key={tab} onClick={() => setFilter(tab)}
-              className={`flex-1 py-2.5 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-400 dark:border-slate-500 text-gray-900 dark:text-white'}`}>
+              className={`flex-shrink-0 py-2 px-3 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-white'}`}>
               <span className="block">{labels[tab]}</span>
               {count > 0 && (
                 <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-black mt-1 ${isActive ? 'bg-white text-[#f97316]' : 'bg-[#f97316] text-white'}`}>
@@ -649,13 +650,6 @@ export default function DashboardPage() {
               )}
             </button>
           );
-          return idx < 3
-            ? [btn, (
-                <svg key={`arrow-${idx}`} className="flex-shrink-0 mx-1 text-gray-800 dark:text-white" width="18" height="8" viewBox="0 0 18 8" fill="none">
-                  <path d="M17 4H1M5 1L1 4L5 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              )]
-            : [btn];
         })}
       </div>
 
@@ -783,6 +777,95 @@ export default function DashboardPage() {
                   <button onClick={() => handleAction(order)} className="w-full py-2 text-white font-bold text-sm active:opacity-80 bg-orange-500">
                     جاهز للتسليم ✓
                   </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : filter === 'pickup' ? (
+          /* ═══ تاب انتظار السائق ═══ */
+          <div className="space-y-2 max-w-3xl mx-auto">
+            {filtered.map(order => {
+              const isOpen = expandedOrders.has(order.id);
+              return (
+                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                  <div className="h-1.5 bg-orange-400" />
+                  <div className="flex items-center gap-2 px-3 py-2.5">
+                    <button
+                      onClick={() => toggleExpand(order.id)}
+                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 transition-all active:scale-90"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+                        className={`text-gray-500 dark:text-slate-300 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                        <path d="M2 5l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                    <div className="flex-1 min-w-0 text-right">
+                      <p className="font-bold text-gray-900 dark:text-white text-sm truncate">
+                        {order.items?.map(i => `${i.quantity}× ${i.item_name}`).join('، ')}
+                      </p>
+                      {order.delivery_address && (
+                        <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.delivery_address}</p>
+                      )}
+                    </div>
+                    {order.driver_name && (
+                      <span className="flex-shrink-0 text-xs text-blue-500 font-bold">🏍️ {order.driver_name}</span>
+                    )}
+                  </div>
+
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        key="details"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-3 pb-3 border-t border-gray-100 dark:border-slate-700 pt-2 space-y-1.5">
+                          <div className="flex justify-between items-center">
+                            <span className="text-green-500 font-black text-lg">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></span>
+                            <span className="text-xs text-orange-500 font-bold">⏳ في انتظار السائق</span>
+                          </div>
+                          <div className="space-y-1">
+                            {order.items?.map(item => {
+                              const img = imageMap.get(item.item_name);
+                              return (
+                                <div key={item.id} className="flex justify-between items-center">
+                                  <span className="text-[#f97316] font-bold text-sm">{(item.price * item.quantity).toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span></span>
+                                  <div className="flex items-center gap-1.5">
+                                    {img && <img src={img} alt={item.item_name} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />}
+                                    <span className="text-gray-800 dark:text-slate-200 font-semibold text-sm">{item.item_name}</span>
+                                    <span className="bg-[#f97316] text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">{item.quantity}×</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {order.delivery_address && (
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-gray-500 dark:text-slate-400">{order.delivery_address}</p>
+                              <button onClick={e => { e.stopPropagation(); setLocationOrder(order); }} className="flex-shrink-0 bg-blue-500 text-white p-1.5 rounded-lg active:scale-95">
+                                <MapPin size={14} />
+                              </button>
+                            </div>
+                          )}
+                          {order.client_phone && <p className="text-xs text-gray-600 dark:text-slate-300 text-right" dir="ltr">📞 {order.client_phone}</p>}
+                          <p className="font-bold text-gray-900 dark:text-white text-right text-sm">{order.client_name}</p>
+                          {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
+                          {order.driver_name && (
+                            <div className="flex items-center bg-blue-50 dark:bg-blue-900/20 rounded-xl px-2.5 py-1.5 gap-2">
+                              <span>🏍️</span>
+                              <div className="text-right">
+                                <p className="text-blue-700 dark:text-blue-300 font-bold text-xs">{order.driver_name}</p>
+                                {order.driver_phone && <p className="text-blue-500 text-xs" dir="ltr">{order.driver_phone}</p>}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}
