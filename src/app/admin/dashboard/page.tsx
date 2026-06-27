@@ -504,7 +504,11 @@ export default function DashboardPage() {
             <button key={tab} onClick={() => setFilter(tab)}
               className={`flex-1 py-2.5 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-400 dark:border-slate-500 text-gray-900 dark:text-white'}`}>
               <span className="block">{labels[tab]}</span>
-              {count > 0 && <span className={`block text-[11px] mt-0.5 font-black ${isActive ? 'text-white/80' : 'text-[#f97316]'}`}>{count}</span>}
+              {count > 0 && (
+                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-black mt-1 ${isActive ? 'bg-white text-[#f97316]' : 'bg-[#f97316] text-white'}`}>
+                  {count}
+                </span>
+              )}
             </button>
           );
           return idx < 3
@@ -525,7 +529,7 @@ export default function DashboardPage() {
           <div className="text-center mt-20"><p className="text-4xl mb-3">📋</p><p className="text-gray-400 dark:text-slate-500">لا توجد طلبات</p></div>
         ) : filter === 'delivery' ? (
           /* ═══ تاب قيد التوصيل — كل طلب بطاقة مستقلة ═══ */
-          <div className="space-y-3">
+          <div className="space-y-3 max-w-3xl mx-auto">
             {filtered.map(order => (
               <button key={order.id} onClick={() => setSelectedOrder(order)}
                 className="w-full bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 text-right active:scale-95 transition-all overflow-hidden flex items-stretch">
@@ -556,7 +560,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           /* ═══ عرض الطلبات العادي ═══ */
-          <div className="space-y-3">
+          <div className="space-y-3 max-w-3xl mx-auto">
             {filtered.map(order => {
               const cfg = STATUS[order.status as keyof typeof STATUS] ?? STATUS.completed;
               const wait = order.status !== 'completed' ? waitInfo(order.created_at) : null;
@@ -568,7 +572,7 @@ export default function DashboardPage() {
                     <>
                       <div className="relative h-2 bg-gray-100 dark:bg-slate-700">
                         <div className="absolute inset-y-0 right-0 transition-all duration-1000"
-                          style={{ width: `${countdown.pct * 100}%`, backgroundColor: countdown.urgent ? '#ef4444' : countdown.pct > 0.5 ? '#22c55e' : '#f59e0b' }} />
+                          style={{ width: `${countdown.pct * 100}%`, backgroundColor: countdown.urgent ? '#ef4444' : '#f59e0b' }} />
                       </div>
                       <div className={`flex items-center justify-between px-4 py-2 ${countdown.urgent ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20'}`}>
                         <span className={`text-xs font-medium ${countdown.urgent ? 'text-red-500' : 'text-amber-600 dark:text-amber-400'}`}>
@@ -631,17 +635,17 @@ export default function DashboardPage() {
 
                   {order.status === 'pending' ? (
                     <div className="grid grid-cols-2">
-                      <button onClick={() => rejectOrder(order.id)} className="py-4 text-white font-bold text-base transition-all active:opacity-80 bg-red-500">✕ رفض</button>
-                      <button onClick={() => handleAction(order)} className="py-4 text-white font-bold text-base transition-all active:opacity-80 bg-blue-600">✓ قبول</button>
+                      <button onClick={() => rejectOrder(order.id)} className="py-2.5 text-white font-bold text-sm transition-all active:opacity-80 bg-red-500">✕ رفض</button>
+                      <button onClick={() => handleAction(order)} className="py-2.5 text-white font-bold text-sm transition-all active:opacity-80 bg-blue-600">✓ قبول</button>
                     </div>
                   ) : cfg.next ? (
                     <button onClick={() => handleAction(order)}
-                      className="w-full py-4 text-white font-bold text-base transition-all active:opacity-80"
+                      className="w-full py-2.5 text-white font-bold text-sm transition-all active:opacity-80"
                       style={{ backgroundColor: cfg.btnColor }}>
                       {cfg.nextLabel}
                     </button>
                   ) : (
-                    <div className="w-full py-4 bg-gray-100 dark:bg-slate-700 text-center text-gray-400 dark:text-slate-500 font-bold text-sm">
+                    <div className="w-full py-2.5 bg-gray-100 dark:bg-slate-700 text-center text-gray-400 dark:text-slate-500 font-bold text-sm">
                       ✓ مكتمل
                     </div>
                   )}
