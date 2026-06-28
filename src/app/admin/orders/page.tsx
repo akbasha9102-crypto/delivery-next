@@ -410,12 +410,12 @@ export default function OrdersPage() {
                     <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
                       <p className="text-green-500 font-bold text-lg pt-1">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
                       <div className="text-right space-y-1.5">
-                        <p className="font-bold text-gray-900 dark:text-slate-100 text-xl">{order.client_name}</p>
+                        <p className="font-bold text-gray-900 dark:text-slate-100 text-3xl">{order.client_name}</p>
                         <a
                           href={`https://wa.me/${order.client_phone.replace(/\D/g, '').replace(/^0/, '964')}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center justify-end gap-2 text-green-500 font-bold text-base active:opacity-70 transition-all"
+                          className="flex items-center justify-end gap-2 text-green-500 font-bold text-2xl active:opacity-70 transition-all"
                           onClick={e => e.stopPropagation()}
                         >
                           <span dir="ltr">{order.client_phone}</span>
@@ -424,10 +424,10 @@ export default function OrdersPage() {
                         {order.delivery_address && (
                           <button
                             onClick={() => { if (order.client_lat && order.client_lng) setMapOrder(order); }}
-                            className={`flex items-center justify-end gap-1.5 text-base font-semibold transition-all ${order.client_lat && order.client_lng ? 'text-red-500 active:opacity-70' : 'text-gray-500 cursor-default'}`}
+                            className={`flex items-center justify-end gap-1.5 text-2xl font-semibold transition-all ${order.client_lat && order.client_lng ? 'text-red-500 active:opacity-70' : 'text-gray-500 cursor-default'}`}
                           >
                             <span>{order.delivery_address}</span>
-                            <MapPin size={16} className="flex-shrink-0" />
+                            <MapPin size={22} className="flex-shrink-0" />
                           </button>
                         )}
                       </div>
