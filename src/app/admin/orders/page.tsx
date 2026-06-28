@@ -410,7 +410,7 @@ export default function OrdersPage() {
                     <div className="mb-3 pb-3 border-b border-gray-50 dark:border-slate-700 space-y-2">
                       <div className="flex justify-between items-center">
                         <p className="text-green-500 font-bold text-lg">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
-                        <p className="font-bold text-gray-900 dark:text-slate-100 text-3xl">{order.client_name}</p>
+                        <p className="font-bold text-gray-900 dark:text-slate-100 text-5xl">{order.client_name}</p>
                         <span className="text-gray-400 dark:text-slate-500 text-sm font-medium">الاسم</span>
                       </div>
                       <div className="flex justify-between items-center">
@@ -418,7 +418,7 @@ export default function OrdersPage() {
                           href={`https://wa.me/${order.client_phone.replace(/\D/g, '').replace(/^0/, '964')}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-green-500 font-bold text-2xl active:opacity-70 transition-all"
+                          className="flex items-center gap-2 text-green-500 font-bold text-4xl active:opacity-70 transition-all"
                           onClick={e => e.stopPropagation()}
                         >
                           <span>💬</span>
@@ -430,7 +430,7 @@ export default function OrdersPage() {
                         <div className="flex justify-between items-center">
                           <button
                             onClick={() => { if (order.client_lat && order.client_lng) setMapOrder(order); }}
-                            className={`flex items-center gap-1.5 text-2xl font-semibold transition-all ${order.client_lat && order.client_lng ? 'text-red-500 active:opacity-70' : 'text-gray-500 cursor-default'}`}
+                            className={`flex items-center gap-1.5 text-4xl font-semibold transition-all ${order.client_lat && order.client_lng ? 'text-red-500 active:opacity-70' : 'text-gray-500 cursor-default'}`}
                           >
                             <MapPin size={22} className="flex-shrink-0" />
                             <span>{order.delivery_address}</span>
