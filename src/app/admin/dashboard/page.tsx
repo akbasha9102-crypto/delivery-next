@@ -900,39 +900,105 @@ export default function DashboardPage() {
               const wait = order.status !== 'completed' ? waitInfo(order.created_at) : null;
               const countdown = order.status === 'pending' ? getCountdown(order.created_at) : null;
               void tick;
-              return (
+              return order.status === 'pending' && countdown ? (
+                  /* ══════════════ كارت الواردة (تصميم جديد) ══════════════ */
+                  <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700" dir="rtl">
+
+                    {/* 1. شريط الحالة + العداد */}
+                    <div className={`flex items-center justify-between px-4 py-3 ${countdown.urgent ? 'bg-red-500' : 'bg-amber-500'}`}>
+                      <div className="flex items-center gap-2">
+                        <Clock size={16} className="text-white/80" />
+                        <span className={`font-black text-white text-base tabular-nums ${countdown.urgent ? 'animate-pulse' : ''}`}>
+                          {fmtCountdown(countdown.secs)}
+                        </span>
+                      </div>
+                      <span className="font-bold text-white text-sm">
+                        {countdown.urgent ? '⚠️ على وشك الإلغاء' : 'في انتظار القبول'}
+                      </span>
+                    </div>
+
+                    {/* 2. رقم الطلب */}
+                    <div className="flex items-center justify-between px-4 py-2.5">
+                      <span className="text-xs text-gray-400 dark:text-slate-500">طلب توصيل</span>
+                      <span className="font-bold text-gray-900 dark:text-slate-100 text-base">#طلب {order.id.slice(-4).toUpperCase()}</span>
+                    </div>
+                    <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
+
+                    {/* 3. الوجبات — الأهم أولاً */}
+                    <div className="px-4 pt-3 pb-1 space-y-2">
+                      {order.items?.map(item => {
+                        const img = imageMap.get(item.item_name);
+                        return (
+                          <div key={item.id} className="flex items-center justify-between">
+                            <span className="text-gray-700 dark:text-slate-300 font-semibold text-sm">{(item.price * item.quantity).toLocaleString()} د.ع</span>
+                            <div className="flex items-center gap-2">
+                              {img && <img src={img} alt={item.item_name} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />}
+                              <div className="text-right">
+                                <span className="font-black text-gray-900 dark:text-slate-100 text-base">{item.quantity}x {item.item_name}</span>
+                              </div>
+                              <span className="bg-amber-500 text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">{item.quantity}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {order.client_note && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 text-right pt-1">📝 {order.client_note}</p>
+                      )}
+                    </div>
+                    <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4 mt-2" />
+
+                    {/* 4. تفاصيل الزبون — ثانوية */}
+                    <div className="px-4 py-2.5 space-y-1.5">
+                      <div className="flex items-center gap-2 justify-end">
+                        <span className="font-bold text-gray-500 dark:text-slate-400 text-sm">{order.client_name}</span>
+                        <span className="text-gray-400 text-sm">👤</span>
+                      </div>
+                      {order.client_phone && (
+                        <div className="flex items-center gap-2 justify-end">
+                          <span className="text-gray-400 dark:text-slate-500 text-xs" dir="ltr">{order.client_phone}</span>
+                          <span className="text-gray-400 text-sm">📞</span>
+                        </div>
+                      )}
+                      {order.delivery_address && (
+                        <div className="flex items-center gap-2 justify-end">
+                          <span className="text-gray-400 dark:text-slate-500 text-xs">{order.delivery_address}</span>
+                          <button
+                            onClick={e => { e.stopPropagation(); setLocationOrder(order); }}
+                            className="flex-shrink-0 text-red-400 active:scale-95 transition-all"
+                          >
+                            <MapPin size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
+
+                    {/* 5. الإجمالي */}
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-green-600 dark:text-green-400 font-black text-xl">{order.total_amount.toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span></span>
+                      <span className="font-bold text-gray-900 dark:text-slate-100 text-base">الإجمالي:</span>
+                    </div>
+
+                    {/* 6. أزرار القبول / الرفض */}
+                    <div className="flex">
+                      <button onClick={() => rejectOrder(order.id)} className="flex-1 py-4 bg-red-600 text-white font-bold text-base transition-all active:opacity-80 rounded-bl-2xl">رفض ❌</button>
+                      <button onClick={() => handleAction(order)} className="flex-1 py-4 bg-blue-600 text-white font-bold text-base transition-all active:opacity-80 rounded-br-2xl">قبول ✅</button>
+                    </div>
+                  </div>
+                ) : (
+                /* ══════════════ كروت الحالات الأخرى (بدون تغيير) ══════════════ */
                 <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
-                  {countdown ? (
-                    <>
-                      <div className="relative h-2 bg-gray-100 dark:bg-slate-700">
-                        <div className="absolute inset-y-0 right-0 transition-all duration-1000"
-                          style={{ width: `${countdown.pct * 100}%`, backgroundColor: countdown.urgent ? '#ef4444' : '#f59e0b' }} />
-                      </div>
-                      <div className={`flex items-center justify-between px-4 py-2 ${countdown.urgent ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20'}`}>
-                        <span className={`text-xs font-medium ${countdown.urgent ? 'text-red-500' : 'text-amber-600 dark:text-amber-400'}`}>
-                          {countdown.urgent ? '⚠️ على وشك الإلغاء' : 'في انتظار القبول'}
-                        </span>
-                        <span className={`text-base font-black tabular-nums ${countdown.urgent ? 'text-red-500 animate-pulse' : 'text-amber-600 dark:text-amber-400'}`}>
-                          ⏱ {fmtCountdown(countdown.secs)}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
-                  )}
+                  <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
                   <div className="px-3 py-2.5">
-                    {/* المجموع الكلي — في الأعلى */}
                     <div className="flex justify-between items-center pb-2 mb-2 border-b border-gray-100 dark:border-slate-700">
                       <span className="text-green-500 font-black text-xl">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></span>
-                      {!countdown && wait && (
+                      {wait && (
                         <div className="flex items-center gap-1">
                           <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: wait.color }} />
                           <span className="text-xs font-bold" style={{ color: wait.color }}>{wait.text}</span>
                         </div>
                       )}
                     </div>
-
-                    {/* الأصناف — تحت المجموع */}
                     <div className="mb-2 space-y-1.5">
                       {order.items?.map(item => {
                         const img = imageMap.get(item.item_name);
@@ -948,8 +1014,6 @@ export default function DashboardPage() {
                         );
                       })}
                     </div>
-
-                    {/* الموقع + أيقونة الخريطة */}
                     {order.delivery_address && (
                       <div className="flex items-center gap-2 mb-1.5 justify-start">
                         <p className="text-xs text-gray-500 dark:text-slate-400 text-right">{order.delivery_address}</p>
@@ -961,17 +1025,11 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     )}
-
-                    {/* رقم الزبون */}
                     {order.client_phone && (
                       <p className="text-xs text-gray-600 dark:text-slate-300 text-right mb-1" dir="ltr">📞 {order.client_phone}</p>
                     )}
-
-                    {/* اسم الزبون */}
                     <p className="font-bold text-gray-900 dark:text-white text-right text-sm mb-1">{order.client_name}</p>
-
                     {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
-
                     {order.driver_name && (
                       <div className="mt-1.5 w-full flex items-center bg-blue-50 dark:bg-blue-900/20 rounded-xl px-2.5 py-1.5 gap-2">
                         <span className="text-base">🏍️</span>
@@ -982,13 +1040,7 @@ export default function DashboardPage() {
                       </div>
                     )}
                   </div>
-
-                  {order.status === 'pending' ? (
-                    <div className="grid grid-cols-2">
-                      <button onClick={() => rejectOrder(order.id)} className="py-2.5 text-white font-bold text-sm transition-all active:opacity-80 bg-red-500">✕ رفض</button>
-                      <button onClick={() => handleAction(order)} className="py-2.5 text-white font-bold text-sm transition-all active:opacity-80 bg-blue-600">✓ قبول</button>
-                    </div>
-                  ) : cfg.next ? (
+                  {cfg.next ? (
                     <button onClick={() => handleAction(order)}
                       className="w-full py-2.5 text-white font-bold text-sm transition-all active:opacity-80"
                       style={{ backgroundColor: cfg.btnColor }}>
@@ -1000,7 +1052,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-              );
+                );
             })}
           </div>
         )}
