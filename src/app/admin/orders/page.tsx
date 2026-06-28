@@ -2,25 +2,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Send, ChevronDown, MapPin, X, Locate, MessageCircle, User, Phone, Timer } from 'lucide-react';
+import { Send, ChevronDown, MapPin, X, Locate, MessageCircle } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; client_lat: number | null; client_lng: number | null };
-
-function ElapsedTimer({ createdAt }: { createdAt: string }) {
-  const [elapsed, setElapsed] = useState(0);
-  useEffect(() => {
-    const start = new Date(createdAt).getTime();
-    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [createdAt]);
-  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
-  const ss = String(elapsed % 60).padStart(2, '0');
-  return <span className="font-bold text-white text-base tracking-widest">{mm}:{ss}</span>;
-}
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; client_lat: number | null; client_lng: number | null };
 type OrderMessage = { id: string; order_id: string; sender: 'customer' | 'restaurant'; message: string; is_read: boolean; created_at: string };
 
 const RESTAURANT_QUICK_REPLIES = [
@@ -138,11 +124,10 @@ function MapModal({ order, onClose }: { order: Order; onClose: () => void }) {
 type Driver = { id: string; name: string; phone: string };
 
 const STATUS = {
-  pending:   { label: 'في انتظار القبول', color: '#f59e0b', next: 'preparing' as const, nextLabel: 'ابدأ التجهيز',  btnColor: '#3b82f6' },
-  preparing: { label: 'قيد التجهيز',      color: '#3b82f6', next: 'ready'     as const, nextLabel: 'جاهز للتسليم', btnColor: '#22c55e' },
-  ready:     { label: 'جاهز للتسليم',     color: '#22c55e', next: 'completed'  as const, nextLabel: 'تم التسليم',   btnColor: '#6b7280' },
-  completed: { label: 'مكتمل',            color: '#9ca3af', next: null,                  nextLabel: '',             btnColor: '#9ca3af' },
-  rejected:  { label: 'مرفوض',            color: '#ef4444', next: null,                  nextLabel: '',             btnColor: '#ef4444' },
+  pending:   { label: 'واردة',        color: '#f59e0b', next: 'preparing' as const, nextLabel: 'ابدأ التجهيز',  btnColor: '#3b82f6' },
+  preparing: { label: 'قيد التجهيز', color: '#3b82f6', next: 'ready'     as const, nextLabel: 'جاهز للتسليم', btnColor: '#22c55e' },
+  ready:     { label: 'جاهز',        color: '#22c55e', next: 'completed'  as const, nextLabel: 'تم التسليم',   btnColor: '#6b7280' },
+  completed: { label: 'مكتمل',       color: '#9ca3af', next: null,                  nextLabel: '',             btnColor: '#9ca3af' },
 };
 
 function timeAgo(d: string) {
@@ -157,7 +142,6 @@ const TABS = [
   { id: 'preparing' as const, name: 'تجهيز' },
   { id: 'ready'     as const, name: 'جاهز' },
   { id: 'completed' as const, name: 'مكتمل' },
-  { id: 'rejected'  as const, name: 'مرفوضة' },
 ];
 
 const PUSH_MESSAGES: Record<string, { title: string; body: string; tag: string }> = {
@@ -182,7 +166,7 @@ export default function OrdersPage() {
   const { restaurantId } = useRestaurant();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'pending' | 'preparing' | 'ready' | 'completed' | 'rejected'>('pending');
+  const [tab, setTab] = useState<'pending' | 'preparing' | 'ready' | 'completed'>('pending');
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<Record<string, string>>({});
   const [sending, setSending] = useState<Record<string, boolean>>({});
@@ -240,11 +224,6 @@ export default function OrdersPage() {
         body: JSON.stringify({ order_id: order.id, ...msg }),
       }).catch(() => {});
     }
-    fetchOrders();
-  };
-
-  const rejectOrder = async (id: string) => {
-    await supabase.from('orders').update({ status: 'rejected' }).eq('id', id);
     fetchOrders();
   };
 
@@ -423,140 +402,83 @@ export default function OrdersPage() {
           <div className="space-y-4">
             {filtered.map(order => {
               const cfg = STATUS[order.status];
-              const orderNum = order.id.slice(-4).toUpperCase();
               return (
-                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-slate-700" dir="rtl">
-
-                  {/* ── الشريط العلوي: الحالة + العداد ── */}
-                  <div className="flex items-center justify-between px-4 py-3" style={{ backgroundColor: cfg.color }}>
-                    <div className="flex items-center gap-2">
-                      <Timer size={16} className="text-white/80" />
-                      <ElapsedTimer createdAt={order.created_at} />
-                    </div>
-                    <span className="font-bold text-white text-sm">{cfg.label}</span>
-                  </div>
-
-                  {/* ── رقم الطلب ── */}
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-xs text-gray-400 dark:text-slate-500">طلب توصيل</span>
-                    <span className="font-bold text-gray-900 dark:text-slate-100 text-base">#طلب {orderNum}</span>
-                  </div>
-                  <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
-
-                  {/* ── تفاصيل الزبون ── */}
-                  <div className="px-4 py-3 space-y-2">
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="font-bold text-gray-900 dark:text-slate-100 text-base">{order.client_name}</span>
-                      <User size={16} className="text-gray-400 dark:text-slate-500 flex-shrink-0" />
-                    </div>
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="text-gray-600 dark:text-slate-300 text-sm">{order.client_phone}</span>
-                      <Phone size={15} className="text-gray-400 dark:text-slate-500 flex-shrink-0" />
-                    </div>
-                    {order.delivery_address && (
-                      <div className="flex items-center gap-2 justify-end">
-                        <span className="text-gray-600 dark:text-slate-300 text-sm">{order.delivery_address}</span>
-                        <MapPin size={15} className="text-gray-400 dark:text-slate-500 flex-shrink-0" />
+                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                  <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
+                  <div className="p-4">
+                    {/* Client + price */}
+                    <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
+                      <p className="text-green-500 font-bold text-lg">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-900 dark:text-slate-100 text-base">{order.client_name}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{order.client_phone}{order.delivery_address ? ` — ${order.delivery_address}` : ''}</p>
                       </div>
-                    )}
+                    </div>
+                    {/* Items */}
+                    <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 mb-3 space-y-2">
+                      {order.items?.map(i => (
+                        <div key={i.id} className="flex justify-between items-center">
+                          <span className="text-[#f97316] font-semibold text-sm">{(i.price * i.quantity).toLocaleString()} د.ع</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-800 dark:text-slate-200 text-sm">{i.item_name}</span>
+                            <span className="bg-white dark:bg-slate-600 text-gray-600 dark:text-slate-300 text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center">{i.quantity}×</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                     {order.client_lat && order.client_lng && (
                       <button
                         onClick={() => setMapOrder(order)}
-                        className="flex items-center gap-1.5 text-xs font-semibold text-red-500 active:scale-95 transition-all justify-end w-full"
+                        className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-red-500 active:scale-95 transition-all"
                       >
-                        <MapPin size={13} /> عرض الموقع على الخريطة
+                        <MapPin size={14} /> عرض موقع العميل على الخريطة
                       </button>
                     )}
                   </div>
 
-                  {/* ── الوجبات ── */}
-                  {order.items?.map((i) => (
-                    <div key={i.id}>
-                      <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
-                      <div className="flex items-start justify-between px-4 py-3">
-                        <span className="text-gray-700 dark:text-slate-300 font-semibold text-sm">{(i.price * i.quantity).toLocaleString()} د.ع</span>
-                        <div className="text-right">
-                          <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">{i.quantity}x {i.item_name}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {order.client_note && (
-                    <>
-                      <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
-                      <p className="text-sm text-amber-600 dark:text-amber-400 text-right px-4 py-2">📝 {order.client_note}</p>
-                    </>
-                  )}
-
-                  {/* ── تعيين السائق (جاهز فقط) ── */}
+                  {/* Driver assignment — only for ready orders */}
                   {order.status === 'ready' && (
-                    <>
-                      <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
-                      <div className="px-4 pb-3 pt-3 space-y-2">
-                        <p className="text-xs text-gray-400 dark:text-slate-500 text-right font-medium">إرسال للسائق عبر واتساب</p>
-                        <div className="relative">
-                          <select
-                            value={selectedDriver[order.id] || ''}
-                            onChange={e => setSelectedDriver(prev => ({ ...prev, [order.id]: e.target.value }))}
-                            dir="rtl"
-                            className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-right text-sm text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#22c55e] appearance-none"
-                          >
-                            <option value="">اختر سائقاً...</option>
-                            {drivers.map(d => (
-                              <option key={d.id} value={d.id}>{d.name} — {d.phone}</option>
-                            ))}
-                          </select>
-                          <ChevronDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                        </div>
-                        {selectedDriver[order.id] && (
-                          <button
-                            onClick={() => sendToDriver(order)}
-                            disabled={sending[order.id]}
-                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm active:opacity-80 transition-all disabled:opacity-60"
-                          >
-                            {sending[order.id] ? 'جاري الإرسال...' : <><Send size={15} /> إرسال عبر واتساب</>}
-                          </button>
-                        )}
+                    <div className="px-4 pb-3 space-y-2 border-b border-gray-50 dark:border-slate-700">
+                      <p className="text-xs text-gray-400 dark:text-slate-500 text-right font-medium">إرسال للسائق عبر واتساب</p>
+                      <div className="relative">
+                        <select
+                          value={selectedDriver[order.id] || ''}
+                          onChange={e => setSelectedDriver(prev => ({ ...prev, [order.id]: e.target.value }))}
+                          dir="rtl"
+                          className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-right text-sm text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#22c55e] appearance-none"
+                        >
+                          <option value="">اختر سائقاً...</option>
+                          {drivers.map(d => (
+                            <option key={d.id} value={d.id}>{d.name} — {d.phone}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                       </div>
-                    </>
+                      {selectedDriver[order.id] && (
+                        <button
+                          onClick={() => sendToDriver(order)}
+                          disabled={sending[order.id]}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-500 text-white font-bold rounded-xl text-sm active:opacity-80 transition-all disabled:opacity-60"
+                        >
+                          {sending[order.id]
+                            ? 'جاري الإرسال...'
+                            : <><Send size={15} /> إرسال عبر واتساب</>
+                          }
+                        </button>
+                      )}
+                    </div>
                   )}
 
-                  {/* ── الإجمالي ── */}
-                  <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-green-600 dark:text-green-400 font-bold text-lg">{order.total_amount.toLocaleString()} د.ع</span>
-                    <span className="font-bold text-gray-900 dark:text-slate-100 text-base">الإجمالي:</span>
-                  </div>
-
-                  {/* ── أزرار التحكم ── */}
-                  {order.status === 'pending' ? (
-                    <div className="flex">
-                      <button
-                        onClick={() => rejectOrder(order.id)}
-                        className="flex-1 py-4 bg-red-600 text-white font-bold text-base transition-all active:opacity-80 rounded-bl-2xl"
-                      >
-                        رفض ✕
-                      </button>
-                      <button
-                        onClick={() => advance(order)}
-                        className="flex-1 py-4 bg-blue-600 text-white font-bold text-base transition-all active:opacity-80 rounded-br-2xl"
-                      >
-                        قبول ✓
-                      </button>
-                    </div>
-                  ) : cfg.next ? (
-                    <button
-                      onClick={() => advance(order)}
-                      className="w-full py-4 text-white font-bold text-base transition-all active:opacity-80 rounded-b-2xl"
-                      style={{ backgroundColor: cfg.btnColor }}
-                    >
+                  {/* Full-width action button */}
+                  {cfg.next ? (
+                    <button onClick={() => advance(order)}
+                      className="w-full py-4 text-white font-bold text-base transition-all active:opacity-80"
+                      style={{ backgroundColor: cfg.btnColor }}>
                       {cfg.nextLabel}
                     </button>
                   ) : (
-                    <div className="w-full py-4 bg-gray-100 dark:bg-slate-700 text-center text-gray-400 font-bold text-sm rounded-b-2xl">
-                      {order.status === 'rejected' ? '✕ مرفوض' : '✓ مكتمل'}
-                    </div>
+                    <div className="w-full py-4 bg-gray-100 dark:bg-slate-700 text-center text-gray-400 font-bold text-sm">✓ مكتمل</div>
                   )}
                 </div>
               );
