@@ -407,11 +407,29 @@ export default function OrdersPage() {
                   <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
                   <div className="p-4">
                     {/* Client + price */}
-                    <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
-                      <p className="text-green-500 font-bold text-lg">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
-                      <div className="text-right">
-                        <p className="font-bold text-gray-900 dark:text-slate-100 text-base">{order.client_name}</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{order.client_phone}{order.delivery_address ? ` — ${order.delivery_address}` : ''}</p>
+                    <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-50 dark:border-slate-700">
+                      <p className="text-green-500 font-bold text-lg pt-1">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
+                      <div className="text-right space-y-1.5">
+                        <p className="font-bold text-gray-900 dark:text-slate-100 text-xl">{order.client_name}</p>
+                        <a
+                          href={`https://wa.me/${order.client_phone.replace(/\D/g, '').replace(/^0/, '964')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-end gap-2 text-green-500 font-bold text-base active:opacity-70 transition-all"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <span dir="ltr">{order.client_phone}</span>
+                          <span>💬</span>
+                        </a>
+                        {order.delivery_address && (
+                          <button
+                            onClick={() => { if (order.client_lat && order.client_lng) setMapOrder(order); }}
+                            className={`flex items-center justify-end gap-1.5 text-base font-semibold transition-all ${order.client_lat && order.client_lng ? 'text-red-500 active:opacity-70' : 'text-gray-500 cursor-default'}`}
+                          >
+                            <span>{order.delivery_address}</span>
+                            <MapPin size={16} className="flex-shrink-0" />
+                          </button>
+                        )}
                       </div>
                     </div>
                     {/* Items */}
@@ -427,14 +445,6 @@ export default function OrdersPage() {
                       ))}
                     </div>
                     {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
-                    {order.client_lat && order.client_lng && (
-                      <button
-                        onClick={() => setMapOrder(order)}
-                        className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-red-500 active:scale-95 transition-all"
-                      >
-                        <MapPin size={14} /> عرض موقع العميل على الخريطة
-                      </button>
-                    )}
                   </div>
 
                   {/* Driver assignment — only for ready orders */}
