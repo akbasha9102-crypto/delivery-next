@@ -573,7 +573,7 @@ export default function DashboardPage() {
         </button>
         <div className="flex items-center gap-1.5">
           <ClipboardList size={18} className="text-[#f97316]" />
-          <p className="font-bold text-gray-900 dark:text-slate-100">الطلبات</p>
+          <p className="font-bold text-red-500">الطلبات</p>
         </div>
         <div className="w-10" />
       </header>
