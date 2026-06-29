@@ -78,13 +78,16 @@ CREATE TRIGGER menu_recipes_updated_at
 -- ─────────────────────────────────────────────────────────────
 -- 3. جدول stock_movements — سجل حركات المخزون
 -- ─────────────────────────────────────────────────────────────
-CREATE TYPE IF NOT EXISTS stock_movement_type AS ENUM (
-  'IN',          -- استلام / شراء
-  'OUT_ORDER',   -- استهلاك بسبب طلب
-  'WASTE',       -- تلف أو هدر
-  'ADJUSTMENT',  -- تعديل يدوي من المدير
-  'RETURN'       -- إرجاع للمورد
-);
+DO $$ BEGIN
+  CREATE TYPE stock_movement_type AS ENUM (
+    'IN',          -- استلام / شراء
+    'OUT_ORDER',   -- استهلاك بسبب طلب
+    'WASTE',       -- تلف أو هدر
+    'ADJUSTMENT',  -- تعديل يدوي من المدير
+    'RETURN'       -- إرجاع للمورد
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS stock_movements (
   id                  UUID                 PRIMARY KEY DEFAULT gen_random_uuid(),
