@@ -729,12 +729,20 @@ export default function DashboardPage() {
                       </p>
                       <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.client_name}</p>
                     </div>
-                    <button
-                      onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
-                      className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-white text-base shadow active:scale-90 transition-transform ${order.driver_id ? 'bg-green-500' : 'bg-red-500'}`}
-                    >
-                      🏍️
-                    </button>
+                    {order.driver_id ? (
+                      <button
+                        onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
+                        className="flex-shrink-0 flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold px-2.5 py-1.5 rounded-xl active:scale-95 transition-transform max-w-[90px]"
+                      >
+                        <span className="text-sm leading-none">🏍️</span>
+                        <span className="truncate">{order.driver_name}</span>
+                      </button>
+                    ) : (
+                      <div className="flex-shrink-0 flex items-center gap-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs font-bold px-2.5 py-1.5 rounded-xl">
+                        <span className="text-sm leading-none">⏳</span>
+                        <span className="whitespace-nowrap">في انتظار السائق</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* التفاصيل الكاملة — تظهر عند الضغط بنفس تصميم كرت الواردة */}
