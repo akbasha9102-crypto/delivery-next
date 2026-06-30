@@ -1,10 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
+import { HexColorPicker } from 'react-colorful';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
@@ -58,6 +59,9 @@ export default function MenuPage() {
   const [editCatAnimateIn, setEditCatAnimateIn] = useState(false);
   const [editCatName, setEditCatName] = useState('');
   const [editCatColors, setEditCatColors] = useState<{ color: string; card_color: string; color_dark: string; card_color_dark: string } | null>(null);
+  const [activeColorPicker, setActiveColorPicker] = useState<'color' | 'card_color' | 'color_dark' | 'card_color_dark' | null>(null);
+  const [colorPickerPos, setColorPickerPos] = useState({ top: 0, left: 0 });
+  const colorPickerRef = useRef<HTMLDivElement>(null);
   const [previewDark, setPreviewDark] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
 
@@ -259,6 +263,30 @@ export default function MenuPage() {
       document.body.style.overflow = '';
     };
   }, [editCatSheet]);
+
+  useEffect(() => {
+    if (!activeColorPicker) return;
+    const handler = (e: PointerEvent) => {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target as Node)) {
+        setActiveColorPicker(null);
+      }
+    };
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, [activeColorPicker]);
+
+  const openColorPicker = (field: 'color' | 'card_color' | 'color_dark' | 'card_color_dark', e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (activeColorPicker === field) { setActiveColorPicker(null); return; }
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const pickerW = 220;
+    const pickerH = 260;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - pickerW - 8));
+    const above = rect.bottom + pickerH > window.innerHeight - 20;
+    const top = above ? rect.top - pickerH - 6 : rect.bottom + 6;
+    setColorPickerPos({ top, left });
+    setActiveColorPicker(field);
+  };
 
   const openCatEdit = (cat: Category) => {
     setEditCatName(cat.name);
@@ -605,6 +633,7 @@ export default function MenuPage() {
         const editCat = categories.find(c => c.id === editCatSheet.catId);
         if (!editCat) return null;
         return (
+          <>
           <div className="fixed inset-0 z-50 flex items-end" onClick={closeCatEdit}>
             <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${editCatAnimateIn ? 'opacity-100' : 'opacity-0'}`} />
             <div
@@ -637,33 +666,24 @@ export default function MenuPage() {
                 />
               </div>
 
-              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl p-3 mb-3">
-                <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right pb-2 border-b border-gray-200 dark:border-slate-600 mb-2">☀️ الوضع النهاري</p>
-                <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
-                  <input type="color" value={editCatColors?.color ?? '#e67e22'} onChange={e => setEditCatColors(p => p ? { ...p, color: e.target.value } : p)}
-                    className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
-                  <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الأزرار</span>
-                </label>
-                <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
-                  <input type="color" value={editCatColors?.card_color ?? '#ffffff'} onChange={e => setEditCatColors(p => p ? { ...p, card_color: e.target.value } : p)}
-                    className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
-                  <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
-                </label>
-              </div>
-
-              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl p-3 mb-4">
-                <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right pb-2 border-b border-gray-200 dark:border-slate-600 mb-2">🌙 الوضع الليلي</p>
-                <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
-                  <input type="color" value={editCatColors?.color_dark ?? '#e67e22'} onChange={e => setEditCatColors(p => p ? { ...p, color_dark: e.target.value } : p)}
-                    className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
-                  <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الأزرار</span>
-                </label>
-                <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
-                  <input type="color" value={editCatColors?.card_color_dark ?? '#1e293b'} onChange={e => setEditCatColors(p => p ? { ...p, card_color_dark: e.target.value } : p)}
-                    className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
-                  <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
-                </label>
-              </div>
+              {([
+                { label: '☀️ الوضع النهاري', fields: [{ key: 'color' as const, name: 'لون الأزرار' }, { key: 'card_color' as const, name: 'لون الكارتات' }] },
+                { label: '🌙 الوضع الليلي',  fields: [{ key: 'color_dark' as const, name: 'لون الأزرار' }, { key: 'card_color_dark' as const, name: 'لون الكارتات' }] },
+              ] as const).map(section => (
+                <div key={section.label} className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl p-3 mb-3">
+                  <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right pb-2 border-b border-gray-200 dark:border-slate-600 mb-2">{section.label}</p>
+                  {section.fields.map(({ key, name }) => (
+                    <div key={key} className="flex items-center justify-between gap-3 p-2 rounded-xl">
+                      <button
+                        onClick={(e) => openColorPicker(key, e)}
+                        className={`w-9 h-9 rounded-xl flex-shrink-0 border-2 transition-all active:scale-90 ${activeColorPicker === key ? 'border-[#f97316] scale-110 shadow-md' : 'border-gray-300 dark:border-slate-500'}`}
+                        style={{ backgroundColor: editCatColors?.[key] ?? '#e67e22' }}
+                      />
+                      <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{name}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
 
               <button
                 onClick={saveCatColors}
@@ -742,6 +762,42 @@ export default function MenuPage() {
               </button>
             </div>
           </div>
+
+          {/* Color picker popover — fixed so it floats above the sheet */}
+          {activeColorPicker && editCatColors && (
+            <div
+              ref={colorPickerRef}
+              className="fixed z-[200] shadow-2xl"
+              style={{ top: colorPickerPos.top, left: colorPickerPos.left }}
+              onPointerDown={e => e.stopPropagation()}
+            >
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-gray-200 dark:border-slate-600 w-[220px]">
+                <HexColorPicker
+                  color={editCatColors[activeColorPicker]}
+                  onChange={v => setEditCatColors(p => p ? { ...p, [activeColorPicker]: v } : p)}
+                  style={{ width: '100%', height: '160px' }}
+                />
+                <div className="mt-2.5 flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg flex-shrink-0 border border-gray-200 dark:border-slate-600" style={{ backgroundColor: editCatColors[activeColorPicker] }} />
+                  <input
+                    type="text"
+                    value={editCatColors[activeColorPicker]}
+                    onChange={e => {
+                      const v = e.target.value.startsWith('#') ? e.target.value : '#' + e.target.value;
+                      if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setEditCatColors(p => p ? { ...p, [activeColorPicker!]: v } : p);
+                    }}
+                    className="flex-1 min-w-0 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1 text-sm font-mono text-gray-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-[#f97316]"
+                    maxLength={7}
+                    dir="ltr"
+                  />
+                  <button onClick={() => setActiveColorPicker(null)} className="text-gray-400 active:scale-90 flex-shrink-0">
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          </>
         );
       })()}
 
