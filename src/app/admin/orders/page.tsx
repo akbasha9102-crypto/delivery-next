@@ -451,16 +451,18 @@ export default function OrdersPage() {
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-1.5 text-4xl font-semibold">
                             <span className="text-gray-700 dark:text-slate-200">{order.delivery_address}</span>
-                            {order.client_lat && order.client_lng && (
-                              <button
-                                onClick={() => setMapOrder(order)}
-                                className="text-blue-500 active:opacity-70 transition-all flex-shrink-0"
-                              >
-                                <MapPin size={28} />
-                              </button>
-                            )}
                           </div>
-                          <span className="text-gray-400 dark:text-slate-500 text-sm font-medium flex-shrink-0 mr-2">العنوان</span>
+                          {order.client_lat && order.client_lng ? (
+                            <button
+                              onClick={() => setMapOrder(order)}
+                              className="flex items-center gap-1.5 text-blue-500 active:opacity-70 transition-all flex-shrink-0"
+                            >
+                              <span className="text-sm font-semibold">العنوان</span>
+                              <MapPin size={28} />
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 dark:text-slate-500 text-sm font-medium flex-shrink-0 mr-2">العنوان</span>
+                          )}
                         </div>
                       )}
                     </div>
