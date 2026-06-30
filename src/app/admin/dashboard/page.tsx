@@ -738,8 +738,7 @@ export default function DashboardPage() {
                         <span className="truncate">{order.driver_name}</span>
                       </button>
                     ) : (
-                      <div className="flex-shrink-0 flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs font-bold px-2.5 py-1.5 rounded-xl">
-                        <span className="whitespace-nowrap">في انتظار السائق</span>
+                      <>
                         <button
                           onClick={e => {
                             e.stopPropagation();
@@ -754,11 +753,14 @@ export default function DashboardPage() {
                               }),
                             }).catch(() => {});
                           }}
-                          className="active:scale-90 transition-transform"
+                          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 active:scale-90 transition-transform"
                         >
                           <Bell size={14} />
                         </button>
-                      </div>
+                        <div className="flex-shrink-0 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs font-bold px-2.5 py-1.5 rounded-xl whitespace-nowrap">
+                          في انتظار السائق
+                        </div>
+                      </>
                     )}
                   </div>
 
