@@ -57,6 +57,7 @@ export default function MenuPage() {
   const [editCatSheet, setEditCatSheet] = useState<{ catId: string } | null>(null);
   const [editCatAnimateIn, setEditCatAnimateIn] = useState(false);
   const [editCatName, setEditCatName] = useState('');
+  const [editCatColors, setEditCatColors] = useState<{ color: string; card_color: string; color_dark: string; card_color_dark: string } | null>(null);
   const [previewDark, setPreviewDark] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
 
@@ -118,24 +119,14 @@ export default function MenuPage() {
     setSaving(false);
   };
 
-  const updateCatColor = async (id: string, color: string) => {
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, color } : c));
-    await supabase.from('categories').update({ color }).eq('id', id);
-  };
-
-  const updateCatCardColor = async (id: string, card_color: string) => {
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, card_color } : c));
-    await supabase.from('categories').update({ card_color }).eq('id', id);
-  };
-
-  const updateCatColorDark = async (id: string, color_dark: string) => {
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, color_dark } : c));
-    await supabase.from('categories').update({ color_dark }).eq('id', id);
-  };
-
-  const updateCatCardColorDark = async (id: string, card_color_dark: string) => {
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, card_color_dark } : c));
-    await supabase.from('categories').update({ card_color_dark }).eq('id', id);
+  const saveCatColors = async () => {
+    if (!editCatSheet || !editCatColors) return;
+    const id = editCatSheet.catId;
+    setSaving(true);
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, ...editCatColors } : c));
+    await supabase.from('categories').update(editCatColors).eq('id', id);
+    setSaving(false);
+    showToast('✓ تم حفظ الألوان');
   };
 
   const deleteCategory = async (cat: Category) => {
@@ -271,13 +262,19 @@ export default function MenuPage() {
 
   const openCatEdit = (cat: Category) => {
     setEditCatName(cat.name);
+    setEditCatColors({
+      color: cat.color || '#e67e22',
+      card_color: cat.card_color || '#ffffff',
+      color_dark: cat.color_dark || cat.color || '#e67e22',
+      card_color_dark: cat.card_color_dark || '#1e293b',
+    });
     setEditCatSheet({ catId: cat.id });
     requestAnimationFrame(() => setEditCatAnimateIn(true));
   };
 
   const closeCatEdit = () => {
     setEditCatAnimateIn(false);
-    setTimeout(() => setEditCatSheet(null), 300);
+    setTimeout(() => { setEditCatSheet(null); setEditCatColors(null); }, 300);
   };
 
   const saveCatName = async () => {
@@ -611,7 +608,7 @@ export default function MenuPage() {
           <div className="fixed inset-0 z-50 flex items-end" onClick={closeCatEdit}>
             <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${editCatAnimateIn ? 'opacity-100' : 'opacity-0'}`} />
             <div
-              className={`relative w-full bg-white dark:bg-slate-800 rounded-t-3xl px-5 pt-5 pb-10 overflow-y-auto max-h-[90vh] transition-transform duration-300 ease-out ${editCatAnimateIn ? 'translate-y-0' : 'translate-y-full'}`}
+              className={`relative w-full bg-white dark:bg-slate-800 rounded-t-3xl px-5 pt-5 pb-10 overflow-y-auto overscroll-y-contain max-h-[90vh] transition-transform duration-300 ease-out ${editCatAnimateIn ? 'translate-y-0' : 'translate-y-full'}`}
               onClick={e => e.stopPropagation()}
             >
               <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mb-4" />
@@ -643,30 +640,37 @@ export default function MenuPage() {
               <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl p-3 mb-3">
                 <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right pb-2 border-b border-gray-200 dark:border-slate-600 mb-2">☀️ الوضع النهاري</p>
                 <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
-                  <input type="color" value={editCat.color || '#e67e22'} onChange={e => updateCatColor(editCat.id, e.target.value)}
+                  <input type="color" value={editCatColors?.color ?? '#e67e22'} onChange={e => setEditCatColors(p => p ? { ...p, color: e.target.value } : p)}
                     className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
                   <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الأزرار</span>
                 </label>
                 <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
-                  <input type="color" value={editCat.card_color || '#ffffff'} onChange={e => updateCatCardColor(editCat.id, e.target.value)}
+                  <input type="color" value={editCatColors?.card_color ?? '#ffffff'} onChange={e => setEditCatColors(p => p ? { ...p, card_color: e.target.value } : p)}
                     className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
                   <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
                 </label>
               </div>
 
-              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl p-3 mb-5">
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl p-3 mb-4">
                 <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 text-right pb-2 border-b border-gray-200 dark:border-slate-600 mb-2">🌙 الوضع الليلي</p>
                 <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
-                  <input type="color" value={editCat.color_dark || editCat.color || '#e67e22'} onChange={e => updateCatColorDark(editCat.id, e.target.value)}
+                  <input type="color" value={editCatColors?.color_dark ?? '#e67e22'} onChange={e => setEditCatColors(p => p ? { ...p, color_dark: e.target.value } : p)}
                     className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
                   <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الأزرار</span>
                 </label>
                 <label className="flex items-center justify-between gap-3 p-2 rounded-xl cursor-pointer">
-                  <input type="color" value={editCat.card_color_dark || '#1e293b'} onChange={e => updateCatCardColorDark(editCat.id, e.target.value)}
+                  <input type="color" value={editCatColors?.card_color_dark ?? '#1e293b'} onChange={e => setEditCatColors(p => p ? { ...p, card_color_dark: e.target.value } : p)}
                     className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
                   <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
                 </label>
               </div>
+
+              <button
+                onClick={saveCatColors}
+                disabled={saving}
+                className="w-full py-3 mb-5 bg-[#f97316] disabled:opacity-40 text-white font-bold rounded-xl active:scale-95 transition-all">
+                {saving ? '...' : 'حفظ الألوان'}
+              </button>
 
               {/* ══ معاينة مباشرة ══ */}
               <div className="mb-5">
@@ -686,7 +690,7 @@ export default function MenuPage() {
                   {/* شريط الفئات */}
                   <div className="flex justify-end gap-2 mb-3 overflow-x-auto pb-1">
                     {(() => {
-                      const pColor = previewDark ? (editCat.color_dark || editCat.color || '#e67e22') : (editCat.color || '#e67e22');
+                      const pColor = previewDark ? (editCatColors?.color_dark ?? '#e67e22') : (editCatColors?.color ?? '#e67e22');
                       const pText = getTextColor(pColor);
                       return (
                         <>
@@ -706,8 +710,8 @@ export default function MenuPage() {
                   {/* بطاقات وهمية */}
                   <div className="grid grid-cols-2 gap-2">
                     {(['برجر لحم', 'دجاج مشوي'] as const).map((name, i) => {
-                      const pCardColor = previewDark ? (editCat.card_color_dark || '#1e293b') : (editCat.card_color || '#ffffff');
-                      const pBtnColor = previewDark ? (editCat.color_dark || editCat.color || '#e67e22') : (editCat.color || '#e67e22');
+                      const pCardColor = previewDark ? (editCatColors?.card_color_dark ?? '#1e293b') : (editCatColors?.card_color ?? '#ffffff');
+                      const pBtnColor = previewDark ? (editCatColors?.color_dark ?? '#e67e22') : (editCatColors?.color ?? '#e67e22');
                       const pBtnBg = previewDark ? '#ffffff' : pBtnColor;
                       const pBtnText = previewDark ? '#000000' : getTextColor(pBtnColor);
                       return (
