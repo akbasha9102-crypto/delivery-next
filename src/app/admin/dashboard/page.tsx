@@ -896,13 +896,34 @@ export default function DashboardPage() {
                       <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.client_name}</p>
                     </div>
                     {order.driver_id ? (
-                      <button
-                        onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
-                        className="flex-shrink-0 flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold px-2.5 py-1.5 rounded-xl active:scale-95 transition-transform max-w-[90px]"
-                      >
-                        <span className="text-sm leading-none">🏍️</span>
-                        <span className="truncate">{order.driver_name}</span>
-                      </button>
+                      <>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            fetch('/api/push/notify', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+                              body: JSON.stringify({
+                                driver_id: order.driver_id,
+                                title: '📦 تعال استلم الطلب',
+                                body: `طلب ${order.client_name} جاهز — تعال للمطعم`,
+                                url: `/delivery/${order.id}`,
+                                tag: `pickup-${order.id}`,
+                              }),
+                            }).catch(() => {});
+                          }}
+                          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-xl bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 active:scale-90 transition-transform"
+                        >
+                          <Bell size={14} />
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
+                          className="flex-shrink-0 flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold px-2.5 py-1.5 rounded-xl active:scale-95 transition-transform max-w-[90px]"
+                        >
+                          <span className="text-sm leading-none">🏍️</span>
+                          <span className="truncate">{order.driver_name}</span>
+                        </button>
+                      </>
                     ) : (
                       <>
                         <button
