@@ -988,13 +988,13 @@ export default function DashboardPage() {
                               ? <img src={img} alt={item.item_name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-gray-100 dark:border-slate-600" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
                               : <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-3xl flex-shrink-0">🍽️</div>
                             }
-                            {/* الاسم والكمية في المنتصف */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 justify-end">
-                                <span className="w-7 h-7 bg-orange-500 text-white text-sm font-black rounded-full inline-flex items-center justify-center flex-shrink-0">{item.quantity}×</span>
-                                <span className="font-black text-gray-900 dark:text-slate-100 text-lg text-right">{item.item_name}</span>
-                              </div>
+                            {/* الاسم والكمية مباشرة جنب الصورة */}
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="w-7 h-7 bg-orange-500 text-white text-sm font-black rounded-full inline-flex items-center justify-center flex-shrink-0">{item.quantity}×</span>
+                              <span className="font-black text-gray-900 dark:text-slate-100 text-lg">{item.item_name}</span>
                             </div>
+                            {/* فاصل */}
+                            <div className="flex-1" />
                             {/* السعر على اليسار */}
                             <div className="text-left shrink-0">
                               <span className="text-gray-900 dark:text-slate-100 font-black text-xl block">{(item.price * item.quantity).toLocaleString()}</span>
