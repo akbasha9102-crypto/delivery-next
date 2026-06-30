@@ -1292,88 +1292,153 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ) : (
-                /* ══════════════ كروت الحالات الأخرى ══════════════ */
+                /* ══════════════ كروت الحالات الأخرى — نفس تصميم قيد التجهيز ══════════════ */
                 <motion.div
                   key={order.id}
                   layout
                   initial={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95, y: -8 }}
                   transition={{ duration: 0.25, ease: 'easeInOut' }}
-                  className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                  className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700"
+                >
                   <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
-                  <div className="px-3 py-2.5">
-                    <div className="flex justify-between items-center pb-2 mb-2 border-b border-gray-100 dark:border-slate-700">
-                      <span className="text-green-500 font-black text-xl">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></span>
-                      {wait && (
-                        <div className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: wait.color }} />
-                          <span className="text-xs font-bold" style={{ color: wait.color }}>{wait.text}</span>
-                        </div>
-                      )}
+                  {/* الصف الرئيسي — السهم + الوجبة + اسم الزبون */}
+                  <div className="flex items-center gap-2 px-3 py-2.5">
+                    <button
+                      onClick={() => toggleExpand(order.id)}
+                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 transition-all active:scale-90"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+                        className={`text-gray-500 dark:text-slate-300 transition-transform duration-300 ${expandedOrders.has(order.id) ? 'rotate-180' : ''}`}>
+                        <path d="M2 5l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                    <div className="flex-1 min-w-0 text-right">
+                      <p className="font-bold text-gray-900 dark:text-white text-sm truncate">
+                        {order.items?.map(i => `${i.quantity}× ${i.item_name}`).join('، ')}
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.client_name}</p>
                     </div>
-                    <div className="mb-2 space-y-1.5">
-                      {order.items?.map(item => {
-                        const img = imageMap.get(item.item_name);
-                        return (
-                          <div key={item.id} className="flex justify-between items-center">
-                            <span className="text-[#f97316] font-bold text-sm">{(item.price * item.quantity).toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span></span>
-                            <div className="flex items-center gap-1.5">
-                              {img && <img src={img} alt={item.item_name} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />}
-                              <span className="text-gray-800 dark:text-slate-200 font-semibold text-sm">{item.item_name}</span>
-                              <span className="bg-[#f97316] text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">{item.quantity}×</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="font-bold text-gray-900 dark:text-white text-right text-sm mb-1">
-                      <span className="text-gray-400 text-xs font-normal">الاسم: </span>{order.client_name}
-                    </p>
-                    {order.client_phone && (
-                      <a
-                        href={`https://wa.me/${order.client_phone.replace(/\D/g,'').replace(/^0/,'964')}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 justify-end text-red-500 active:scale-95 transition-transform text-xs mb-1"
-                      >
-                        <span dir="ltr">{order.client_phone}</span>
-                        <span className="font-semibold">الرقم:</span>
-                        <Phone size={14} className="flex-shrink-0" />
-                      </a>
-                    )}
-                    {order.delivery_address && (
-                      <div className="flex items-center gap-1 justify-end text-xs mb-1">
-                        <span className="text-gray-500 dark:text-slate-400">{order.delivery_address}</span>
-                        {order.client_lat && order.client_lng ? (
-                          <button onClick={() => setLocationOrder(order)} className="flex items-center gap-1 text-blue-500 active:scale-90 transition-transform flex-shrink-0">
-                            <span className="font-semibold">العنوان:</span>
-                            <MapPin size={20} />
-                          </button>
-                        ) : (
-                          <span className="text-gray-400">العنوان:</span>
-                        )}
-                      </div>
-                    )}
-                    {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                     {order.driver_name && (
-                      <div className="mt-1.5 w-full flex items-center bg-blue-50 dark:bg-blue-900/20 rounded-xl px-2.5 py-1.5 gap-2">
-                        <span className="text-base">🏍️</span>
-                        <div className="text-right">
-                          <p className="text-blue-700 dark:text-blue-300 font-bold text-xs">{order.driver_name}</p>
-                          <p className="text-blue-500 text-xs" dir="ltr">{order.driver_phone}</p>
-                        </div>
-                      </div>
+                      <button
+                        onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
+                        className="flex-shrink-0 flex items-center gap-1 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 text-xs font-bold px-2.5 py-1.5 rounded-xl active:scale-95 transition-transform max-w-[90px]"
+                      >
+                        <span className="text-sm leading-none">🏍️</span>
+                        <span className="truncate">{order.driver_name}</span>
+                      </button>
                     )}
                   </div>
+
+                  {/* التفاصيل الكاملة */}
+                  <AnimatePresence initial={false}>
+                    {expandedOrders.has(order.id) && (
+                      <motion.div
+                        key="details"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                        dir="rtl"
+                      >
+                        {/* رقم الطلب */}
+                        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-slate-700">
+                          <span className="font-bold text-gray-900 dark:text-slate-100 text-base">#طلب {order.id.slice(-4).toUpperCase()}</span>
+                          <span className="text-base text-gray-700 dark:text-slate-300 font-bold">طلب توصيل</span>
+                        </div>
+                        <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
+
+                        {/* الوجبات */}
+                        <div className="px-4 pt-3 pb-3 space-y-2.5">
+                          {order.items?.map(item => {
+                            const img = imageMap.get(item.item_name);
+                            return (
+                              <div key={item.id} className="flex items-center gap-3">
+                                {img
+                                  ? <img src={img} alt={item.item_name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-gray-100 dark:border-slate-600" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                                  : <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-3xl flex-shrink-0">🍽️</div>
+                                }
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="w-7 h-7 bg-orange-500 text-white text-sm font-black rounded-full inline-flex items-center justify-center flex-shrink-0">{item.quantity}×</span>
+                                  <span className="font-black text-gray-900 dark:text-slate-100 text-lg">{item.item_name}</span>
+                                </div>
+                                <div className="flex-1" />
+                                <div className="text-left shrink-0">
+                                  <span className="text-gray-900 dark:text-slate-100 font-black text-xl block">{(item.price * item.quantity).toLocaleString()}</span>
+                                  <span className="text-xs text-gray-400">د.ع</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {order.client_note && (
+                            <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 rounded-lg px-3 py-2">
+                              <span className="text-amber-600 dark:text-amber-400 text-xs flex-1 text-right">{order.client_note}</span>
+                              <span className="flex-shrink-0">📝</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
+
+                        {/* بيانات العميل */}
+                        <div className="px-4 py-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <User size={14} className="text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-400 text-sm">الاسم:</span>
+                            <span className="font-bold text-gray-700 dark:text-slate-200 text-sm">{order.client_name}</span>
+                          </div>
+                          {order.client_phone && (
+                            <a
+                              href={`https://wa.me/${order.client_phone.replace(/\D/g,'').replace(/^0/,'964')}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-red-500 active:scale-95 transition-transform"
+                            >
+                              <Phone size={20} className="flex-shrink-0" />
+                              <span className="text-sm font-semibold">الرقم:</span>
+                              <span className="text-sm font-semibold" dir="ltr">{order.client_phone}</span>
+                            </a>
+                          )}
+                          {order.delivery_address && (
+                            <div className="flex items-center gap-2">
+                              {order.client_lat && order.client_lng ? (
+                                <button onClick={() => setLocationOrder(order)} className="flex items-center gap-1.5 text-blue-500 active:scale-95 transition-transform flex-shrink-0">
+                                  <MapPin size={20} />
+                                  <span className="text-sm font-semibold">العنوان:</span>
+                                </button>
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-gray-400 flex-shrink-0">
+                                  <MapPin size={20} />
+                                  <span className="text-sm">العنوان:</span>
+                                </div>
+                              )}
+                              <span className="text-gray-600 dark:text-slate-300 text-sm">{order.delivery_address}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
+
+                        {/* الإجمالي */}
+                        <div className="flex items-center justify-between px-4 py-3">
+                          <span className="font-bold text-gray-900 dark:text-slate-100 text-base">الإجمالي:</span>
+                          <span className="text-red-500 font-black text-xl">
+                            {order.total_amount.toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span>
+                          </span>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* زر الأرشفة أو الإجراء */}
                   {cfg.next ? (
                     <button onClick={() => handleAction(order)}
-                      className="w-full py-2.5 text-white font-bold text-sm transition-all active:opacity-80"
+                      className="w-full py-2 text-white font-bold text-sm transition-all active:opacity-80"
                       style={{ backgroundColor: cfg.btnColor }}>
                       {cfg.nextLabel}
                     </button>
                   ) : (
                     <button
                       onClick={() => setOrders(prev => prev.filter(o => o.id !== order.id))}
-                      className="w-full py-2.5 bg-green-500 text-center text-white font-bold text-sm active:bg-green-600 transition-colors"
+                      className="w-full py-2 bg-green-500 text-center text-white font-bold text-sm active:bg-green-600 transition-colors"
                     >
                       ✓ مكتمل — اضغط للأرشفة
                     </button>
