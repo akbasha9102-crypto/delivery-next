@@ -22,6 +22,17 @@ function getItemStatus(item: Item) {
 
 const DEFAULT_IMAGE = 'https://via.placeholder.com/300x200.png?text=Food';
 
+const getTextColor = (hex: string): string => {
+  const h = (hex || '#000000').replace('#', '');
+  if (h.length !== 6) return '#ffffff';
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const toLinear = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+  return L > 0.179 ? '#000000' : '#ffffff';
+};
+
 export default function MenuPage() {
   const { dark } = useDarkMode();
   const { restaurantId } = useRestaurant();
@@ -46,6 +57,7 @@ export default function MenuPage() {
   const [editCatSheet, setEditCatSheet] = useState<{ catId: string } | null>(null);
   const [editCatAnimateIn, setEditCatAnimateIn] = useState(false);
   const [editCatName, setEditCatName] = useState('');
+  const [previewDark, setPreviewDark] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
 
   const fetchMenu = async (seedIfEmpty = true) => {
@@ -640,6 +652,69 @@ export default function MenuPage() {
                     className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600 flex-shrink-0" />
                   <span className="text-sm font-bold text-gray-700 dark:text-slate-200">لون الكارتات</span>
                 </label>
+              </div>
+
+              {/* ══ معاينة مباشرة ══ */}
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-3">
+                  <button
+                    onClick={() => setPreviewDark(p => !p)}
+                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 active:scale-95 transition-all border border-gray-200 dark:border-slate-600">
+                    {previewDark ? '🌙 ليلي' : '☀️ نهاري'}
+                  </button>
+                  <p className="text-xs font-bold text-gray-500 dark:text-slate-400">معاينة القسم</p>
+                </div>
+
+                <div
+                  className="rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-600 p-3 transition-all duration-300"
+                  style={{ background: previewDark ? '#020617' : '#f8fafc' }}>
+
+                  {/* شريط الفئات */}
+                  <div className="flex justify-end gap-2 mb-3 overflow-x-auto pb-1">
+                    {(() => {
+                      const pColor = previewDark ? (editCat.color_dark || editCat.color || '#e67e22') : (editCat.color || '#e67e22');
+                      const pText = getTextColor(pColor);
+                      return (
+                        <>
+                          <div className="px-4 py-2 rounded-2xl text-xs font-black flex-shrink-0"
+                            style={{ backgroundColor: previewDark ? '#1e293b' : '#ffffff', color: previewDark ? '#94a3b8' : '#9ca3af', border: `1px solid ${previewDark ? '#334155' : '#e5e7eb'}` }}>
+                            الكل
+                          </div>
+                          <div className="px-4 py-2 rounded-2xl text-xs font-black flex-shrink-0 shadow-md"
+                            style={{ backgroundColor: pColor, color: pText }}>
+                            {editCat.name}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* بطاقات وهمية */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['برجر لحم', 'دجاج مشوي'] as const).map((name, i) => {
+                      const pCardColor = previewDark ? (editCat.card_color_dark || '#1e293b') : (editCat.card_color || '#ffffff');
+                      const pBtnColor = previewDark ? (editCat.color_dark || editCat.color || '#e67e22') : (editCat.color || '#e67e22');
+                      const pBtnBg = previewDark ? '#ffffff' : pBtnColor;
+                      const pBtnText = previewDark ? '#000000' : getTextColor(pBtnColor);
+                      return (
+                        <div key={i} className="rounded-2xl overflow-hidden" style={{ backgroundColor: pCardColor, border: `1px solid ${previewDark ? '#334155' : '#f3f4f6'}` }}>
+                          <div className="h-14 flex items-center justify-center" style={{ backgroundColor: previewDark ? '#0f172a' : '#e5e7eb' }}>
+                            <span className="text-xl">🍽️</span>
+                          </div>
+                          <div className="p-2">
+                            <p className="text-[11px] font-black text-right mb-1.5 truncate" style={{ color: previewDark ? '#f1f5f9' : '#111827' }}>{name}</p>
+                            <div className="flex items-center justify-between flex-row-reverse">
+                              <p className="text-[10px] font-bold" style={{ color: previewDark ? '#64748b' : '#9ca3af' }}>5,000 د.ع</p>
+                              <div className="px-2.5 py-1 rounded-full text-[10px] font-black" style={{ backgroundColor: pBtnBg, color: pBtnText }}>
+                                إضافة
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               <button
