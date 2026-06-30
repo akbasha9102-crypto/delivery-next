@@ -972,8 +972,8 @@ export default function DashboardPage() {
 
                     {/* 2. رقم الطلب */}
                     <div className="flex items-center justify-between px-4 py-3">
-                      <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">طلب توصيل</span>
                       <span className="font-bold text-gray-900 dark:text-slate-100 text-base">#طلب {order.id.slice(-4).toUpperCase()}</span>
+                      <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">طلب توصيل</span>
                     </div>
                     <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
 
@@ -982,17 +982,21 @@ export default function DashboardPage() {
                       {order.items?.map(item => {
                         const img = imageMap.get(item.item_name);
                         return (
-                          <div key={item.id} className="flex items-center justify-between gap-3">
-                            <span className="text-gray-600 dark:text-slate-300 font-semibold text-sm shrink-0">
-                              {(item.price * item.quantity).toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span>
-                            </span>
-                            <div className="flex items-center gap-2 flex-1 justify-end">
-                              <span className="w-6 h-6 bg-orange-500 text-white text-xs font-black rounded-full flex items-center justify-center flex-shrink-0">{item.quantity}</span>
-                              <span className="font-bold text-gray-900 dark:text-slate-100 text-sm text-right">{item.quantity}x {item.item_name}</span>
-                              {img
-                                ? <img src={img} alt={item.item_name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-100 dark:border-slate-600" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
-                                : <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-lg flex-shrink-0">🍽️</div>
-                              }
+                          <div key={item.id} className="flex items-center gap-3">
+                            {/* الصورة على اليمين */}
+                            {img
+                              ? <img src={img} alt={item.item_name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0 border border-gray-100 dark:border-slate-600" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                              : <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-3xl flex-shrink-0">🍽️</div>
+                            }
+                            {/* الاسم والكمية في المنتصف */}
+                            <div className="flex-1 min-w-0">
+                              <span className="font-bold text-gray-900 dark:text-slate-100 text-base block text-right">{item.item_name}</span>
+                              <span className="w-6 h-6 bg-orange-500 text-white text-xs font-black rounded-full inline-flex items-center justify-center mt-1">{item.quantity}×</span>
+                            </div>
+                            {/* السعر على اليسار */}
+                            <div className="text-left shrink-0">
+                              <span className="text-green-500 font-black text-xl block">{(item.price * item.quantity).toLocaleString()}</span>
+                              <span className="text-xs text-gray-400">د.ع</span>
                             </div>
                           </div>
                         );
