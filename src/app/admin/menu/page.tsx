@@ -248,11 +248,25 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (editCatSheet) {
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
     } else {
+      const top = parseInt(document.body.style.top || '0', 10);
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
       document.body.style.overflow = '';
+      window.scrollTo(0, -top);
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+    };
   }, [editCatSheet]);
 
   const openCatEdit = (cat: Category) => {

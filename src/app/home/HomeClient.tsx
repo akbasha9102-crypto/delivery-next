@@ -281,25 +281,9 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
   const qty = (id: string) => cartItems.find(i => i.id === id)?.quantity || 0;
 
-  const fixedBgColor = (() => {
-    const cat = categories.find(c => c.id === activeCategory);
-    return cat ? ((dark && cat.color_dark) ? cat.color_dark : (cat.color || brandColor)) : brandColor;
-  })();
-
   return (
     <CustomerGuard>
-    <div className="min-h-screen" style={isDesktop ? { paddingRight: '70px', paddingBottom: showCartPanel ? '10rem' : '2rem', transition: 'padding-bottom 0.35s ease' } : { paddingBottom: showCartPanel ? '14rem' : '9rem', transition: 'padding-bottom 0.35s ease' }}>
-
-      {/* ══ FIXED PAGE BACKGROUND ══ */}
-      <div
-        className="fixed inset-0 pointer-events-none transition-all duration-700 ease-out"
-        style={{
-          zIndex: -1,
-          background: dark
-            ? `radial-gradient(ellipse 160% 90% at 50% 0%, ${fixedBgColor}28 0%, transparent 60%), #020617`
-            : `radial-gradient(ellipse 160% 90% at 50% 0%, ${fixedBgColor}18 0%, transparent 60%), #f8fafc`
-        }}
-      />
+    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950" style={isDesktop ? { paddingRight: '70px', paddingBottom: showCartPanel ? '10rem' : '2rem', transition: 'padding-bottom 0.35s ease' } : { paddingBottom: showCartPanel ? '14rem' : '9rem', transition: 'padding-bottom 0.35s ease' }}>
 
       {/* ══ HEADER ══ */}
       <motion.header
