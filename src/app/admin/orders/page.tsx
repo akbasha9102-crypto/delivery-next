@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Send, ChevronDown, MapPin, X, Locate, MessageCircle } from 'lucide-react';
+import { Send, ChevronDown, MapPin, X, Locate, MessageCircle, Phone } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
@@ -439,10 +439,10 @@ export default function OrdersPage() {
                           href={`https://wa.me/${order.client_phone.replace(/\D/g, '').replace(/^0/, '964')}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-green-500 font-bold text-4xl active:opacity-70 transition-all"
+                          className="flex items-center gap-2 text-red-500 font-bold text-4xl active:opacity-70 transition-all"
                           onClick={e => e.stopPropagation()}
                         >
-                          <span>💬</span>
+                          <Phone size={28} />
                           <span dir="ltr">{order.client_phone}</span>
                         </a>
                         <span className="text-gray-400 dark:text-slate-500 text-sm font-medium">الرقم</span>

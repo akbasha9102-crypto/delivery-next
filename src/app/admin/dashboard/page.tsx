@@ -786,10 +786,15 @@ export default function DashboardPage() {
                           </p>
                           {/* الهاتف */}
                           {order.client_phone && (
-                            <p className="text-xs text-right">
-                              <span className="text-gray-400">الرقم: </span>
-                              <span className="text-gray-600 dark:text-slate-300" dir="ltr">{order.client_phone}</span>
-                            </p>
+                            <a
+                              href={`https://wa.me/${order.client_phone.replace(/\D/g,'').replace(/^0/,'964')}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-1 justify-end text-red-500 active:scale-95 transition-transform text-xs"
+                            >
+                              <span dir="ltr">{order.client_phone}</span>
+                              <span className="font-semibold">الرقم:</span>
+                              <Phone size={14} className="flex-shrink-0" />
+                            </a>
                           )}
                           {/* العنوان */}
                           {order.delivery_address && (
@@ -896,10 +901,15 @@ export default function DashboardPage() {
                             <span className="text-gray-400 text-xs font-normal">الاسم: </span>{order.client_name}
                           </p>
                           {order.client_phone && (
-                            <p className="text-xs text-right">
-                              <span className="text-gray-400">الرقم: </span>
-                              <span className="text-gray-600 dark:text-slate-300" dir="ltr">{order.client_phone}</span>
-                            </p>
+                            <a
+                              href={`https://wa.me/${order.client_phone.replace(/\D/g,'').replace(/^0/,'964')}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-1 justify-end text-red-500 active:scale-95 transition-transform text-xs"
+                            >
+                              <span dir="ltr">{order.client_phone}</span>
+                              <span className="font-semibold">الرقم:</span>
+                              <Phone size={14} className="flex-shrink-0" />
+                            </a>
                           )}
                           {order.delivery_address && (
                             <div className="flex items-center gap-1 justify-end text-xs">
@@ -1004,11 +1014,15 @@ export default function DashboardPage() {
                         <span className="font-bold text-gray-700 dark:text-slate-200 text-sm">{order.client_name}</span>
                       </div>
                       {order.client_phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone size={14} className="text-gray-400 flex-shrink-0" />
-                          <span className="text-gray-400 text-sm">الرقم:</span>
-                          <span className="text-gray-600 dark:text-slate-300 text-sm" dir="ltr">{order.client_phone}</span>
-                        </div>
+                        <a
+                          href={`https://wa.me/${order.client_phone.replace(/\D/g,'').replace(/^0/,'964')}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-red-500 active:scale-95 transition-transform"
+                        >
+                          <Phone size={20} className="flex-shrink-0" />
+                          <span className="text-sm font-semibold">الرقم:</span>
+                          <span className="text-sm font-semibold" dir="ltr">{order.client_phone}</span>
+                        </a>
                       )}
                       {order.delivery_address && (
                         <div className="flex items-center gap-2">
@@ -1088,10 +1102,15 @@ export default function DashboardPage() {
                       <span className="text-gray-400 text-xs font-normal">الاسم: </span>{order.client_name}
                     </p>
                     {order.client_phone && (
-                      <p className="text-xs text-right mb-1">
-                        <span className="text-gray-400">الرقم: </span>
-                        <span className="text-gray-600 dark:text-slate-300" dir="ltr">{order.client_phone}</span>
-                      </p>
+                      <a
+                        href={`https://wa.me/${order.client_phone.replace(/\D/g,'').replace(/^0/,'964')}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 justify-end text-red-500 active:scale-95 transition-transform text-xs mb-1"
+                      >
+                        <span dir="ltr">{order.client_phone}</span>
+                        <span className="font-semibold">الرقم:</span>
+                        <Phone size={14} className="flex-shrink-0" />
+                      </a>
                     )}
                     {order.delivery_address && (
                       <div className="flex items-center gap-1 justify-end text-xs mb-1">
