@@ -708,16 +708,9 @@ export default function DashboardPage() {
             {filtered.map(order => {
               const isOpen = expandedOrders.has(order.id);
               return (
-                <div key={order.id} className="relative bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
-                  {/* أيقونة السائق في الزاوية */}
-                  <button
-                    onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
-                    className={`absolute top-2 left-2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-white text-base shadow active:scale-90 transition-transform ${order.driver_id ? 'bg-green-500' : 'bg-red-500'}`}
-                  >
-                    🏍️
-                  </button>
+                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
                   <div className="h-1.5 bg-blue-400" />
-                  {/* الصف الرئيسي — الوجبة + اسم الزبون + السهم */}
+                  {/* الصف الرئيسي — السهم + النص + أيقونة الدراجة */}
                   <div className="flex items-center gap-2 px-3 py-2.5">
                     <button
                       onClick={() => toggleExpand(order.id)}
@@ -736,6 +729,12 @@ export default function DashboardPage() {
                       </p>
                       <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.client_name}</p>
                     </div>
+                    <button
+                      onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
+                      className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-white text-base shadow active:scale-90 transition-transform ${order.driver_id ? 'bg-green-500' : 'bg-red-500'}`}
+                    >
+                      🏍️
+                    </button>
                   </div>
 
                   {/* التفاصيل الكاملة — تظهر عند الضغط بنفس تصميم كرت الواردة */}
