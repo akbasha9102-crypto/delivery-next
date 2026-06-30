@@ -688,10 +688,9 @@ export default function DashboardPage() {
                     <p className="font-bold text-gray-900 dark:text-white">{order.client_name}</p>
                   </div>
                   {order.delivery_address && (
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="text-xs text-gray-400 flex-shrink-0">📍 العنوان:</span>
-                      <p className="text-xs text-gray-400 dark:text-slate-500 text-right">{order.delivery_address}</p>
-                    </div>
+                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">
+                      <span className="text-gray-400">📍 العنوان: </span>{order.delivery_address}
+                    </p>
                   )}
                   <div className="flex justify-between items-center">
                     {order.driver_name
@@ -776,28 +775,27 @@ export default function DashboardPage() {
                           </div>
                           {/* الموقع */}
                           {order.delivery_address && (
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1 flex-shrink-0">
-                                <button onClick={e => { e.stopPropagation(); setLocationOrder(order); }} className="bg-blue-500 text-white p-1.5 rounded-lg active:scale-95">
-                                  <MapPin size={14} />
-                                </button>
-                                <span className="text-xs text-gray-400">العنوان:</span>
-                              </div>
-                              <p className="text-xs text-gray-500 dark:text-slate-400 text-right">{order.delivery_address}</p>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button onClick={e => { e.stopPropagation(); setLocationOrder(order); }} className="bg-blue-500 text-white p-1.5 rounded-lg active:scale-95 flex-shrink-0">
+                                <MapPin size={14} />
+                              </button>
+                              <p className="text-xs text-right">
+                                <span className="text-gray-400">العنوان: </span>
+                                <span className="text-gray-500 dark:text-slate-400">{order.delivery_address}</span>
+                              </p>
                             </div>
                           )}
                           {/* الهاتف */}
                           {order.client_phone && (
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs text-gray-400 flex-shrink-0">الرقم:</span>
-                              <p className="text-xs text-gray-600 dark:text-slate-300" dir="ltr">{order.client_phone}</p>
-                            </div>
+                            <p className="text-xs text-right">
+                              <span className="text-gray-400">الرقم: </span>
+                              <span className="text-gray-600 dark:text-slate-300" dir="ltr">{order.client_phone}</span>
+                            </p>
                           )}
                           {/* الاسم */}
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs text-gray-400 flex-shrink-0">الاسم:</span>
-                            <p className="font-bold text-gray-900 dark:text-white text-right text-sm">{order.client_name}</p>
-                          </div>
+                          <p className="font-bold text-gray-900 dark:text-white text-right text-sm">
+                            <span className="text-gray-400 text-xs font-normal">الاسم: </span>{order.client_name}
+                          </p>
                           {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                         </div>
                       </motion.div>
@@ -879,26 +877,25 @@ export default function DashboardPage() {
                             })}
                           </div>
                           {order.delivery_address && (
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1 flex-shrink-0">
-                                <button onClick={e => { e.stopPropagation(); setLocationOrder(order); }} className="bg-blue-500 text-white p-1.5 rounded-lg active:scale-95">
-                                  <MapPin size={14} />
-                                </button>
-                                <span className="text-xs text-gray-400">العنوان:</span>
-                              </div>
-                              <p className="text-xs text-gray-500 dark:text-slate-400 text-right">{order.delivery_address}</p>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button onClick={e => { e.stopPropagation(); setLocationOrder(order); }} className="bg-blue-500 text-white p-1.5 rounded-lg active:scale-95 flex-shrink-0">
+                                <MapPin size={14} />
+                              </button>
+                              <p className="text-xs text-right">
+                                <span className="text-gray-400">العنوان: </span>
+                                <span className="text-gray-500 dark:text-slate-400">{order.delivery_address}</span>
+                              </p>
                             </div>
                           )}
                           {order.client_phone && (
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs text-gray-400 flex-shrink-0">الرقم:</span>
-                              <p className="text-xs text-gray-600 dark:text-slate-300" dir="ltr">{order.client_phone}</p>
-                            </div>
+                            <p className="text-xs text-right">
+                              <span className="text-gray-400">الرقم: </span>
+                              <span className="text-gray-600 dark:text-slate-300" dir="ltr">{order.client_phone}</span>
+                            </p>
                           )}
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs text-gray-400 flex-shrink-0">الاسم:</span>
-                            <p className="font-bold text-gray-900 dark:text-white text-right text-sm">{order.client_name}</p>
-                          </div>
+                          <p className="font-bold text-gray-900 dark:text-white text-right text-sm">
+                            <span className="text-gray-400 text-xs font-normal">الاسم: </span>{order.client_name}
+                          </p>
                           {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                           {order.driver_name && (
                             <div className="flex items-center bg-blue-50 dark:bg-blue-900/20 rounded-xl px-2.5 py-1.5 gap-2">
@@ -974,28 +971,28 @@ export default function DashboardPage() {
 
                     {/* 4. تفاصيل الزبون — ثانوية */}
                     <div className="px-4 py-2.5 space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-gray-400 text-xs font-normal flex items-center gap-1 flex-shrink-0">👤 الاسم:</span>
-                        <span className="font-bold text-gray-500 dark:text-slate-400 text-sm text-right">{order.client_name}</span>
-                      </div>
+                      <p className="text-sm text-right">
+                        <span className="text-gray-400 font-normal">👤 الاسم: </span>
+                        <span className="font-bold text-gray-500 dark:text-slate-400">{order.client_name}</span>
+                      </p>
                       {order.client_phone && (
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-gray-400 text-xs font-normal flex items-center gap-1 flex-shrink-0">📞 الرقم:</span>
-                          <span className="text-gray-400 dark:text-slate-500 text-xs" dir="ltr">{order.client_phone}</span>
-                        </div>
+                        <p className="text-xs text-right">
+                          <span className="text-gray-400 font-normal">📞 الرقم: </span>
+                          <span className="text-gray-400 dark:text-slate-500" dir="ltr">{order.client_phone}</span>
+                        </p>
                       )}
                       {order.delivery_address && (
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <button
-                              onClick={e => { e.stopPropagation(); setLocationOrder(order); }}
-                              className="text-red-400 active:scale-95 transition-all"
-                            >
-                              <MapPin size={14} />
-                            </button>
-                            <span className="text-gray-400 text-xs font-normal">العنوان:</span>
-                          </div>
-                          <span className="text-gray-400 dark:text-slate-500 text-xs text-right">{order.delivery_address}</span>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={e => { e.stopPropagation(); setLocationOrder(order); }}
+                            className="text-red-400 active:scale-95 transition-all flex-shrink-0"
+                          >
+                            <MapPin size={14} />
+                          </button>
+                          <p className="text-xs text-right">
+                            <span className="text-gray-400 font-normal">العنوان: </span>
+                            <span className="text-gray-400 dark:text-slate-500">{order.delivery_address}</span>
+                          </p>
                         </div>
                       )}
                     </div>
@@ -1043,29 +1040,28 @@ export default function DashboardPage() {
                       })}
                     </div>
                     {order.delivery_address && (
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button
-                            onClick={e => { e.stopPropagation(); setLocationOrder(order); }}
-                            className="bg-blue-500 active:bg-blue-600 text-white p-1.5 rounded-lg transition-all active:scale-95"
-                          >
-                            <MapPin size={16} />
-                          </button>
-                          <span className="text-xs text-gray-400">العنوان:</span>
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-slate-400 text-right">{order.delivery_address}</p>
+                      <div className="flex items-center justify-end gap-1.5 mb-1.5">
+                        <button
+                          onClick={e => { e.stopPropagation(); setLocationOrder(order); }}
+                          className="bg-blue-500 active:bg-blue-600 text-white p-1.5 rounded-lg transition-all active:scale-95 flex-shrink-0"
+                        >
+                          <MapPin size={16} />
+                        </button>
+                        <p className="text-xs text-right">
+                          <span className="text-gray-400">العنوان: </span>
+                          <span className="text-gray-500 dark:text-slate-400">{order.delivery_address}</span>
+                        </p>
                       </div>
                     )}
                     {order.client_phone && (
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-xs text-gray-400 flex-shrink-0">الرقم:</span>
-                        <p className="text-xs text-gray-600 dark:text-slate-300" dir="ltr">{order.client_phone}</p>
-                      </div>
+                      <p className="text-xs text-right mb-1">
+                        <span className="text-gray-400">الرقم: </span>
+                        <span className="text-gray-600 dark:text-slate-300" dir="ltr">{order.client_phone}</span>
+                      </p>
                     )}
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-xs text-gray-400 flex-shrink-0">الاسم:</span>
-                      <p className="font-bold text-gray-900 dark:text-white text-right text-sm">{order.client_name}</p>
-                    </div>
+                    <p className="font-bold text-gray-900 dark:text-white text-right text-sm mb-1">
+                      <span className="text-gray-400 text-xs font-normal">الاسم: </span>{order.client_name}
+                    </p>
                     {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                     {order.driver_name && (
                       <div className="mt-1.5 w-full flex items-center bg-blue-50 dark:bg-blue-900/20 rounded-xl px-2.5 py-1.5 gap-2">
