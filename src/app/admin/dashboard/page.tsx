@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, ClipboardList, Clock, ChevronLeft, MapPin } from 'lucide-react';
+import { Moon, Sun, ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
@@ -937,73 +937,86 @@ export default function DashboardPage() {
               const countdown = order.status === 'pending' ? getCountdown(order.created_at) : null;
               void tick;
               return order.status === 'pending' && countdown ? (
-                  /* ══════════════ كارت الواردة (تصميم جديد) ══════════════ */
-                  <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700" dir="rtl">
+                  /* ══════════════ كارت الواردة ══════════════ */
+                  <div key={order.id} className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-md border border-gray-100 dark:border-slate-700" dir="rtl">
 
-                    {/* 1. شريط الحالة + العداد */}
-                    <div className={`flex items-center justify-between px-4 py-3 ${countdown.urgent ? 'bg-red-500' : 'bg-amber-500'}`}>
-                      <div className="flex items-center gap-2">
-                        <Clock size={16} className="text-white/80" />
-                        <span className={`font-black text-white text-base tabular-nums ${countdown.urgent ? 'animate-pulse' : ''}`}>
+                    {/* 1. شريط التنبيه العلوي */}
+                    <div className={`flex items-center justify-between px-4 py-2.5 ${countdown.urgent ? 'bg-red-500' : 'bg-amber-500'}`}>
+                      <div className="flex items-center gap-1.5">
+                        <Clock size={14} className="text-white" />
+                        <span className={`font-black text-white text-sm tabular-nums ${countdown.urgent ? 'animate-pulse' : ''}`}>
                           {fmtCountdown(countdown.secs)}
                         </span>
                       </div>
-                      <span className="font-bold text-white text-sm">
-                        {countdown.urgent ? '⚠️ على وشك الإلغاء' : 'في انتظار القبول'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-white text-sm">
+                          {countdown.urgent ? 'على وشك الإلغاء' : 'في انتظار القبول'}
+                        </span>
+                        <AlertTriangle size={15} className="text-white flex-shrink-0" />
+                      </div>
                     </div>
 
                     {/* 2. رقم الطلب */}
-                    <div className="flex items-center justify-between px-4 py-2.5">
-                      <span className="text-xs text-gray-400 dark:text-slate-500">طلب توصيل</span>
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">طلب توصيل</span>
                       <span className="font-bold text-gray-900 dark:text-slate-100 text-base">#طلب {order.id.slice(-4).toUpperCase()}</span>
                     </div>
                     <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
 
-                    {/* 3. الوجبات — الأهم أولاً */}
-                    <div className="px-4 pt-3 pb-1 space-y-2">
+                    {/* 3. الوجبات */}
+                    <div className="px-4 pt-3 pb-3 space-y-2.5">
                       {order.items?.map(item => {
                         const img = imageMap.get(item.item_name);
                         return (
-                          <div key={item.id} className="flex items-center justify-between">
-                            <span className="text-gray-700 dark:text-slate-300 font-semibold text-sm">{(item.price * item.quantity).toLocaleString()} د.ع</span>
-                            <div className="flex items-center gap-2">
-                              {img && <img src={img} alt={item.item_name} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />}
-                              <div className="text-right">
-                                <span className="font-black text-gray-900 dark:text-slate-100 text-base">{item.quantity}x {item.item_name}</span>
-                              </div>
-                              <span className="bg-amber-500 text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">{item.quantity}</span>
+                          <div key={item.id} className="flex items-center justify-between gap-3">
+                            <span className="text-gray-600 dark:text-slate-300 font-semibold text-sm shrink-0">
+                              {(item.price * item.quantity).toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span>
+                            </span>
+                            <div className="flex items-center gap-2 flex-1 justify-end">
+                              <span className="w-6 h-6 bg-orange-500 text-white text-xs font-black rounded-full flex items-center justify-center flex-shrink-0">{item.quantity}</span>
+                              <span className="font-bold text-gray-900 dark:text-slate-100 text-sm text-right">{item.quantity}x {item.item_name}</span>
+                              {img
+                                ? <img src={img} alt={item.item_name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-100 dark:border-slate-600" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                                : <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-lg flex-shrink-0">🍽️</div>
+                              }
                             </div>
                           </div>
                         );
                       })}
                       {order.client_note && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400 text-right pt-1">📝 {order.client_note}</p>
+                        <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 rounded-lg px-3 py-2">
+                          <span className="text-amber-600 dark:text-amber-400 text-xs flex-1 text-right">{order.client_note}</span>
+                          <span className="flex-shrink-0">📝</span>
+                        </div>
                       )}
                     </div>
-                    <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4 mt-2" />
+                    <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
 
-                    {/* 4. تفاصيل الزبون — ثانوية */}
-                    <div className="px-4 py-2.5 space-y-1.5">
-                      <p className="text-sm text-right">
-                        <span className="text-gray-400 font-normal">👤 الاسم: </span>
-                        <span className="font-bold text-gray-500 dark:text-slate-400">{order.client_name}</span>
-                      </p>
+                    {/* 4. بيانات العميل */}
+                    <div className="px-4 py-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <User size={14} className="text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-400 text-sm">الاسم:</span>
+                        <span className="font-bold text-gray-700 dark:text-slate-200 text-sm">{order.client_name}</span>
+                      </div>
                       {order.client_phone && (
-                        <p className="text-xs text-right">
-                          <span className="text-gray-400 font-normal">📞 الرقم: </span>
-                          <span className="text-gray-400 dark:text-slate-500" dir="ltr">{order.client_phone}</span>
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <Phone size={14} className="text-gray-400 flex-shrink-0" />
+                          <span className="text-gray-400 text-sm">الرقم:</span>
+                          <span className="text-gray-600 dark:text-slate-300 text-sm" dir="ltr">{order.client_phone}</span>
+                        </div>
                       )}
                       {order.delivery_address && (
-                        <div className="flex items-center gap-1 justify-end text-xs">
-                          {order.client_lat && order.client_lng && (
-                            <button onClick={() => setLocationOrder(order)} className="flex-shrink-0 text-blue-500 active:scale-90 transition-transform">
-                              <MapPin size={13} />
+                        <div className="flex items-center gap-2">
+                          {order.client_lat && order.client_lng ? (
+                            <button onClick={() => setLocationOrder(order)} className="text-blue-500 active:scale-90 transition-transform flex-shrink-0">
+                              <MapPin size={14} />
                             </button>
+                          ) : (
+                            <MapPin size={14} className="text-gray-400 flex-shrink-0" />
                           )}
-                          <span className="text-gray-400 font-normal">📍 العنوان: </span>
-                          <span className="text-gray-400 dark:text-slate-500">{order.delivery_address}</span>
+                          <span className="text-gray-400 text-sm">العنوان:</span>
+                          <span className="text-gray-600 dark:text-slate-300 text-sm">{order.delivery_address}</span>
                         </div>
                       )}
                     </div>
@@ -1011,14 +1024,28 @@ export default function DashboardPage() {
 
                     {/* 5. الإجمالي */}
                     <div className="flex items-center justify-between px-4 py-3">
-                      <span className="text-green-600 dark:text-green-400 font-black text-xl">{order.total_amount.toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span></span>
+                      <span className="text-green-500 dark:text-green-400 font-black text-xl">
+                        {order.total_amount.toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span>
+                      </span>
                       <span className="font-bold text-gray-900 dark:text-slate-100 text-base">الإجمالي:</span>
                     </div>
 
-                    {/* 6. أزرار القبول / الرفض */}
-                    <div className="flex">
-                      <button onClick={() => rejectOrder(order.id)} className="flex-1 py-4 bg-red-600 text-white font-bold text-base transition-all active:opacity-80 rounded-bl-2xl">رفض ❌</button>
-                      <button onClick={() => handleAction(order)} className="flex-1 py-4 bg-blue-600 text-white font-bold text-base transition-all active:opacity-80 rounded-br-2xl">قبول ✅</button>
+                    {/* 6. أزرار الإجراءات */}
+                    <div className="flex gap-3 px-4 pb-4">
+                      <button
+                        onClick={() => rejectOrder(order.id)}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-500 text-white font-bold rounded-xl text-sm transition-all active:scale-95"
+                      >
+                        <X size={16} strokeWidth={2.5} />
+                        <span>رفض</span>
+                      </button>
+                      <button
+                        onClick={() => handleAction(order)}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-600 text-white font-bold rounded-xl text-sm transition-all active:scale-95"
+                      >
+                        <Check size={16} strokeWidth={2.5} />
+                        <span>قبول</span>
+                      </button>
                     </div>
                   </div>
                 ) : (
