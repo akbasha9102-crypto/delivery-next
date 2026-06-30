@@ -739,7 +739,7 @@ export default function DashboardPage() {
                           <p className="text-xs text-gray-400 dark:text-slate-500 truncate">{order.delivery_address}</p>
                           {order.client_lat && order.client_lng && (
                             <button onClick={e => { e.stopPropagation(); setLocationOrder(order); }} className="flex-shrink-0 text-blue-500 active:scale-90 transition-transform">
-                              <MapPin size={12} />
+                              <MapPin size={20} />
                             </button>
                           )}
                         </div>
@@ -798,7 +798,7 @@ export default function DashboardPage() {
                               <span className="text-gray-500 dark:text-slate-400">{order.delivery_address}</span>
                               {order.client_lat && order.client_lng && (
                                 <button onClick={() => setLocationOrder(order)} className="flex-shrink-0 text-blue-500 active:scale-90 transition-transform">
-                                  <MapPin size={12} />
+                                  <MapPin size={20} />
                                 </button>
                               )}
                             </div>
@@ -844,7 +844,7 @@ export default function DashboardPage() {
                           <p className="text-xs text-gray-400 dark:text-slate-500 truncate">{order.delivery_address}</p>
                           {order.client_lat && order.client_lng && (
                             <button onClick={e => { e.stopPropagation(); setLocationOrder(order); }} className="flex-shrink-0 text-blue-500 active:scale-90 transition-transform">
-                              <MapPin size={12} />
+                              <MapPin size={20} />
                             </button>
                           )}
                         </div>
@@ -905,7 +905,7 @@ export default function DashboardPage() {
                               <span className="text-gray-500 dark:text-slate-400">{order.delivery_address}</span>
                               {order.client_lat && order.client_lng && (
                                 <button onClick={() => setLocationOrder(order)} className="flex-shrink-0 text-blue-500 active:scale-90 transition-transform">
-                                  <MapPin size={12} />
+                                  <MapPin size={20} />
                                 </button>
                               )}
                             </div>
@@ -1013,7 +1013,7 @@ export default function DashboardPage() {
                           <span className="text-gray-600 dark:text-slate-300 text-sm">{order.delivery_address}</span>
                           {order.client_lat && order.client_lng && (
                             <button onClick={() => setLocationOrder(order)} className="text-blue-500 active:scale-90 transition-transform flex-shrink-0">
-                              <MapPin size={14} />
+                              <MapPin size={20} />
                             </button>
                           )}
                         </div>
@@ -1091,7 +1091,7 @@ export default function DashboardPage() {
                         <span className="text-gray-500 dark:text-slate-400">{order.delivery_address}</span>
                         {order.client_lat && order.client_lng && (
                           <button onClick={() => setLocationOrder(order)} className="flex-shrink-0 text-blue-500 active:scale-90 transition-transform">
-                            <MapPin size={12} />
+                            <MapPin size={20} />
                           </button>
                         )}
                       </div>

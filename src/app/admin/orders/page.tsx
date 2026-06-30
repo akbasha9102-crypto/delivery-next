@@ -456,7 +456,7 @@ export default function OrdersPage() {
                                 onClick={() => setMapOrder(order)}
                                 className="text-blue-500 active:opacity-70 transition-all flex-shrink-0"
                               >
-                                <MapPin size={22} />
+                                <MapPin size={28} />
                               </button>
                             )}
                           </div>
