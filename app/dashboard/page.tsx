@@ -402,10 +402,12 @@ export default function DriverDashboard() {
                           <span className="text-xs font-normal text-slate-400"> د.ع</span>
                         </span>
                         <div className="text-right">
-                          <p className="font-black text-white text-lg">{order.client_name}</p>
+                          <p className="font-black text-white text-lg">
+                            <span className="text-slate-400 text-sm font-normal">الاسم: </span>{order.client_name}
+                          </p>
                           {order.delivery_address && (
                             <p className="text-slate-400 text-xs flex items-center gap-1 justify-end mt-0.5">
-                              <MapPin size={10} /> {order.delivery_address}
+                              <MapPin size={10} /> <span className="text-slate-500">العنوان: </span>{order.delivery_address}
                             </p>
                           )}
                         </div>
@@ -470,10 +472,12 @@ export default function DriverDashboard() {
                   {order.total_amount.toLocaleString()}<span className="text-sm font-normal"> د.ع</span>
                 </span>
                 <div className="text-right">
-                  <p className="font-black text-white text-xl">{order.client_name}</p>
+                  <p className="font-black text-white text-xl">
+                    <span className="text-green-200 text-sm font-normal">الاسم: </span>{order.client_name}
+                  </p>
                   {order.delivery_address && (
                     <p className="text-green-100 text-xs flex items-center gap-1 justify-end mt-0.5">
-                      <MapPin size={10} /> {order.delivery_address}
+                      <MapPin size={10} /> <span className="text-green-200">العنوان: </span>{order.delivery_address}
                     </p>
                   )}
                 </div>
@@ -511,10 +515,12 @@ export default function DriverDashboard() {
                   {order.total_amount.toLocaleString()}<span className="text-sm font-normal"> د.ع</span>
                 </span>
                 <div className="text-right">
-                  <p className="font-black text-white text-xl">{order.client_name}</p>
+                  <p className="font-black text-white text-xl">
+                    <span className="text-amber-200 text-sm font-normal">الاسم: </span>{order.client_name}
+                  </p>
                   {order.delivery_address && (
                     <p className="text-amber-100 text-xs flex items-center gap-1 justify-end mt-0.5">
-                      <MapPin size={10} /> {order.delivery_address}
+                      <MapPin size={10} /> <span className="text-amber-200">العنوان: </span>{order.delivery_address}
                     </p>
                   )}
                 </div>
@@ -558,7 +564,9 @@ export default function DriverDashboard() {
                   </div>
 
                   {/* الاسم — كبير */}
-                  <p className="font-black text-white text-2xl text-right mb-2">{order.client_name}</p>
+                  <p className="font-black text-white text-2xl text-right mb-2">
+                    <span className="text-slate-400 text-sm font-normal">الاسم: </span>{order.client_name}
+                  </p>
 
                   {/* الرقم — كبير وقابل للضغط لواتساب */}
                   {order.client_phone && (
@@ -568,6 +576,7 @@ export default function DriverDashboard() {
                       <span className="text-[#25D366] font-black text-2xl tracking-wide" dir="ltr">
                         {order.client_phone}
                       </span>
+                      <span className="text-slate-400 text-sm font-normal">:الرقم</span>
                       <MessageCircle size={22} className="text-[#25D366]" />
                     </a>
                   )}
@@ -578,6 +587,7 @@ export default function DriverDashboard() {
                       onClick={() => setMapAddress(order.delivery_address!)}
                       className="w-full flex items-center gap-2 bg-blue-900/30 border border-blue-700/40 rounded-xl px-3 py-2.5 mb-3 active:scale-[0.98] transition-all text-right">
                       <MapPin size={18} className="text-blue-400 flex-shrink-0" />
+                      <span className="text-slate-400 text-sm font-normal flex-shrink-0">العنوان:</span>
                       <span className="text-blue-300 font-bold text-base flex-1">{order.delivery_address}</span>
                     </button>
                   )}
