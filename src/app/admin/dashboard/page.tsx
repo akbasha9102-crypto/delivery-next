@@ -1160,6 +1160,7 @@ export default function DashboardPage() {
         ) : (
           /* ═══ عرض الطلبات العادي ═══ */
           <div className="space-y-3 max-w-3xl mx-auto">
+            <AnimatePresence initial={false}>
             {filtered.map(order => {
               const cfg = STATUS[order.status as keyof typeof STATUS] ?? STATUS.completed;
               const wait = order.status !== 'completed' ? waitInfo(order.created_at) : null;
@@ -1291,8 +1292,14 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ) : (
-                /* ══════════════ كروت الحالات الأخرى (بدون تغيير) ══════════════ */
-                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                /* ══════════════ كروت الحالات الأخرى ══════════════ */
+                <motion.div
+                  key={order.id}
+                  layout
+                  initial={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
                   <div className="h-1.5" style={{ backgroundColor: cfg.color }} />
                   <div className="px-3 py-2.5">
                     <div className="flex justify-between items-center pb-2 mb-2 border-b border-gray-100 dark:border-slate-700">
@@ -1364,13 +1371,17 @@ export default function DashboardPage() {
                       {cfg.nextLabel}
                     </button>
                   ) : (
-                    <div className="w-full py-2.5 bg-gray-100 dark:bg-slate-700 text-center text-gray-400 dark:text-slate-500 font-bold text-sm">
-                      ✓ مكتمل
-                    </div>
+                    <button
+                      onClick={() => setOrders(prev => prev.filter(o => o.id !== order.id))}
+                      className="w-full py-2.5 bg-gray-100 dark:bg-slate-700 text-center text-gray-400 dark:text-slate-500 font-bold text-sm active:bg-gray-200 dark:active:bg-slate-600 transition-colors"
+                    >
+                      ✓ مكتمل — اضغط للأرشفة
+                    </button>
                   )}
-                </div>
+                </motion.div>
                 );
             })}
+            </AnimatePresence>
           </div>
         )}
       </div>
