@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check } from 'lucide-react';
+import { Moon, Sun, ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check, Bell } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
@@ -738,9 +738,26 @@ export default function DashboardPage() {
                         <span className="truncate">{order.driver_name}</span>
                       </button>
                     ) : (
-                      <div className="flex-shrink-0 flex items-center gap-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs font-bold px-2.5 py-1.5 rounded-xl">
-                        <span className="text-sm leading-none">⏳</span>
+                      <div className="flex-shrink-0 flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs font-bold px-2.5 py-1.5 rounded-xl">
                         <span className="whitespace-nowrap">في انتظار السائق</span>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            fetch('/api/push/broadcast', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+                              body: JSON.stringify({
+                                title: '🔔 طلب جديد بانتظارك',
+                                body: `طلب من ${order.client_name} — ${order.total_amount.toLocaleString()} د.ع`,
+                                url: '/driver/dashboard',
+                                tag: `remind-${order.id}`,
+                              }),
+                            }).catch(() => {});
+                          }}
+                          className="active:scale-90 transition-transform"
+                        >
+                          <Bell size={14} />
+                        </button>
                       </div>
                     )}
                   </div>
