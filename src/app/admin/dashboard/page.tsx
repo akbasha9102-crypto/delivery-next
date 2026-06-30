@@ -685,10 +685,10 @@ export default function DashboardPage() {
                     }`}>
                       {order.status === 'ready' ? 'في الطريق' : 'ينتظر السائق'}
                     </span>
-                    <p className="font-bold text-gray-900 dark:text-white">{order.client_name}</p>
+                    <p className="font-bold text-gray-900 dark:text-white"><span className="text-gray-400 text-xs font-normal">الاسم: </span>{order.client_name}</p>
                   </div>
                   {order.delivery_address && (
-                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">📍 {order.delivery_address}</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">📍 <span className="text-gray-400">العنوان: </span>{order.delivery_address}</p>
                   )}
                   <div className="flex justify-between items-center">
                     {order.driver_name
@@ -775,15 +775,16 @@ export default function DashboardPage() {
                           {order.delivery_address && (
                             <div className="flex items-center gap-2">
                               <p className="text-xs text-gray-500 dark:text-slate-400">{order.delivery_address}</p>
+                              <span className="text-xs text-gray-400 flex-shrink-0">العنوان:</span>
                               <button onClick={e => { e.stopPropagation(); setLocationOrder(order); }} className="flex-shrink-0 bg-blue-500 text-white p-1.5 rounded-lg active:scale-95">
                                 <MapPin size={14} />
                               </button>
                             </div>
                           )}
                           {/* الهاتف */}
-                          {order.client_phone && <p className="text-xs text-gray-600 dark:text-slate-300 text-right" dir="ltr">📞 {order.client_phone}</p>}
+                          {order.client_phone && <p className="text-xs text-gray-600 dark:text-slate-300 text-right" dir="ltr"><span className="text-gray-400 font-normal" dir="rtl">الرقم: </span>{order.client_phone}</p>}
                           {/* الاسم */}
-                          <p className="font-bold text-gray-900 dark:text-white text-right text-sm">{order.client_name}</p>
+                          <p className="font-bold text-gray-900 dark:text-white text-right text-sm"><span className="text-gray-400 text-xs font-normal">الاسم: </span>{order.client_name}</p>
                           {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                         </div>
                       </motion.div>
@@ -867,13 +868,14 @@ export default function DashboardPage() {
                           {order.delivery_address && (
                             <div className="flex items-center gap-2">
                               <p className="text-xs text-gray-500 dark:text-slate-400">{order.delivery_address}</p>
+                              <span className="text-xs text-gray-400 flex-shrink-0">العنوان:</span>
                               <button onClick={e => { e.stopPropagation(); setLocationOrder(order); }} className="flex-shrink-0 bg-blue-500 text-white p-1.5 rounded-lg active:scale-95">
                                 <MapPin size={14} />
                               </button>
                             </div>
                           )}
-                          {order.client_phone && <p className="text-xs text-gray-600 dark:text-slate-300 text-right" dir="ltr">📞 {order.client_phone}</p>}
-                          <p className="font-bold text-gray-900 dark:text-white text-right text-sm">{order.client_name}</p>
+                          {order.client_phone && <p className="text-xs text-gray-600 dark:text-slate-300 text-right" dir="ltr"><span className="text-gray-400 font-normal" dir="rtl">الرقم: </span>{order.client_phone}</p>}
+                          <p className="font-bold text-gray-900 dark:text-white text-right text-sm"><span className="text-gray-400 text-xs font-normal">الاسم: </span>{order.client_name}</p>
                           {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                           {order.driver_name && (
                             <div className="flex items-center bg-blue-50 dark:bg-blue-900/20 rounded-xl px-2.5 py-1.5 gap-2">
@@ -951,17 +953,20 @@ export default function DashboardPage() {
                     <div className="px-4 py-2.5 space-y-1.5">
                       <div className="flex items-center gap-2 justify-end">
                         <span className="font-bold text-gray-500 dark:text-slate-400 text-sm">{order.client_name}</span>
+                        <span className="text-gray-400 text-xs font-normal">الاسم:</span>
                         <span className="text-gray-400 text-sm">👤</span>
                       </div>
                       {order.client_phone && (
                         <div className="flex items-center gap-2 justify-end">
                           <span className="text-gray-400 dark:text-slate-500 text-xs" dir="ltr">{order.client_phone}</span>
+                          <span className="text-gray-400 text-xs font-normal">الرقم:</span>
                           <span className="text-gray-400 text-sm">📞</span>
                         </div>
                       )}
                       {order.delivery_address && (
                         <div className="flex items-center gap-2 justify-end">
                           <span className="text-gray-400 dark:text-slate-500 text-xs">{order.delivery_address}</span>
+                          <span className="text-gray-400 text-xs font-normal flex-shrink-0">العنوان:</span>
                           <button
                             onClick={e => { e.stopPropagation(); setLocationOrder(order); }}
                             className="flex-shrink-0 text-red-400 active:scale-95 transition-all"
@@ -1017,6 +1022,7 @@ export default function DashboardPage() {
                     {order.delivery_address && (
                       <div className="flex items-center gap-2 mb-1.5 justify-start">
                         <p className="text-xs text-gray-500 dark:text-slate-400 text-right">{order.delivery_address}</p>
+                        <span className="text-xs text-gray-400 flex-shrink-0">العنوان:</span>
                         <button
                           onClick={e => { e.stopPropagation(); setLocationOrder(order); }}
                           className="flex-shrink-0 bg-blue-500 active:bg-blue-600 text-white p-1.5 rounded-lg transition-all active:scale-95"
@@ -1026,9 +1032,9 @@ export default function DashboardPage() {
                       </div>
                     )}
                     {order.client_phone && (
-                      <p className="text-xs text-gray-600 dark:text-slate-300 text-right mb-1" dir="ltr">📞 {order.client_phone}</p>
+                      <p className="text-xs text-gray-600 dark:text-slate-300 text-right mb-1" dir="ltr"><span className="text-gray-400 font-normal" dir="rtl">الرقم: </span>{order.client_phone}</p>
                     )}
-                    <p className="font-bold text-gray-900 dark:text-white text-right text-sm mb-1">{order.client_name}</p>
+                    <p className="font-bold text-gray-900 dark:text-white text-right text-sm mb-1"><span className="text-gray-400 text-xs font-normal">الاسم: </span>{order.client_name}</p>
                     {order.client_note && <p className="text-xs text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                     {order.driver_name && (
                       <div className="mt-1.5 w-full flex items-center bg-blue-50 dark:bg-blue-900/20 rounded-xl px-2.5 py-1.5 gap-2">
