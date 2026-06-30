@@ -21,6 +21,7 @@ function MapModal({ order, onClose }: { order: Order; onClose: () => void }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const myMarkerRef = useRef<any>(null);
+  const routeLineRef = useRef<any>(null);
 
   useEffect(() => {
     const link = document.createElement('link');
@@ -76,6 +77,26 @@ function MapModal({ order, onClose }: { order: Order; onClose: () => void }) {
                 L.latLngBounds([order.client_lat!, order.client_lng!], [latitude, longitude]),
                 { padding: [60, 60] }
               );
+
+              // رسم المسار من موقعك لموقع الزبون
+              fetch(`https://router.project-osrm.org/route/v1/driving/${longitude},${latitude};${order.client_lng},${order.client_lat}?overview=full&geometries=geojson`)
+                .then(r => r.json())
+                .then(json => {
+                  const coords = json.routes?.[0]?.geometry?.coordinates?.map(
+                    ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+                  );
+                  if (!coords?.length || !mapRef.current) return;
+                  if (routeLineRef.current) routeLineRef.current.remove();
+                  routeLineRef.current = L.polyline(coords, { color: '#2563eb', weight: 5, opacity: 0.85 }).addTo(map);
+                  routeLineRef.current.bringToBack();
+                })
+                .catch(() => {
+                  if (!mapRef.current) return;
+                  if (routeLineRef.current) routeLineRef.current.remove();
+                  routeLineRef.current = L.polyline([[latitude, longitude], [order.client_lat!, order.client_lng!]], {
+                    color: '#2563eb', weight: 4, opacity: 0.7, dashArray: '8 6',
+                  }).addTo(map);
+                });
             }
           },
           () => {},
@@ -428,13 +449,17 @@ export default function OrdersPage() {
                       </div>
                       {order.delivery_address && (
                         <div className="flex justify-between items-center">
-                          <button
-                            onClick={() => { if (order.client_lat && order.client_lng) setMapOrder(order); }}
-                            className={`flex items-center gap-1.5 text-4xl font-semibold transition-all ${order.client_lat && order.client_lng ? 'text-red-500 active:opacity-70' : 'text-gray-500 cursor-default'}`}
-                          >
-                            <MapPin size={22} className="flex-shrink-0" />
-                            <span>{order.delivery_address}</span>
-                          </button>
+                          <div className="flex items-center gap-1.5 text-4xl font-semibold">
+                            {order.client_lat && order.client_lng && (
+                              <button
+                                onClick={() => setMapOrder(order)}
+                                className="text-blue-500 active:opacity-70 transition-all flex-shrink-0"
+                              >
+                                <MapPin size={22} />
+                              </button>
+                            )}
+                            <span className="text-gray-700 dark:text-slate-200">{order.delivery_address}</span>
+                          </div>
                           <span className="text-gray-400 dark:text-slate-500 text-sm font-medium flex-shrink-0 mr-2">العنوان</span>
                         </div>
                       )}
