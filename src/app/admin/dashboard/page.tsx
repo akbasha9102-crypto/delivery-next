@@ -973,7 +973,7 @@ export default function DashboardPage() {
                     {/* 2. رقم الطلب */}
                     <div className="flex items-center justify-between px-4 py-3">
                       <span className="font-bold text-gray-900 dark:text-slate-100 text-base">#طلب {order.id.slice(-4).toUpperCase()}</span>
-                      <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">طلب توصيل</span>
+                      <span className="text-base text-gray-700 dark:text-slate-300 font-bold">طلب توصيل</span>
                     </div>
                     <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
 
@@ -990,12 +990,14 @@ export default function DashboardPage() {
                             }
                             {/* الاسم والكمية في المنتصف */}
                             <div className="flex-1 min-w-0">
-                              <span className="font-bold text-gray-900 dark:text-slate-100 text-base block text-right">{item.item_name}</span>
-                              <span className="w-6 h-6 bg-orange-500 text-white text-xs font-black rounded-full inline-flex items-center justify-center mt-1">{item.quantity}×</span>
+                              <div className="flex items-center gap-2 justify-end">
+                                <span className="w-7 h-7 bg-orange-500 text-white text-sm font-black rounded-full inline-flex items-center justify-center flex-shrink-0">{item.quantity}×</span>
+                                <span className="font-black text-gray-900 dark:text-slate-100 text-lg text-right">{item.item_name}</span>
+                              </div>
                             </div>
                             {/* السعر على اليسار */}
                             <div className="text-left shrink-0">
-                              <span className="text-green-500 font-black text-xl block">{(item.price * item.quantity).toLocaleString()}</span>
+                              <span className="text-gray-900 dark:text-slate-100 font-black text-xl block">{(item.price * item.quantity).toLocaleString()}</span>
                               <span className="text-xs text-gray-400">د.ع</span>
                             </div>
                           </div>
