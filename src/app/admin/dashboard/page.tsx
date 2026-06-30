@@ -717,7 +717,7 @@ export default function DashboardPage() {
                     🏍️
                   </button>
                   <div className="h-1.5 bg-blue-400" />
-                  {/* الصف الرئيسي — الوجبة + العنوان + السهم */}
+                  {/* الصف الرئيسي — الوجبة + اسم الزبون + السهم */}
                   <div className="flex items-center gap-2 px-3 py-2.5">
                     <button
                       onClick={() => toggleExpand(order.id)}
@@ -734,16 +734,7 @@ export default function DashboardPage() {
                       <p className="font-bold text-gray-900 dark:text-white text-sm truncate">
                         {order.items?.map(i => `${i.quantity}× ${i.item_name}`).join('، ')}
                       </p>
-                      {order.delivery_address && (
-                        <div className="flex items-center gap-1 mt-0.5 justify-end">
-                          <p className="text-xs text-gray-400 dark:text-slate-500 truncate">{order.delivery_address}</p>
-                          {order.client_lat && order.client_lng && (
-                            <button onClick={e => { e.stopPropagation(); setLocationOrder(order); }} className="flex-shrink-0 text-blue-500 active:scale-90 transition-transform">
-                              <MapPin size={20} />
-                            </button>
-                          )}
-                        </div>
-                      )}
+                      <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.client_name}</p>
                     </div>
                   </div>
 
