@@ -1051,10 +1051,10 @@ export default function DashboardPage() {
 
                     {/* 5. الإجمالي */}
                     <div className="flex items-center justify-between px-4 py-3">
-                      <span className="text-green-500 dark:text-green-400 font-black text-xl">
+                      <span className="font-bold text-gray-900 dark:text-slate-100 text-base">الإجمالي:</span>
+                      <span className="text-gray-900 dark:text-slate-100 font-black text-xl">
                         {order.total_amount.toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span>
                       </span>
-                      <span className="font-bold text-gray-900 dark:text-slate-100 text-base">الإجمالي:</span>
                     </div>
 
                     {/* 6. أزرار الإجراءات */}
