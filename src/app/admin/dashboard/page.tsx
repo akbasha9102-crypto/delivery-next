@@ -1438,7 +1438,7 @@ export default function DashboardPage() {
                   ) : (
                     <button
                       onClick={() => setOrders(prev => prev.filter(o => o.id !== order.id))}
-                      className="w-full py-2 bg-green-500 text-center text-white font-bold text-sm active:bg-green-600 transition-colors"
+                      className="w-full py-2 bg-green-700 text-center text-white font-bold text-sm active:bg-green-800 transition-colors"
                     >
                       ✓ مكتمل — اضغط للأرشفة
                     </button>
