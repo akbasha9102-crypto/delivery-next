@@ -138,7 +138,8 @@ export default function InventoryPage() {
   };
 
   const saveItem = async () => {
-    if (!form.name.trim() || !restaurantId) return;
+    if (!form.name.trim()) return;
+    if (!restaurantId) { showToast('تعذّر تحديد المطعم، أعد تحميل الصفحة', false); return; }
     setSaving(true);
     const payload = {
       name: form.name.trim(),
@@ -156,11 +157,24 @@ export default function InventoryPage() {
     if (editItem) {
       const { error } = await supabase.from('inventory_items').update(payload).eq('id', editItem.id);
       if (error) showToast('تعذّر الحفظ', false);
-      else { showToast('✓ تم الحفظ'); setShowForm(false); fetchItems(); }
+      else {
+        showToast('✓ تم الحفظ');
+        setShowForm(false);
+        setCatFilter(null);
+        setSearch('');
+        fetchItems();
+      }
     } else {
       const { error } = await supabase.from('inventory_items').insert([{ ...payload, restaurant_id: restaurantId }]);
       if (error) showToast('تعذّر الإضافة', false);
-      else { showToast('✓ تمت الإضافة'); setShowForm(false); fetchItems(); }
+      else {
+        showToast('✓ تمت الإضافة');
+        setShowForm(false);
+        setCatFilter(null);
+        setShowLowOnly(false);
+        setSearch('');
+        fetchItems();
+      }
     }
     setSaving(false);
   };
