@@ -51,6 +51,9 @@ export default function MenuPage() {
   const [extras, setExtras] = useState<Extra[]>([]);
   const [extraName, setExtraName] = useState('');
   const [extraPrice, setExtraPrice] = useState('');
+  const [newItemExtras, setNewItemExtras] = useState<Extra[]>([]);
+  const [newExtraName, setNewExtraName] = useState('');
+  const [newExtraPrice, setNewExtraPrice] = useState('');
   const [search, setSearch] = useState('');
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showReorder, setShowReorder] = useState(false);
@@ -165,8 +168,9 @@ export default function MenuPage() {
       image_url: form.image_url.trim() || DEFAULT_IMAGE,
       is_available: true,
       restaurant_id: restaurantId,
+      extras_json: JSON.stringify(newItemExtras),
     }]);
-    error ? showToast('تعذّر إضافة الطبق', false) : (setForm({ category_id: '', name: '', description: '', price: '', image_url: '' }), fetchMenu(), showToast('✓ تم إضافة الطبق'));
+    error ? showToast('تعذّر إضافة الطبق', false) : (setForm({ category_id: '', name: '', description: '', price: '', image_url: '' }), setNewItemExtras([]), fetchMenu(), showToast('✓ تم إضافة الطبق'));
     setSaving(false);
   };
 
@@ -489,7 +493,34 @@ export default function MenuPage() {
               ].map(({ key, placeholder, type }) => (
                 <input key={key} type={type || 'text'} value={(form as any)[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder} dir="rtl" className={input} />
               ))}
-              <button onClick={addItem} disabled={saving} className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-3.5 rounded-xl text-base active:scale-95 transition-all">
+
+              <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
+                <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧂 الإضافات</h4>
+                {newItemExtras.map(e => (
+                  <div key={e.id} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
+                    <button onClick={() => setNewItemExtras(newItemExtras.filter(x => x.id !== e.id))} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
+                    <div className="text-right flex-1 mr-3">
+                      <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{e.name}</p>
+                      <p className={`text-xs ${e.price > 0 ? 'text-[#f97316]' : 'text-gray-400 dark:text-slate-500'}`}>{e.price > 0 ? `+${e.price.toLocaleString()} د.ع` : 'مجاني'}</p>
+                    </div>
+                  </div>
+                ))}
+                <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة جديدة</p>
+                  <input value={newExtraName} onChange={e => setNewExtraName(e.target.value)} placeholder="اسم الإضافة" dir="rtl" className={`${input} mb-2`} />
+                  <div className="flex gap-2">
+                    <input value={newExtraPrice} onChange={e => setNewExtraPrice(e.target.value)} placeholder="السعر (0=مجاني)" type="number" className={`${input} flex-1 mb-0`} />
+                    <button onClick={() => {
+                      if (!newExtraName.trim()) return;
+                      const price = parseFloat(newExtraPrice.replace(',', '.')) || 0;
+                      setNewItemExtras([...newItemExtras, { id: Date.now().toString(), name: newExtraName.trim(), price }]);
+                      setNewExtraName(''); setNewExtraPrice('');
+                    }} disabled={!newExtraName.trim()} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={addItem} disabled={saving} className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-3.5 rounded-xl text-base active:scale-95 transition-all mt-4">
                 {saving ? 'جاري الحفظ...' : 'إضافة الطبق'}
               </button>
             </div>
