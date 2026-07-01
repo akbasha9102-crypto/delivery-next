@@ -123,13 +123,25 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
     whatsapp: whatsapp_number || '',
     location: location_url    || '',
   });
-  const [saving, setSaving] = useState(false);
-  const [saved,  setSaved]  = useState(false);
+  const [saving,      setSaving]      = useState(false);
+  const [saved,       setSaved]       = useState(false);
 
   useEffect(() => {
     requestAnimationFrame(() => setAnimateIn(true));
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
   }, []);
 
   const close = () => { setAnimateIn(false); setTimeout(onClose, 300); };
@@ -211,21 +223,28 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
 
           {/* معاينة مصغرة */}
           <Field label="معاينة">
-            <div className="bg-gray-50 dark:bg-slate-950 p-3 rounded-2xl border border-gray-100 dark:border-slate-800">
-              <div className="bg-white dark:bg-slate-900 px-3 h-11 flex items-center justify-between rounded-xl mb-2.5 shadow-sm">
-                <div className="w-6 h-6 rounded-lg bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-                  <Moon size={11} className="text-gray-400" />
+            <div className="flex gap-3">
+              {[false, true].map(isDark => (
+                <div key={isDark ? 'dark' : 'light'} className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5 text-center">{isDark ? '🌙 ليلي' : '☀️ نهاري'}</p>
+                  <div className="p-3 rounded-2xl border border-gray-200 transition-colors duration-300" style={{ background: isDark ? '#020617' : '#f8fafc' }}>
+                    <div className="px-3 h-11 flex items-center justify-between rounded-xl mb-2.5 shadow-sm transition-colors duration-300" style={{ background: isDark ? '#0f172a' : '#ffffff' }}>
+                      <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: isDark ? '#1e293b' : '#f3f4f6' }}>
+                        <Moon size={11} style={{ color: isDark ? '#64748b' : '#9ca3af' }} />
+                      </div>
+                      <p className="text-xs font-black truncate flex-1 min-w-0 px-1.5 text-center transition-colors duration-300" style={{ color: isDark ? '#f1f5f9' : '#111827' }}>{form.name || 'اسم المطعم'}</p>
+                      {form.logo
+                        ? <img src={form.logo} alt="" className="h-7 w-7 object-cover rounded-lg flex-shrink-0" />
+                        : <div className="w-7 h-7 rounded-lg text-white flex items-center justify-center bg-orange-400 flex-shrink-0"><ImageIcon size={12} /></div>
+                      }
+                    </div>
+                    <div className="flex gap-2 flex-row-reverse">
+                      <span className="px-3 py-1 rounded-lg text-[10px] font-black text-white bg-orange-400">مختار</span>
+                      <span className="px-3 py-1 rounded-lg text-[10px] font-black transition-colors duration-300" style={{ background: isDark ? '#1e293b' : '#ffffff', color: isDark ? '#94a3b8' : '#9ca3af' }}>قسم آخر</span>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs font-black truncate max-w-[110px]">{form.name || 'اسم المطعم'}</p>
-                {form.logo
-                  ? <img src={form.logo} alt="" className="h-7 w-7 object-cover rounded-lg" />
-                  : <div className="w-7 h-7 rounded-lg text-white flex items-center justify-center bg-orange-400"><ImageIcon size={12} /></div>
-                }
-              </div>
-              <div className="flex gap-2 flex-row-reverse">
-                <span className="px-3 py-1 rounded-lg text-[10px] font-black text-white bg-orange-400">مختار</span>
-                <span className="px-3 py-1 rounded-lg text-[10px] font-black bg-white dark:bg-slate-800 text-gray-400">قسم آخر</span>
-              </div>
+              ))}
             </div>
           </Field>
 
