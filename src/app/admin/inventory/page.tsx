@@ -92,7 +92,7 @@ export default function InventoryPage() {
       .eq('is_active', true)
       .order('category')
       .order('name');
-    if (error) { showToast('تعذّر تحميل المستودع', false); }
+    if (error) { showToast('تعذّر تحميل المخزون', false); }
     else setItems(data || []);
     setLoading(false);
   }, [restaurantId]);
@@ -218,7 +218,7 @@ export default function InventoryPage() {
         </button>
         <div className="flex items-center gap-2">
           <Package size={18} className="text-[#f97316]" />
-          <p className="font-bold text-gray-900 dark:text-slate-100">المستودع</p>
+          <p className="font-bold text-gray-900 dark:text-slate-100">المخزون</p>
           {lowStockCount > 0 && (
             <span className="flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
               <AlertTriangle size={10} /> {lowStockCount}

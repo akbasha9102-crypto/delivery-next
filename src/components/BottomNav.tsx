@@ -10,7 +10,7 @@ const adminTabs = [
   { href: '/admin/dashboard',   icon: ClipboardList,   label: 'الطلبات' },
   { href: '/admin/local',       icon: Store,           label: 'المحل' },
   { href: '/admin/menu',        icon: UtensilsCrossed, label: 'المنيو' },
-  { href: '/admin/inventory',   icon: Package,         label: 'المستودع' },
+  { href: '/admin/inventory',   icon: Package,         label: 'المخزون' },
   { href: '/admin/settings',    icon: Menu,            label: 'مطعمي' },
 ];
 
