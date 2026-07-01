@@ -177,6 +177,12 @@ export default function MenuPage() {
     setExtraName(''); setExtraPrice('');
   };
 
+  useEffect(() => {
+    if (!editItem) return;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [editItem]);
+
   const saveEdit = async () => {
     if (!editItem || !editForm.name.trim() || !editForm.price.trim()) return;
     const price = parseFloat(editForm.price.replace(',', '.'));
@@ -321,8 +327,8 @@ export default function MenuPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
       {/* Edit Modal */}
       {editItem && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
               <button onClick={saveEdit} disabled={saving} className="bg-black text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
