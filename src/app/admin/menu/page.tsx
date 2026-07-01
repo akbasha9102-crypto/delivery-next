@@ -179,8 +179,20 @@ export default function MenuPage() {
 
   useEffect(() => {
     if (!editItem) return;
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
   }, [editItem]);
 
   const saveEdit = async () => {
@@ -336,7 +348,7 @@ export default function MenuPage() {
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">✏️ تعديل الطبق</h3>
               <button onClick={() => setEditItem(null)} className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 font-bold px-4 py-2 rounded-xl active:scale-95 transition-all">إلغاء</button>
             </div>
-            <div className="overflow-y-auto p-5">
+            <div className="overflow-y-auto overscroll-contain p-5">
               <p className="text-gray-400 dark:text-slate-500 text-xs text-right mb-2">القسم</p>
               <div className="flex gap-2 overflow-x-auto mb-4 flex-row-reverse">
                 {categories.map(cat => (
