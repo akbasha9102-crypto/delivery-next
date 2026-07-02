@@ -114,9 +114,11 @@ export default function StatisticsPage() {
 
   const totalRevenue   = filtered.reduce((s, o) => s + o.total_amount, 0);
   const avgOrder       = filtered.length ? Math.round(totalRevenue / filtered.length) : 0;
-  const localOrders    = filtered.filter(o => o.order_type === 'local');
-  const deliveryOrders = filtered.filter(o => o.order_type !== 'local');
-  const localRevenue   = localOrders.reduce((s, o) => s + o.total_amount, 0);
+  const localOrders     = filtered.filter(o => o.order_type === 'local');
+  const internalOrders  = filtered.filter(o => o.order_type === 'dine_in' || o.order_type === 'pickup');
+  const deliveryOrders  = filtered.filter(o => !o.order_type || o.order_type === 'delivery');
+  const localRevenue    = localOrders.reduce((s, o) => s + o.total_amount, 0);
+  const internalRevenue = internalOrders.reduce((s, o) => s + o.total_amount, 0);
   const deliveryRevenue = deliveryOrders.reduce((s, o) => s + o.total_amount, 0);
 
   const catBreakdown = useMemo(() => {
@@ -227,10 +229,10 @@ export default function StatisticsPage() {
           ))}
         </div>
 
-        {/* Local vs Delivery revenue breakdown */}
-        {(localOrders.length > 0 || deliveryOrders.length > 0) && (
+        {/* Local vs Delivery vs Internal revenue breakdown */}
+        {(localOrders.length > 0 || deliveryOrders.length > 0 || internalOrders.length > 0) && (
           <div className="mx-4 mb-3 rounded-2xl border p-4" style={{ backgroundColor: s.surface, borderColor: s.border }}>
-            <h3 className="font-bold text-right mb-4" style={{ color: s.text }}>الإيراد المحلي مقابل التوصيل</h3>
+            <h3 className="font-bold text-right mb-4" style={{ color: s.text }}>الإيراد حسب نوع الطلب</h3>
             <div className="space-y-4">
               {/* Local */}
               <div>
@@ -262,6 +264,22 @@ export default function StatisticsPage() {
                 </div>
                 <p className="text-xs text-left mt-0.5" style={{ color: s.sub }}>
                   {totalRevenue > 0 ? `${Math.round((deliveryRevenue / totalRevenue) * 100)}%` : '0%'}
+                </p>
+              </div>
+              {/* Internal (dine-in/pickup) */}
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="font-bold text-sm" style={{ color: '#f59e0b' }}>{internalRevenue.toLocaleString()} د.ع</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs" style={{ color: s.sub }}>{internalOrders.length} طلب</span>
+                    <span className="font-bold text-sm" style={{ color: s.text }}>🍽️ إيراد الطلب الداخلي</span>
+                  </div>
+                </div>
+                <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: s.muted }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: totalRevenue > 0 ? `${(internalRevenue / totalRevenue) * 100}%` : '0%', backgroundColor: '#f59e0b' }} />
+                </div>
+                <p className="text-xs text-left mt-0.5" style={{ color: s.sub }}>
+                  {totalRevenue > 0 ? `${Math.round((internalRevenue / totalRevenue) * 100)}%` : '0%'}
                 </p>
               </div>
             </div>

@@ -21,14 +21,17 @@ const STATUS = {
   rejected:  { label: 'مرفوضة',      next: null,                 nextLabel: '',              color: '#ef4444', dot: 'bg-red-400',     btnColor: '#ef4444' },
 } as const;
 
-// طلبات "داخلي" (طاولة/سفري) ليس لها سائق إطلاقاً — تمشي بمسار مبسّط:
-// pending → preparing → completed (بدون انتظار سائق ولا "في الطريق")
+// طلبات "داخلي" (طاولة/سفري) ليس لها سائق إطلاقاً — تمشي بنفس مسار التوصيل
+// لكن بدون مرحلة "انتظار السائق": pending → preparing → ready(جاهز) → completed
 function isInternalOrder(order: Pick<Order, 'order_type'>): boolean {
   return order.order_type === 'dine_in' || order.order_type === 'pickup';
 }
 
 function getNextStatus(order: Order): Order['status'] | null {
-  if (order.status === 'preparing' && isInternalOrder(order)) return 'completed';
+  if (isInternalOrder(order)) {
+    if (order.status === 'preparing') return 'ready';
+    if (order.status === 'ready')     return 'completed';
+  }
   return STATUS[order.status as keyof typeof STATUS]?.next ?? null;
 }
 
@@ -682,12 +685,12 @@ export default function DashboardPage() {
       <div className="flex px-3 py-3 overflow-x-auto scrollbar-none">
         <div className="flex items-center gap-1 w-full">
         {(scope === 'internal'
-          ? (['pending','preparing','completed'] as const)
+          ? (['pending','preparing','delivery','completed'] as const)
           : (['pending','preparing','pickup','delivery','completed'] as const)
         ).map((tab, idx, arr) => {
           const isActive = filter === tab;
           const count    = counts[tab] || 0;
-          const labels   = { pending: 'واردة', preparing: 'التجهيز', pickup: 'انتظار السائق', delivery: 'التوصيل', completed: 'مكتمل' };
+          const labels   = { pending: 'واردة', preparing: 'التجهيز', pickup: 'انتظار السائق', delivery: scope === 'internal' ? 'جاهز' : 'التوصيل', completed: 'مكتمل' };
           const btn = (
             <button key={tab} onClick={() => setFilter(tab)}
               className={`flex-1 min-w-[60px] py-2 px-2 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-white'}`}>
@@ -743,12 +746,14 @@ export default function DashboardPage() {
                       <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.client_name}</p>
                     </div>
                     {/* أيقونة الموقع + اسم السائق */}
-                    <button
-                      onClick={e => { e.stopPropagation(); setSelectedOrder(order); }}
-                      className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 active:scale-90 transition-transform"
-                    >
-                      <MapPin size={14} />
-                    </button>
+                    {scope === 'delivery' && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setSelectedOrder(order); }}
+                        className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 active:scale-90 transition-transform"
+                      >
+                        <MapPin size={14} />
+                      </button>
+                    )}
                     {order.driver_name && (
                       <button
                         onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
@@ -837,6 +842,12 @@ export default function DashboardPage() {
                               <span className="text-gray-600 dark:text-slate-300 text-sm">{order.delivery_address}</span>
                             </div>
                           )}
+                          {order.order_type === 'dine_in' && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 text-sm">🍽️ رقم الطاولة:</span>
+                              <span className="font-bold text-gray-700 dark:text-slate-200 text-sm">{order.table_number ?? '—'}</span>
+                            </div>
+                          )}
                         </div>
                         <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
 
@@ -850,6 +861,14 @@ export default function DashboardPage() {
                       </motion.div>
                     )}
                   </AnimatePresence>
+
+                  {/* زر تسليم الطلب — فقط للطلب الداخلي/السفري بمرحلة "جاهز" (ما إلها سائق يكمّلها) */}
+                  {isInternalOrder(order) && (
+                    <button onClick={() => handleAction(order)}
+                      className="w-full py-2 text-white font-bold text-sm active:opacity-80 bg-green-600">
+                      تسليم الطلب ✓
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -1015,10 +1034,10 @@ export default function DashboardPage() {
                     )}
                   </AnimatePresence>
 
-                  {/* زر جاهز للتسليم / تسليم الطلب — دائماً ظاهر */}
+                  {/* زر جاهز للتسليم — دائماً ظاهر */}
                   <button onClick={() => handleAction(order)}
                     className={`w-full py-2 text-white font-bold text-sm active:opacity-80 ${isInternalOrder(order) ? 'bg-green-600' : 'bg-orange-500'}`}>
-                    {isInternalOrder(order) ? 'تسليم الطلب ✓' : 'جاهز للتسليم ✓'}
+                    {isInternalOrder(order) ? 'الطلب جاهز ✓' : 'جاهز للتسليم ✓'}
                   </button>
                 </div>
               );
