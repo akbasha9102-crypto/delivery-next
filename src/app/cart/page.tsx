@@ -100,6 +100,11 @@ export default function CartPage() {
   const [note,            setNote]            = useState('');
   const [addressError,    setAddressError]    = useState(false);
 
+  // نوع الطلب: توصيل / طلب داخلي (صالة) / استلام سفري
+  const [orderType,        setOrderType]        = useState<'delivery' | 'dine_in' | 'pickup'>('delivery');
+  const [tableNumber,      setTableNumber]      = useState('');
+  const [tableNumberError, setTableNumberError] = useState(false);
+
   // extras selection per item in review
   const [itemSelectedExtras, setItemSelectedExtras] = useState<Record<string, Set<string>>>({});
   const [cartPriceFlash, setCartPriceFlash] = useState(false);
@@ -588,19 +593,29 @@ const proceedFromReview = () => {
 
   const handleSubmitPress = () => {
     if (!name.trim() || !phone.trim()) { alert('الرجاء إدخال الاسم ورقم الهاتف'); return; }
-
-    if (!addressDetails.trim()) {
-      setAddressError(true);
-      setTimeout(() => setAddressError(false), 600);
-      document.getElementById('address-details-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
     if (items.length === 0) { alert('السلة فارغة'); return; }
-    if (!locationConfirmed) {
-      pendingConfirmRef.current = true;
-      openMap();
-      return;
+
+    if (orderType === 'delivery') {
+      if (!addressDetails.trim()) {
+        setAddressError(true);
+        setTimeout(() => setAddressError(false), 600);
+        document.getElementById('address-details-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      if (!locationConfirmed) {
+        pendingConfirmRef.current = true;
+        openMap();
+        return;
+      }
+    } else if (orderType === 'dine_in') {
+      if (!tableNumber.trim()) {
+        setTableNumberError(true);
+        setTimeout(() => setTableNumberError(false), 600);
+        document.getElementById('table-number-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
     }
+
     setShowConfirmModal(true);
   };
 
@@ -612,11 +627,13 @@ const proceedFromReview = () => {
 
     const { data: order, error } = await supabase.from('orders').insert([{
       client_name: nickname.trim() ? `${name.trim()} (${nickname.trim()})` : name.trim(), client_phone: phone.trim(),
-      delivery_address: addressDetails.trim() || null,
+      delivery_address: orderType === 'delivery' ? (addressDetails.trim() || null) : null,
       client_note: note || null,
       total_amount: grandTotal, status: 'pending',
+      order_type: orderType,
+      ...(orderType === 'dine_in' && tableNumber.trim() ? { table_number: Number(tableNumber.trim()) } : {}),
       ...(session?.user?.id ? { user_id: session.user.id } : {}),
-      ...(clientLat !== null && clientLng !== null ? { client_lat: clientLat, client_lng: clientLng } : {}),
+      ...(clientLat !== null && clientLng !== null && orderType === 'delivery' ? { client_lat: clientLat, client_lng: clientLng } : {}),
       ...(restaurantId ? { restaurant_id: restaurantId } : {}),
     }]).select().single();
 
@@ -704,6 +721,28 @@ const proceedFromReview = () => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 space-y-3">
             <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right">معلومات الطلب</h3>
 
+            {/* نوع الطلب: توصيل / طلب داخلي / استلام سفري */}
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { key: 'delivery' as const, label: 'توصيل',       emoji: '🛵' },
+                { key: 'dine_in'  as const, label: 'طلب داخلي',   emoji: '🍽️' },
+                { key: 'pickup'   as const, label: 'استلام سفري', emoji: '🛍️' },
+              ]).map(opt => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setOrderType(opt.key)}
+                  className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 border-2"
+                  style={orderType === opt.key
+                    ? { backgroundColor: brandColor, borderColor: brandColor, color: textOnBrand }
+                    : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}
+                >
+                  <span className="text-lg leading-none">{opt.emoji}</span>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
             {/* الاسم */}
             <input type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder="الاسم *" dir="rtl"
@@ -731,70 +770,87 @@ const proceedFromReview = () => {
               />
             </div>
 
-            {/* زر الخريطة */}
-            {locationConfirmed ? (
-              <div className="rounded-xl px-4 py-3 flex items-center justify-between mt-1 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-                <button type="button" onClick={() => { setLocationConfirmed(false); openMap(); }}
-                  className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
-                  <RefreshCw size={12} /> تغيير
-                </button>
-                <span className="flex items-center gap-2 bg-green-500 text-white text-sm font-bold px-4 py-2.5 rounded-xl">
-                  <CheckCircle2 size={17} /> تم تحديد موقعك
-                </span>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {/* كروت المواقع المحفوظة */}
-                {savedLocations.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 text-right mb-1.5 uppercase tracking-wider">مواقع سابقة</p>
-                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-row-reverse">
-                      {savedLocations.map(loc => (
-                        <div key={loc.id} className="flex-shrink-0 flex items-center bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl overflow-hidden">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setClientLat(loc.lat);
-                              setClientLng(loc.lng);
-                              if (loc.address) setAddressDetails(loc.address);
-                              setLocationConfirmed(true);
-                            }}
-                            className="flex items-center gap-2 px-3 py-2.5 active:scale-95 transition-all"
-                          >
-                            <div className="w-6 h-6 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
-                              <MapPin size={12} className="text-red-500" />
+            {orderType === 'delivery' && (
+              <>
+                {/* زر الخريطة */}
+                {locationConfirmed ? (
+                  <div className="rounded-xl px-4 py-3 flex items-center justify-between mt-1 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <button type="button" onClick={() => { setLocationConfirmed(false); openMap(); }}
+                      className="flex items-center gap-1 text-xs font-semibold text-gray-400 active:scale-90 transition-all">
+                      <RefreshCw size={12} /> تغيير
+                    </button>
+                    <span className="flex items-center gap-2 bg-green-500 text-white text-sm font-bold px-4 py-2.5 rounded-xl">
+                      <CheckCircle2 size={17} /> تم تحديد موقعك
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* كروت المواقع المحفوظة */}
+                    {savedLocations.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 text-right mb-1.5 uppercase tracking-wider">مواقع سابقة</p>
+                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-row-reverse">
+                          {savedLocations.map(loc => (
+                            <div key={loc.id} className="flex-shrink-0 flex items-center bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl overflow-hidden">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setClientLat(loc.lat);
+                                  setClientLng(loc.lng);
+                                  if (loc.address) setAddressDetails(loc.address);
+                                  setLocationConfirmed(true);
+                                }}
+                                className="flex items-center gap-2 px-3 py-2.5 active:scale-95 transition-all"
+                              >
+                                <div className="w-6 h-6 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
+                                  <MapPin size={12} className="text-red-500" />
+                                </div>
+                                <p className="text-xs font-bold text-gray-700 dark:text-slate-200 max-w-[110px] truncate text-right">
+                                  {loc.address || `${loc.lat.toFixed(4)}° ${loc.lng.toFixed(4)}°`}
+                                </p>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { deleteSavedLocation(loc.id); setSavedLocations(loadSavedLocations()); }}
+                                className="pr-2 pl-3 py-2.5 text-gray-300 dark:text-slate-600 active:text-red-400 transition-colors"
+                              >
+                                <X size={12} />
+                              </button>
                             </div>
-                            <p className="text-xs font-bold text-gray-700 dark:text-slate-200 max-w-[110px] truncate text-right">
-                              {loc.address || `${loc.lat.toFixed(4)}° ${loc.lng.toFixed(4)}°`}
-                            </p>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { deleteSavedLocation(loc.id); setSavedLocations(loadSavedLocations()); }}
-                            className="pr-2 pl-3 py-2.5 text-gray-300 dark:text-slate-600 active:text-red-400 transition-colors"
-                          >
-                            <X size={12} />
-                          </button>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
+                    <button type="button" onClick={openMap}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
+                      style={{ backgroundColor: '#ef4444', color: '#ffffff', boxShadow: '0 4px 14px #ef444450' }}>
+                      <MapPin size={17} />
+                      اضغط هنا لتحديد الموقع
+                    </button>
                   </div>
                 )}
-                <button type="button" onClick={openMap}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
-                  style={{ backgroundColor: '#ef4444', color: '#ffffff', boxShadow: '0 4px 14px #ef444450' }}>
-                  <MapPin size={17} />
-                  اضغط هنا لتحديد الموقع
-                </button>
-              </div>
+
+                {/* تفاصيل العنوان */}
+                <input id="address-details-input" type="text" value={addressDetails} onChange={e => { setAddressDetails(e.target.value); if (addressError) setAddressError(false); }}
+                  placeholder="تفاصيل العنوان — أقرب دالة *" dir="rtl"
+                  className={`w-full bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 border-2 transition-colors${addressError ? ' shake border-red-500' : ' border-gray-200 dark:border-slate-600'}`}
+                  style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
+                />
+              </>
             )}
 
-            {/* تفاصيل العنوان */}
-            <input id="address-details-input" type="text" value={addressDetails} onChange={e => { setAddressDetails(e.target.value); if (addressError) setAddressError(false); }}
-              placeholder="تفاصيل العنوان — أقرب دالة *" dir="rtl"
-              className={`w-full bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 border-2 transition-colors${addressError ? ' shake border-red-500' : ' border-gray-200 dark:border-slate-600'}`}
-              style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
-            />
+            {orderType === 'dine_in' && (
+              <input
+                id="table-number-input"
+                type="number"
+                inputMode="numeric"
+                value={tableNumber}
+                onChange={e => { setTableNumber(e.target.value); if (tableNumberError) setTableNumberError(false); }}
+                placeholder="رقم الطاولة *" dir="rtl"
+                className={`w-full bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 border-2 transition-colors${tableNumberError ? ' shake border-red-500' : ' border-gray-200 dark:border-slate-600'}`}
+                style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
+              />
+            )}
           </div>
         )}
 
@@ -1176,12 +1232,14 @@ const proceedFromReview = () => {
                 className="w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-800 text-gray-500 active:scale-90">
                 <X size={17}/>
               </button>
-              <p className="font-bold" style={{ color: '#ef4444' }}>موقعك:</p>
+              <p className="font-bold" style={{ color: '#ef4444' }}>
+                {orderType === 'delivery' ? 'موقعك:' : orderType === 'dine_in' ? 'طلب داخلي 🍽️' : 'استلام سفري 🛍️'}
+              </p>
               <div className="w-9"/>
             </div>
 
             {/* Mini map */}
-            {clientLat && clientLng && (
+            {orderType === 'delivery' && clientLat && clientLng && (
               <div style={{ height: 200, position: 'relative' }}>
                 <div ref={confirmMapRef} style={{ position: 'absolute', inset: 0 }} />
                 <button
@@ -1197,27 +1255,53 @@ const proceedFromReview = () => {
 
             {/* Info */}
             <div className="px-5 pt-4 pb-2 space-y-3">
-              <div className="flex items-start gap-3 rounded-xl p-3.5 text-right"
-                style={{ backgroundColor: `${brandColor}10`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}30` }}>
-                <div className="flex-1">
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">العنوان</p>
-                  {editingConfirmAddress ? (
-                    <input
-                      type="text" value={addressDetails} onChange={e => setAddressDetails(e.target.value)}
-                      onBlur={() => setEditingConfirmAddress(false)} autoFocus dir="rtl"
-                      className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-slate-100 outline-none"
-                    />
-                  ) : (
-                    <div className="flex items-center gap-2 justify-end">
-                      <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-relaxed flex-1">{addressDetails || '—'}</p>
-                      <button type="button" onClick={() => setEditingConfirmAddress(true)} className="text-gray-400 active:scale-90 transition-all flex-shrink-0">
-                        <Pencil size={13}/>
-                      </button>
-                    </div>
-                  )}
+              {orderType === 'delivery' && (
+                <div className="flex items-start gap-3 rounded-xl p-3.5 text-right"
+                  style={{ backgroundColor: `${brandColor}10`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}30` }}>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">العنوان</p>
+                    {editingConfirmAddress ? (
+                      <input
+                        type="text" value={addressDetails} onChange={e => setAddressDetails(e.target.value)}
+                        onBlur={() => setEditingConfirmAddress(false)} autoFocus dir="rtl"
+                        className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-slate-100 outline-none"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2 justify-end">
+                        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-relaxed flex-1">{addressDetails || '—'}</p>
+                        <button type="button" onClick={() => setEditingConfirmAddress(true)} className="text-gray-400 active:scale-90 transition-all flex-shrink-0">
+                          <Pencil size={13}/>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <MapPin size={18} className="mt-0.5 flex-shrink-0" style={{ color: brandColor }}/>
                 </div>
-                <MapPin size={18} className="mt-0.5 flex-shrink-0" style={{ color: brandColor }}/>
-              </div>
+              )}
+
+              {orderType === 'dine_in' && (
+                <div className="flex items-start gap-3 rounded-xl p-3.5 text-right"
+                  style={{ backgroundColor: `${brandColor}10`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}30` }}>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">رقم الطاولة</p>
+                    {editingConfirmAddress ? (
+                      <input
+                        type="number" inputMode="numeric" value={tableNumber} onChange={e => setTableNumber(e.target.value)}
+                        onBlur={() => setEditingConfirmAddress(false)} autoFocus dir="rtl"
+                        className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-slate-100 outline-none"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2 justify-end">
+                        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-relaxed flex-1">{tableNumber || '—'}</p>
+                        <button type="button" onClick={() => setEditingConfirmAddress(true)} className="text-gray-400 active:scale-90 transition-all flex-shrink-0">
+                          <Pencil size={13}/>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-lg mt-0.5 flex-shrink-0">🍽️</span>
+                </div>
+              )}
 
               <div className="flex items-center gap-3 rounded-xl p-3.5 text-right"
                 style={{ backgroundColor: `${brandColor}10`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}30` }}>

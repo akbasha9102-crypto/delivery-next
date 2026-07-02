@@ -6,7 +6,7 @@ import { Send, ChevronDown, MapPin, X, Locate, MessageCircle, Phone } from 'luci
 import { useRestaurant } from '@/context/RestaurantContext';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; client_lat: number | null; client_lng: number | null };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'ready' | 'completed'; created_at: string; items?: OrderItem[]; client_lat: number | null; client_lng: number | null; order_type: 'delivery' | 'dine_in' | 'pickup' | null; table_number: number | null };
 type OrderMessage = { id: string; order_id: string; sender: 'customer' | 'restaurant'; message: string; is_read: boolean; created_at: string };
 
 const RESTAURANT_QUICK_REPLIES = [
@@ -188,6 +188,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'pending' | 'preparing' | 'ready' | 'completed'>('pending');
+  const [scope, setScope] = useState<'delivery' | 'internal'>('delivery');
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<Record<string, string>>({});
   const [sending, setSending] = useState<Record<string, boolean>>({});
@@ -367,7 +368,11 @@ export default function OrdersPage() {
   };
 
 
-  const filtered = orders.filter(o => o.status === tab);
+  const inScope = (o: Order) => scope === 'delivery'
+    ? (!o.order_type || o.order_type === 'delivery')
+    : (o.order_type === 'dine_in' || o.order_type === 'pickup');
+
+  const filtered = orders.filter(o => o.status === tab && inScope(o));
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
@@ -389,10 +394,25 @@ export default function OrdersPage() {
             )}
           </button>
         </div>
+        {/* تبويب: توصيل خارجي / داخلي (صالة + سفري) */}
+        <div className="grid grid-cols-2 gap-2 px-4 py-2.5 border-b border-gray-100 dark:border-slate-700">
+          {([
+            { key: 'delivery' as const, label: 'توصيل خارجي 🛵' },
+            { key: 'internal' as const, label: 'داخلي 🍽️ 🛍️' },
+          ]).map(s => (
+            <button key={s.key} onClick={() => setScope(s.key)}
+              className="py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2"
+              style={scope === s.key
+                ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#ffffff' }
+                : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}>
+              {s.label}
+            </button>
+          ))}
+        </div>
         <div className="flex border-b border-gray-100 dark:border-slate-700">
           {TABS.map(t => {
             const cfg = STATUS[t.id];
-            const count = orders.filter(o => o.status === t.id).length;
+            const count = orders.filter(o => o.status === t.id && inScope(o)).length;
             const active = tab === t.id;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
@@ -465,6 +485,18 @@ export default function OrdersPage() {
                           )}
                         </div>
                       )}
+                      {order.order_type === 'dine_in' && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-3xl font-semibold text-gray-700 dark:text-slate-200">🍽️ طاولة رقم {order.table_number ?? '—'}</span>
+                          <span className="text-gray-400 dark:text-slate-500 text-sm font-medium">طلب داخلي</span>
+                        </div>
+                      )}
+                      {order.order_type === 'pickup' && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-2xl font-semibold text-gray-700 dark:text-slate-200">🛍️ استلام سفري</span>
+                          <span className="text-gray-400 dark:text-slate-500 text-sm font-medium">سفري</span>
+                        </div>
+                      )}
                     </div>
                     {/* Items */}
                     <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 mb-3 space-y-2">
@@ -481,8 +513,8 @@ export default function OrdersPage() {
                     {order.client_note && <p className="text-sm text-amber-600 dark:text-amber-400 text-right">📝 {order.client_note}</p>}
                   </div>
 
-                  {/* Driver assignment — only for ready orders */}
-                  {order.status === 'ready' && (
+                  {/* Driver assignment — only for ready delivery orders */}
+                  {order.status === 'ready' && (!order.order_type || order.order_type === 'delivery') && (
                     <div className="px-4 pb-3 space-y-2 border-b border-gray-50 dark:border-slate-700">
                       <p className="text-xs text-gray-400 dark:text-slate-500 text-right font-medium">إرسال للسائق عبر واتساب</p>
                       <div className="relative">
