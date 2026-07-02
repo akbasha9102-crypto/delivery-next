@@ -72,7 +72,7 @@ function saveInfo(info: SavedInfo) {
 }
 
 export default function CartPage() {
-  const { items, addItem, decrementItem, removeItem, clearCart, restoreCart, total } = useCart();
+  const { items, addItem, decrementItem, removeItem, clearCart, restoreCart, total, orderType, setOrderType } = useCart();
   const { primary_color } = useSettings();
   const { dark } = useDarkMode();
   const router = useRouter();
@@ -100,8 +100,8 @@ export default function CartPage() {
   const [note,            setNote]            = useState('');
   const [addressError,    setAddressError]    = useState(false);
 
-  // نوع الطلب: توصيل / طلب داخلي (صالة) / استلام سفري
-  const [orderType,        setOrderType]        = useState<'delivery' | 'dine_in' | 'pickup'>('delivery');
+  // نوع الطلب: توصيل / طلب داخلي (صالة) / استلام سفري — مصدره الموحّد CartContext
+  // (يُختار مبدئياً من صفحة المنيو، وقابل للتغيير هنا أيضاً بنفس المبدّل)
   const [tableNumber,      setTableNumber]      = useState('');
   const [tableNumberError, setTableNumberError] = useState(false);
 

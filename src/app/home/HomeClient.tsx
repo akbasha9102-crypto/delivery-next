@@ -51,7 +51,7 @@ type Props = {
 
 export default function HomeClient({ initialCategories, initialItems, restaurantId, restaurantSlug }: Props) {
   const { dark, toggleDark } = useDarkMode();
-  const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total } = useCart();
+  const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total, orderType, setOrderType } = useCart();
   const [priceFlash, setPriceFlash] = useState(false);
   const prevTotal = useRef(total);
   useEffect(() => {
@@ -366,6 +366,30 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
           )}
         </div>
       )}
+
+      {/* ══ سويتش نوع الطلب: توصيل / داخلي / سفري ══ */}
+      <div className="px-4 pt-3">
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { key: 'delivery' as const, label: 'توصيل',       emoji: '🛵' },
+            { key: 'dine_in'  as const, label: 'طلب داخلي',   emoji: '🍽️' },
+            { key: 'pickup'   as const, label: 'استلام سفري', emoji: '🛍️' },
+          ]).map(opt => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setOrderType(opt.key)}
+              className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl text-xs font-bold transition-all active:scale-95 border-2"
+              style={orderType === opt.key
+                ? { backgroundColor: brandColor, borderColor: brandColor, color: textOnBrand }
+                : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}
+            >
+              <span className="text-lg leading-none">{opt.emoji}</span>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* ══ CATEGORY PILLS (Sticky at top-0) ══ */}
       <div className="sticky top-0 z-40 bg-gray-50/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-800">

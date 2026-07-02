@@ -6,6 +6,9 @@ import { createContext, useContext, useState, useEffect } from 'react';
 // حتى تُهمَل البيانات القديمة بدلاً من قراءة بيانات بشكل غلط.
 const CART_VERSION = 1;
 const CART_KEY = `cart_v${CART_VERSION}`;
+const ORDER_TYPE_KEY = 'order_type_v1';
+
+export type OrderType = 'delivery' | 'dine_in' | 'pickup';
 
 type CartItem = {
   id: string;
@@ -25,6 +28,8 @@ type Ctx = {
   clearCart: () => void;
   restoreCart: (items: CartItem[]) => void;
   total: number;
+  orderType: OrderType;
+  setOrderType: (type: OrderType) => void;
 };
 
 // ── حارس نوع: يتحقق من صحة كل عنصر مقروء من localStorage ─────────────────
@@ -65,17 +70,29 @@ function writeCart(items: CartItem[]) {
   }
 }
 
+function readOrderType(): OrderType {
+  if (typeof window === 'undefined') return 'delivery';
+  const v = localStorage.getItem(ORDER_TYPE_KEY);
+  return v === 'dine_in' || v === 'pickup' || v === 'delivery' ? v : 'delivery';
+}
+
 // ── Provider ────────────────────────────────────────────────────────────────
 const CartContext = createContext<Ctx | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   // نُهيّئ الحالة من localStorage مباشرة (تجنّب flash of empty cart)
   const [items, setItems] = useState<CartItem[]>(() => readCart());
+  const [orderType, setOrderTypeState] = useState<OrderType>(() => readOrderType());
 
   // كلما تغيّرت items نكتب في localStorage
   useEffect(() => {
     writeCart(items);
   }, [items]);
+
+  const setOrderType = (type: OrderType) => {
+    setOrderTypeState(type);
+    if (typeof window !== 'undefined') localStorage.setItem(ORDER_TYPE_KEY, type);
+  };
 
   const addItem = (item: Omit<CartItem, 'quantity'>) =>
     setItems(prev => {
@@ -98,7 +115,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, decrementItem, removeItem, clearCart, restoreCart, total }}>
+    <CartContext.Provider value={{ items, addItem, decrementItem, removeItem, clearCart, restoreCart, total, orderType, setOrderType }}>
       {children}
     </CartContext.Provider>
   );
