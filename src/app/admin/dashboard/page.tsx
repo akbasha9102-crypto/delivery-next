@@ -10,7 +10,7 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'dine_in' | 'pickup' | 'local' | null; table_number: number | null };
 
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز', color: '#f59e0b', dot: 'bg-yellow-400',  btnColor: '#3b82f6' },
@@ -21,6 +21,22 @@ const STATUS = {
   rejected:  { label: 'مرفوضة',      next: null,                 nextLabel: '',              color: '#ef4444', dot: 'bg-red-400',     btnColor: '#ef4444' },
 } as const;
 
+// طلبات "داخلي" (طاولة/سفري) ليس لها سائق إطلاقاً — تمشي بمسار مبسّط:
+// pending → preparing → completed (بدون انتظار سائق ولا "في الطريق")
+function isInternalOrder(order: Pick<Order, 'order_type'>): boolean {
+  return order.order_type === 'dine_in' || order.order_type === 'pickup';
+}
+
+function getNextStatus(order: Order): Order['status'] | null {
+  if (order.status === 'preparing' && isInternalOrder(order)) return 'completed';
+  return STATUS[order.status as keyof typeof STATUS]?.next ?? null;
+}
+
+function orderTypeLabel(order: Order): string {
+  if (order.order_type === 'dine_in')  return `طاولة رقم ${order.table_number ?? '—'} 🍽️`;
+  if (order.order_type === 'pickup')   return 'استلام سفري 🛍️';
+  return 'طلب توصيل 🛵';
+}
 
 const EXPIRE_SECS = 5 * 60; // 5 دقائق
 
@@ -444,6 +460,7 @@ export default function DashboardPage() {
   const [imageMap,      setImageMap]      = useState<Map<string, string>>(new Map());
   const [loading,       setLoading]       = useState(true);
   const [filter,        setFilter]        = useState<'pending'|'preparing'|'pickup'|'delivery'|'completed'>('pending');
+  const [scope,         setScope]         = useState<'delivery' | 'internal'>('delivery');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [locationOrder, setLocationOrder] = useState<Order | null>(null);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
@@ -479,10 +496,14 @@ export default function DashboardPage() {
     (itemsRes.data || []).forEach(i => imgMap.set(i.name, i.image_url));
     setImageMap(imgMap);
 
-    const withItems = await Promise.all((ordersRes.data || []).map(async o => {
-      const { data: items } = await supabase.from('order_items').select('*').eq('order_id', o.id);
-      return { ...o, items: items || [] };
-    }));
+    // طلبات "local" (كاشير محلي / نقطة بيع) تُسدَّد وتُغلق مباشرة عند البيع
+    // ولا تمر بخط أنابيب التجهيز/التوصيل — تُستبعد هنا كلياً عن هذه الشاشة.
+    const withItems = await Promise.all((ordersRes.data || [])
+      .filter(o => o.order_type !== 'local')
+      .map(async o => {
+        const { data: items } = await supabase.from('order_items').select('*').eq('order_id', o.id);
+        return { ...o, items: items || [] };
+      }));
     setOrders(withItems);
     setLoading(false);
     initialLoadDone.current = true;
@@ -517,10 +538,12 @@ export default function DashboardPage() {
   };
 
   const handleAction = async (order: Order) => {
-    const cfg = STATUS[order.status as keyof typeof STATUS];
-    const next = cfg?.next;
+    const next = getNextStatus(order);
     if (!next) return;
     await updateStatus(order.id, next);
+
+    // طلبات داخلي/سفري ليس لها سائق — لا إشعارات سائقين إطلاقاً
+    if (isInternalOrder(order)) return;
 
     if (order.status === 'pending') {
       fetch('/api/push/broadcast', {
@@ -550,8 +573,13 @@ export default function DashboardPage() {
     }
   };
 
+  const inScope = (o: Order) => scope === 'delivery'
+    ? (!o.order_type || o.order_type === 'delivery')
+    : isInternalOrder(o);
+
+  const scopedOrders = orders.filter(inScope);
   const counts = { pending: 0, preparing: 0, pickup: 0, delivery: 0, completed: 0 };
-  orders.forEach(o => {
+  scopedOrders.forEach(o => {
     if (o.status === 'pending')        counts.pending++;
     else if (o.status === 'preparing') counts.preparing++;
     else if (o.status === 'pickup')    counts.pickup++;
@@ -559,7 +587,7 @@ export default function DashboardPage() {
     else if (o.status === 'completed') counts.completed++;
   });
   const todayRevenue = orders.filter(o => o.status === 'completed').reduce((s, o) => s + o.total_amount, 0);
-  const filtered = orders.filter(o =>
+  const filtered = scopedOrders.filter(o =>
     filter === 'delivery' ? o.status === 'ready' : o.status === filter
   );
 
@@ -578,6 +606,21 @@ export default function DashboardPage() {
         <div className="w-10" />
       </header>
 
+      {/* تبويب: توصيل خارجي / داخلي (صالة + سفري) */}
+      <div className="grid grid-cols-2 gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
+        {([
+          { key: 'delivery' as const, label: 'توصيل خارجي 🛵' },
+          { key: 'internal' as const, label: 'داخلي 🍽️🛍️' },
+        ]).map(s => (
+          <button key={s.key} onClick={() => { setScope(s.key); setFilter('pending'); }}
+            className="py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2"
+            style={scope === s.key
+              ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#ffffff' }
+              : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}>
+            {s.label}
+          </button>
+        ))}
+      </div>
 
       {/* إشعار طلب جديد — Dynamic Island */}
       <AnimatePresence>
@@ -637,7 +680,10 @@ export default function DashboardPage() {
       {/* تابس الفلتر */}
       <div className="flex px-3 py-3 overflow-x-auto scrollbar-none">
         <div className="flex items-center gap-1 w-full">
-        {(['pending','preparing','pickup','delivery','completed'] as const).map((tab, idx, arr) => {
+        {(scope === 'internal'
+          ? (['pending','preparing','completed'] as const)
+          : (['pending','preparing','pickup','delivery','completed'] as const)
+        ).map((tab, idx, arr) => {
           const isActive = filter === tab;
           const count    = counts[tab] || 0;
           const labels   = { pending: 'واردة', preparing: 'التجهيز', pickup: 'انتظار السائق', delivery: 'التوصيل', completed: 'مكتمل' };
@@ -728,7 +774,7 @@ export default function DashboardPage() {
                         {/* رقم الطلب */}
                         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-slate-700">
                           <span className="font-bold text-gray-900 dark:text-slate-100 text-base">#طلب {order.id.slice(-4).toUpperCase()}</span>
-                          <span className="text-base text-gray-700 dark:text-slate-300 font-bold">طلب توصيل</span>
+                          <span className="text-base text-gray-700 dark:text-slate-300 font-bold">{orderTypeLabel(order)}</span>
                         </div>
                         <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
 
@@ -834,7 +880,7 @@ export default function DashboardPage() {
                       </p>
                       <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.client_name}</p>
                     </div>
-                    {order.driver_id ? (
+                    {scope === 'delivery' && (order.driver_id ? (
                       <button
                         onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}
                         className="flex-shrink-0 flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold px-2.5 py-1.5 rounded-xl active:scale-95 transition-transform max-w-[90px]"
@@ -847,6 +893,7 @@ export default function DashboardPage() {
                         <button
                           onClick={e => {
                             e.stopPropagation();
+                            if (isInternalOrder(order)) return;
                             fetch('/api/push/broadcast', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
@@ -866,7 +913,7 @@ export default function DashboardPage() {
                           في انتظار السائق
                         </div>
                       </>
-                    )}
+                    ))}
                   </div>
 
                   {/* التفاصيل الكاملة — تظهر عند الضغط بنفس تصميم كرت الواردة */}
@@ -884,7 +931,7 @@ export default function DashboardPage() {
                         {/* رقم الطلب */}
                         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-slate-700">
                           <span className="font-bold text-gray-900 dark:text-slate-100 text-base">#طلب {order.id.slice(-4).toUpperCase()}</span>
-                          <span className="text-base text-gray-700 dark:text-slate-300 font-bold">طلب توصيل</span>
+                          <span className="text-base text-gray-700 dark:text-slate-300 font-bold">{orderTypeLabel(order)}</span>
                         </div>
                         <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
 
@@ -967,9 +1014,10 @@ export default function DashboardPage() {
                     )}
                   </AnimatePresence>
 
-                  {/* زر جاهز للتسليم — دائماً ظاهر */}
-                  <button onClick={() => handleAction(order)} className="w-full py-2 text-white font-bold text-sm active:opacity-80 bg-orange-500">
-                    جاهز للتسليم ✓
+                  {/* زر جاهز للتسليم / تسليم الطلب — دائماً ظاهر */}
+                  <button onClick={() => handleAction(order)}
+                    className={`w-full py-2 text-white font-bold text-sm active:opacity-80 ${isInternalOrder(order) ? 'bg-green-600' : 'bg-orange-500'}`}>
+                    {isInternalOrder(order) ? 'تسليم الطلب ✓' : 'جاهز للتسليم ✓'}
                   </button>
                 </div>
               );
@@ -1005,6 +1053,7 @@ export default function DashboardPage() {
                         <button
                           onClick={e => {
                             e.stopPropagation();
+                            if (isInternalOrder(order)) return;
                             fetch('/api/push/notify', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
@@ -1034,6 +1083,7 @@ export default function DashboardPage() {
                         <button
                           onClick={e => {
                             e.stopPropagation();
+                            if (isInternalOrder(order)) return;
                             fetch('/api/push/broadcast', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
@@ -1071,7 +1121,7 @@ export default function DashboardPage() {
                         {/* رقم الطلب */}
                         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-slate-700">
                           <span className="font-bold text-gray-900 dark:text-slate-100 text-base">#طلب {order.id.slice(-4).toUpperCase()}</span>
-                          <span className="text-base text-gray-700 dark:text-slate-300 font-bold">طلب توصيل</span>
+                          <span className="text-base text-gray-700 dark:text-slate-300 font-bold">{orderTypeLabel(order)}</span>
                         </div>
                         <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
 
@@ -1189,7 +1239,7 @@ export default function DashboardPage() {
                     {/* 2. رقم الطلب */}
                     <div className="flex items-center justify-between px-4 py-3">
                       <span className="font-bold text-gray-900 dark:text-slate-100 text-base">#طلب {order.id.slice(-4).toUpperCase()}</span>
-                      <span className="text-base text-gray-700 dark:text-slate-300 font-bold">طلب توصيل</span>
+                      <span className="text-base text-gray-700 dark:text-slate-300 font-bold">{orderTypeLabel(order)}</span>
                     </div>
                     <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
 
@@ -1345,7 +1395,7 @@ export default function DashboardPage() {
                         {/* رقم الطلب */}
                         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-slate-700">
                           <span className="font-bold text-gray-900 dark:text-slate-100 text-base">#طلب {order.id.slice(-4).toUpperCase()}</span>
-                          <span className="text-base text-gray-700 dark:text-slate-300 font-bold">طلب توصيل</span>
+                          <span className="text-base text-gray-700 dark:text-slate-300 font-bold">{orderTypeLabel(order)}</span>
                         </div>
                         <div className="h-px bg-gray-100 dark:bg-slate-700 mx-4" />
 
