@@ -513,8 +513,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const ch = supabase.channel('dash-live')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
-        if (initialLoadDone.current) {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, ({ new: row }: any) => {
+        // طلبات الكاشير المحلي (local) لا تظهر في هذه الشاشة إطلاقاً — لا داعي لتنبيه "طلب جديد" بشأنها
+        if (initialLoadDone.current && row?.order_type !== 'local') {
           setNewOrderFlash(true);
           setIslandExpanded(false);
           setTimeout(() => setIslandExpanded(true), 220);
