@@ -8,12 +8,25 @@ import { useSettings } from '@/context/SettingsContext';
 import { CustomerGuard } from '@/components/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
 
-const STEPS = [
-  { key: 'pending',   label: 'انتظار',      icon: '⏳', desc: 'تم إرسال طلبك، بانتظار القبول' },
-  { key: 'preparing', label: 'تجهيز',       icon: '🍳', desc: 'طلبك قيد التجهيز الآن' },
-  { key: 'ready',     label: 'في الطريق',   icon: '🏍️', desc: 'طلبك في الطريق إليك' },
-  { key: 'completed', label: 'تم التوصيل', icon: '🎉', desc: 'تم توصيل طلبك بنجاح' },
-];
+function isInternalOrder(orderType?: string | null) {
+  return orderType === 'dine_in' || orderType === 'pickup';
+}
+
+function getSteps(orderType?: string | null) {
+  const internal   = isInternalOrder(orderType);
+  const readyIcon  = orderType === 'dine_in' ? '🍽️' : orderType === 'pickup' ? '🛍️' : '🏍️';
+  const readyLabel = internal ? 'جاهز' : 'في الطريق';
+  const readyDesc  = orderType === 'dine_in' ? 'طلبك جاهز على طاولتك 🍽️'
+                    : orderType === 'pickup' ? 'طلبك جاهز، تفضل لاستلامه 🛍️'
+                    : 'طلبك في الطريق إليك';
+  return [
+    { key: 'pending',   label: 'انتظار',  icon: '⏳', desc: 'تم إرسال طلبك، بانتظار القبول' },
+    { key: 'preparing', label: 'تجهيز',   icon: '🍳', desc: 'طلبك قيد التجهيز الآن' },
+    { key: 'ready',     label: readyLabel, icon: readyIcon, desc: readyDesc },
+    { key: 'completed', label: internal ? 'تم الاستلام' : 'تم التوصيل', icon: '🎉',
+      desc: internal ? 'تم استلام طلبك بنجاح' : 'تم توصيل طلبك بنجاح' },
+  ];
+}
 
 const CSS = `
   @keyframes line-fill { 0%{width:0%} 100%{width:100%} }
@@ -188,6 +201,8 @@ type Order = {
   driver_arrived?: boolean | null;
   driver_lat?: number | null; driver_lng?: number | null;
   client_lat?: number | null; client_lng?: number | null;
+  order_type: 'delivery' | 'dine_in' | 'pickup' | null;
+  table_number: number | null;
 };
 
 
@@ -241,10 +256,16 @@ export default function TrackPage() {
     if (prevStatusRef.current === order.status) return;
     prevStatusRef.current = order.status;
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    const internal = isInternalOrder(order.order_type);
     const STATUS_LABELS: Record<string, { title: string; body: string }> = {
       preparing: { title: '🍳 طلبك قيد التجهيز', body: 'يعمل الطاقم الآن على تجهيز طلبك' },
-      ready:     { title: '🏍️ طلبك في الطريق!', body: 'السائق في طريقه إليك' },
-      completed: { title: '🎉 تم التوصيل!',      body: 'وصل طلبك بنجاح. شكراً لطلبك!' },
+      ready: internal
+        ? { title: order.order_type === 'dine_in' ? '🍽️ طلبك جاهز!' : '🛍️ طلبك جاهز!',
+            body: order.order_type === 'dine_in' ? 'طلبك جاهز على طاولتك' : 'طلبك جاهز، تفضل لاستلامه' }
+        : { title: '🏍️ طلبك في الطريق!', body: 'السائق في طريقه إليك' },
+      completed: internal
+        ? { title: '🎉 تم الاستلام!', body: 'تم استلام طلبك بنجاح. شكراً لطلبك!' }
+        : { title: '🎉 تم التوصيل!', body: 'وصل طلبك بنجاح. شكراً لطلبك!' },
       rejected:  { title: '❌ تم رفض الطلب',     body: 'عذراً، لم نتمكن من قبول طلبك' },
     };
     const info = STATUS_LABELS[order.status];
@@ -576,7 +597,8 @@ export default function TrackPage() {
     setNotifPermission(result);
   };
 
-  const stepIndex = (s: string) => s === 'pickup' ? 1 : STEPS.findIndex(x => x.key === s);
+  const steps = useMemo(() => getSteps(order?.order_type), [order?.order_type]);
+  const stepIndex = (s: string) => s === 'pickup' ? 1 : steps.findIndex(x => x.key === s);
   const current = order ? stepIndex(order.status) : -1;
 
   return (
@@ -708,7 +730,7 @@ export default function TrackPage() {
             {(() => {
               const timeline = (
                 <div className="flex items-start">
-                  {STEPS.map((step, idx) => (
+                  {steps.map((step, idx) => (
                     <React.Fragment key={step.key}>
                       <div className="flex flex-col items-center flex-shrink-0">
                         <div className={`w-11 h-11 rounded-full flex items-center justify-center text-lg transition-all duration-500 ${
@@ -718,7 +740,7 @@ export default function TrackPage() {
                           idx <= current ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-slate-500'
                         }`}>{step.label}</span>
                       </div>
-                      {idx < STEPS.length - 1 && (
+                      {idx < steps.length - 1 && (
                         <div className="flex-1 h-1 rounded mx-1 relative overflow-hidden bg-gray-100 dark:bg-slate-700" style={{ marginTop: '21px' }}>
                           <div key={`${idx}-${current}`} className="absolute inset-y-0 right-0 rounded bg-red-500"
                             style={
@@ -733,8 +755,8 @@ export default function TrackPage() {
                 </div>
               );
 
-              /* ── حالة "في الطريق": خريطة → سائق → وصل → تفاصيل → شريط ── */
-              if (order.status === 'ready') return (
+              /* ── حالة "في الطريق": خريطة → سائق → وصل → تفاصيل → شريط (توصيل فقط) ── */
+              if (order.status === 'ready' && (!order.order_type || order.order_type === 'delivery')) return (
                 <>
                   {/* الخريطة */}
                   <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
@@ -838,10 +860,10 @@ export default function TrackPage() {
                        style={{ animation: 'status-enter 0.5s ease-out' }}>
                     <div className="text-center mb-5">
                       <div className="mb-3">
-                        {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{STEPS[current]?.icon}</div>}
+                        {STATUS_ANIMATION[order.status] ?? <div className="text-5xl">{steps[current]?.icon}</div>}
                       </div>
-                      <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{STEPS[current]?.label}</p>
-                      <p className="text-gray-500 dark:text-slate-400 text-sm">{STEPS[current]?.desc}</p>
+                      <p className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{steps[current]?.label}</p>
+                      <p className="text-gray-500 dark:text-slate-400 text-sm">{steps[current]?.desc}</p>
                       {order.status === 'completed' && !alreadySentFeedback && (
                         <button
                           onClick={() => { setShowFeedbackModal(true); setFeedbackStep('choose'); setFeedbackDone(false); setFeedbackText(''); }}
@@ -865,9 +887,11 @@ export default function TrackPage() {
                   {estimatedAt && !order.driver_name && (
                     <div className="bg-white dark:bg-slate-800 rounded-2xl px-5 py-4 border border-gray-100 dark:border-slate-700">
                       <div className="text-right">
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">الوقت التقديري للتوصيل</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">
+                          {isInternalOrder(order.order_type) ? 'الوقت التقديري للتحضير' : 'الوقت التقديري للتوصيل'}
+                        </p>
                         <p className="font-black text-gray-900 dark:text-white text-lg">
-                          سيصلك طلبك عند الساعة{' '}
+                          {isInternalOrder(order.order_type) ? 'سيكون طلبك جاهزاً عند الساعة' : 'سيصلك طلبك عند الساعة'}{' '}
                           <span className="text-orange-500">{fmtEta(estimatedAt)}</span>
                         </p>
                       </div>
@@ -909,8 +933,12 @@ export default function TrackPage() {
                   <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700">
                     <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-4">تفاصيل الطلب</h3>
                     {[
-                      { label: 'الاسم',     value: order.client_name },
-                      { label: 'المنطقة',   value: order.delivery_address || '—' },
+                      { label: 'الاسم', value: order.client_name },
+                      ...(order.order_type === 'dine_in'
+                        ? [{ label: 'رقم الطاولة', value: order.table_number != null ? String(order.table_number) : '—' }]
+                        : order.order_type === 'pickup'
+                          ? []
+                          : [{ label: 'المنطقة', value: order.delivery_address || '—' }]),
                       { label: 'الإجمالي', value: `${order.total_amount.toLocaleString()} د.ع` },
                     ].map(row => (
                       <div key={row.label} className="flex justify-between items-center py-3 border-b border-gray-50 dark:border-slate-700 last:border-0">

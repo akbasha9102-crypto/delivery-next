@@ -25,15 +25,24 @@ type Order = {
   delivery_address: string | null; total_amount: number;
   status: string; created_at: string;
   client_lat?: number | null; client_lng?: number | null;
+  order_type: 'delivery' | 'dine_in' | 'pickup' | null;
+  table_number: number | null;
 };
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending:   { label: 'قيد الانتظار', color: '#f59e0b' },
-  preparing: { label: 'جاري التجهيز', color: '#3b82f6' },
-  ready:     { label: 'في الطريق',    color: '#8b5cf6' },
-  completed: { label: 'تم التوصيل',   color: '#10b981' },
-  rejected:  { label: 'مرفوض',        color: '#ef4444' },
-};
+function isInternalOrder(orderType?: string | null) {
+  return orderType === 'dine_in' || orderType === 'pickup';
+}
+
+function getStatusLabels(orderType?: string | null): Record<string, { label: string; color: string }> {
+  const internal = isInternalOrder(orderType);
+  return {
+    pending:   { label: 'قيد الانتظار', color: '#f59e0b' },
+    preparing: { label: 'جاري التجهيز', color: '#3b82f6' },
+    ready:     { label: internal ? 'جاهز' : 'في الطريق', color: '#8b5cf6' },
+    completed: { label: internal ? 'تم الاستلام' : 'تم التوصيل', color: '#10b981' },
+    rejected:  { label: 'مرفوض', color: '#ef4444' },
+  };
+}
 
 function fmtDate(iso: string) {
   const d     = new Date(iso);
@@ -250,10 +259,15 @@ export default function OrdersPage() {
     };
   }, [showMap]);
 
-  // ── Open map when "تأكيد وإرسال" pressed ────────────────────────────────
+  // ── Open map when "تأكيد وإرسال" pressed — skipped entirely for dine-in/pickup reorders ──
   const handleConfirmPress = () => {
-    const prevLat = reorderTarget?.client_lat ?? null;
-    const prevLng = reorderTarget?.client_lng ?? null;
+    if (!reorderTarget) return;
+    if (reorderTarget.order_type === 'dine_in' || reorderTarget.order_type === 'pickup') {
+      submitReorder();
+      return;
+    }
+    const prevLat = reorderTarget.client_lat ?? null;
+    const prevLng = reorderTarget.client_lng ?? null;
     if (prevLat && prevLng) {
       setClientLat(prevLat);
       setClientLng(prevLng);
@@ -291,17 +305,17 @@ export default function OrdersPage() {
     setGpsAccuracy(null);
   };
 
-  // ── Confirm location → submit order ──────────────────────────────────────
-  const confirmLocationAndSubmit = async () => {
-    stopGpsWatch();
-    if (locationMapInstanceRef.current) { locationMapInstanceRef.current.remove(); locationMapInstanceRef.current = null; }
-    pendingFlyRef.current = null;
-    setShowMap(false);
-    setGpsLocating(false);
-    setGpsAccuracy(null);
-
+  // ── Submit the new order (shared by both the delivery-map flow and the ─────
+  //    dine-in/pickup flow, which skips the map entirely) ────────────────────
+  const submitReorder = async () => {
     if (!reorderTarget) return;
     setSubmitting(true);
+
+    const orderType: 'delivery' | 'dine_in' | 'pickup' =
+      reorderTarget.order_type === 'dine_in' || reorderTarget.order_type === 'pickup'
+        ? reorderTarget.order_type
+        : 'delivery';
+    const isInternal = orderType === 'dine_in' || orderType === 'pickup';
 
     const name = localStorage.getItem('deliveryName') || reorderTarget.client_name;
     const nick = localStorage.getItem('deliveryNickname') || '';
@@ -315,10 +329,12 @@ export default function OrdersPage() {
     const { data: order, error } = await supabase.from('orders').insert([{
       client_name:      clientName,
       client_phone:     ph,
-      delivery_address: addr || null,
+      delivery_address: isInternal ? null : (addr || null),
       total_amount:     total,
       status:           'pending',
-      ...(lat && lng ? { client_lat: lat, client_lng: lng } : {}),
+      order_type:       orderType,
+      ...(orderType === 'dine_in' ? { table_number: reorderTarget.table_number ?? null } : {}),
+      ...(!isInternal && lat && lng ? { client_lat: lat, client_lng: lng } : {}),
     }]).select().single();
 
     if (error || !order) { alert('حدث خطأ، حاول مجدداً'); setSubmitting(false); return; }
@@ -343,6 +359,17 @@ export default function OrdersPage() {
     setSubmitting(false);
     setReorderTarget(null);
     router.push('/track');
+  };
+
+  // ── Confirm location (delivery flow only) → submit order ───────────────────
+  const confirmLocationAndSubmit = async () => {
+    stopGpsWatch();
+    if (locationMapInstanceRef.current) { locationMapInstanceRef.current.remove(); locationMapInstanceRef.current = null; }
+    pendingFlyRef.current = null;
+    setShowMap(false);
+    setGpsLocating(false);
+    setGpsAccuracy(null);
+    await submitReorder();
   };
 
   // ── Sorted orders ────────────────────────────────────────────────────────
@@ -426,7 +453,7 @@ export default function OrdersPage() {
           <div className="space-y-4">
             {sortedOrders.map((order, idx) => {
               const items = itemsMap[order.id] || [];
-              const st    = STATUS_LABELS[order.status] || { label: order.status, color: '#9ca3af' };
+              const st    = getStatusLabels(order.order_type)[order.status] || { label: order.status, color: '#9ca3af' };
               return (
                 <motion.div
                   key={order.id}
@@ -552,11 +579,18 @@ export default function OrdersPage() {
                   <span className="font-bold text-sm" style={{ color: '#ef4444' }}>{reorderTarget.client_phone}</span>
                   <span className="text-gray-400 dark:text-slate-500 text-xs">الهاتف</span>
                 </div>
-                {reorderTarget.delivery_address && (
+                {reorderTarget.order_type === 'dine_in' ? (
                   <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-700 pt-2">
-                    <span className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{reorderTarget.delivery_address}</span>
-                    <span className="text-gray-400 dark:text-slate-500 text-xs">العنوان</span>
+                    <span className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{reorderTarget.table_number ?? '—'}</span>
+                    <span className="text-gray-400 dark:text-slate-500 text-xs">رقم الطاولة</span>
                   </div>
+                ) : reorderTarget.order_type === 'pickup' ? null : (
+                  reorderTarget.delivery_address && (
+                    <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-700 pt-2">
+                      <span className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{reorderTarget.delivery_address}</span>
+                      <span className="text-gray-400 dark:text-slate-500 text-xs">العنوان</span>
+                    </div>
+                  )
                 )}
               </div>
             </div>
@@ -698,7 +732,7 @@ export default function OrdersPage() {
       <AnimatePresence>
       {detailOrder && (() => {
         const items = itemsMap[detailOrder.id] || [];
-        const st    = STATUS_LABELS[detailOrder.status] || { label: detailOrder.status, color: '#9ca3af' };
+        const st    = getStatusLabels(detailOrder.order_type)[detailOrder.status] || { label: detailOrder.status, color: '#9ca3af' };
         const dt    = fmtDateFull(detailOrder.created_at);
         return (
           <motion.div
@@ -746,9 +780,13 @@ export default function OrdersPage() {
                 <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-4 space-y-3" dir="rtl">
                   <p className="text-xs text-gray-400 dark:text-slate-500 font-bold">معلومات الطلب</p>
                   {[
-                    { label: 'الاسم',    value: detailOrder.client_name },
-                    { label: 'الهاتف',   value: detailOrder.client_phone },
-                    { label: 'العنوان',  value: detailOrder.delivery_address || '—' },
+                    { label: 'الاسم',  value: detailOrder.client_name },
+                    { label: 'الهاتف', value: detailOrder.client_phone },
+                    ...(detailOrder.order_type === 'dine_in'
+                      ? [{ label: 'رقم الطاولة', value: detailOrder.table_number != null ? String(detailOrder.table_number) : '—' }]
+                      : detailOrder.order_type === 'pickup'
+                        ? []
+                        : [{ label: 'العنوان', value: detailOrder.delivery_address || '—' }]),
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-2.5 first:border-0 first:pt-0">
                       <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">{row.value}</span>
