@@ -303,7 +303,24 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
           <div className="w-8 h-1 rounded-full mt-1 opacity-20" style={{ backgroundColor: brandColor }}/>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {/* سويتش مصغّر: توصيل ⇄ طلب داخلي */}
+          <button
+            type="button"
+            onClick={() => setOrderType(orderType === 'delivery' ? 'dine_in' : 'delivery')}
+            className="relative w-12 h-7 rounded-full flex items-center px-0.5 transition-colors flex-shrink-0"
+            style={{ backgroundColor: orderType === 'delivery' ? '#e5e7eb' : brandColor }}
+            aria-label="نوع الطلب: توصيل أو طلب داخلي"
+          >
+            <motion.span
+              layout
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              className="w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-[11px] leading-none"
+              style={{ marginRight: orderType === 'delivery' ? 0 : 'auto', marginLeft: orderType === 'delivery' ? 'auto' : 0 }}
+            >
+              {orderType === 'delivery' ? '🛵' : '🍽️'}
+            </motion.span>
+          </button>
           {location_url && (
             <motion.a
               href={location_url}
@@ -311,8 +328,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
               rel="noopener noreferrer"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center border border-gray-100 dark:border-slate-700 shadow-sm">
-              <MapPin size={18} className="text-red-500"/>
+              className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0">
+              <MapPin size={14} className="text-red-500"/>
             </motion.a>
           )}
           {whatsapp_number && (
@@ -322,8 +339,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
               rel="noopener noreferrer"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center border border-gray-100 dark:border-slate-700 shadow-sm">
-              <MessageCircle size={18} className="text-green-500"/>
+              className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0">
+              <MessageCircle size={14} className="text-green-500"/>
             </motion.a>
           )}
           {brandLogo ? (
@@ -366,30 +383,6 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
           )}
         </div>
       )}
-
-      {/* ══ سويتش نوع الطلب: توصيل / داخلي / سفري ══ */}
-      <div className="px-4 pt-3">
-        <div className="grid grid-cols-3 gap-2">
-          {([
-            { key: 'delivery' as const, label: 'توصيل',       emoji: '🛵' },
-            { key: 'dine_in'  as const, label: 'طلب داخلي',   emoji: '🍽️' },
-            { key: 'pickup'   as const, label: 'استلام سفري', emoji: '🛍️' },
-          ]).map(opt => (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => setOrderType(opt.key)}
-              className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl text-xs font-bold transition-all active:scale-95 border-2"
-              style={orderType === opt.key
-                ? { backgroundColor: brandColor, borderColor: brandColor, color: textOnBrand }
-                : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}
-            >
-              <span className="text-lg leading-none">{opt.emoji}</span>
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* ══ CATEGORY PILLS (Sticky at top-0) ══ */}
       <div className="sticky top-0 z-40 bg-gray-50/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-800">
