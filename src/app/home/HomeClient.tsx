@@ -315,11 +315,9 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
             <motion.span
               layout
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              className="w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-[11px] leading-none"
+              className="w-6 h-6 rounded-full bg-white shadow flex-shrink-0"
               style={{ marginRight: orderType === 'delivery' ? 0 : 'auto', marginLeft: orderType === 'delivery' ? 'auto' : 0 }}
-            >
-              {orderType === 'delivery' ? '🛵' : '🍽️'}
-            </motion.span>
+            />
           </button>
           {location_url && (
             <motion.a

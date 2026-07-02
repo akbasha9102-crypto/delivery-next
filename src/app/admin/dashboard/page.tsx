@@ -36,9 +36,9 @@ function getNextStatus(order: Order): Order['status'] | null {
 }
 
 function orderTypeLabel(order: Order): string {
-  if (order.order_type === 'dine_in')  return `طاولة رقم ${order.table_number ?? '—'} 🍽️`;
-  if (order.order_type === 'pickup')   return 'استلام سفري 🛍️';
-  return 'طلب توصيل 🛵';
+  if (order.order_type === 'dine_in')  return `طاولة رقم ${order.table_number ?? '—'}`;
+  if (order.order_type === 'pickup')   return 'استلام سفري';
+  return 'طلب توصيل';
 }
 
 const EXPIRE_SECS = 5 * 60; // 5 دقائق
@@ -613,8 +613,8 @@ export default function DashboardPage() {
       {/* تبويب: توصيل خارجي / داخلي (صالة + سفري) */}
       <div className="grid grid-cols-2 gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
         {([
-          { key: 'delivery' as const, label: 'توصيل خارجي 🛵' },
-          { key: 'internal' as const, label: 'داخلي 🍽️🛍️' },
+          { key: 'delivery' as const, label: 'توصيل خارجي' },
+          { key: 'internal' as const, label: 'داخلي' },
         ]).map(s => (
           <button key={s.key} onClick={() => { setScope(s.key); setFilter('pending'); }}
             className="py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2"
@@ -844,7 +844,7 @@ export default function DashboardPage() {
                           )}
                           {order.order_type === 'dine_in' && (
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 text-sm">🍽️ رقم الطاولة:</span>
+                              <span className="text-gray-400 text-sm">رقم الطاولة:</span>
                               <span className="font-bold text-gray-700 dark:text-slate-200 text-sm">{order.table_number ?? '—'}</span>
                             </div>
                           )}

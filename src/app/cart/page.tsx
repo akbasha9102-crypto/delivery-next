@@ -724,20 +724,19 @@ const proceedFromReview = () => {
             {/* نوع الطلب: توصيل / طلب داخلي / استلام سفري */}
             <div className="grid grid-cols-3 gap-2">
               {([
-                { key: 'delivery' as const, label: 'توصيل',       emoji: '🛵' },
-                { key: 'dine_in'  as const, label: 'طلب داخلي',   emoji: '🍽️' },
-                { key: 'pickup'   as const, label: 'استلام سفري', emoji: '🛍️' },
+                { key: 'delivery' as const, label: 'توصيل' },
+                { key: 'dine_in'  as const, label: 'طلب داخلي' },
+                { key: 'pickup'   as const, label: 'استلام سفري' },
               ]).map(opt => (
                 <button
                   key={opt.key}
                   type="button"
                   onClick={() => setOrderType(opt.key)}
-                  className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 border-2"
+                  className="flex items-center justify-center py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 border-2"
                   style={orderType === opt.key
                     ? { backgroundColor: brandColor, borderColor: brandColor, color: textOnBrand }
                     : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}
                 >
-                  <span className="text-lg leading-none">{opt.emoji}</span>
                   {opt.label}
                 </button>
               ))}
@@ -1233,7 +1232,7 @@ const proceedFromReview = () => {
                 <X size={17}/>
               </button>
               <p className="font-bold" style={{ color: '#ef4444' }}>
-                {orderType === 'delivery' ? 'موقعك:' : orderType === 'dine_in' ? 'طلب داخلي 🍽️' : 'استلام سفري 🛍️'}
+                {orderType === 'delivery' ? 'موقعك:' : orderType === 'dine_in' ? 'طلب داخلي' : 'استلام سفري'}
               </p>
               <div className="w-9"/>
             </div>
@@ -1299,7 +1298,6 @@ const proceedFromReview = () => {
                       </div>
                     )}
                   </div>
-                  <span className="text-lg mt-0.5 flex-shrink-0">🍽️</span>
                 </div>
               )}
 

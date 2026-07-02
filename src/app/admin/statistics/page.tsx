@@ -256,7 +256,7 @@ export default function StatisticsPage() {
                   <span className="font-bold text-sm" style={{ color: '#22c55e' }}>{deliveryRevenue.toLocaleString()} د.ع</span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs" style={{ color: s.sub }}>{deliveryOrders.length} طلب</span>
-                    <span className="font-bold text-sm" style={{ color: s.text }}>🛵 إيراد التوصيل</span>
+                    <span className="font-bold text-sm" style={{ color: s.text }}>إيراد التوصيل</span>
                   </div>
                 </div>
                 <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: s.muted }}>
@@ -272,7 +272,7 @@ export default function StatisticsPage() {
                   <span className="font-bold text-sm" style={{ color: '#f59e0b' }}>{internalRevenue.toLocaleString()} د.ع</span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs" style={{ color: s.sub }}>{internalOrders.length} طلب</span>
-                    <span className="font-bold text-sm" style={{ color: s.text }}>🍽️ إيراد الطلب الداخلي</span>
+                    <span className="font-bold text-sm" style={{ color: s.text }}>إيراد الطلب الداخلي</span>
                   </div>
                 </div>
                 <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: s.muted }}>

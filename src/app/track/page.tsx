@@ -16,8 +16,8 @@ function getSteps(orderType?: string | null) {
   const internal   = isInternalOrder(orderType);
   const readyIcon  = orderType === 'dine_in' ? '🍽️' : orderType === 'pickup' ? '🛍️' : '🏍️';
   const readyLabel = internal ? 'جاهز' : 'في الطريق';
-  const readyDesc  = orderType === 'dine_in' ? 'طلبك جاهز على طاولتك 🍽️'
-                    : orderType === 'pickup' ? 'طلبك جاهز، تفضل لاستلامه 🛍️'
+  const readyDesc  = orderType === 'dine_in' ? 'طلبك جاهز على طاولتك'
+                    : orderType === 'pickup' ? 'طلبك جاهز، تفضل لاستلامه'
                     : 'طلبك في الطريق إليك';
   return [
     { key: 'pending',   label: 'انتظار',  icon: '⏳', desc: 'تم إرسال طلبك، بانتظار القبول' },
@@ -260,7 +260,7 @@ export default function TrackPage() {
     const STATUS_LABELS: Record<string, { title: string; body: string }> = {
       preparing: { title: '🍳 طلبك قيد التجهيز', body: 'يعمل الطاقم الآن على تجهيز طلبك' },
       ready: internal
-        ? { title: order.order_type === 'dine_in' ? '🍽️ طلبك جاهز!' : '🛍️ طلبك جاهز!',
+        ? { title: 'طلبك جاهز!',
             body: order.order_type === 'dine_in' ? 'طلبك جاهز على طاولتك' : 'طلبك جاهز، تفضل لاستلامه' }
         : { title: '🏍️ طلبك في الطريق!', body: 'السائق في طريقه إليك' },
       completed: internal
