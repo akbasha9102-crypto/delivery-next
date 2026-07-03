@@ -603,7 +603,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
         <button onClick={onClose} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
           <X size={18} className="text-gray-600 dark:text-slate-300" />
         </button>
-        <p className="font-bold text-gray-900 dark:text-white">طلب زبون بدون جوال</p>
+        <p className="font-bold text-gray-900 dark:text-white">طلب الزبون فقط</p>
         <div className="w-9" />
       </header>
 
