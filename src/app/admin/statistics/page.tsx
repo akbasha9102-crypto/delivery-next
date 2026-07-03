@@ -3,12 +3,30 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
+import { useRestaurant } from '@/context/RestaurantContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; order_type?: string | null; items: OrderItem[] };
 type Category = { id: string; name: string };
+
+type StockMovementRow = {
+  id: string;
+  inventory_item_id: string;
+  quantity_changed: number;
+  reference_id: string | null;
+  created_at: string;
+  inventory_items: { name: string; unit: string } | null;
+};
+
+type IngredientAgg = {
+  id: string;
+  name: string;
+  unit: string;
+  total: number;
+  byOrder: Map<string, { qty: number; time: string }>;
+};
 
 function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -25,6 +43,7 @@ function quickRange(range: 'today' | 'week' | 'month') {
 export default function StatisticsPage() {
   const router = useRouter();
   const { dark } = useDarkMode();
+  const { restaurantId } = useRestaurant();
   const today = localDate();
 
   const [orders,     setOrders]     = useState<Order[]>([]);
@@ -38,6 +57,11 @@ export default function StatisticsPage() {
   const [fromDate,   setFromDate]   = useState(today);
   const [toDate,     setToDate]     = useState(today);
   const [dayView,    setDayView]    = useState(today);
+
+  const [invMovements, setInvMovements] = useState<StockMovementRow[]>([]);
+  const [invOrderNames, setInvOrderNames] = useState<Map<string, string>>(new Map());
+  const [invLoading,  setInvLoading]  = useState(true);
+  const [expandedIng, setExpandedIng] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -76,6 +100,55 @@ export default function StatisticsPage() {
   }, [fromDate, toDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const fetchInventoryStats = useCallback(async () => {
+    if (!restaurantId) { setInvLoading(false); return; }
+    setInvLoading(true);
+    const start = new Date(fromDate + 'T00:00:00').toISOString();
+    const end   = new Date(toDate   + 'T23:59:59').toISOString();
+
+    const { data } = await supabase
+      .from('stock_movements')
+      .select('id, inventory_item_id, quantity_changed, reference_id, created_at, inventory_items(name, unit)')
+      .eq('restaurant_id', restaurantId)
+      .eq('movement_type', 'OUT_ORDER')
+      .gte('created_at', start).lte('created_at', end)
+      .order('created_at', { ascending: false })
+      .limit(2000);
+
+    const rows = (data || []) as unknown as StockMovementRow[];
+    setInvMovements(rows);
+
+    const orderIds = [...new Set(rows.map(r => r.reference_id).filter(Boolean))] as string[];
+    if (orderIds.length) {
+      const { data: ords } = await supabase.from('orders').select('id, client_name').in('id', orderIds);
+      const map = new Map<string, string>();
+      (ords || []).forEach(o => map.set(o.id, o.client_name));
+      setInvOrderNames(map);
+    } else {
+      setInvOrderNames(new Map());
+    }
+    setInvLoading(false);
+  }, [restaurantId, fromDate, toDate]);
+
+  useEffect(() => { fetchInventoryStats(); }, [fetchInventoryStats]);
+
+  const ingredientStats = useMemo(() => {
+    const map = new Map<string, IngredientAgg>();
+    invMovements.forEach(r => {
+      const invItem = r.inventory_items;
+      if (!invItem) return;
+      const qty = Math.abs(r.quantity_changed);
+      const e = map.get(r.inventory_item_id) || { id: r.inventory_item_id, name: invItem.name, unit: invItem.unit, total: 0, byOrder: new Map<string, { qty: number; time: string }>() };
+      e.total += qty;
+      if (r.reference_id) {
+        const prev = e.byOrder.get(r.reference_id);
+        e.byOrder.set(r.reference_id, { qty: (prev?.qty || 0) + qty, time: prev?.time || r.created_at });
+      }
+      map.set(r.inventory_item_id, e);
+    });
+    return [...map.values()].sort((a, b) => b.total - a.total);
+  }, [invMovements]);
 
   const handleQuick = (r: 'today' | 'week' | 'month') => {
     const { from, to } = quickRange(r);
@@ -311,6 +384,59 @@ export default function StatisticsPage() {
             </div>
           </div>
         )}
+
+        {/* إحصائيات المخزون */}
+        <div className="mx-4 mb-3 rounded-2xl border p-4" style={{ backgroundColor: s.surface, borderColor: s.border }}>
+          <div className="flex items-center gap-2 mb-4 justify-end">
+            <h3 className="font-bold text-right" style={{ color: s.text }}>إحصائيات المخزون</h3>
+            <Package size={18} style={{ color: '#f97316' }} />
+          </div>
+
+          {invLoading ? (
+            <div className="flex justify-center py-6"><div className="w-7 h-7 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
+          ) : ingredientStats.length === 0 ? (
+            <p className="text-center text-sm py-4" style={{ color: s.sub }}>لا يوجد استهلاك مخزون في هذه الفترة</p>
+          ) : (
+            <div className="space-y-2">
+              {ingredientStats.map(ing => {
+                const isOpen = expandedIng === ing.id;
+                const orderEntries = [...ing.byOrder.entries()].sort((a, b) => b[1].qty - a[1].qty);
+                return (
+                  <div key={ing.id} className="rounded-xl border overflow-hidden" style={{ borderColor: s.border }}>
+                    <button onClick={() => setExpandedIng(isOpen ? null : ing.id)}
+                      className="w-full flex items-center justify-between p-3 active:scale-[0.99] transition-all">
+                      <span className="font-bold text-sm" style={{ color: '#f97316' }}>
+                        {ing.total.toLocaleString(undefined, { maximumFractionDigits: 3 })} {ing.unit}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs" style={{ color: s.sub }}>{ing.byOrder.size} طلب</span>
+                        <span className="font-bold text-sm" style={{ color: s.text }}>{ing.name}</span>
+                        <ChevronDown size={16} style={{ color: s.sub, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="border-t px-3 py-2 space-y-1.5" style={{ borderColor: s.border, backgroundColor: s.muted }}>
+                        {orderEntries.map(([orderId, info]) => (
+                          <div key={orderId} className="flex items-center justify-between text-xs">
+                            <span className="font-bold" style={{ color: '#f97316' }}>
+                              {info.qty.toLocaleString(undefined, { maximumFractionDigits: 3 })} {ing.unit}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span style={{ color: s.sub }}>
+                                {new Date(info.time).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
+                              </span>
+                              <span style={{ color: s.text }}>{invOrderNames.get(orderId) || 'طلب محذوف'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Search */}
         <div className="px-4 mb-2">

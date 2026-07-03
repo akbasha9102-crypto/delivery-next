@@ -32,7 +32,7 @@ type StockMovement = {
   stock_after: number;
   notes: string | null;
   created_at: string;
-  inventory_items?: { name: string; unit: string } | null;
+  inventory_items?: { name: string; unit: string; category: string } | null;
 };
 
 const UNITS = ['قطعة', 'غرام', 'كيلو', 'لتر', 'علبة', 'كيس', 'صندوق'];
@@ -65,6 +65,9 @@ export default function InventoryPage() {
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState<string | null>(null);
   const [showLowOnly, setShowLowOnly] = useState(false);
+  const [movCatFilter, setMovCatFilter] = useState<string | null>(null);
+  const [showCustomCat, setShowCustomCat] = useState(false);
+  const [customCat, setCustomCat] = useState('');
 
   // فورم إضافة/تعديل مادة
   const [editItem, setEditItem] = useState<InventoryItem | null>(null);
@@ -101,7 +104,7 @@ export default function InventoryPage() {
     if (!restaurantId) return;
     const { data } = await supabase
       .from('stock_movements')
-      .select('*, inventory_items(name, unit)')
+      .select('*, inventory_items(name, unit, category)')
       .eq('restaurant_id', restaurantId)
       .order('created_at', { ascending: false })
       .limit(100);
@@ -134,11 +137,15 @@ export default function InventoryPage() {
   const openAdd = () => {
     setEditItem(null);
     setForm(emptyForm);
+    setShowCustomCat(false);
+    setCustomCat('');
     setShowForm(true);
   };
 
   const openEdit = (item: InventoryItem) => {
     setEditItem(item);
+    setShowCustomCat(false);
+    setCustomCat('');
     setForm({
       name: item.name,
       category: item.category,
@@ -236,6 +243,11 @@ export default function InventoryPage() {
     if (search && !i.name.includes(search) && !i.supplier?.includes(search)) return false;
     return true;
   });
+
+  const movementCategories = [...new Set(movements.map(m => m.inventory_items?.category).filter((c): c is string => !!c))].sort();
+  const filteredMovements = movements.filter(m => !movCatFilter || m.inventory_items?.category === movCatFilter);
+
+  const formCategories = [...new Set([...CATEGORIES, ...categories, ...(form.category ? [form.category] : [])])];
 
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
@@ -377,14 +389,28 @@ export default function InventoryPage() {
 
       {tab === 'movements' && (
         <div className="px-4 pb-4">
-          {movements.length === 0 ? (
+          {movements.length > 0 && movementCategories.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-none">
+              <button onClick={() => setMovCatFilter(null)}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!movCatFilter ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                الكل
+              </button>
+              {movementCategories.map(c => (
+                <button key={c} onClick={() => setMovCatFilter(movCatFilter === c ? null : c)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${movCatFilter === c ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
+          {filteredMovements.length === 0 ? (
             <div className="text-center mt-20">
               <p className="text-4xl mb-3">📊</p>
-              <p className="text-gray-400 dark:text-slate-500">لا توجد حركات بعد</p>
+              <p className="text-gray-400 dark:text-slate-500">{movements.length === 0 ? 'لا توجد حركات بعد' : 'لا توجد حركات في هذا القسم'}</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {movements.map(m => {
+              {filteredMovements.map(m => {
                 const cfg = MOVEMENT_LABELS[m.movement_type];
                 const Icon = cfg.icon;
                 const isIn = m.movement_type === 'IN' || m.movement_type === 'ADJUSTMENT';
@@ -439,14 +465,33 @@ export default function InventoryPage() {
               <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="اسم المادة" dir="rtl" className={input} />
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">الفئة</p>
-              <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
-                {CATEGORIES.map(c => (
+              <div className="flex gap-1.5 flex-wrap mb-2 justify-end">
+                {formCategories.map(c => (
                   <button key={c} onClick={() => setForm(p => ({ ...p, category: c }))}
                     className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${form.category === c ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                     {c}
                   </button>
                 ))}
+                <button onClick={() => setShowCustomCat(v => !v)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${showCustomCat ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                  + قسم جديد
+                </button>
               </div>
+              {showCustomCat && (
+                <div className="flex gap-1.5 mb-3">
+                  <input value={customCat} onChange={e => setCustomCat(e.target.value)} placeholder="اسم القسم الجديد" dir="rtl"
+                    className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]" />
+                  <button onClick={() => {
+                    const name = customCat.trim();
+                    if (!name) return;
+                    setForm(p => ({ ...p, category: name }));
+                    setCustomCat('');
+                    setShowCustomCat(false);
+                  }} className="bg-[#f97316] text-white font-bold px-4 py-2.5 rounded-xl active:scale-95 transition-all text-sm">
+                    تم
+                  </button>
+                </div>
+              )}
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">وحدة القياس</p>
               <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
