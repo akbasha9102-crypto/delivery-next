@@ -461,6 +461,8 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
   const [submitting,   setSubmitting] = useState(false);
   const [extrasItem,   setExtrasItem] = useState<MenuItem | null>(null);
   const [pickedExtras, setPickedExtras] = useState<Set<string>>(new Set());
+  const [showReview,   setShowReview] = useState(false);
+  const [itemNotes,    setItemNotes]  = useState<Record<string, string>>({});
 
   useEffect(() => {
     (async () => {
@@ -520,12 +522,18 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
     setSubmitting(true);
     const name = customerName.trim() || 'زبون بدون جوال';
 
+    const noteParts: string[] = [];
+    for (const e of cart) {
+      const n = (itemNotes[e.item.id] || '').trim();
+      if (n) noteParts.push(`${e.item.name}: ${n}`);
+    }
+
     const { data: order, error } = await supabase.from('orders').insert([{
       restaurant_id:     restaurantId,
       client_name:       name,
       client_phone:      '0000000000',
       delivery_address:  null,
-      client_note:       null,
+      client_note:       noteParts.length > 0 ? noteParts.join('\n') : null,
       total_amount:      total,
       status:             'preparing',
       order_type:          'pickup',
@@ -652,15 +660,75 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
             className="w-full rounded-2xl px-4 py-2.5 text-right border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 outline-none focus:ring-2 focus:ring-[#f97316] text-gray-900 dark:text-white"
           />
           <button
-            onClick={submitOrder}
-            disabled={submitting}
-            className="w-full py-3.5 rounded-2xl bg-[#f97316] text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
-            {submitting ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <><Check size={18} /> تأكيد الطلب — {total.toLocaleString()} د.ع</>
-            )}
+            onClick={() => setShowReview(true)}
+            className="w-full py-3.5 rounded-2xl bg-[#f97316] text-white font-bold text-base active:scale-95 transition-all flex items-center justify-center gap-2">
+            التالي — {total.toLocaleString()} د.ع
           </button>
+        </div>
+      )}
+
+      {/* مودال مراجعة الطلب قبل الإرسال */}
+      {showReview && (
+        <div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/50" onClick={() => setShowReview(false)}>
+          <div
+            className="w-full max-w-lg rounded-t-3xl bg-white dark:bg-slate-900 max-h-[88vh] flex flex-col"
+            onClick={e => e.stopPropagation()}>
+
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+              <button onClick={() => setShowReview(false)} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
+                <X size={18} className="text-gray-600 dark:text-slate-300" />
+              </button>
+              <div className="text-center">
+                <p className="font-bold text-gray-900 dark:text-white">مراجعة الطلب</p>
+                <p className="text-[11px] text-gray-400 dark:text-slate-500">{cart.reduce((s, e) => s + e.qty, 0)} وجبة</p>
+              </div>
+              <div className="w-9" />
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              {cart.map(e => (
+                <div key={e.item.id} className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm" style={{ color: '#f97316' }}>
+                      {(e.unitPrice * e.qty).toLocaleString()} د.ع
+                    </span>
+                    <span className="font-bold text-sm text-gray-900 dark:text-white text-right">
+                      {e.item.name} <span className="text-gray-400 font-normal">×{e.qty}</span>
+                    </span>
+                  </div>
+                  {e.extraNames.length > 0 && (
+                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mt-1.5">
+                      ✨ {e.extraNames.join('، ')}
+                    </p>
+                  )}
+                  <input
+                    value={itemNotes[e.item.id] || ''}
+                    onChange={ev => setItemNotes(prev => ({ ...prev, [e.item.id]: ev.target.value }))}
+                    placeholder="ملاحظة لهذه الوجبة (اختياري)"
+                    dir="rtl"
+                    className="w-full mt-2.5 rounded-xl px-3 py-2 text-right text-sm border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 outline-none focus:ring-2 focus:ring-[#f97316] text-gray-900 dark:text-white"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex-shrink-0 px-5 pt-3 pb-6 border-t border-gray-100 dark:border-slate-700 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-gray-500 dark:text-slate-400 text-sm">السعر النهائي</span>
+                <span className="font-black text-xl" style={{ color: '#f97316' }}>{total.toLocaleString()} <span className="text-sm font-normal">د.ع</span></span>
+              </div>
+              <button
+                onClick={submitOrder}
+                disabled={submitting}
+                className="w-full py-3.5 rounded-2xl bg-[#f97316] text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
+                {submitting ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <><Check size={18} /> إرسال</>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
