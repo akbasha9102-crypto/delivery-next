@@ -310,9 +310,9 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
           <ChevronDown size={17} className="text-gray-400" />
         </button>
 
-        {/* الموقع فوق والواتس تحته */}
+        {/* الموقع والواتس جنب بعض */}
         {(location_url || whatsapp_number) && (
-          <div className="flex flex-col items-center gap-1 flex-shrink-0">
+          <div className="flex flex-row items-center gap-1.5 flex-shrink-0">
             {location_url && (
               <motion.a
                 href={location_url}
@@ -320,8 +320,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 rel="noopener noreferrer"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm">
-                <MapPin size={15} className="text-red-500"/>
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm">
+                <MapPin size={19} className="text-red-500"/>
               </motion.a>
             )}
             {whatsapp_number && (
@@ -331,8 +331,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 rel="noopener noreferrer"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm">
-                <MessageCircle size={15} className="text-green-500"/>
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm">
+                <MessageCircle size={19} className="text-green-500"/>
               </motion.a>
             )}
           </div>
