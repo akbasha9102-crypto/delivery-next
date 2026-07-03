@@ -8,7 +8,7 @@ const CART_VERSION = 1;
 const CART_KEY = `cart_v${CART_VERSION}`;
 const ORDER_TYPE_KEY = 'order_type_v1';
 
-export type OrderType = 'delivery' | 'dine_in' | 'pickup';
+export type OrderType = 'delivery' | 'pickup';
 
 type CartItem = {
   id: string;
@@ -73,7 +73,7 @@ function writeCart(items: CartItem[]) {
 function readOrderType(): OrderType {
   if (typeof window === 'undefined') return 'delivery';
   const v = localStorage.getItem(ORDER_TYPE_KEY);
-  return v === 'dine_in' || v === 'pickup' || v === 'delivery' ? v : 'delivery';
+  return v === 'pickup' || v === 'delivery' ? v : 'delivery';
 }
 
 // ── Provider ────────────────────────────────────────────────────────────────

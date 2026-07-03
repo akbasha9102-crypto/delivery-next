@@ -10,7 +10,7 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'dine_in' | 'pickup' | 'local' | null; table_number: number | null };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'pickup' | 'local' | null };
 
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز', color: '#f59e0b', dot: 'bg-yellow-400',  btnColor: '#3b82f6' },
@@ -21,10 +21,10 @@ const STATUS = {
   rejected:  { label: 'مرفوضة',      next: null,                 nextLabel: '',              color: '#ef4444', dot: 'bg-red-400',     btnColor: '#ef4444' },
 } as const;
 
-// طلبات "داخلي" (طاولة/سفري) ليس لها سائق إطلاقاً — تمشي بنفس مسار التوصيل
+// طلبات "استلام الطلب" ليس لها سائق إطلاقاً — تمشي بنفس مسار التوصيل
 // لكن بدون مرحلة "انتظار السائق": pending → preparing → ready(جاهز) → completed
 function isInternalOrder(order: Pick<Order, 'order_type'>): boolean {
-  return order.order_type === 'dine_in' || order.order_type === 'pickup';
+  return order.order_type === 'pickup';
 }
 
 function getNextStatus(order: Order): Order['status'] | null {
@@ -36,9 +36,8 @@ function getNextStatus(order: Order): Order['status'] | null {
 }
 
 function orderTypeLabel(order: Order): string {
-  if (order.order_type === 'dine_in')  return `طاولة رقم ${order.table_number ?? '—'}`;
-  if (order.order_type === 'pickup')   return 'استلام سفري';
-  return 'طلب توصيل';
+  if (order.order_type === 'pickup') return 'استلام الطلب';
+  return 'توصيل الطلب';
 }
 
 const EXPIRE_SECS = 5 * 60; // 5 دقائق
@@ -614,11 +613,11 @@ export default function DashboardPage() {
         <div className="w-10" />
       </header>
 
-      {/* تبويب: توصيل خارجي / داخلي (صالة + سفري) */}
+      {/* تبويب: توصيل الطلب / استلام الطلب */}
       <div className="grid grid-cols-2 gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
         {([
-          { key: 'delivery' as const, label: 'توصيل خارجي' },
-          { key: 'internal' as const, label: 'داخلي' },
+          { key: 'delivery' as const, label: 'توصيل الطلب' },
+          { key: 'internal' as const, label: 'استلام الطلب' },
         ]).map(s => (
           <button key={s.key} onClick={() => { setScope(s.key); setFilter('pending'); }}
             className="relative py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2"
@@ -849,12 +848,6 @@ export default function DashboardPage() {
                                 <span className="text-sm font-semibold">العنوان:</span>
                               </button>
                               <span className="text-gray-600 dark:text-slate-300 text-sm">{order.delivery_address}</span>
-                            </div>
-                          )}
-                          {order.order_type === 'dine_in' && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-400 text-sm">رقم الطاولة:</span>
-                              <span className="font-bold text-gray-700 dark:text-slate-200 text-sm">{order.table_number ?? '—'}</span>
                             </div>
                           )}
                         </div>

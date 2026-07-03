@@ -25,12 +25,11 @@ type Order = {
   delivery_address: string | null; total_amount: number;
   status: string; created_at: string;
   client_lat?: number | null; client_lng?: number | null;
-  order_type: 'delivery' | 'dine_in' | 'pickup' | null;
-  table_number: number | null;
+  order_type: 'delivery' | 'pickup' | null;
 };
 
 function isInternalOrder(orderType?: string | null) {
-  return orderType === 'dine_in' || orderType === 'pickup';
+  return orderType === 'pickup';
 }
 
 function getStatusLabels(orderType?: string | null): Record<string, { label: string; color: string }> {
@@ -259,10 +258,10 @@ export default function OrdersPage() {
     };
   }, [showMap]);
 
-  // ── Open map when "تأكيد وإرسال" pressed — skipped entirely for dine-in/pickup reorders ──
+  // ── Open map when "تأكيد وإرسال" pressed — skipped entirely for pickup reorders ──
   const handleConfirmPress = () => {
     if (!reorderTarget) return;
-    if (reorderTarget.order_type === 'dine_in' || reorderTarget.order_type === 'pickup') {
+    if (reorderTarget.order_type === 'pickup') {
       submitReorder();
       return;
     }
@@ -306,16 +305,14 @@ export default function OrdersPage() {
   };
 
   // ── Submit the new order (shared by both the delivery-map flow and the ─────
-  //    dine-in/pickup flow, which skips the map entirely) ────────────────────
+  //    pickup flow, which skips the map entirely) ─────────────────────────────
   const submitReorder = async () => {
     if (!reorderTarget) return;
     setSubmitting(true);
 
-    const orderType: 'delivery' | 'dine_in' | 'pickup' =
-      reorderTarget.order_type === 'dine_in' || reorderTarget.order_type === 'pickup'
-        ? reorderTarget.order_type
-        : 'delivery';
-    const isInternal = orderType === 'dine_in' || orderType === 'pickup';
+    const orderType: 'delivery' | 'pickup' =
+      reorderTarget.order_type === 'pickup' ? 'pickup' : 'delivery';
+    const isInternal = orderType === 'pickup';
 
     const name = localStorage.getItem('deliveryName') || reorderTarget.client_name;
     const nick = localStorage.getItem('deliveryNickname') || '';
@@ -333,7 +330,6 @@ export default function OrdersPage() {
       total_amount:     total,
       status:           'pending',
       order_type:       orderType,
-      ...(orderType === 'dine_in' ? { table_number: reorderTarget.table_number ?? null } : {}),
       ...(!isInternal && lat && lng ? { client_lat: lat, client_lng: lng } : {}),
     }]).select().single();
 
@@ -579,12 +575,7 @@ export default function OrdersPage() {
                   <span className="font-bold text-sm" style={{ color: '#ef4444' }}>{reorderTarget.client_phone}</span>
                   <span className="text-gray-400 dark:text-slate-500 text-xs">الهاتف</span>
                 </div>
-                {reorderTarget.order_type === 'dine_in' ? (
-                  <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-700 pt-2">
-                    <span className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{reorderTarget.table_number ?? '—'}</span>
-                    <span className="text-gray-400 dark:text-slate-500 text-xs">رقم الطاولة</span>
-                  </div>
-                ) : reorderTarget.order_type === 'pickup' ? null : (
+                {reorderTarget.order_type === 'pickup' ? null : (
                   reorderTarget.delivery_address && (
                     <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-700 pt-2">
                       <span className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{reorderTarget.delivery_address}</span>
@@ -782,11 +773,9 @@ export default function OrdersPage() {
                   {[
                     { label: 'الاسم',  value: detailOrder.client_name },
                     { label: 'الهاتف', value: detailOrder.client_phone },
-                    ...(detailOrder.order_type === 'dine_in'
-                      ? [{ label: 'رقم الطاولة', value: detailOrder.table_number != null ? String(detailOrder.table_number) : '—' }]
-                      : detailOrder.order_type === 'pickup'
-                        ? []
-                        : [{ label: 'العنوان', value: detailOrder.delivery_address || '—' }]),
+                    ...(detailOrder.order_type === 'pickup'
+                      ? []
+                      : [{ label: 'العنوان', value: detailOrder.delivery_address || '—' }]),
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-2.5 first:border-0 first:pt-0">
                       <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">{row.value}</span>

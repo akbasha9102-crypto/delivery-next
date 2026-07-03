@@ -306,7 +306,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
             className="flex items-center gap-1.5 pl-2.5 pr-3.5 h-11 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0"
             aria-label="نوع الطلب: توصيل أو استلام"
           >
-            <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{orderType === 'pickup' ? 'استلام' : 'توصيل'}</span>
+            <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{orderType === 'pickup' ? 'استلام الطلب' : 'توصيل الطلب'}</span>
             <ChevronDown size={17} className="text-gray-400" />
           </button>
 
@@ -1021,8 +1021,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
               </div>
               <div className="px-3 pb-4 flex flex-col gap-1.5">
                 {([
-                  { key: 'delivery' as const, label: 'توصيل', hint: '(يوصلك الطلب لباب البيت)' },
-                  { key: 'pickup'   as const, label: 'استلام', hint: '(تستلم طلبك من المطعم)' },
+                  { key: 'delivery' as const, label: 'توصيل الطلب', hint: '(يوصلك الطلب لباب البيت)' },
+                  { key: 'pickup'   as const, label: 'استلام الطلب', hint: '(تستلم طلبك من المطعم)' },
                 ]).map(o => (
                   <button
                     key={o.key}

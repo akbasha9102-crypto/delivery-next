@@ -115,7 +115,7 @@ export default function StatisticsPage() {
   const totalRevenue   = filtered.reduce((s, o) => s + o.total_amount, 0);
   const avgOrder       = filtered.length ? Math.round(totalRevenue / filtered.length) : 0;
   const localOrders     = filtered.filter(o => o.order_type === 'local');
-  const internalOrders  = filtered.filter(o => o.order_type === 'dine_in' || o.order_type === 'pickup');
+  const internalOrders  = filtered.filter(o => o.order_type === 'pickup');
   const deliveryOrders  = filtered.filter(o => !o.order_type || o.order_type === 'delivery');
   const localRevenue    = localOrders.reduce((s, o) => s + o.total_amount, 0);
   const internalRevenue = internalOrders.reduce((s, o) => s + o.total_amount, 0);

@@ -100,10 +100,8 @@ export default function CartPage() {
   const [note,            setNote]            = useState('');
   const [addressError,    setAddressError]    = useState(false);
 
-  // نوع الطلب: توصيل / طلب داخلي (صالة) / استلام سفري — مصدره الموحّد CartContext
+  // نوع الطلب: توصيل الطلب / استلام الطلب — مصدره الموحّد CartContext
   // (يُختار مبدئياً من صفحة المنيو، وقابل للتغيير هنا أيضاً بنفس المبدّل)
-  const [tableNumber,      setTableNumber]      = useState('');
-  const [tableNumberError, setTableNumberError] = useState(false);
 
   // extras selection per item in review
   const [itemSelectedExtras, setItemSelectedExtras] = useState<Record<string, Set<string>>>({});
@@ -608,13 +606,6 @@ const proceedFromReview = () => {
         openMap();
         return;
       }
-    } else if (orderType === 'dine_in') {
-      if (!tableNumber.trim()) {
-        setTableNumberError(true);
-        setTimeout(() => setTableNumberError(false), 600);
-        document.getElementById('table-number-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
-      }
     }
 
     setShowConfirmModal(true);
@@ -632,7 +623,6 @@ const proceedFromReview = () => {
       client_note: note || null,
       total_amount: grandTotal, status: 'pending',
       order_type: orderType,
-      ...(orderType === 'dine_in' && tableNumber.trim() ? { table_number: Number(tableNumber.trim()) } : {}),
       ...(session?.user?.id ? { user_id: session.user.id } : {}),
       ...(clientLat !== null && clientLng !== null && orderType === 'delivery' ? { client_lat: clientLat, client_lng: clientLng } : {}),
       ...(restaurantId ? { restaurant_id: restaurantId } : {}),
@@ -722,12 +712,11 @@ const proceedFromReview = () => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 space-y-3">
             <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right">معلومات الطلب</h3>
 
-            {/* نوع الطلب: توصيل / طلب داخلي / استلام سفري */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* نوع الطلب: توصيل الطلب / استلام الطلب */}
+            <div className="grid grid-cols-2 gap-2">
               {([
-                { key: 'delivery' as const, label: 'توصيل' },
-                { key: 'dine_in'  as const, label: 'طلب داخلي' },
-                { key: 'pickup'   as const, label: 'استلام سفري' },
+                { key: 'delivery' as const, label: 'توصيل الطلب' },
+                { key: 'pickup'   as const, label: 'استلام الطلب' },
               ]).map(opt => (
                 <button
                   key={opt.key}
@@ -837,19 +826,6 @@ const proceedFromReview = () => {
                   style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
                 />
               </>
-            )}
-
-            {orderType === 'dine_in' && (
-              <input
-                id="table-number-input"
-                type="number"
-                inputMode="numeric"
-                value={tableNumber}
-                onChange={e => { setTableNumber(e.target.value); if (tableNumberError) setTableNumberError(false); }}
-                placeholder="رقم الطاولة *" dir="rtl"
-                className={`w-full bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 border-2 transition-colors${tableNumberError ? ' shake border-red-500' : ' border-gray-200 dark:border-slate-600'}`}
-                style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
-              />
             )}
           </div>
         )}
@@ -1233,7 +1209,7 @@ const proceedFromReview = () => {
                 <X size={17}/>
               </button>
               <p className="font-bold" style={{ color: '#ef4444' }}>
-                {orderType === 'delivery' ? 'موقعك:' : orderType === 'dine_in' ? 'طلب داخلي' : 'استلام سفري'}
+                {orderType === 'delivery' ? 'موقعك:' : 'استلام الطلب'}
               </p>
               <div className="w-9"/>
             </div>
@@ -1276,29 +1252,6 @@ const proceedFromReview = () => {
                     )}
                   </div>
                   <MapPin size={18} className="mt-0.5 flex-shrink-0" style={{ color: brandColor }}/>
-                </div>
-              )}
-
-              {orderType === 'dine_in' && (
-                <div className="flex items-start gap-3 rounded-xl p-3.5 text-right"
-                  style={{ backgroundColor: `${brandColor}10`, borderWidth: 1, borderStyle: 'solid', borderColor: `${brandColor}30` }}>
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">رقم الطاولة</p>
-                    {editingConfirmAddress ? (
-                      <input
-                        type="number" inputMode="numeric" value={tableNumber} onChange={e => setTableNumber(e.target.value)}
-                        onBlur={() => setEditingConfirmAddress(false)} autoFocus dir="rtl"
-                        className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-500 rounded-lg px-2 py-1 text-sm text-gray-900 dark:text-slate-100 outline-none"
-                      />
-                    ) : (
-                      <div className="flex items-center gap-2 justify-end">
-                        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-relaxed flex-1">{tableNumber || '—'}</p>
-                        <button type="button" onClick={() => setEditingConfirmAddress(true)} className="text-gray-400 active:scale-90 transition-all flex-shrink-0">
-                          <Pencil size={13}/>
-                        </button>
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
 

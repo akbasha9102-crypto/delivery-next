@@ -9,15 +9,14 @@ import { CustomerGuard } from '@/components/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
 
 function isInternalOrder(orderType?: string | null) {
-  return orderType === 'dine_in' || orderType === 'pickup';
+  return orderType === 'pickup';
 }
 
 function getSteps(orderType?: string | null) {
   const internal   = isInternalOrder(orderType);
-  const readyIcon  = orderType === 'dine_in' ? '🍽️' : orderType === 'pickup' ? '🛍️' : '🏍️';
+  const readyIcon  = orderType === 'pickup' ? '🛍️' : '🏍️';
   const readyLabel = internal ? 'جاهز' : 'في الطريق';
-  const readyDesc  = orderType === 'dine_in' ? 'طلبك جاهز على طاولتك'
-                    : orderType === 'pickup' ? 'طلبك جاهز، تفضل لاستلامه'
+  const readyDesc  = orderType === 'pickup' ? 'طلبك جاهز، تفضل لاستلامه'
                     : 'طلبك في الطريق إليك';
   return [
     { key: 'pending',   label: 'انتظار',  icon: '⏳', desc: 'تم إرسال طلبك، بانتظار القبول' },
@@ -201,8 +200,7 @@ type Order = {
   driver_arrived?: boolean | null;
   driver_lat?: number | null; driver_lng?: number | null;
   client_lat?: number | null; client_lng?: number | null;
-  order_type: 'delivery' | 'dine_in' | 'pickup' | null;
-  table_number: number | null;
+  order_type: 'delivery' | 'pickup' | null;
 };
 
 
@@ -261,7 +259,7 @@ export default function TrackPage() {
       preparing: { title: '🍳 طلبك قيد التجهيز', body: 'يعمل الطاقم الآن على تجهيز طلبك' },
       ready: internal
         ? { title: 'طلبك جاهز!',
-            body: order.order_type === 'dine_in' ? 'طلبك جاهز على طاولتك' : 'طلبك جاهز، تفضل لاستلامه' }
+            body: 'طلبك جاهز، تفضل لاستلامه' }
         : { title: '🏍️ طلبك في الطريق!', body: 'السائق في طريقه إليك' },
       completed: internal
         ? { title: '🎉 تم الاستلام!', body: 'تم استلام طلبك بنجاح. شكراً لطلبك!' }
@@ -934,11 +932,9 @@ export default function TrackPage() {
                     <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-4">تفاصيل الطلب</h3>
                     {[
                       { label: 'الاسم', value: order.client_name },
-                      ...(order.order_type === 'dine_in'
-                        ? [{ label: 'رقم الطاولة', value: order.table_number != null ? String(order.table_number) : '—' }]
-                        : order.order_type === 'pickup'
-                          ? []
-                          : [{ label: 'المنطقة', value: order.delivery_address || '—' }]),
+                      ...(order.order_type === 'pickup'
+                        ? []
+                        : [{ label: 'المنطقة', value: order.delivery_address || '—' }]),
                       { label: 'الإجمالي', value: `${order.total_amount.toLocaleString()} د.ع` },
                     ].map(row => (
                       <div key={row.label} className="flex justify-between items-center py-3 border-b border-gray-50 dark:border-slate-700 last:border-0">
