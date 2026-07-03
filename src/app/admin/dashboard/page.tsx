@@ -582,6 +582,10 @@ export default function DashboardPage() {
     : isInternalOrder(o);
 
   const scopedOrders = orders.filter(inScope);
+  const pendingByScope = {
+    delivery: orders.filter(o => (!o.order_type || o.order_type === 'delivery') && o.status === 'pending').length,
+    internal: orders.filter(o => isInternalOrder(o) && o.status === 'pending').length,
+  };
   const counts = { pending: 0, preparing: 0, pickup: 0, delivery: 0, completed: 0 };
   scopedOrders.forEach(o => {
     if (o.status === 'pending')        counts.pending++;
@@ -617,11 +621,14 @@ export default function DashboardPage() {
           { key: 'internal' as const, label: 'داخلي' },
         ]).map(s => (
           <button key={s.key} onClick={() => { setScope(s.key); setFilter('pending'); }}
-            className="py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2"
+            className="relative py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2"
             style={scope === s.key
               ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#ffffff' }
               : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}>
             {s.label}
+            {pendingByScope[s.key] > 0 && (
+              <span className="absolute -top-1 -left-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-slate-800 animate-pulse" />
+            )}
           </button>
         ))}
       </div>
