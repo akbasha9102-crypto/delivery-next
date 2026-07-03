@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check, Bell } from 'lucide-react';
+import { Moon, Sun, ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check, Bell, Plus, Minus } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
@@ -442,6 +442,198 @@ function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => 
   );
 }
 
+type MenuCategory = { id: string; name: string };
+type MenuItem = { id: string; category_id: string; name: string; price: number; image_url: string; is_available: boolean; item_status?: string };
+
+function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId: string; onClose: () => void; onCreated: () => void }) {
+  const [categories,  setCategories]  = useState<MenuCategory[]>([]);
+  const [items,        setItems]      = useState<MenuItem[]>([]);
+  const [loading,      setLoading]    = useState(true);
+  const [selectedCat,  setSelectedCat] = useState<string | null>(null);
+  const [cart,         setCart]       = useState<{ item: MenuItem; qty: number }[]>([]);
+  const [customerName, setCustomerName] = useState('');
+  const [submitting,   setSubmitting] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const [catsRes, itemsRes] = await Promise.all([
+        supabase.from('categories').select('id, name').eq('restaurant_id', restaurantId).order('created_at', { ascending: true }),
+        supabase.from('items').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false }),
+      ]);
+      setCategories(catsRes.data || []);
+      setItems(
+        (itemsRes.data || []).filter((i: MenuItem) => {
+          const st = i.item_status || (i.is_available ? 'available' : 'hidden');
+          return st === 'available';
+        })
+      );
+      setLoading(false);
+    })();
+  }, [restaurantId]);
+
+  const addToCart = (item: MenuItem) =>
+    setCart(prev => {
+      const found = prev.find(e => e.item.id === item.id);
+      return found
+        ? prev.map(e => e.item.id === item.id ? { ...e, qty: e.qty + 1 } : e)
+        : [...prev, { item, qty: 1 }];
+    });
+
+  const changeQty = (itemId: string, delta: number) =>
+    setCart(prev =>
+      prev.map(e => e.item.id === itemId ? { ...e, qty: e.qty + delta } : e)
+          .filter(e => e.qty > 0)
+    );
+
+  const total    = cart.reduce((s, e) => s + e.item.price * e.qty, 0);
+  const filtered = selectedCat ? items.filter(i => i.category_id === selectedCat) : items;
+
+  const submitOrder = async () => {
+    if (cart.length === 0 || submitting) return;
+    setSubmitting(true);
+    const name = customerName.trim() || 'زبون بدون جوال';
+
+    const { data: order, error } = await supabase.from('orders').insert([{
+      restaurant_id:     restaurantId,
+      client_name:       name,
+      client_phone:      '0000000000',
+      delivery_address:  null,
+      client_note:       null,
+      total_amount:      total,
+      status:             'preparing',
+      order_type:          'pickup',
+    }]).select().single();
+
+    if (error || !order) {
+      alert('حدث خطأ أثناء حفظ الطلب');
+      setSubmitting(false);
+      return;
+    }
+
+    const { error: itemsError } = await supabase.from('order_items').insert(
+      cart.map(e => ({ order_id: order.id, item_name: e.item.name, quantity: e.qty, price: e.item.price }))
+    );
+
+    if (itemsError) {
+      await supabase.from('orders').delete().eq('id', order.id);
+      alert('حدث خطأ في حفظ عناصر الطلب، حاول مجدداً');
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmitting(false);
+    onCreated();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-white dark:bg-slate-900 flex flex-col">
+      <header className="sticky top-0 z-10 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 flex items-center justify-between flex-shrink-0">
+        <button onClick={onClose} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
+          <X size={18} className="text-gray-600 dark:text-slate-300" />
+        </button>
+        <p className="font-bold text-gray-900 dark:text-white">طلب زبون بدون جوال</p>
+        <div className="w-9" />
+      </header>
+
+      {loading ? (
+        <div className="flex justify-center mt-20">
+          <div className="w-10 h-10 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto pb-40">
+          <div className="flex gap-2 px-4 pt-4 pb-3 overflow-x-auto">
+            <button
+              onClick={() => setSelectedCat(null)}
+              className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border active:scale-95 transition-all"
+              style={{ backgroundColor: !selectedCat ? '#f97316' : '#fff', borderColor: !selectedCat ? '#f97316' : '#e2e8f0', color: !selectedCat ? '#fff' : '#64748b' }}>
+              الكل
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCat(selectedCat === cat.id ? null : cat.id)}
+                className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border active:scale-95 transition-all"
+                style={{ backgroundColor: selectedCat === cat.id ? '#f97316' : '#fff', borderColor: selectedCat === cat.id ? '#f97316' : '#e2e8f0', color: selectedCat === cat.id ? '#fff' : '#64748b' }}>
+                {cat.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="px-4 grid grid-cols-2 gap-3">
+            {filtered.map(item => {
+              const entry = cart.find(e => e.item.id === item.id);
+              return (
+                <div key={item.id} className="rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                  <div className="relative">
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="w-full h-28 object-cover"
+                      onError={e => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200.png?text=Food'; }}
+                    />
+                    {entry && (
+                      <span className="absolute top-2 right-2 bg-[#f97316] text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-md">
+                        {entry.qty}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="font-bold text-sm text-right mb-1 leading-tight text-gray-900 dark:text-white">{item.name}</p>
+                    <p className="font-bold text-xs text-right mb-2" style={{ color: '#f97316' }}>{item.price.toLocaleString()} د.ع</p>
+                    {entry ? (
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => changeQty(item.id, +1)}
+                          className="w-8 h-8 rounded-xl bg-[#f97316] text-white flex items-center justify-center active:scale-90 transition-all">
+                          <Plus size={15} />
+                        </button>
+                        <span className="font-bold text-base text-gray-900 dark:text-white">{entry.qty}</span>
+                        <button
+                          onClick={() => changeQty(item.id, -1)}
+                          className="w-8 h-8 rounded-xl flex items-center justify-center active:scale-90 transition-all bg-gray-100 dark:bg-slate-700">
+                          <Minus size={15} className="text-gray-500 dark:text-slate-300" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => addToCart(item)}
+                        className="w-full py-2 rounded-xl bg-[#f97316] text-white text-xs font-bold active:scale-95 transition-all">
+                        إضافة +
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {cart.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 pt-3 pb-5 space-y-3">
+          <input
+            value={customerName}
+            onChange={e => setCustomerName(e.target.value)}
+            placeholder="اسم الزبون (اختياري)"
+            dir="rtl"
+            className="w-full rounded-2xl px-4 py-2.5 text-right border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 outline-none focus:ring-2 focus:ring-[#f97316] text-gray-900 dark:text-white"
+          />
+          <button
+            onClick={submitOrder}
+            disabled={submitting}
+            className="w-full py-3.5 rounded-2xl bg-[#f97316] text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
+            {submitting ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <><Check size={18} /> تأكيد الطلب — {total.toLocaleString()} د.ع</>
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { dark, toggleDark } = useDarkMode();
   const { markSeen } = useNewOrders();
@@ -472,6 +664,7 @@ export default function DashboardPage() {
   const islandControls = useAnimation();
   const [tick,          setTick]          = useState(0);
   const [driverPopup,   setDriverPopup]   = useState<string | null>(null);
+  const [showQuickAdd,  setShowQuickAdd]  = useState(false);
 
 
   const initialLoadDone = useRef(false);
@@ -610,7 +803,15 @@ export default function DashboardPage() {
           <ClipboardList size={18} className="text-[#f97316]" />
           <p className="font-bold text-red-500">الطلبات</p>
         </div>
-        <div className="w-10" />
+        {scope === 'internal' ? (
+          <button onClick={() => setShowQuickAdd(true)}
+            className="p-2 rounded-full bg-[#f97316] active:scale-90 transition-all"
+            aria-label="إضافة طلب زبون بدون جوال">
+            <Plus size={16} className="text-white" />
+          </button>
+        ) : (
+          <div className="w-10" />
+        )}
       </header>
 
       {/* تبويب: توصيل الطلب / استلام الطلب */}
@@ -1531,6 +1732,19 @@ export default function DashboardPage() {
 
       {locationOrder && (
         <LocationModal order={locationOrder} onClose={() => setLocationOrder(null)} />
+      )}
+
+      {showQuickAdd && restaurantId && (
+        <QuickAddOrderModal
+          restaurantId={restaurantId}
+          onClose={() => setShowQuickAdd(false)}
+          onCreated={() => {
+            setShowQuickAdd(false);
+            setScope('internal');
+            setFilter('preparing');
+            fetchOrders();
+          }}
+        />
       )}
 
       {/* مودال معلومات السائق */}
