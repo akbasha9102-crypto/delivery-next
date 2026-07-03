@@ -13,15 +13,16 @@ function isInternalOrder(orderType?: string | null) {
 }
 
 function getSteps(orderType?: string | null) {
-  const internal   = isInternalOrder(orderType);
-  const readyIcon  = orderType === 'pickup' ? '🛍️' : '🏍️';
-  const readyLabel = internal ? 'جاهز' : 'في الطريق';
-  const readyDesc  = orderType === 'pickup' ? 'طلبك جاهز، تفضل لاستلامه'
-                    : 'طلبك في الطريق إليك';
+  const internal    = isInternalOrder(orderType);
+  const pendingLabel = internal ? 'تم الإرسال' : 'انتظار';
+  const readyIcon   = internal ? '🛍️' : '🏍️';
+  const readyLabel  = internal ? 'جاهز للاستلام' : 'في الطريق';
+  const readyDesc   = internal ? 'تعال استلم طلبك، طلبك جاهز'
+                     : 'طلبك في الطريق إليك';
   return [
-    { key: 'pending',   label: 'انتظار',  icon: '⏳', desc: 'تم إرسال طلبك، بانتظار القبول' },
-    { key: 'preparing', label: 'تجهيز',   icon: '🍳', desc: 'طلبك قيد التجهيز الآن' },
-    { key: 'ready',     label: readyLabel, icon: readyIcon, desc: readyDesc },
+    { key: 'pending',   label: pendingLabel, icon: '⏳', desc: 'تم إرسال طلبك، بانتظار القبول' },
+    { key: 'preparing', label: 'تجهيز',      icon: '🍳', desc: 'طلبك قيد التجهيز الآن' },
+    { key: 'ready',     label: readyLabel,   icon: readyIcon, desc: readyDesc },
     { key: 'completed', label: internal ? 'تم الاستلام' : 'تم التوصيل', icon: '🎉',
       desc: internal ? 'تم استلام طلبك بنجاح' : 'تم توصيل طلبك بنجاح' },
   ];
@@ -259,7 +260,7 @@ export default function TrackPage() {
       preparing: { title: '🍳 طلبك قيد التجهيز', body: 'يعمل الطاقم الآن على تجهيز طلبك' },
       ready: internal
         ? { title: 'طلبك جاهز!',
-            body: 'طلبك جاهز، تفضل لاستلامه' }
+            body: 'تعال استلم طلبك، طلبك جاهز' }
         : { title: '🏍️ طلبك في الطريق!', body: 'السائق في طريقه إليك' },
       completed: internal
         ? { title: '🎉 تم الاستلام!', body: 'تم استلام طلبك بنجاح. شكراً لطلبك!' }
