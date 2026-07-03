@@ -416,7 +416,7 @@ export default function InventoryPage() {
               <h3 className="font-bold text-gray-900 dark:text-slate-100">{editItem ? '✏️ تعديل مادة' : '➕ مادة جديدة'}</h3>
               <button onClick={() => setShowForm(false)} className="bg-gray-100 dark:bg-slate-700 text-gray-500 px-3 py-2 rounded-xl text-sm font-bold active:scale-95">إلغاء</button>
             </div>
-            <div className="overflow-y-auto p-5 space-y-1">
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-1">
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">اسم المادة *</p>
               <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="اسم المادة" dir="rtl" className={input} />
