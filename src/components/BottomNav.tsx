@@ -9,6 +9,7 @@ import { useNewOrders } from '@/context/NewOrdersContext';
 const adminTabs = [
   { href: '/admin/dashboard',   icon: ClipboardList,   label: 'الطلبات' },
   { href: '/admin/menu',        icon: UtensilsCrossed, label: 'المنيو' },
+  { href: '/admin/drivers',     icon: Car,             label: 'السائقين' },
   { href: '/admin/inventory',   icon: Package,         label: 'المخزون' },
   { href: '/admin/settings',    icon: Menu,            label: 'مطعمي' },
 ];
