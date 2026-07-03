@@ -114,6 +114,13 @@ export default function InventoryPage() {
     fetchMovements();
   }, [fetchItems, fetchMovements]);
 
+  // قفل تمرير الصفحة خلف أي نافذة منبثقة حتى لا تتحرك الخلفية بدل النافذة
+  useEffect(() => {
+    const isModalOpen = showForm || !!movementTarget;
+    document.body.style.overflow = isModalOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [showForm, movementTarget]);
+
   const openAdd = () => {
     setEditItem(null);
     setForm(emptyForm);
