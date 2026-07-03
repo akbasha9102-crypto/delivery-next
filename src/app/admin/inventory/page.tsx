@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { Plus, Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, AlertTriangle, PackageOpen, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown } from 'lucide-react';
 
 type InventoryItem = {
   id: string;
@@ -260,7 +260,7 @@ export default function InventoryPage() {
           <Plus size={18} />
         </button>
         <div className="flex items-center gap-2">
-          <Package size={18} className="text-[#f97316]" />
+          <PackageOpen size={18} className="text-[#f97316]" />
           <p className="font-bold text-gray-900 dark:text-slate-100">المخزون</p>
           {lowStockCount > 0 && (
             <span className="flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">

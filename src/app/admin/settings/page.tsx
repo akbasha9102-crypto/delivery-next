@@ -450,6 +450,23 @@ export default function SettingsPage() {
 
       <div className="px-4 pt-4 space-y-3">
 
+        {/* ـ معلومات المطعم ـ */}
+        <button
+          onClick={() => setShowInfo(true)}
+          className="w-full flex items-center justify-between px-4 py-4 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <PenLine size={18} className="text-gray-600 dark:text-slate-400" />
+            </div>
+            <div className="text-right">
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">معلومات المطعم</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">الاسم، الشعار، الواتساب، الموقع</p>
+            </div>
+          </div>
+          <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+        </button>
+
         {/* المظهر */}
         <div className="w-full flex items-center justify-between px-4 py-4 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl">
           <div className="flex items-center gap-3">
@@ -466,23 +483,6 @@ export default function SettingsPage() {
             <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${dark ? 'translate-x-6' : ''}`} />
           </button>
         </div>
-
-        {/* ─ معلومات المطعم ─ */}
-        <button
-          onClick={() => setShowInfo(true)}
-          className="w-full flex items-center justify-between px-4 py-4 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <PenLine size={18} className="text-gray-600 dark:text-slate-400" />
-            </div>
-            <div className="text-right">
-              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">معلومات المطعم</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">الاسم، الشعار، الواتساب، الموقع</p>
-            </div>
-          </div>
-          <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-        </button>
 
         {/* ─ حساب الدخول ─ */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4" dir="rtl">
