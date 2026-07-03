@@ -592,7 +592,8 @@ const proceedFromReview = () => {
   };
 
   const handleSubmitPress = () => {
-    if (!name.trim() || !phone.trim()) { alert('الرجاء إدخال الاسم ورقم الهاتف'); return; }
+    if (!name.trim()) { alert('الرجاء إدخال الاسم'); return; }
+    if (orderType !== 'pickup' && !phone.trim()) { alert('الرجاء إدخال رقم الهاتف'); return; }
     if (items.length === 0) { alert('السلة فارغة'); return; }
 
     if (orderType === 'delivery') {
@@ -626,7 +627,7 @@ const proceedFromReview = () => {
     const restaurantId = localStorage.getItem('currentRestaurantId') || null;
 
     const { data: order, error } = await supabase.from('orders').insert([{
-      client_name: nickname.trim() ? `${name.trim()} (${nickname.trim()})` : name.trim(), client_phone: phone.trim(),
+      client_name: nickname.trim() ? `${name.trim()} (${nickname.trim()})` : name.trim(), client_phone: phone.trim() || null,
       delivery_address: orderType === 'delivery' ? (addressDetails.trim() || null) : null,
       client_note: note || null,
       total_amount: grandTotal, status: 'pending',
@@ -764,7 +765,7 @@ const proceedFromReview = () => {
                 <span className="text-sm font-bold text-gray-500 dark:text-slate-400">+964</span>
               </div>
               <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                placeholder="رقم الهاتف *" dir="rtl"
+                placeholder={orderType === 'pickup' ? 'رقم الهاتف (اختياري)' : 'رقم الهاتف *'} dir="rtl"
                 className="flex-1 bg-transparent px-3 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none"
               />
             </div>
