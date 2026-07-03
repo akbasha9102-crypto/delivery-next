@@ -3,9 +3,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User } from 'lucide-react';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
+import { useDarkMode } from '@/context/ThemeContext';
 
 /* ─── جدولة الدوام ─── */
 const DAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -367,6 +368,7 @@ function ChangePasswordSheet({ onClose, username }: { onClose: () => void; usern
 export default function SettingsPage() {
   const router = useRouter();
   const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded } = useSettings();
+  const { dark, toggleDark } = useDarkMode();
 
   const [scheduleLocal,    setScheduleLocal]    = useState<WeekSchedule | null>(null);
   const [showClosedModal,  setShowClosedModal]  = useState(false);
@@ -442,11 +444,28 @@ export default function SettingsPage() {
       {/* هيدر */}
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
         <div className="w-9" />
-        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">مطعمي</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">الإعدادات</h1>
         <div className="w-9" />
       </header>
 
       <div className="px-4 pt-4 space-y-3">
+
+        {/* المظهر */}
+        <div className="w-full flex items-center justify-between px-4 py-4 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              {dark ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-gray-600" />}
+            </div>
+            <div className="text-right">
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">المظهر</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{dark ? 'الوضع الليلي' : 'الوضع النهاري'}</p>
+            </div>
+          </div>
+          <button onClick={toggleDark} dir="ltr"
+            className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${dark ? 'bg-[#f97316]' : 'bg-gray-300 dark:bg-slate-500'}`}>
+            <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${dark ? 'translate-x-6' : ''}`} />
+          </button>
+        </div>
 
         {/* ─ معلومات المطعم ─ */}
         <button

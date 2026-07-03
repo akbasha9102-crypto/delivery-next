@@ -11,7 +11,7 @@ const adminTabs = [
   { href: '/admin/menu',        icon: UtensilsCrossed, label: 'المنيو' },
   { href: '/admin/drivers',     icon: Car,             label: 'السائقين' },
   { href: '/admin/inventory',   icon: Package,         label: 'المخزون' },
-  { href: '/admin/settings',    icon: Menu,            label: 'مطعمي' },
+  { href: '/admin/settings',    icon: Menu,            label: 'الإعدادات' },
 ];
 
 export function ClientBottomNav() {

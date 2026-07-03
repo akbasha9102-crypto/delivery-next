@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check, Bell, Plus, Minus } from 'lucide-react';
+import { ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check, Bell, Plus, Minus } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
@@ -824,7 +824,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
 }
 
 export default function DashboardPage() {
-  const { dark, toggleDark } = useDarkMode();
+  const { dark } = useDarkMode();
   const { markSeen } = useNewOrders();
   useEffect(() => { markSeen(); }, [markSeen]);
 
@@ -991,9 +991,7 @@ export default function DashboardPage() {
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
-        <button onClick={toggleDark} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
-          {dark ? <Sun size={16} className="text-yellow-400" /> : <Moon size={16} className="text-gray-600" />}
-        </button>
+        <div className="w-9" />
         <div className="flex items-center gap-1.5">
           <ClipboardList size={18} className="text-[#f97316]" />
           <p className="font-bold text-red-500">الطلبات</p>
