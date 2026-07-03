@@ -1033,7 +1033,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                     <span className="font-bold text-sm" style={{ color: orderType === o.key ? brandColor : undefined }}>{o.label}</span>
                     {orderType === o.key && (
                       <span className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: brandColor }}>
-                        <Check size={14} className="text-white" strokeWidth={3} />
+                        <Check size={14} style={{ color: textOnBrand }} strokeWidth={3} />
                       </span>
                     )}
                   </button>
