@@ -591,7 +591,7 @@ const proceedFromReview = () => {
 
   const handleSubmitPress = () => {
     if (!name.trim()) { alert('الرجاء إدخال الاسم'); return; }
-    if (orderType === 'delivery' && !phone.trim()) { alert('الرجاء إدخال رقم الهاتف'); return; }
+    if (!phone.trim()) { alert('الرجاء إدخال رقم الهاتف'); return; }
     if (items.length === 0) { alert('السلة فارغة'); return; }
 
     if (orderType === 'delivery') {
@@ -754,7 +754,7 @@ const proceedFromReview = () => {
                 <span className="text-sm font-bold text-gray-500 dark:text-slate-400">+964</span>
               </div>
               <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                placeholder={orderType === 'delivery' ? 'رقم الهاتف *' : 'رقم الهاتف (اختياري)'} dir="rtl"
+                placeholder="رقم الهاتف *" dir="rtl"
                 className="flex-1 bg-transparent px-3 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none"
               />
             </div>

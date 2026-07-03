@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { User, Truck, UtensilsCrossed, ClipboardList, BarChart2, Car, Store, Menu, Archive, ShoppingBag, Package } from 'lucide-react';
+import { User, Route, UtensilsCrossed, ClipboardList, BarChart2, Car, Store, Menu, Archive, ShoppingBag, Package } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 
@@ -36,7 +36,7 @@ export function ClientBottomNav() {
 
   const clientTabs = [
     { href: menuHref, icon: UtensilsCrossed, label: 'قائمة الطعام' },
-    { href: '/track',   icon: Truck,           label: 'تتبع طلبك' },
+    { href: '/track',   icon: Route,           label: 'تتبع طلبك' },
     { href: '/orders',  icon: ShoppingBag,     label: 'طلباتي' },
     { href: '/profile', icon: User,            label: 'معلوماتي' },
   ];
