@@ -119,6 +119,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   const [showClosedToast,  setShowClosedToast]  = useState(false);
   const [showCartPanel,  setShowCartPanel]  = useState(false);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
+  const [showOrderTypeModal, setShowOrderTypeModal] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
     const check = () => setIsDesktop(window.innerWidth >= 768);
@@ -304,25 +305,16 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* اختيار نوع الطلب: توصيل أو استلام */}
-          <div className="flex items-center rounded-full p-0.5 bg-gray-100 dark:bg-slate-800 flex-shrink-0" role="group" aria-label="نوع الطلب: توصيل أو استلام">
-            <button
-              type="button"
-              onClick={() => setOrderType('delivery')}
-              className="px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-colors"
-              style={orderType === 'delivery' ? { backgroundColor: brandColor, color: '#ffffff' } : { color: '#9ca3af' }}
-            >
-              توصيل
-            </button>
-            <button
-              type="button"
-              onClick={() => setOrderType('pickup')}
-              className="px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-colors"
-              style={orderType === 'pickup' ? { backgroundColor: brandColor, color: '#ffffff' } : { color: '#9ca3af' }}
-            >
-              استلام
-            </button>
-          </div>
+          {/* زر نوع الطلب: يفتح نافذة لاختيار توصيل أو استلام */}
+          <button
+            type="button"
+            onClick={() => setShowOrderTypeModal(true)}
+            className="flex items-center gap-1 pl-2.5 pr-3 py-1.5 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0"
+            aria-label="نوع الطلب: توصيل أو استلام"
+          >
+            <span className="text-[11px] font-bold text-gray-700 dark:text-slate-200">{orderType === 'pickup' ? 'استلام' : 'توصيل'}</span>
+            <ChevronDown size={14} className="text-gray-400" />
+          </button>
           {location_url && (
             <motion.a
               href={location_url}
@@ -1003,6 +995,55 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
           </div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showOrderTypeModal && (
+          <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowOrderTypeModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: 40, opacity: 0, scale: 0.96 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 40, opacity: 0, scale: 0.96 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 260 }}
+              className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                <h3 className="font-black text-base text-gray-900 dark:text-white">نوع الطلب</h3>
+                <button onClick={() => setShowOrderTypeModal(false)} className="w-8 h-8 rounded-full bg-gray-50 dark:bg-slate-800 flex items-center justify-center">
+                  <X size={16} className="text-gray-400" />
+                </button>
+              </div>
+              <div className="px-3 pb-4 flex flex-col gap-1.5">
+                {([
+                  { key: 'delivery' as const, label: 'توصيل' },
+                  { key: 'pickup'   as const, label: 'استلام' },
+                ]).map(o => (
+                  <button
+                    key={o.key}
+                    onClick={() => { setOrderType(o.key); setShowOrderTypeModal(false); }}
+                    className="flex items-center justify-between px-4 py-3.5 rounded-2xl transition-colors"
+                    style={orderType === o.key ? { backgroundColor: `${brandColor}1a` } : {}}
+                  >
+                    <span className="font-bold text-sm" style={{ color: orderType === o.key ? brandColor : undefined }}>{o.label}</span>
+                    {orderType === o.key && (
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: brandColor }}>
+                        <Check size={14} className="text-white" strokeWidth={3} />
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {showClosedToast && (
           <motion.div
