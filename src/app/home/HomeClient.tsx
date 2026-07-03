@@ -304,21 +304,25 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* سويتش مصغّر: توصيل ⇄ طلب داخلي */}
-          <button
-            type="button"
-            onClick={() => setOrderType(orderType === 'delivery' ? 'dine_in' : 'delivery')}
-            className="relative w-12 h-7 rounded-full flex items-center px-0.5 transition-colors flex-shrink-0"
-            style={{ backgroundColor: orderType === 'delivery' ? '#e5e7eb' : brandColor }}
-            aria-label="نوع الطلب: توصيل أو طلب داخلي"
-          >
-            <motion.span
-              layout
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              className="w-6 h-6 rounded-full bg-white shadow flex-shrink-0"
-              style={{ marginRight: orderType === 'delivery' ? 0 : 'auto', marginLeft: orderType === 'delivery' ? 'auto' : 0 }}
-            />
-          </button>
+          {/* اختيار نوع الطلب: توصيل أو استلام */}
+          <div className="flex items-center rounded-full p-0.5 bg-gray-100 dark:bg-slate-800 flex-shrink-0" role="group" aria-label="نوع الطلب: توصيل أو استلام">
+            <button
+              type="button"
+              onClick={() => setOrderType('delivery')}
+              className="px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-colors"
+              style={orderType === 'delivery' ? { backgroundColor: brandColor, color: '#ffffff' } : { color: '#9ca3af' }}
+            >
+              توصيل
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrderType('pickup')}
+              className="px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-colors"
+              style={orderType === 'pickup' ? { backgroundColor: brandColor, color: '#ffffff' } : { color: '#9ca3af' }}
+            >
+              استلام
+            </button>
+          </div>
           {location_url && (
             <motion.a
               href={location_url}
