@@ -627,7 +627,9 @@ export default function DashboardPage() {
               : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}>
             {s.label}
             {pendingByScope[s.key] > 0 && (
-              <span className="absolute -top-1 -left-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-slate-800 animate-pulse" />
+              <span className="absolute -top-2.5 -left-2.5 min-w-[22px] h-[22px] px-1 rounded-full bg-red-500 border-2 border-white dark:border-slate-800 text-white text-xs font-bold flex items-center justify-center animate-pulse">
+                {pendingByScope[s.key]}
+              </span>
             )}
           </button>
         ))}
