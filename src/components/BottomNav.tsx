@@ -2,13 +2,12 @@
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { User, Route, UtensilsCrossed, ClipboardList, BarChart2, Car, Store, Menu, Archive, ShoppingBag, Package } from 'lucide-react';
+import { User, Route, UtensilsCrossed, ClipboardList, BarChart2, Car, Menu, Archive, ShoppingBag, Package } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 
 const adminTabs = [
   { href: '/admin/dashboard',   icon: ClipboardList,   label: 'الطلبات' },
-  { href: '/admin/local',       icon: Store,           label: 'المحل' },
   { href: '/admin/menu',        icon: UtensilsCrossed, label: 'المنيو' },
   { href: '/admin/inventory',   icon: Package,         label: 'المخزون' },
   { href: '/admin/settings',    icon: Menu,            label: 'مطعمي' },

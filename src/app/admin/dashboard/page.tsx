@@ -443,16 +443,24 @@ function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => 
 }
 
 type MenuCategory = { id: string; name: string };
-type MenuItem = { id: string; category_id: string; name: string; price: number; image_url: string; is_available: boolean; item_status?: string };
+type MenuItem = { id: string; category_id: string; name: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
+type MenuExtra = { id: string; name: string; price: number };
+type QuickCartEntry = { item: MenuItem; qty: number; unitPrice: number; extraNames: string[] };
+
+function getMenuExtras(item: MenuItem): MenuExtra[] {
+  try { return JSON.parse(item.extras_json || '[]'); } catch { return []; }
+}
 
 function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId: string; onClose: () => void; onCreated: () => void }) {
   const [categories,  setCategories]  = useState<MenuCategory[]>([]);
   const [items,        setItems]      = useState<MenuItem[]>([]);
   const [loading,      setLoading]    = useState(true);
   const [selectedCat,  setSelectedCat] = useState<string | null>(null);
-  const [cart,         setCart]       = useState<{ item: MenuItem; qty: number }[]>([]);
+  const [cart,         setCart]       = useState<QuickCartEntry[]>([]);
   const [customerName, setCustomerName] = useState('');
   const [submitting,   setSubmitting] = useState(false);
+  const [extrasItem,   setExtrasItem] = useState<MenuItem | null>(null);
+  const [pickedExtras, setPickedExtras] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -471,13 +479,32 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
     })();
   }, [restaurantId]);
 
-  const addToCart = (item: MenuItem) =>
+  const addToCart = (item: MenuItem, unitPrice: number, extraNames: string[] = []) =>
     setCart(prev => {
       const found = prev.find(e => e.item.id === item.id);
       return found
         ? prev.map(e => e.item.id === item.id ? { ...e, qty: e.qty + 1 } : e)
-        : [...prev, { item, qty: 1 }];
+        : [...prev, { item, qty: 1, unitPrice, extraNames }];
     });
+
+  const handleTapAdd = (item: MenuItem) => {
+    const extras = getMenuExtras(item);
+    if (extras.length > 0) {
+      setExtrasItem(item);
+      setPickedExtras(new Set());
+      return;
+    }
+    addToCart(item, item.price);
+  };
+
+  const confirmExtras = () => {
+    if (!extrasItem) return;
+    const extras = getMenuExtras(extrasItem);
+    const chosen = extras.filter(e => pickedExtras.has(e.id));
+    const extrasSum = chosen.reduce((s, e) => s + e.price, 0);
+    addToCart(extrasItem, extrasItem.price + extrasSum, chosen.map(e => e.name));
+    setExtrasItem(null);
+  };
 
   const changeQty = (itemId: string, delta: number) =>
     setCart(prev =>
@@ -485,7 +512,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
           .filter(e => e.qty > 0)
     );
 
-  const total    = cart.reduce((s, e) => s + e.item.price * e.qty, 0);
+  const total    = cart.reduce((s, e) => s + e.unitPrice * e.qty, 0);
   const filtered = selectedCat ? items.filter(i => i.category_id === selectedCat) : items;
 
   const submitOrder = async () => {
@@ -511,7 +538,12 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
     }
 
     const { error: itemsError } = await supabase.from('order_items').insert(
-      cart.map(e => ({ order_id: order.id, item_name: e.item.name, quantity: e.qty, price: e.item.price }))
+      cart.map(e => ({
+        order_id:   order.id,
+        item_name:  e.extraNames.length > 0 ? `${e.item.name} (${e.extraNames.join('، ')})` : e.item.name,
+        quantity:   e.qty,
+        price:      e.unitPrice,
+      }))
     );
 
     if (itemsError) {
@@ -562,6 +594,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
           <div className="px-4 grid grid-cols-2 gap-3">
             {filtered.map(item => {
               const entry = cart.find(e => e.item.id === item.id);
+              const hasExtras = getMenuExtras(item).length > 0;
               return (
                 <div key={item.id} className="rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                   <div className="relative">
@@ -596,9 +629,9 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
                       </div>
                     ) : (
                       <button
-                        onClick={() => addToCart(item)}
+                        onClick={() => handleTapAdd(item)}
                         className="w-full py-2 rounded-xl bg-[#f97316] text-white text-xs font-bold active:scale-95 transition-all">
-                        إضافة +
+                        {hasExtras ? 'اختر إضافات +' : 'إضافة +'}
                       </button>
                     )}
                   </div>
@@ -630,6 +663,62 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
           </button>
         </div>
       )}
+
+      {/* مودال اختيار الإضافات */}
+      {extrasItem && (() => {
+        const extras = getMenuExtras(extrasItem);
+        const extrasSum = extras.filter(e => pickedExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
+        return (
+          <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50" onClick={() => setExtrasItem(null)}>
+            <div
+              className="w-full max-w-lg rounded-t-3xl pb-6 bg-white dark:bg-slate-900"
+              onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-700">
+                <button onClick={() => setExtrasItem(null)} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
+                  <X size={18} className="text-gray-600 dark:text-slate-300" />
+                </button>
+                <p className="font-bold text-gray-900 dark:text-white">{extrasItem.name}</p>
+                <div className="w-9" />
+              </div>
+
+              <div className="px-5 py-4 space-y-2">
+                <p className="text-xs font-black text-gray-400 dark:text-slate-500 mb-1 uppercase tracking-wider text-right">الإضافات</p>
+                {extras.map(e => {
+                  const on = pickedExtras.has(e.id);
+                  return (
+                    <button
+                      key={e.id}
+                      onClick={() => setPickedExtras(prev => {
+                        const next = new Set(prev);
+                        on ? next.delete(e.id) : next.add(e.id);
+                        return next;
+                      })}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-right transition-all"
+                      style={on
+                        ? { backgroundColor: 'rgba(249,115,22,0.1)', borderColor: '#f97316' }
+                        : { backgroundColor: 'transparent', borderColor: '#e2e8f0' }
+                      }>
+                      <span className="flex items-center gap-2">
+                        {on ? <Check size={16} className="text-[#f97316]" strokeWidth={3} /> : <Plus size={16} className="text-gray-400" />}
+                        {e.price > 0 && <span className="text-xs font-bold text-gray-400">+{e.price.toLocaleString()}</span>}
+                      </span>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">{e.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="px-5 pt-2">
+                <button
+                  onClick={confirmExtras}
+                  className="w-full py-3.5 rounded-2xl bg-[#f97316] text-white font-bold text-base active:scale-95 transition-all flex items-center justify-center gap-2">
+                  <Check size={18} /> إضافة للسلة — {(extrasItem.price + extrasSum).toLocaleString()} د.ع
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
