@@ -77,7 +77,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   const rawColor   = primary_color || "#000000";
 
   const isTooDark = rawColor === '#000000' || rawColor.toLowerCase() === '#121212';
-  const brandColor = (dark && isTooDark) ? '#ffffff' : rawColor;
+  const isTooLight = rawColor.toLowerCase() === '#ffffff' || rawColor.toLowerCase() === '#fff';
+  const brandColor = (dark && isTooDark) ? '#ffffff' : (!dark && isTooLight) ? '#000000' : rawColor;
 
   const brandLogo = logo_url;
   const p = brandColor;

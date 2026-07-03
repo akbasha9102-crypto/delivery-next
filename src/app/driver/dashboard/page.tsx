@@ -61,6 +61,7 @@ export default function DriverDashboard() {
   const [showIOSBanner, setShowIOSBanner] = useState(false);
   const [isAvailable,   setIsAvailable]   = useState(true);
   const [togglingAvail, setTogglingAvail] = useState(false);
+  const [mapAddress,    setMapAddress]    = useState<string | null>(null);
   const sessionRef = useRef<Session | null>(null);
 
   useEffect(() => {
@@ -94,6 +95,8 @@ export default function DriverDashboard() {
       .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at')
       .eq('status', 'preparing')
       .is('driver_id', null)
+      // طلبات داخلي/سفري/كاشير محلي ليس لها سائق إطلاقاً — تُستبعد من قائمة السائقين
+      .or('order_type.is.null,order_type.eq.delivery')
       .order('created_at', { ascending: true })
       .then(({ data }) => {
         const filtered = ((data as Order[]) || []).filter(o => !rejected.includes(o.id));
@@ -515,44 +518,101 @@ export default function DriverDashboard() {
           <div className="space-y-2.5">
             <p className="text-slate-400 text-xs font-bold px-1">⏳ قيد التجهيز في المطعم</p>
             {preparingOrders.map(order => (
-              <a key={order.id} href={`/delivery/${order.id}`}
-                className="block bg-slate-800 rounded-2xl border border-slate-700/60 overflow-hidden active:scale-[0.98] transition-all">
+              <div key={order.id}
+                className="bg-slate-800 rounded-2xl border border-slate-700/60 overflow-hidden">
                 <div className="h-1 bg-blue-500" />
-                <div className="px-4 py-3.5">
-                  <div className="flex items-start justify-between mb-2.5">
+                <div className="px-4 py-4">
+                  {/* وقت + رابط تفاصيل */}
+                  <div className="flex items-center justify-between mb-3">
+                    <a href={`/delivery/${order.id}`}
+                      className="flex items-center gap-1 text-blue-400 text-xs active:scale-95 transition-all">
+                      تفاصيل <ChevronLeft size={12} />
+                    </a>
                     <div className="flex items-center gap-1.5 text-slate-500 text-xs">
                       <Clock size={12} />
                       <span>{timeAgo(order.created_at)}</span>
                     </div>
-                    <div className="text-right">
-                      <p className="font-black text-white text-lg">{order.client_name}</p>
-                      {order.delivery_address && (
-                        <p className="text-slate-400 text-xs flex items-center gap-1 justify-end mt-0.5">
-                          <MapPin size={10} /> {order.delivery_address}
-                        </p>
-                      )}
-                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    {order.client_phone && (
-                      <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
-                        target="_blank" rel="noopener noreferrer"
-                        onClick={e => e.stopPropagation()}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366]/20 text-[#25D366] rounded-xl text-sm font-bold active:scale-95 transition-all">
-                        <MessageCircle size={14} /> واتساب
-                      </a>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-400 font-black text-lg">
-                        {order.total_amount.toLocaleString()}
-                        <span className="text-xs font-normal text-slate-500"> د.ع</span>
+
+                  {/* الاسم — كبير */}
+                  <p className="font-black text-white text-2xl text-right mb-2">{order.client_name}</p>
+
+                  {/* الرقم — كبير وقابل للضغط لواتساب */}
+                  {order.client_phone && (
+                    <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-end gap-2 mb-3 active:scale-95 transition-all">
+                      <span className="text-[#25D366] font-black text-2xl tracking-wide" dir="ltr">
+                        {order.client_phone}
                       </span>
-                      <ChevronLeft size={16} className="text-slate-500" />
-                    </div>
+                      <MessageCircle size={22} className="text-[#25D366]" />
+                    </a>
+                  )}
+
+                  {/* العنوان — كبير وقابل للضغط لفتح الخريطة */}
+                  {order.delivery_address && (
+                    <button
+                      onClick={() => setMapAddress(order.delivery_address!)}
+                      className="w-full flex items-center gap-2 bg-blue-900/30 border border-blue-700/40 rounded-xl px-3 py-2.5 mb-3 active:scale-[0.98] transition-all text-right">
+                      <MapPin size={18} className="text-blue-400 flex-shrink-0" />
+                      <span className="text-blue-300 font-bold text-base flex-1">{order.delivery_address}</span>
+                    </button>
+                  )}
+
+                  {/* المبلغ */}
+                  <div className="flex items-center justify-end">
+                    <span className="text-green-400 font-black text-xl">
+                      {order.total_amount.toLocaleString()}
+                      <span className="text-xs font-normal text-slate-500"> د.ع</span>
+                    </span>
                   </div>
                 </div>
-              </a>
+              </div>
             ))}
+          </div>
+        )}
+
+        {/* Modal الخريطة */}
+        {mapAddress && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center"
+            onClick={() => setMapAddress(null)}
+          >
+            <div
+              className="bg-slate-800 w-full max-w-lg rounded-t-3xl p-5 space-y-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between" dir="rtl">
+                <p className="text-white font-black text-lg">📍 عنوان التوصيل</p>
+                <button onClick={() => setMapAddress(null)}
+                  className="p-2 rounded-xl bg-slate-700 active:scale-90 transition-all">
+                  <X size={18} className="text-slate-300" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2 bg-slate-700 rounded-2xl px-4 py-3" dir="rtl">
+                <MapPin size={16} className="text-blue-400 flex-shrink-0" />
+                <p className="text-white font-bold text-base">{mapAddress}</p>
+              </div>
+              <iframe
+                src={`https://maps.google.com/maps?q=${encodeURIComponent(mapAddress)}&output=embed&hl=ar`}
+                className="w-full h-56 rounded-2xl border-0"
+                loading="lazy"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapAddress)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white font-black rounded-2xl text-sm active:scale-95 transition-all">
+                  🗺️ Google Maps
+                </a>
+                <a
+                  href={`https://waze.com/ul?q=${encodeURIComponent(mapAddress)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 py-3.5 bg-[#00B4FF] text-white font-black rounded-2xl text-sm active:scale-95 transition-all">
+                  🚗 Waze
+                </a>
+              </div>
+            </div>
           </div>
         )}
 
