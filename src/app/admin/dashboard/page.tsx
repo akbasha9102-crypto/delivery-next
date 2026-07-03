@@ -1018,7 +1018,7 @@ export default function DashboardPage() {
           <button key={s.key} onClick={() => { setScope(s.key); setFilter('pending'); }}
             className="relative py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2"
             style={scope === s.key
-              ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#ffffff' }
+              ? { backgroundColor: '#f97316', borderColor: '#f97316', color: '#ffffff' }
               : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}>
             {s.label}
             {pendingByScope[s.key] > 0 && (
