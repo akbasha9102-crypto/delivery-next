@@ -1021,8 +1021,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
               </div>
               <div className="px-3 pb-4 flex flex-col gap-1.5">
                 {([
-                  { key: 'delivery' as const, label: 'توصيل' },
-                  { key: 'pickup'   as const, label: 'استلام' },
+                  { key: 'delivery' as const, label: 'توصيل', hint: '(يوصلك الطلب لباب البيت)' },
+                  { key: 'pickup'   as const, label: 'استلام', hint: '(تستلم طلبك من المطعم)' },
                 ]).map(o => (
                   <button
                     key={o.key}
@@ -1030,7 +1030,10 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                     className="flex items-center justify-between px-4 py-3.5 rounded-2xl transition-colors"
                     style={orderType === o.key ? { backgroundColor: `${brandColor}1a` } : {}}
                   >
-                    <span className="font-bold text-sm" style={{ color: orderType === o.key ? brandColor : undefined }}>{o.label}</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-bold text-sm" style={{ color: orderType === o.key ? brandColor : undefined }}>{o.label}</span>
+                      <span className="text-xs font-medium text-gray-400 dark:text-slate-500">{o.hint}</span>
+                    </span>
                     {orderType === o.key && (
                       <span className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: brandColor }}>
                         <Check size={14} style={{ color: textOnBrand }} strokeWidth={3} />
