@@ -299,54 +299,60 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
           {dark ? <Sun size={20} className="text-yellow-400"/> : <Moon size={20} className="text-gray-400"/>}
         </motion.button>
 
-        <div className="flex flex-col items-center flex-1 mx-4">
-          <h1 className="text-lg font-black tracking-tight text-center leading-tight text-black dark:text-white">{brandName}</h1>
+        <div className="flex flex-col items-center flex-1 min-w-0 mx-3">
+          <h1 className="w-full text-lg font-black tracking-tight text-center leading-tight text-black dark:text-white truncate">{brandName}</h1>
           <div className="w-8 h-1 rounded-full mt-1 opacity-20" style={{ backgroundColor: brandColor }}/>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* زر نوع الطلب: يفتح نافذة لاختيار توصيل أو استلام */}
           <button
             type="button"
             onClick={() => setShowOrderTypeModal(true)}
-            className="flex items-center gap-1 pl-2.5 pr-3 py-1.5 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0"
+            className="flex items-center gap-1 pl-2 pr-2.5 h-9 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0"
             aria-label="نوع الطلب: توصيل أو استلام"
           >
             <span className="text-[11px] font-bold text-gray-700 dark:text-slate-200">{orderType === 'pickup' ? 'استلام' : 'توصيل'}</span>
             <ChevronDown size={14} className="text-gray-400" />
           </button>
-          {location_url && (
-            <motion.a
-              href={location_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0">
-              <MapPin size={14} className="text-red-500"/>
-            </motion.a>
+
+          {(location_url || whatsapp_number) && (
+            <div className="flex items-center gap-0.5 h-9 px-1 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0">
+              {location_url && (
+                <motion.a
+                  href={location_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="w-7 h-7 rounded-full flex items-center justify-center">
+                  <MapPin size={14} className="text-red-500"/>
+                </motion.a>
+              )}
+              {whatsapp_number && (
+                <motion.a
+                  href={`https://wa.me/${whatsapp_number.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="w-7 h-7 rounded-full flex items-center justify-center">
+                  <MessageCircle size={14} className="text-green-500"/>
+                </motion.a>
+              )}
+            </div>
           )}
-          {whatsapp_number && (
-            <motion.a
-              href={`https://wa.me/${whatsapp_number.replace(/\D/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0">
-              <MessageCircle size={14} className="text-green-500"/>
-            </motion.a>
-          )}
+
           {brandLogo ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="relative">
-              <Image src={brandLogo} alt={brandName} width={60} height={60} className="h-14 w-14 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md" unoptimized/>
+              className="relative flex-shrink-0">
+              <Image src={brandLogo} alt={brandName} width={60} height={60} className="h-11 w-11 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md" unoptimized/>
             </motion.div>
           ) : (
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-black/10" style={{ backgroundColor: brandColor, color: textOnBrand }}>
-               <ShoppingBag size={20} />
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg shadow-black/10 flex-shrink-0" style={{ backgroundColor: brandColor, color: textOnBrand }}>
+               <ShoppingBag size={18} />
             </div>
           )}
         </div>
