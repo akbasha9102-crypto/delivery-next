@@ -9,7 +9,7 @@ import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
-type OrderItem = { id: string; item_name: string; quantity: number; price: number };
+type OrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'pickup' | 'local' | null };
 
 const STATUS = {
@@ -33,6 +33,34 @@ function getNextStatus(order: Order): Order['status'] | null {
     if (order.status === 'ready')     return 'completed';
   }
   return STATUS[order.status as keyof typeof STATUS]?.next ?? null;
+}
+
+// خصم مكونات الوجبات (menu_recipes) من المخزون تلقائياً عند بدء تجهيز الطلب
+async function deductStockForOrder(restaurantId: string, orderId: string, clientName: string, items: OrderItem[]) {
+  const itemIds = [...new Set(items.filter(i => i.item_id).map(i => i.item_id as string))];
+  if (itemIds.length === 0) return;
+
+  const { data: recipes } = await supabase.from('menu_recipes').select('*').in('menu_item_id', itemIds);
+  if (!recipes || recipes.length === 0) return;
+
+  const movements = items.flatMap(oi => {
+    if (!oi.item_id) return [];
+    return recipes
+      .filter(r => r.menu_item_id === oi.item_id)
+      .map(r => ({
+        inventory_item_id: r.inventory_item_id,
+        restaurant_id: restaurantId,
+        movement_type: 'OUT_ORDER',
+        quantity_changed: r.quantity_required * oi.quantity,
+        reference_id: orderId,
+        reference_type: 'order',
+        notes: `خصم تلقائي — طلب ${clientName}`,
+      }));
+  });
+  if (movements.length === 0) return;
+
+  const { error } = await supabase.from('stock_movements').insert(movements);
+  if (error) console.error('تعذّر خصم المخزون تلقائياً للطلب', orderId, error.message);
 }
 
 function orderTypeLabel(order: Order): string {
@@ -548,6 +576,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
     const { error: itemsError } = await supabase.from('order_items').insert(
       cart.map(e => ({
         order_id:   order.id,
+        item_id:    e.item.id,
         item_name:  e.extraNames.length > 0 ? `${e.item.name} (${e.extraNames.join('، ')})` : e.item.name,
         quantity:   e.qty,
         price:      e.unitPrice,
@@ -560,6 +589,9 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
       setSubmitting(false);
       return;
     }
+
+    deductStockForOrder(restaurantId, order.id, name, cart.map(e => ({ id: e.item.id, item_id: e.item.id, item_name: e.item.name, quantity: e.qty, price: e.unitPrice })))
+      .catch(err => console.error('تعذّر خصم المخزون:', err));
 
     setSubmitting(false);
     onCreated();
@@ -894,6 +926,12 @@ export default function DashboardPage() {
     const next = getNextStatus(order);
     if (!next) return;
     await updateStatus(order.id, next);
+
+    // عند قبول الطلب وبدء التجهيز، نخصم مكونات الوجبات من المخزون تلقائياً
+    if (order.status === 'pending' && restaurantId) {
+      deductStockForOrder(restaurantId, order.id, order.client_name, order.items || [])
+        .catch(err => console.error('تعذّر خصم المخزون:', err));
+    }
 
     // طلبات داخلي/سفري ليس لها سائق — لا إشعارات سائقين إطلاقاً
     if (isInternalOrder(order)) return;

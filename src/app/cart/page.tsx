@@ -639,6 +639,7 @@ const proceedFromReview = () => {
         const extraNames = selectedArr.map(e => e.name).join('، ');
         return {
           order_id: order.id,
+          item_id: i.id,
           item_name: extraNames ? `${i.name} (${extraNames})` : i.name,
           quantity: i.quantity,
           price: i.price + extraCost,

@@ -10,6 +10,8 @@ import { HexColorPicker } from 'react-colorful';
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
 type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
+type InventoryItem = { id: string; name: string; unit: string; current_stock: number };
+type Recipe = { id: string; menu_item_id: string; inventory_item_id: string; quantity_required: number };
 
 const ITEM_STATUSES = [
   { value: 'available',   label: 'متوفر',            color: 'bg-green-500 text-white border-green-500' },
@@ -67,6 +69,10 @@ export default function MenuPage() {
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const [previewDark, setPreviewDark] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [recipeInvId, setRecipeInvId] = useState('');
+  const [recipeQty, setRecipeQty] = useState('');
 
   const fetchMenu = async (seedIfEmpty = true) => {
     // لا نجلب أي شيء حتى يُحدَّد restaurant_id — يمنع تسريب بيانات مطاعم أخرى
@@ -111,6 +117,12 @@ export default function MenuPage() {
   };
 
   useEffect(() => { fetchMenu(); }, [restaurantId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    supabase.from('inventory_items').select('id, name, unit, current_stock').eq('restaurant_id', restaurantId).eq('is_active', true).order('name')
+      .then(({ data }) => setInventoryItems(data || []));
+  }, [restaurantId]);
 
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
@@ -179,6 +191,26 @@ export default function MenuPage() {
     setEditForm({ category_id: item.category_id, name: item.name, description: item.description || '', price: String(item.price), image_url: item.image_url || '' });
     try { setExtras(JSON.parse(item.extras_json || '[]')); } catch { setExtras([]); }
     setExtraName(''); setExtraPrice('');
+    setRecipes([]);
+    setRecipeInvId(''); setRecipeQty('');
+    supabase.from('menu_recipes').select('*').eq('menu_item_id', item.id)
+      .then(({ data }) => setRecipes(data || []));
+  };
+
+  const addRecipe = async () => {
+    if (!editItem || !recipeInvId) return;
+    const qty = parseFloat(recipeQty.replace(',', '.')) || 1;
+    const { data, error } = await supabase.from('menu_recipes')
+      .insert([{ menu_item_id: editItem.id, inventory_item_id: recipeInvId, quantity_required: qty }])
+      .select().single();
+    if (error) { showToast('تعذّر إضافة المكوّن', false); return; }
+    setRecipes(prev => [...prev, data]);
+    setRecipeInvId(''); setRecipeQty('');
+  };
+
+  const removeRecipe = async (id: string) => {
+    await supabase.from('menu_recipes').delete().eq('id', id);
+    setRecipes(prev => prev.filter(r => r.id !== id));
   };
 
   useEffect(() => {
@@ -393,6 +425,43 @@ export default function MenuPage() {
                     <button onClick={addExtra} disabled={!extraName.trim()} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                   </div>
                 </div>
+              </div>
+
+              <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
+                <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧾 إدارة المكونات</h4>
+                {recipes.length === 0 && (
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">لا توجد مكونات مرتبطة بعد — عند إضافة مكوّن، سيُخصم من المخزون تلقائياً مع كل طلب.</p>
+                )}
+                {recipes.map(r => {
+                  const inv = inventoryItems.find(i => i.id === r.inventory_item_id);
+                  return (
+                    <div key={r.id} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
+                      <button onClick={() => removeRecipe(r.id)} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
+                      <div className="text-right flex-1 mr-3">
+                        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{inv?.name || '—'}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {inv?.unit || ''} لكل وجبة</p>
+                      </div>
+                    </div>
+                  );
+                })}
+                {inventoryItems.length === 0 ? (
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right">أضف مواد في المخزون أولاً حتى تقدر تربطها بالوجبة.</p>
+                ) : (
+                  <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
+                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة مكوّن</p>
+                    <select value={recipeInvId} onChange={e => setRecipeInvId(e.target.value)} dir="rtl"
+                      className={`${input} mb-2`}>
+                      <option value="">اختر مادة من المخزون</option>
+                      {inventoryItems.map(i => (
+                        <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <input value={recipeQty} onChange={e => setRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
+                      <button onClick={addRecipe} disabled={!recipeInvId} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
