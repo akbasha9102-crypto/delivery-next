@@ -293,19 +293,22 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
         animate={{ y: 0 }}
         className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-gray-100/50 dark:border-slate-800/50 px-4 h-20 flex items-center gap-2.5 shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
 
-        {/* صورة المطعم — بموقعها الطبيعي */}
-        {brandLogo ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative flex-shrink-0">
-            <Image src={brandLogo} alt={brandName} width={60} height={60} className="h-12 w-12 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md" unoptimized/>
-          </motion.div>
-        ) : (
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-black/10 flex-shrink-0" style={{ backgroundColor: brandColor, color: textOnBrand }}>
-             <ShoppingBag size={20} />
-          </div>
-        )}
+        {/* اسم المطعم */}
+        <div className="flex flex-col flex-1 min-w-0">
+          <h1 className="max-w-full text-lg font-black tracking-tight leading-tight text-black dark:text-white truncate">{brandName}</h1>
+          <div className="w-8 h-1 rounded-full mt-1 opacity-20" style={{ backgroundColor: brandColor }}/>
+        </div>
+
+        {/* زر نوع الطلب: يفتح نافذة لاختيار توصيل أو استلام */}
+        <button
+          type="button"
+          onClick={() => setShowOrderTypeModal(true)}
+          className="flex items-center gap-1.5 pl-2.5 pr-3.5 h-11 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0"
+          aria-label="نوع الطلب: توصيل أو استلام"
+        >
+          <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{orderType === 'pickup' ? 'استلام الطلب' : 'توصيل الطلب'}</span>
+          <ChevronDown size={17} className="text-gray-400" />
+        </button>
 
         {/* الموقع فوق والواتس تحته */}
         {(location_url || whatsapp_number) && (
@@ -335,22 +338,19 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
           </div>
         )}
 
-        {/* زر نوع الطلب: يفتح نافذة لاختيار توصيل أو استلام */}
-        <button
-          type="button"
-          onClick={() => setShowOrderTypeModal(true)}
-          className="flex items-center gap-1.5 pl-2.5 pr-3.5 h-11 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0"
-          aria-label="نوع الطلب: توصيل أو استلام"
-        >
-          <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{orderType === 'pickup' ? 'استلام الطلب' : 'توصيل الطلب'}</span>
-          <ChevronDown size={17} className="text-gray-400" />
-        </button>
-
-        {/* اسم المطعم */}
-        <div className="flex flex-col flex-1 min-w-0">
-          <h1 className="max-w-full text-lg font-black tracking-tight leading-tight text-black dark:text-white truncate">{brandName}</h1>
-          <div className="w-8 h-1 rounded-full mt-1 opacity-20" style={{ backgroundColor: brandColor }}/>
-        </div>
+        {/* صورة المطعم */}
+        {brandLogo ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative flex-shrink-0">
+            <Image src={brandLogo} alt={brandName} width={60} height={60} className="h-12 w-12 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md" unoptimized/>
+          </motion.div>
+        ) : (
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-black/10 flex-shrink-0" style={{ backgroundColor: brandColor, color: textOnBrand }}>
+             <ShoppingBag size={20} />
+          </div>
+        )}
       </motion.header>
 
       {/* ══ شريط الحالة والوقت ══ */}
