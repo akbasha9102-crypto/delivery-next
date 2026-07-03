@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { Moon, Sun, Plus, Minus, ShoppingBag, ShoppingCart, Trash2, MapPin, MessageCircle, ChevronDown, Check, X } from 'lucide-react';
+import { Plus, Minus, ShoppingBag, ShoppingCart, Trash2, MapPin, MessageCircle, ChevronDown, Check, X } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/CustomerGuard';
@@ -50,7 +50,7 @@ type Props = {
 };
 
 export default function HomeClient({ initialCategories, initialItems, restaurantId, restaurantSlug }: Props) {
-  const { dark, toggleDark } = useDarkMode();
+  const { dark } = useDarkMode();
   const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total, orderType, setOrderType } = useCart();
   const [priceFlash, setPriceFlash] = useState(false);
   const prevTotal = useRef(total);
@@ -291,33 +291,26 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-gray-100/50 dark:border-slate-800/50 px-6 h-20 flex items-center justify-between shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={toggleDark}
-          className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center transition-all border border-gray-100 dark:border-slate-700 shadow-sm">
-          {dark ? <Sun size={20} className="text-yellow-400"/> : <Moon size={20} className="text-gray-400"/>}
-        </motion.button>
 
         <div className="flex flex-col items-center flex-1 min-w-0 mx-3">
-          <h1 className="w-full text-lg font-black tracking-tight text-center leading-tight text-black dark:text-white truncate">{brandName}</h1>
+          <h1 className="max-w-full text-lg font-black tracking-tight text-center leading-tight text-black dark:text-white truncate">{brandName}</h1>
           <div className="w-8 h-1 rounded-full mt-1 opacity-20" style={{ backgroundColor: brandColor }}/>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2.5 flex-shrink-0">
           {/* زر نوع الطلب: يفتح نافذة لاختيار توصيل أو استلام */}
           <button
             type="button"
             onClick={() => setShowOrderTypeModal(true)}
-            className="flex items-center gap-1 pl-2 pr-2.5 h-9 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0"
+            className="flex items-center gap-1.5 pl-2.5 pr-3.5 h-11 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0"
             aria-label="نوع الطلب: توصيل أو استلام"
           >
-            <span className="text-[11px] font-bold text-gray-700 dark:text-slate-200">{orderType === 'pickup' ? 'استلام' : 'توصيل'}</span>
-            <ChevronDown size={14} className="text-gray-400" />
+            <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{orderType === 'pickup' ? 'استلام' : 'توصيل'}</span>
+            <ChevronDown size={17} className="text-gray-400" />
           </button>
 
           {(location_url || whatsapp_number) && (
-            <div className="flex items-center gap-0.5 h-9 px-1 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0">
+            <div className="flex items-center gap-1 h-11 px-1 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0">
               {location_url && (
                 <motion.a
                   href={location_url}
@@ -325,8 +318,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                   rel="noopener noreferrer"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="w-7 h-7 rounded-full flex items-center justify-center">
-                  <MapPin size={14} className="text-red-500"/>
+                  className="w-9 h-9 rounded-full flex items-center justify-center">
+                  <MapPin size={17} className="text-red-500"/>
                 </motion.a>
               )}
               {whatsapp_number && (
@@ -336,8 +329,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                   rel="noopener noreferrer"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="w-7 h-7 rounded-full flex items-center justify-center">
-                  <MessageCircle size={14} className="text-green-500"/>
+                  className="w-9 h-9 rounded-full flex items-center justify-center">
+                  <MessageCircle size={17} className="text-green-500"/>
                 </motion.a>
               )}
             </div>
@@ -348,11 +341,11 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               className="relative flex-shrink-0">
-              <Image src={brandLogo} alt={brandName} width={60} height={60} className="h-11 w-11 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md" unoptimized/>
+              <Image src={brandLogo} alt={brandName} width={60} height={60} className="h-12 w-12 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md" unoptimized/>
             </motion.div>
           ) : (
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg shadow-black/10 flex-shrink-0" style={{ backgroundColor: brandColor, color: textOnBrand }}>
-               <ShoppingBag size={18} />
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-black/10 flex-shrink-0" style={{ backgroundColor: brandColor, color: textOnBrand }}>
+               <ShoppingBag size={20} />
             </div>
           )}
         </div>

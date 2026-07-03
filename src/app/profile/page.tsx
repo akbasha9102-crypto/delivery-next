@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { ClientBottomNav } from '@/components/BottomNav';
-import { User, Pencil, Check, Phone, LogOut, MapPin, Plus, Trash2, X, LocateFixed, CheckCircle2, Loader2, ChevronRight } from 'lucide-react';
+import { User, Pencil, Check, Phone, LogOut, MapPin, Plus, Trash2, X, LocateFixed, CheckCircle2, Loader2, ChevronRight, Moon, Sun } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { CustomerGuard } from '@/components/CustomerGuard';
@@ -120,7 +120,7 @@ function EditableRow({
 
 
 export default function ProfilePage() {
-  const { dark } = useDarkMode();
+  const { dark, toggleDark } = useDarkMode();
   const { primary_color } = useSettings();
 
   const rawColor   = primary_color || '#e67e22';
@@ -417,6 +417,35 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* المظهر: الوضع الليلي / الفاتح */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden">
+          <button
+            onClick={toggleDark}
+            className="w-full px-5 py-4 flex items-center justify-between active:scale-[0.98] transition-all text-right"
+          >
+            <div
+              className="relative w-14 h-8 rounded-full flex items-center px-1 transition-colors flex-shrink-0"
+              style={{ backgroundColor: dark ? brandColor : '#e5e7eb' }}
+            >
+              <motion.span
+                layout
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className="w-6 h-6 rounded-full bg-white shadow flex-shrink-0"
+                style={{ marginRight: dark ? 0 : 'auto', marginLeft: dark ? 'auto' : 0 }}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <span className="font-bold text-gray-900 dark:text-slate-100 block">المظهر</span>
+                <span className="text-xs text-gray-400 dark:text-slate-500">{dark ? 'الوضع الليلي' : 'الوضع الفاتح'}</span>
+              </div>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: dark ? '#fbbf2420' : '#64748b18' }}>
+                {dark ? <Sun size={20} style={{ color: '#fbbf24' }}/> : <Moon size={20} style={{ color: '#64748b' }}/>}
+              </div>
+            </div>
+          </button>
+        </div>
+
         {/* ── العناوين ── */}
         <button
           onClick={() => setShowAddressPanel(true)}
@@ -429,10 +458,10 @@ export default function ProfilePage() {
                 {savedLocations.length > 0 ? `${savedLocations.length} عنوان محفوظ` : 'لا توجد عناوين'}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <span className="font-bold text-gray-900 dark:text-slate-100">العناوين</span>
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#ef444418' }}>
-                <MapPin size={16} style={{ color: '#ef4444' }}/>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#ef444418' }}>
+                <MapPin size={20} style={{ color: '#ef4444' }}/>
               </div>
             </div>
           </div>
