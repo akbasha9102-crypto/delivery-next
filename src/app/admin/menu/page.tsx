@@ -146,10 +146,16 @@ export default function MenuPage() {
   const saveCatColors = async () => {
     if (!editCatSheet || !editCatColors) return;
     const id = editCatSheet.catId;
+    const prevCat = categories.find(c => c.id === id);
     setSaving(true);
     setCategories(prev => prev.map(c => c.id === id ? { ...c, ...editCatColors } : c));
-    await supabase.from('categories').update(editCatColors).eq('id', id);
+    const { error } = await supabase.from('categories').update(editCatColors).eq('id', id);
     setSaving(false);
+    if (error) {
+      if (prevCat) setCategories(prev => prev.map(c => c.id === id ? prevCat : c));
+      showToast('تعذّر حفظ الألوان', false);
+      return;
+    }
     showToast('✓ تم حفظ الألوان');
   };
 

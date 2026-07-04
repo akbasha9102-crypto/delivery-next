@@ -15,8 +15,13 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       // Super admin preview mode — bypass normal auth
       const previewRes = await fetch('/api/super-admin/preview-check').catch(() => null);
       if (previewRes?.ok) {
-        const { ok } = await previewRes.json().catch(() => ({ ok: false }));
-        if (ok) { setChecking(false); return; }
+        const { ok, restaurant } = await previewRes.json().catch(() => ({ ok: false, restaurant: null }));
+        if (ok && restaurant?.id) {
+          setRestaurant(restaurant.id, restaurant.name ?? null);
+          setChecking(false);
+          return;
+        }
+        if (ok) { router.replace('/login'); return; }
       }
 
       // Normal Supabase auth

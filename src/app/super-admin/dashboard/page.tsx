@@ -311,7 +311,7 @@ function RestaurantCard({
 
           {/* ── Preview button ── */}
           <button
-            onClick={() => window.open('/api/super-admin/preview', '_blank')}
+            onClick={() => window.open(`/api/super-admin/preview?rid=${encodeURIComponent(r.restaurant_id ?? r.id)}`, '_blank')}
             className="w-full py-3 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 font-bold text-sm hover:bg-indigo-600/30 transition-all active:scale-95 flex items-center justify-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

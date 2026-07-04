@@ -202,10 +202,19 @@ type Order = {
   driver_lat?: number | null; driver_lng?: number | null;
   client_lat?: number | null; client_lng?: number | null;
   order_type: 'delivery' | 'pickup' | null;
+  restaurant_id?: string | null;
 };
 
 
 const MOTO_ICON_HTML = `<div style="width:46px;height:46px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 4px 16px rgba(37,99,235,0.45);display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;">🏍️</div>`;
+
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
+
+function urlBase64ToUint8Array(b64: string) {
+  const padding = '='.repeat((4 - (b64.length % 4)) % 4);
+  const base64  = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from([...atob(base64)].map(c => c.charCodeAt(0)));
+}
 
 export default function TrackPage() {
   const { dark } = useDarkMode();
@@ -321,6 +330,7 @@ export default function TrackPage() {
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackSending, setFeedbackSending] = useState(false);
   const [feedbackDone, setFeedbackDone] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [alreadySentFeedback, setAlreadySentFeedback] = useState(false);
 
   const trackMapRef          = useRef<HTMLDivElement>(null);
@@ -552,7 +562,9 @@ export default function TrackPage() {
   const submitFeedback = async () => {
     if (!feedbackText.trim() || !order) return;
     setFeedbackSending(true);
-    await supabase.from('order_feedback').insert({
+    setFeedbackError(null);
+    const { error } = await supabase.from('order_feedback').insert({
+      restaurant_id: order.restaurant_id,
       order_id: order.id,
       client_name: order.client_name,
       client_phone: order.client_phone,
@@ -560,6 +572,10 @@ export default function TrackPage() {
       message: feedbackText.trim(),
     });
     setFeedbackSending(false);
+    if (error) {
+      setFeedbackError('تعذّر إرسال ملاحظتك، حاول مجدداً');
+      return;
+    }
     setFeedbackDone(true);
     localStorage.setItem(`fb_sent_${order.id}`, '1');
     setAlreadySentFeedback(true);
@@ -594,6 +610,24 @@ export default function TrackPage() {
     if (typeof Notification === 'undefined') return;
     const result = await Notification.requestPermission();
     setNotifPermission(result);
+
+    if (result === 'granted' && order?.id) {
+      // اشتراك Web Push لإشعارات تتبع الطلب — فشله لا يكسر تجربة المستخدم
+      try {
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+          const reg = await navigator.serviceWorker.register('/sw.js');
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          });
+          await fetch('/api/push/subscribe-customer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: order.id, subscription: sub.toJSON() }),
+          });
+        }
+      } catch { /* تجاهل الفشل بصمت */ }
+    }
   };
 
   const steps = useMemo(() => getSteps(order?.order_type), [order?.order_type]);
@@ -865,7 +899,7 @@ export default function TrackPage() {
                       <p className="text-gray-500 dark:text-slate-400 text-sm">{steps[current]?.desc}</p>
                       {order.status === 'completed' && !alreadySentFeedback && (
                         <button
-                          onClick={() => { setShowFeedbackModal(true); setFeedbackStep('choose'); setFeedbackDone(false); setFeedbackText(''); }}
+                          onClick={() => { setShowFeedbackModal(true); setFeedbackStep('choose'); setFeedbackDone(false); setFeedbackText(''); setFeedbackError(null); }}
                           className="mt-4 flex items-center gap-2 mx-auto px-5 py-2.5 rounded-2xl border-2 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
                         >
                           <MessageSquare size={16}/>
@@ -1022,6 +1056,9 @@ export default function TrackPage() {
                   autoFocus
                   className="w-full bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-2xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none text-sm resize-none mb-4"
                 />
+                {feedbackError && (
+                  <p className="text-red-500 text-sm text-center mb-3">{feedbackError}</p>
+                )}
                 <button
                   onClick={submitFeedback}
                   disabled={!feedbackText.trim() || feedbackSending}

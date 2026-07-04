@@ -64,16 +64,17 @@ export default function StatisticsPage() {
   const [expandedIng, setExpandedIng] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!restaurantId) { setLoading(false); return; }
     setLoading(true);
     const start = new Date(fromDate + 'T00:00:00').toISOString();
     const end   = new Date(toDate   + 'T23:59:59').toISOString();
 
     const [ordersRes, itemsRes, catsRes] = await Promise.all([
-      supabase.from('orders').select('*').eq('status', 'completed')
+      supabase.from('orders').select('*').eq('restaurant_id', restaurantId).eq('status', 'completed')
         .gte('created_at', start).lte('created_at', end)
         .order('created_at', { ascending: false }).limit(500),
-      supabase.from('items').select('name, category_id, image_url'),
-      supabase.from('categories').select('*').order('created_at', { ascending: true }),
+      supabase.from('items').select('name, category_id, image_url').eq('restaurant_id', restaurantId),
+      supabase.from('categories').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: true }),
     ]);
 
     const imgMap = new Map<string, string>();
@@ -97,7 +98,7 @@ export default function StatisticsPage() {
     const withItems = orders.map(o => ({ ...o, items: itemsByOrder.get(o.id) ?? [] }));
     setOrders(withItems);
     setLoading(false);
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, restaurantId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

@@ -378,6 +378,7 @@ export default function SettingsPage() {
   const [showChangePass,   setShowChangePass]   = useState(false);
   const [username,         setUsername]         = useState('');
   const [tick,             setTick]             = useState(0);
+  const [toggleError,      setToggleError]      = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -405,7 +406,12 @@ export default function SettingsPage() {
       const nowMins = now.getHours() * 60 + now.getMinutes();
       const [oh=0, om=0]   = (day.open  || '00:00').split(':').map(Number);
       const [ch=23, cm=59] = (day.close || '23:59').split(':').map(Number);
-      shouldBeOpen = nowMins >= oh*60+om && nowMins < ch*60+cm;
+      const openMins  = oh*60+om;
+      const closeMins = ch*60+cm;
+      // دوام يعبر منتصف الليل (مثلاً 18:00 → 02:00): closeMins <= openMins
+      shouldBeOpen = closeMins > openMins
+        ? (nowMins >= openMins && nowMins < closeMins)
+        : (nowMins >= openMins || nowMins < closeMins);
     }
     if (shouldBeOpen && isClosedRef.current) {
       supabase.from('restaurant_settings').update({ is_closed: false, opens_at: null }).eq('id', settingsId).then(() => refreshSettings());
@@ -418,15 +424,20 @@ export default function SettingsPage() {
 
   const handleToggleClosed = async () => {
     if (is_closed) {
-      await supabase.from('restaurant_settings').update({ is_closed: false, opens_at: null }).eq('id', settingsId);
+      setToggleError(null);
+      const { error } = await supabase.from('restaurant_settings').update({ is_closed: false, opens_at: null }).eq('id', settingsId);
+      if (error) { setToggleError('فشل فتح المطعم: ' + error.message); return; }
       await refreshSettings();
     } else {
+      setToggleError(null);
       setOpensAtInput('');
       setShowClosedModal(true);
     }
   };
   const confirmClose = async () => {
-    await supabase.from('restaurant_settings').update({ is_closed: true, opens_at: opensAtInput || null }).eq('id', settingsId);
+    setToggleError(null);
+    const { error } = await supabase.from('restaurant_settings').update({ is_closed: true, opens_at: opensAtInput || null }).eq('id', settingsId);
+    if (error) { setToggleError('فشل إغلاق المطعم: ' + error.message); return; }
     setShowClosedModal(false);
     await refreshSettings();
   };
@@ -529,6 +540,9 @@ export default function SettingsPage() {
               </div>
             </button>
           </div>
+          {toggleError && (
+            <p className="text-red-500 text-xs text-center font-bold">{toggleError}</p>
+          )}
         </div>
 
         {/* ─ الأرشيف والإحصاء ─ */}
@@ -608,6 +622,9 @@ export default function SettingsPage() {
               <input type="time" value={opensAtInput} onChange={e => setOpensAtInput(e.target.value)}
                 className="flex-1 bg-transparent text-lg font-bold text-gray-900 dark:text-slate-100 outline-none text-center" />
             </div>
+            {toggleError && (
+              <p className="text-red-500 text-xs text-center font-bold mb-3">{toggleError}</p>
+            )}
             <div className="flex gap-3">
               <button onClick={() => setShowClosedModal(false)}
                 className="flex-1 py-3 rounded-2xl border border-gray-200 dark:border-slate-600 font-bold text-gray-600 dark:text-slate-400 active:scale-95 transition-all">

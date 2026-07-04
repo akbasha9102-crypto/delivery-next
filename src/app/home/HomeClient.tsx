@@ -51,7 +51,7 @@ type Props = {
 
 export default function HomeClient({ initialCategories, initialItems, restaurantId, restaurantSlug }: Props) {
   const { dark } = useDarkMode();
-  const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total, orderType, setOrderType } = useCart();
+  const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total, orderType, setOrderType, ensureRestaurant } = useCart();
   const [priceFlash, setPriceFlash] = useState(false);
   const prevTotal = useRef(total);
   useEffect(() => {
@@ -118,6 +118,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   const [dataError,    setDataError]    = useState<string | null>(null);
   const [activeCategory,   setActiveCategory]   = useState('all');
   const [showClosedToast,  setShowClosedToast]  = useState(false);
+  const [showCartResetToast, setShowCartResetToast] = useState(false);
   const [showCartPanel,  setShowCartPanel]  = useState(false);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [showOrderTypeModal, setShowOrderTypeModal] = useState(false);
@@ -213,6 +214,12 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   }, [showClosedToast]);
 
   useEffect(() => {
+    if (!showCartResetToast) return;
+    const t = setTimeout(() => setShowCartResetToast(false), 2500);
+    return () => clearTimeout(t);
+  }, [showCartResetToast]);
+
+  useEffect(() => {
     if (showCartDrawer) {
       scrollLockPos.current = window.scrollY;
       document.body.style.position = 'fixed';
@@ -240,6 +247,11 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   useEffect(() => {
     if (restaurantId) localStorage.setItem('currentRestaurantId', restaurantId);
     if (restaurantSlug) localStorage.setItem('currentRestaurantSlug', restaurantSlug);
+    // منع خلط سلة مطعم بسلة مطعم آخر — تفريغ تلقائي عند اكتشاف تغيّر المطعم
+    if (restaurantId && ensureRestaurant(restaurantId)) {
+      setShowCartResetToast(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId, restaurantSlug]);
 
   const scrollToCategory = (catId: string) => {
@@ -1058,6 +1070,20 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
             className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 dark:bg-slate-700 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-black whitespace-nowrap"
           >
             🔒 المطعم مغلق حالياً
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showCartResetToast && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 dark:bg-slate-700 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-black whitespace-nowrap"
+          >
+            🛒 تم تفريغ سلتك لأنك انتقلت لمطعم آخر
           </motion.div>
         )}
       </AnimatePresence>

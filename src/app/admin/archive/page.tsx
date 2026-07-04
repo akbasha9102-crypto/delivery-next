@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useDarkMode } from '@/context/ThemeContext';
+import { useRestaurant } from '@/context/RestaurantContext';
 import { MessageSquare, AlertCircle, ChevronRight, ChevronDown, ChevronUp, MapPin, Car } from 'lucide-react';
 
 type Feedback = {
@@ -59,6 +60,7 @@ function localDate(d = new Date()) {
 export default function ArchivePage() {
   const router = useRouter();
   useDarkMode();
+  const { restaurantId } = useRestaurant();
   const [feedbacks, setFeedbacks]     = useState<Feedback[]>([]);
   const [rejected,  setRejected]      = useState<RejectedOrder[]>([]);
   const [driverGroups, setDriverGroups] = useState<DriverGroup[]>([]);
@@ -69,14 +71,18 @@ export default function ArchivePage() {
   const [expandedTrip,   setExpandedTrip]   = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
+    if (!restaurantId) {
+      setFeedbacks([]); setRejected([]); setDriverGroups([]); setLoading(false);
+      return;
+    }
     const today = localDate();
     const start = new Date(today + 'T00:00:00').toISOString();
     const end   = new Date(today + 'T23:59:59').toISOString();
 
     const [fbRes, rejRes, tripsRes] = await Promise.all([
-      supabase.from('order_feedback').select('*, orders(total_amount, delivery_address)').order('created_at', { ascending: false }).limit(200),
-      supabase.from('orders').select('id, client_name, client_phone, total_amount, delivery_address, created_at').eq('status', 'rejected').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
-      supabase.from('orders').select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, created_at, driver_name, driver_phone, driver_id').eq('status', 'completed').not('driver_id', 'is', null).gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
+      supabase.from('order_feedback').select('*, orders(total_amount, delivery_address)').eq('restaurant_id', restaurantId).order('created_at', { ascending: false }).limit(200),
+      supabase.from('orders').select('id, client_name, client_phone, total_amount, delivery_address, created_at').eq('restaurant_id', restaurantId).eq('status', 'rejected').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
+      supabase.from('orders').select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, created_at, driver_name, driver_phone, driver_id').eq('restaurant_id', restaurantId).eq('status', 'completed').not('driver_id', 'is', null).gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
     ]);
 
     const enriched: Feedback[] = (fbRes.data || []).map((f: any) => ({
@@ -120,7 +126,7 @@ export default function ArchivePage() {
     });
     setDriverGroups(Array.from(map.values()));
     setLoading(false);
-  }, []);
+  }, [restaurantId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 

@@ -941,6 +941,7 @@ export default function DashboardPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
         body: JSON.stringify({
+          restaurant_id: restaurantId,
           title: '🔔 طلب جديد',
           body: `طلب من ${order.client_name} — ${order.total_amount.toLocaleString()} د.ع`,
           url: '/driver/dashboard',
@@ -1316,6 +1317,7 @@ export default function DashboardPage() {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
                               body: JSON.stringify({
+                                restaurant_id: restaurantId,
                                 title: '🔔 طلب جديد بانتظارك',
                                 body: `طلب من ${order.client_name} — ${order.total_amount.toLocaleString()} د.ع`,
                                 url: '/driver/dashboard',
@@ -1506,6 +1508,7 @@ export default function DashboardPage() {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
                               body: JSON.stringify({
+                                restaurant_id: restaurantId,
                                 title: '🔔 طلب جديد بانتظارك',
                                 body: `طلب من ${order.client_name} — ${order.total_amount.toLocaleString()} د.ع`,
                                 url: '/driver/dashboard',

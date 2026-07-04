@@ -17,11 +17,16 @@ export async function POST(request: Request) {
     process.env.VAPID_PRIVATE_KEY!
   );
 
-  const { title, body, url, tag } = await request.json();
+  const { title, body, url, tag, restaurant_id } = await request.json();
+
+  if (!restaurant_id) {
+    return Response.json({ error: 'restaurant_id مطلوب' }, { status: 400 });
+  }
 
   const { data: drivers } = await supabase
     .from('drivers')
     .select('id, push_subscription')
+    .eq('restaurant_id', restaurant_id)
     .not('push_subscription', 'is', null);
 
   if (!drivers?.length) return Response.json({ ok: true, sent: 0 });

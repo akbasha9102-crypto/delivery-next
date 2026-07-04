@@ -28,9 +28,10 @@ export default function DriversPage() {
   const [savingPw,    setSavingPw]    = useState(false);
 
   const fetchDrivers = useCallback(async () => {
-    let q = supabase.from('drivers').select('*').order('created_at', { ascending: false });
-    if (restaurantId) q = q.eq('restaurant_id', restaurantId) as typeof q;
-    const { data } = await q;
+    if (!restaurantId) { setDrivers([]); setLoading(false); return; }
+    const { data } = await supabase.from('drivers').select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('created_at', { ascending: false });
     setDrivers(data || []);
     setLoading(false);
   }, [restaurantId]);
@@ -59,6 +60,7 @@ export default function DriversPage() {
   };
 
   const addDriver = async () => {
+    if (!restaurantId) return;
     if (!name.trim() || !phone.trim() || !password.trim()) return;
     setAdding(true);
     const localNumber = phone.trim().replace(/^0/, '');
@@ -68,7 +70,7 @@ export default function DriversPage() {
       phone: fullPhone,
       password: password.trim(),
       status: 'unavailable',
-      ...(restaurantId ? { restaurant_id: restaurantId } : {}),
+      restaurant_id: restaurantId,
     });
     setAdding(false);
     closeAdd();

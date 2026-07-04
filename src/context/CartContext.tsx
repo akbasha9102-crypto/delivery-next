@@ -4,8 +4,9 @@ import { createContext, useContext, useState, useEffect } from 'react';
 // ── نوع العناصر ─────────────────────────────────────────────────────────────
 // عند تغيير هذا النوع يجب رفع رقم CART_VERSION بمقدار 1
 // حتى تُهمَل البيانات القديمة بدلاً من قراءة بيانات بشكل غلط.
-const CART_VERSION = 1;
+const CART_VERSION = 2;
 const CART_KEY = `cart_v${CART_VERSION}`;
+const CART_RESTAURANT_KEY = `cart_restaurant_v${CART_VERSION}`;
 const ORDER_TYPE_KEY = 'order_type_v1';
 
 export type OrderType = 'delivery' | 'pickup';
@@ -30,6 +31,7 @@ type Ctx = {
   total: number;
   orderType: OrderType;
   setOrderType: (type: OrderType) => void;
+  ensureRestaurant: (restaurantId: string) => boolean;
 };
 
 // ── حارس نوع: يتحقق من صحة كل عنصر مقروء من localStorage ─────────────────
@@ -76,6 +78,20 @@ function readOrderType(): OrderType {
   return v === 'pickup' || v === 'delivery' ? v : 'delivery';
 }
 
+function readCartRestaurant(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(CART_RESTAURANT_KEY);
+}
+
+function writeCartRestaurant(restaurantId: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CART_RESTAURANT_KEY, restaurantId);
+  } catch {
+    // تجاهل بصمت
+  }
+}
+
 // ── Provider ────────────────────────────────────────────────────────────────
 const CartContext = createContext<Ctx | null>(null);
 
@@ -114,8 +130,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const restoreCart = (newItems: CartItem[]) => setItems(newItems);
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
+  // يتحقق من أن السلة الحالية تخص نفس المطعم — إن اختلف المطعم وفيه عناصر بالسلة
+  // يفرّغها تلقائياً ويرجع true (تم التفريغ)، وإلا يحدّث المطعم المخزَّن ويرجع false.
+  const ensureRestaurant = (restaurantId: string): boolean => {
+    const stored = readCartRestaurant();
+    if (stored && stored !== restaurantId) {
+      writeCartRestaurant(restaurantId);
+      if (items.length > 0) {
+        setItems([]);
+        return true;
+      }
+      return false;
+    }
+    writeCartRestaurant(restaurantId);
+    return false;
+  };
+
   return (
-    <CartContext.Provider value={{ items, addItem, decrementItem, removeItem, clearCart, restoreCart, total, orderType, setOrderType }}>
+    <CartContext.Provider value={{ items, addItem, decrementItem, removeItem, clearCart, restoreCart, total, orderType, setOrderType, ensureRestaurant }}>
       {children}
     </CartContext.Provider>
   );
