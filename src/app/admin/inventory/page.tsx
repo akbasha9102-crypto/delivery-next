@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { Plus, Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus } from 'lucide-react';
 
 type InventoryItem = {
   id: string;
@@ -59,6 +59,7 @@ export default function InventoryPage() {
   const [tab, setTab] = useState<'items' | 'movements'>('items');
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
+  const [categoriesList, setCategoriesList] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -68,6 +69,14 @@ export default function InventoryPage() {
   const [movCatFilter, setMovCatFilter] = useState<string | null>(null);
   const [showCustomCat, setShowCustomCat] = useState(false);
   const [customCat, setCustomCat] = useState('');
+
+  // قائمة اختيار "مادة جديدة / فئة جديدة" عند الضغط على +
+  const [showAddMenu, setShowAddMenu] = useState(false);
+
+  // فورم إضافة فئة جديدة مستقلة
+  const [showCatForm, setShowCatForm] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [catSaving, setCatSaving] = useState(false);
 
   // فورم إضافة/تعديل مادة
   const [editItem, setEditItem] = useState<InventoryItem | null>(null);
@@ -111,15 +120,26 @@ export default function InventoryPage() {
     setMovements(data || []);
   }, [restaurantId]);
 
+  const fetchCategoriesList = useCallback(async () => {
+    if (!restaurantId) return;
+    const { data } = await supabase
+      .from('inventory_categories')
+      .select('name')
+      .eq('restaurant_id', restaurantId)
+      .order('name');
+    setCategoriesList((data || []).map((c: { name: string }) => c.name));
+  }, [restaurantId]);
+
   useEffect(() => {
     setLoading(true);
     fetchItems();
     fetchMovements();
-  }, [fetchItems, fetchMovements]);
+    fetchCategoriesList();
+  }, [fetchItems, fetchMovements, fetchCategoriesList]);
 
   // قفل تمرير الصفحة خلف أي نافذة منبثقة حتى لا تتحرك الخلفية بدل النافذة
   useEffect(() => {
-    const isModalOpen = showForm || !!movementTarget;
+    const isModalOpen = showForm || !!movementTarget || showAddMenu || showCatForm;
     if (isModalOpen) {
       const scrollY = window.scrollY;
       document.body.style.position = 'fixed';
@@ -132,7 +152,7 @@ export default function InventoryPage() {
         window.scrollTo(0, scrollY);
       };
     }
-  }, [showForm, movementTarget]);
+  }, [showForm, movementTarget, showAddMenu, showCatForm]);
 
   const openAdd = () => {
     setEditItem(null);
@@ -203,6 +223,21 @@ export default function InventoryPage() {
     setSaving(false);
   };
 
+  const saveNewCategory = async () => {
+    const name = newCatName.trim();
+    if (!name || !restaurantId) return;
+    setCatSaving(true);
+    const { error } = await supabase.from('inventory_categories').insert([{ restaurant_id: restaurantId, name }]);
+    if (error) showToast(error.code === '23505' ? 'هذه الفئة موجودة مسبقاً' : 'تعذّرت إضافة الفئة', false);
+    else {
+      showToast('✓ تمت إضافة الفئة');
+      setNewCatName('');
+      setShowCatForm(false);
+      fetchCategoriesList();
+    }
+    setCatSaving(false);
+  };
+
   const deleteItem = async (item: InventoryItem) => {
     if (!confirm(`هل أنت متأكد من حذف "${item.name}"؟`)) return;
     const { error } = await supabase.from('inventory_items').update({ is_active: false }).eq('id', item.id);
@@ -247,7 +282,7 @@ export default function InventoryPage() {
   const movementCategories = [...new Set(movements.map(m => m.inventory_items?.category).filter((c): c is string => !!c))].sort();
   const filteredMovements = movements.filter(m => !movCatFilter || m.inventory_items?.category === movCatFilter);
 
-  const formCategories = [...new Set([...CATEGORIES, ...categories, ...(form.category ? [form.category] : [])])];
+  const formCategories = [...new Set([...CATEGORIES, ...categories, ...categoriesList, ...(form.category ? [form.category] : [])])];
 
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
@@ -256,7 +291,7 @@ export default function InventoryPage() {
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <button onClick={openAdd} className="w-9 h-9 flex items-center justify-center rounded-full bg-[#f97316] text-white active:scale-90 transition-all">
+        <button onClick={() => setShowAddMenu(true)} className="w-9 h-9 flex items-center justify-center rounded-full bg-[#f97316] text-white active:scale-90 transition-all">
           <Plus size={18} />
         </button>
         <div className="flex items-center gap-2">
@@ -571,6 +606,56 @@ export default function InventoryPage() {
               <button onClick={submitMovement} disabled={movSaving || !movQty}
                 className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
                 {movSaving ? 'جاري الحفظ...' : 'تسجيل الحركة'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ قائمة اختيار: مادة جديدة / فئة جديدة ═══ */}
+      {showAddMenu && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowAddMenu(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
+            <div className="px-5 pb-6 space-y-2">
+              <button onClick={() => { setShowAddMenu(false); openAdd(); }}
+                className="w-full flex items-center gap-3 bg-gray-50 dark:bg-slate-700 rounded-2xl p-4 text-right active:scale-[0.98] transition-all">
+                <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-[#f97316]/10 text-[#f97316]">
+                  <PackagePlus size={18} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">مادة جديدة</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500">إضافة مادة جديدة إلى المخزون</p>
+                </div>
+              </button>
+              <button onClick={() => { setShowAddMenu(false); setNewCatName(''); setShowCatForm(true); }}
+                className="w-full flex items-center gap-3 bg-gray-50 dark:bg-slate-700 rounded-2xl p-4 text-right active:scale-[0.98] transition-all">
+                <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-[#f97316]/10 text-[#f97316]">
+                  <FolderPlus size={18} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">فئة جديدة</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500">إضافة فئة جديدة تظهر عند إضافة مادة</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ موديل إضافة فئة جديدة ═══ */}
+      {showCatForm && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowCatForm(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
+            <div className="px-5 pb-6">
+              <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-4">فئة جديدة</p>
+              <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="اسم الفئة" dir="rtl"
+                autoFocus
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-4" />
+              <button onClick={saveNewCategory} disabled={catSaving || !newCatName.trim()}
+                className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
+                {catSaving ? 'جاري الحفظ...' : 'إضافة الفئة'}
               </button>
             </div>
           </div>
