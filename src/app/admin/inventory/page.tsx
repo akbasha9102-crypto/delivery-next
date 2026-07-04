@@ -644,10 +644,9 @@ export default function InventoryPage() {
 
       {/* ═══ موديل إضافة فئة جديدة ═══ */}
       {showCatForm && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowCatForm(false)}>
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl" onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
-            <div className="px-5 pb-6">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowCatForm(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-6">
               <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-4">فئة جديدة</p>
               <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="اسم الفئة" dir="rtl"
                 autoFocus
