@@ -614,10 +614,9 @@ export default function InventoryPage() {
 
       {/* ═══ قائمة اختيار: مادة جديدة / فئة جديدة ═══ */}
       {showAddMenu && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowAddMenu(false)}>
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl" onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
-            <div className="px-5 pb-6 space-y-2">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowAddMenu(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-6 space-y-2">
               <button onClick={() => { setShowAddMenu(false); openAdd(); }}
                 className="w-full flex items-center gap-3 bg-gray-50 dark:bg-slate-700 rounded-2xl p-4 text-right active:scale-[0.98] transition-all">
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-[#f97316]/10 text-[#f97316]">
