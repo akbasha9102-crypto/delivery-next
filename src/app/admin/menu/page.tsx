@@ -73,6 +73,9 @@ export default function MenuPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [recipeInvId, setRecipeInvId] = useState('');
   const [recipeQty, setRecipeQty] = useState('');
+  const [newItemRecipes, setNewItemRecipes] = useState<{ tempId: string; inventory_item_id: string; quantity_required: number }[]>([]);
+  const [newRecipeInvId, setNewRecipeInvId] = useState('');
+  const [newRecipeQty, setNewRecipeQty] = useState('');
 
   const fetchMenu = async (seedIfEmpty = true) => {
     // لا نجلب أي شيء حتى يُحدَّد restaurant_id — يمنع تسريب بيانات مطاعم أخرى
@@ -172,7 +175,7 @@ export default function MenuPage() {
     const price = parseFloat(form.price.replace(',', '.'));
     if (isNaN(price) || price <= 0) return alert('سعر غير صالح');
     setSaving(true);
-    const { error } = await supabase.from('items').insert([{
+    const { data, error } = await supabase.from('items').insert([{
       ...form,
       name: form.name.trim(),
       description: form.description.trim(),
@@ -181,9 +184,27 @@ export default function MenuPage() {
       is_available: true,
       restaurant_id: restaurantId,
       extras_json: JSON.stringify(newItemExtras),
-    }]);
-    error ? showToast('تعذّر إضافة الطبق', false) : (setForm({ category_id: '', name: '', description: '', price: '', image_url: '' }), setNewItemExtras([]), fetchMenu(), showToast('✓ تم إضافة الطبق'));
+    }]).select().single();
+    if (error) { showToast('تعذّر إضافة الطبق', false); setSaving(false); return; }
+    if (newItemRecipes.length > 0) {
+      const { error: recErr } = await supabase.from('menu_recipes').insert(
+        newItemRecipes.map(r => ({ menu_item_id: data.id, inventory_item_id: r.inventory_item_id, quantity_required: r.quantity_required }))
+      );
+      if (recErr) showToast('تم إضافة الطبق لكن تعذّر ربط بعض المكونات', false);
+    }
+    setForm({ category_id: '', name: '', description: '', price: '', image_url: '' });
+    setNewItemExtras([]);
+    setNewItemRecipes([]);
+    fetchMenu();
+    showToast('✓ تم إضافة الطبق');
     setSaving(false);
+  };
+
+  const addNewItemRecipe = () => {
+    if (!newRecipeInvId) return;
+    const qty = parseFloat(newRecipeQty.replace(',', '.')) || 1;
+    setNewItemRecipes(prev => [...prev, { tempId: Date.now().toString(), inventory_item_id: newRecipeInvId, quantity_required: qty }]);
+    setNewRecipeInvId(''); setNewRecipeQty('');
   };
 
   const openEdit = (item: Item) => {
@@ -587,6 +608,43 @@ export default function MenuPage() {
                     }} disabled={!newExtraName.trim()} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                   </div>
                 </div>
+              </div>
+
+              <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
+                <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧾 إدارة المكونات</h4>
+                {newItemRecipes.length === 0 && (
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">لا توجد مكونات مرتبطة بعد — عند إضافة مكوّن، سيُخصم من المخزون تلقائياً مع كل طلب.</p>
+                )}
+                {newItemRecipes.map(r => {
+                  const inv = inventoryItems.find(i => i.id === r.inventory_item_id);
+                  return (
+                    <div key={r.tempId} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
+                      <button onClick={() => setNewItemRecipes(prev => prev.filter(x => x.tempId !== r.tempId))} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
+                      <div className="text-right flex-1 mr-3">
+                        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{inv?.name || '—'}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {inv?.unit || ''} لكل وجبة</p>
+                      </div>
+                    </div>
+                  );
+                })}
+                {inventoryItems.length === 0 ? (
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right">أضف مواد في المخزون أولاً حتى تقدر تربطها بالوجبة.</p>
+                ) : (
+                  <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
+                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة مكوّن</p>
+                    <select value={newRecipeInvId} onChange={e => setNewRecipeInvId(e.target.value)} dir="rtl"
+                      className={`${input} mb-2`}>
+                      <option value="">اختر مادة من المخزون</option>
+                      {inventoryItems.map(i => (
+                        <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <input value={newRecipeQty} onChange={e => setNewRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
+                      <button onClick={addNewItemRecipe} disabled={!newRecipeInvId} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button onClick={addItem} disabled={saving} className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-3.5 rounded-xl text-base active:scale-95 transition-all mt-4">
