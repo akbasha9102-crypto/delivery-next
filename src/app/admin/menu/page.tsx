@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal } from 'lucide-react';
+import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, FolderPlus, UtensilsCrossed } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { HexColorPicker } from 'react-colorful';
 
@@ -76,6 +76,8 @@ export default function MenuPage() {
   const [newItemRecipes, setNewItemRecipes] = useState<{ tempId: string; inventory_item_id: string; quantity_required: number }[]>([]);
   const [newRecipeInvId, setNewRecipeInvId] = useState('');
   const [newRecipeQty, setNewRecipeQty] = useState('');
+  const [showAddCatSheet, setShowAddCatSheet] = useState(false);
+  const [showAddItemSheet, setShowAddItemSheet] = useState(false);
 
   const fetchMenu = async (seedIfEmpty = true) => {
     // لا نجلب أي شيء حتى يُحدَّد restaurant_id — يمنع تسريب بيانات مطاعم أخرى
@@ -137,7 +139,7 @@ export default function MenuPage() {
       color: newCatColor,
       restaurant_id: restaurantId,
     }]);
-    error ? showToast('تعذّر إضافة القسم', false) : (setNewCat(''), fetchMenu(), showToast('✓ تم إضافة القسم'));
+    error ? showToast('تعذّر إضافة القسم', false) : (setNewCat(''), setShowAddCatSheet(false), fetchMenu(), showToast('✓ تم إضافة القسم'));
     setSaving(false);
   };
 
@@ -195,6 +197,7 @@ export default function MenuPage() {
     setForm({ category_id: '', name: '', description: '', price: '', image_url: '' });
     setNewItemExtras([]);
     setNewItemRecipes([]);
+    setShowAddItemSheet(false);
     fetchMenu();
     showToast('✓ تم إضافة الطبق');
     setSaving(false);
@@ -394,6 +397,127 @@ export default function MenuPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
+      {/* Add Category Modal */}
+      {showAddCatSheet && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
+              <button onClick={addCategory} disabled={saving || !newCat.trim()} className="bg-black text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+                {saving ? '...' : 'حفظ'}
+              </button>
+              <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">➕ قسم جديد</h3>
+              <button onClick={() => setShowAddCatSheet(false)} className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 font-bold px-4 py-2 rounded-xl active:scale-95 transition-all">إلغاء</button>
+            </div>
+            <div className="overflow-y-auto overscroll-contain p-5">
+              <p className="text-gray-400 dark:text-slate-500 text-xs text-right mb-1">اسم القسم</p>
+              <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="اسم القسم" dir="rtl" className={input} />
+              <div className="flex items-center justify-end gap-3 mb-3">
+                <span className="text-sm text-gray-400 dark:text-slate-500">لون القسم</span>
+                <input type="color" value={newCatColor} onChange={e => setNewCatColor(e.target.value)}
+                  className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Item Modal */}
+      {showAddItemSheet && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
+              <button onClick={addItem} disabled={saving} className="bg-black text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+                {saving ? '...' : 'حفظ'}
+              </button>
+              <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">🍽️ طبق جديد</h3>
+              <button onClick={() => setShowAddItemSheet(false)} className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 font-bold px-4 py-2 rounded-xl active:scale-95 transition-all">إلغاء</button>
+            </div>
+            <div className="overflow-y-auto overscroll-contain p-5">
+              <p className="text-gray-400 dark:text-slate-500 text-xs text-right mb-2">اختر القسم</p>
+              <div className="flex gap-2 overflow-x-auto mb-4 flex-row-reverse">
+                {categories.map(cat => (
+                  <button key={cat.id} onClick={() => setForm(p => ({ ...p, category_id: cat.id }))}
+                    className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border active:scale-95 transition-all ${form.category_id === cat.id ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+              {[
+                { key: 'name', placeholder: 'اسم الطبق *' },
+                { key: 'description', placeholder: 'وصف الطبق' },
+                { key: 'price', placeholder: 'السعر * (د.ع)', type: 'number' },
+                { key: 'image_url', placeholder: 'رابط الصورة (اختياري)' },
+              ].map(({ key, placeholder, type }) => (
+                <input key={key} type={type || 'text'} value={(form as any)[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder} dir="rtl" className={input} />
+              ))}
+
+              <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
+                <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧂 الإضافات</h4>
+                {newItemExtras.map(e => (
+                  <div key={e.id} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
+                    <button onClick={() => setNewItemExtras(newItemExtras.filter(x => x.id !== e.id))} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
+                    <div className="text-right flex-1 mr-3">
+                      <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{e.name}</p>
+                      <p className={`text-xs ${e.price > 0 ? 'text-[#f97316]' : 'text-gray-400 dark:text-slate-500'}`}>{e.price > 0 ? `+${e.price.toLocaleString()} د.ع` : 'مجاني'}</p>
+                    </div>
+                  </div>
+                ))}
+                <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة جديدة</p>
+                  <input value={newExtraName} onChange={e => setNewExtraName(e.target.value)} placeholder="اسم الإضافة" dir="rtl" className={`${input} mb-2`} />
+                  <div className="flex gap-2">
+                    <input value={newExtraPrice} onChange={e => setNewExtraPrice(e.target.value)} placeholder="السعر (0=مجاني)" type="number" className={`${input} flex-1 mb-0`} />
+                    <button onClick={() => {
+                      if (!newExtraName.trim()) return;
+                      const price = parseFloat(newExtraPrice.replace(',', '.')) || 0;
+                      setNewItemExtras([...newItemExtras, { id: Date.now().toString(), name: newExtraName.trim(), price }]);
+                      setNewExtraName(''); setNewExtraPrice('');
+                    }} disabled={!newExtraName.trim()} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
+                <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧾 إدارة المكونات</h4>
+                {newItemRecipes.length === 0 && (
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">لا توجد مكونات مرتبطة بعد — عند إضافة مكوّن، سيُخصم من المخزون تلقائياً مع كل طلب.</p>
+                )}
+                {newItemRecipes.map(r => {
+                  const inv = inventoryItems.find(i => i.id === r.inventory_item_id);
+                  return (
+                    <div key={r.tempId} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
+                      <button onClick={() => setNewItemRecipes(prev => prev.filter(x => x.tempId !== r.tempId))} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
+                      <div className="text-right flex-1 mr-3">
+                        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{inv?.name || '—'}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {inv?.unit || ''} لكل وجبة</p>
+                      </div>
+                    </div>
+                  );
+                })}
+                {inventoryItems.length === 0 ? (
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right">أضف مواد في المخزون أولاً حتى تقدر تربطها بالوجبة.</p>
+                ) : (
+                  <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
+                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة مكوّن</p>
+                    <select value={newRecipeInvId} onChange={e => setNewRecipeInvId(e.target.value)} dir="rtl"
+                      className={`${input} mb-2`}>
+                      <option value="">اختر مادة من المخزون</option>
+                      {inventoryItems.map(i => (
+                        <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <input value={newRecipeQty} onChange={e => setNewRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
+                      <button onClick={addNewItemRecipe} disabled={!newRecipeInvId} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Modal */}
       {editItem && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
@@ -550,107 +674,30 @@ export default function MenuPage() {
         {loading ? (
           <div className="flex justify-center mt-20"><div className="w-10 h-10 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
         ) : activeTab === 'add' ? (
-          <div className="space-y-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
-              <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">➕ قسم جديد</h3>
-              <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="اسم القسم" dir="rtl" className={input} />
-              <div className="flex items-center justify-end gap-3 mb-3">
-                <span className="text-sm text-gray-400 dark:text-slate-500">لون القسم</span>
-                <input type="color" value={newCatColor} onChange={e => setNewCatColor(e.target.value)}
-                  className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600" />
+          <div className="space-y-3">
+            <button
+              onClick={() => setShowAddCatSheet(true)}
+              className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+              <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+                <FolderPlus size={26} className="text-[#f97316]" />
               </div>
-              <button onClick={addCategory} disabled={saving || !newCat.trim()} className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-3 rounded-xl active:scale-95 transition-all">
-                {saving ? 'جاري الحفظ...' : 'إضافة القسم'}
-              </button>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700">
-              <h3 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-4">🍽️ طبق جديد</h3>
-              <p className="text-gray-400 dark:text-slate-500 text-xs text-right mb-2">اختر القسم</p>
-              <div className="flex gap-2 overflow-x-auto mb-4 flex-row-reverse">
-                {categories.map(cat => (
-                  <button key={cat.id} onClick={() => setForm(p => ({ ...p, category_id: cat.id }))}
-                    className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border active:scale-95 transition-all ${form.category_id === cat.id ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
-                    {cat.name}
-                  </button>
-                ))}
+              <div className="text-right flex-1">
+                <p className="font-bold text-gray-900 dark:text-slate-100">إضافة قسم جديد</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">أنشئ قسماً جديداً في المنيو</p>
               </div>
-              {[
-                { key: 'name', placeholder: 'اسم الطبق *' },
-                { key: 'description', placeholder: 'وصف الطبق' },
-                { key: 'price', placeholder: 'السعر * (د.ع)', type: 'number' },
-                { key: 'image_url', placeholder: 'رابط الصورة (اختياري)' },
-              ].map(({ key, placeholder, type }) => (
-                <input key={key} type={type || 'text'} value={(form as any)[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder} dir="rtl" className={input} />
-              ))}
+            </button>
 
-              <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
-                <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧂 الإضافات</h4>
-                {newItemExtras.map(e => (
-                  <div key={e.id} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
-                    <button onClick={() => setNewItemExtras(newItemExtras.filter(x => x.id !== e.id))} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
-                    <div className="text-right flex-1 mr-3">
-                      <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{e.name}</p>
-                      <p className={`text-xs ${e.price > 0 ? 'text-[#f97316]' : 'text-gray-400 dark:text-slate-500'}`}>{e.price > 0 ? `+${e.price.toLocaleString()} د.ع` : 'مجاني'}</p>
-                    </div>
-                  </div>
-                ))}
-                <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة جديدة</p>
-                  <input value={newExtraName} onChange={e => setNewExtraName(e.target.value)} placeholder="اسم الإضافة" dir="rtl" className={`${input} mb-2`} />
-                  <div className="flex gap-2">
-                    <input value={newExtraPrice} onChange={e => setNewExtraPrice(e.target.value)} placeholder="السعر (0=مجاني)" type="number" className={`${input} flex-1 mb-0`} />
-                    <button onClick={() => {
-                      if (!newExtraName.trim()) return;
-                      const price = parseFloat(newExtraPrice.replace(',', '.')) || 0;
-                      setNewItemExtras([...newItemExtras, { id: Date.now().toString(), name: newExtraName.trim(), price }]);
-                      setNewExtraName(''); setNewExtraPrice('');
-                    }} disabled={!newExtraName.trim()} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
-                  </div>
-                </div>
+            <button
+              onClick={() => setShowAddItemSheet(true)}
+              className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+              <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+                <UtensilsCrossed size={26} className="text-[#f97316]" />
               </div>
-
-              <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
-                <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧾 إدارة المكونات</h4>
-                {newItemRecipes.length === 0 && (
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">لا توجد مكونات مرتبطة بعد — عند إضافة مكوّن، سيُخصم من المخزون تلقائياً مع كل طلب.</p>
-                )}
-                {newItemRecipes.map(r => {
-                  const inv = inventoryItems.find(i => i.id === r.inventory_item_id);
-                  return (
-                    <div key={r.tempId} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
-                      <button onClick={() => setNewItemRecipes(prev => prev.filter(x => x.tempId !== r.tempId))} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
-                      <div className="text-right flex-1 mr-3">
-                        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{inv?.name || '—'}</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {inv?.unit || ''} لكل وجبة</p>
-                      </div>
-                    </div>
-                  );
-                })}
-                {inventoryItems.length === 0 ? (
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right">أضف مواد في المخزون أولاً حتى تقدر تربطها بالوجبة.</p>
-                ) : (
-                  <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
-                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة مكوّن</p>
-                    <select value={newRecipeInvId} onChange={e => setNewRecipeInvId(e.target.value)} dir="rtl"
-                      className={`${input} mb-2`}>
-                      <option value="">اختر مادة من المخزون</option>
-                      {inventoryItems.map(i => (
-                        <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
-                      ))}
-                    </select>
-                    <div className="flex gap-2">
-                      <input value={newRecipeQty} onChange={e => setNewRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
-                      <button onClick={addNewItemRecipe} disabled={!newRecipeInvId} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
-                    </div>
-                  </div>
-                )}
+              <div className="text-right flex-1">
+                <p className="font-bold text-gray-900 dark:text-slate-100">إضافة وجبة جديدة</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">أضف طبقاً جديداً لأحد الأقسام</p>
               </div>
-
-              <button onClick={addItem} disabled={saving} className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-3.5 rounded-xl text-base active:scale-95 transition-all mt-4">
-                {saving ? 'جاري الحفظ...' : 'إضافة الطبق'}
-              </button>
-            </div>
+            </button>
           </div>
         ) : (
           <div className="space-y-6 pb-8">
