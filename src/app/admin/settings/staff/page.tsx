@@ -1,0 +1,216 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ChevronRight, KeyRound, Plus, ShieldCheck, ToggleLeft, ToggleRight, User, X } from 'lucide-react';
+import { useRestaurant } from '@/context/RestaurantContext';
+import { useStaff } from '@/context/StaffContext';
+import { OwnerOnly } from '@/components/OwnerOnly';
+import { createStaff, updateStaff, type StaffMember, type StaffRole } from '@/lib/staffApi';
+
+const ROLE_LABEL: Record<StaffRole, string> = { owner: 'مالك', manager: 'مدير', cashier: 'كاشير' };
+
+const emptyForm = { display_name: '', role: 'cashier' as StaffRole, pin: '', max_discount_pct: '0', max_void_amount: '0' };
+
+export default function StaffManagementPage() {
+  const router = useRouter();
+  const { restaurantId } = useRestaurant();
+  const { staffList, staffListLoading, refreshStaffList } = useStaff();
+
+  const [showForm, setShowForm] = useState(false);
+  const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [resetTarget, setResetTarget] = useState<StaffMember | null>(null);
+  const [resetPin, setResetPin] = useState('');
+
+  const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
+
+  useEffect(() => { refreshStaffList(); }, [refreshStaffList]);
+
+  const openAdd = () => { setEditTarget(null); setForm(emptyForm); setError(null); setShowForm(true); };
+  const openEdit = (s: StaffMember) => {
+    setEditTarget(s);
+    setForm({ display_name: s.display_name, role: s.role, pin: '', max_discount_pct: String(s.max_discount_pct), max_void_amount: String(s.max_void_amount) });
+    setError(null);
+    setShowForm(true);
+  };
+
+  const submit = async () => {
+    if (!restaurantId || !form.display_name.trim()) return;
+    setSaving(true);
+    setError(null);
+
+    if (editTarget) {
+      const res = await updateStaff(editTarget.id, {
+        display_name: form.display_name.trim(),
+        role: form.role,
+        max_discount_pct: parseFloat(form.max_discount_pct) || 0,
+        max_void_amount: parseFloat(form.max_void_amount) || 0,
+      });
+      setSaving(false);
+      if (!res.ok) { setError('error' in res ? res.error : 'تعذّر الحفظ'); return; }
+      showToast('✓ تم التحديث');
+      setShowForm(false);
+      refreshStaffList();
+      return;
+    }
+
+    if (!/^\d{4,6}$/.test(form.pin)) { setError('الرمز (PIN) يجب أن يكون 4 إلى 6 أرقام'); setSaving(false); return; }
+    const res = await createStaff({
+      restaurant_id: restaurantId,
+      display_name: form.display_name.trim(),
+      role: form.role,
+      pin: form.pin,
+      max_discount_pct: parseFloat(form.max_discount_pct) || 0,
+      max_void_amount: parseFloat(form.max_void_amount) || 0,
+    });
+    setSaving(false);
+    if (!res.ok) { setError('error' in res ? res.error : 'تعذّر الإضافة'); return; }
+    showToast('✓ تمت الإضافة');
+    setShowForm(false);
+    refreshStaffList();
+  };
+
+  const toggleActive = async (s: StaffMember) => {
+    const res = await updateStaff(s.id, { is_active: !s.is_active });
+    if (!res.ok) { showToast('error' in res ? res.error : 'تعذّر التحديث', false); return; }
+    showToast(s.is_active ? '✓ تم تعطيل الموظف' : '✓ تم تفعيل الموظف');
+    refreshStaffList();
+  };
+
+  const submitResetPin = async () => {
+    if (!resetTarget || !/^\d{4,6}$/.test(resetPin)) return;
+    const res = await updateStaff(resetTarget.id, { pin: resetPin });
+    if (!res.ok) { showToast('error' in res ? res.error : 'تعذّر إعادة تعيين الرمز', false); return; }
+    showToast('✓ تم إعادة تعيين الرمز');
+    setResetTarget(null);
+    setResetPin('');
+  };
+
+  const input = 'w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#2563eb] mb-3';
+
+  return (
+    <OwnerOnly>
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-10" dir="rtl">
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
+        <button onClick={openAdd} className="w-9 h-9 flex items-center justify-center rounded-full bg-[#2563eb] text-white active:scale-90 transition-all"><Plus size={18} /></button>
+        <div className="flex items-center gap-2">
+          <ShieldCheck size={18} className="text-[#2563eb]" />
+          <p className="font-bold text-gray-900 dark:text-slate-100">إدارة الموظفين</p>
+        </div>
+        <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all"><ChevronRight size={18} /></button>
+      </header>
+
+      {toast && (
+        <div className={`mx-4 mt-3 px-4 py-3 rounded-xl border text-center font-bold text-sm ${toast.ok ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'}`}>
+          {toast.msg}
+        </div>
+      )}
+
+      <div className="px-4 pt-4">
+        {staffListLoading ? (
+          <div className="flex justify-center mt-20"><div className="w-10 h-10 border-4 border-[#2563eb] border-t-transparent rounded-full animate-spin" /></div>
+        ) : staffList.length === 0 ? (
+          <div className="text-center mt-16">
+            <p className="text-4xl mb-3">👥</p>
+            <p className="text-gray-400 dark:text-slate-500 text-sm">لا يوجد موظفون بعد — اضغط + لإضافة كاشير</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {staffList.map(s => (
+              <div key={s.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <button onClick={() => toggleActive(s)} className="text-gray-400 active:scale-90 transition-all">
+                    {s.is_active ? <ToggleRight size={26} className="text-green-500" /> : <ToggleLeft size={26} />}
+                  </button>
+                  <div className="text-right flex-1 px-3">
+                    <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">{s.display_name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{ROLE_LABEL[s.role]} · خصم حتى {s.max_discount_pct}% · إلغاء حتى {s.max_void_amount.toLocaleString()} د.ع</p>
+                  </div>
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0"><User size={16} className="text-blue-500" /></div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => openEdit(s)} className="flex-1 py-2 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 font-bold text-xs active:scale-95 transition-all">تعديل الحدود</button>
+                  <button onClick={() => { setResetTarget(s); setResetPin(''); }} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold text-xs active:scale-95 transition-all">
+                    <KeyRound size={12} /> إعادة تعيين PIN
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* موديل إضافة/تعديل موظف */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowForm(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[90dvh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
+              <button onClick={submit} disabled={saving || !form.display_name.trim()} className="bg-[#2563eb] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
+                {saving ? '...' : editTarget ? 'حفظ' : 'إضافة'}
+              </button>
+              <h3 className="font-bold text-gray-900 dark:text-slate-100">{editTarget ? 'تعديل موظف' : 'موظف جديد'}</h3>
+              <button onClick={() => setShowForm(false)} className="bg-gray-100 dark:bg-slate-700 text-gray-500 px-3 py-2 rounded-xl text-sm font-bold active:scale-95">إلغاء</button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-5">
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">اسم الموظف *</p>
+              <input value={form.display_name} onChange={e => setForm(p => ({ ...p, display_name: e.target.value }))} placeholder="مثال: أحمد" dir="rtl" className={input} />
+
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">الدور</p>
+              <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
+                {(['cashier', 'manager'] as StaffRole[]).map(r => (
+                  <button key={r} onClick={() => setForm(p => ({ ...p, role: r }))}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${form.role === r ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                    {ROLE_LABEL[r]}
+                  </button>
+                ))}
+              </div>
+
+              {!editTarget && (
+                <>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">رمز الدخول (PIN) — 4 إلى 6 أرقام</p>
+                  <input value={form.pin} onChange={e => setForm(p => ({ ...p, pin: e.target.value.replace(/\D/g, '') }))} placeholder="••••" dir="ltr" inputMode="numeric" maxLength={6} className={input} />
+                </>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">أقصى خصم بدون موافقة (%)</p>
+                  <input type="number" value={form.max_discount_pct} onChange={e => setForm(p => ({ ...p, max_discount_pct: e.target.value }))} dir="rtl"
+                    className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">أقصى إلغاء بدون موافقة (د.ع)</p>
+                  <input type="number" value={form.max_void_amount} onChange={e => setForm(p => ({ ...p, max_void_amount: e.target.value }))} dir="rtl"
+                    className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb]" />
+                </div>
+              </div>
+
+              {error && <p className="text-red-500 text-xs font-bold text-center mt-2">{error}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* موديل إعادة تعيين PIN */}
+      {resetTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setResetTarget(null)}>
+          <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl p-5" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <button onClick={() => setResetTarget(null)} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500"><X size={16} /></button>
+              <p className="font-bold text-gray-900 dark:text-slate-100">إعادة تعيين PIN — {resetTarget.display_name}</p>
+              <div className="w-9" />
+            </div>
+            <input value={resetPin} onChange={e => setResetPin(e.target.value.replace(/\D/g, ''))} placeholder="رمز جديد (4-6 أرقام)" dir="ltr" inputMode="numeric" maxLength={6} className={input} />
+            <button onClick={submitResetPin} disabled={!/^\d{4,6}$/.test(resetPin)} className="w-full bg-[#2563eb] disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all">
+              تأكيد
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+    </OwnerOnly>
+  );
+}

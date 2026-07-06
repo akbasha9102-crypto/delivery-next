@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
+import { OwnerOnly } from '@/components/OwnerOnly';
 import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, FolderPlus, UtensilsCrossed } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { HexColorPicker } from 'react-colorful';
@@ -420,6 +421,7 @@ export default function MenuPage() {
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
   return (
+    <OwnerOnly>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
       {/* Add Category Modal */}
       {showAddCatSheet && (
@@ -1050,6 +1052,7 @@ export default function MenuPage() {
 
       {!editCatSheet && <AdminBottomNav />}
     </div>
+    </OwnerOnly>
   );
 }
 

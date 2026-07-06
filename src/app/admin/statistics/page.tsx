@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { AdminBottomNav } from '@/components/BottomNav';
+import { OwnerOnly } from '@/components/OwnerOnly';
 import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
@@ -222,6 +223,7 @@ export default function StatisticsPage() {
   };
 
   return (
+    <OwnerOnly>
     <div className="min-h-screen pb-24 md:pb-0 md:mr-[70px]" style={{ backgroundColor: s.bg }}>
 
       {/* Header */}
@@ -539,6 +541,7 @@ export default function StatisticsPage() {
 
       <AdminBottomNav />
     </div>
+    </OwnerOnly>
   );
 }
 

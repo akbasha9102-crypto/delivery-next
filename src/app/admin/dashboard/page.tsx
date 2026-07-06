@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
+import { OwnerOnly } from '@/components/OwnerOnly';
 import { ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check, Bell, Plus, Minus } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
@@ -988,6 +989,7 @@ export default function DashboardPage() {
   );
 
   return (
+    <OwnerOnly>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* Header */}
@@ -1991,6 +1993,7 @@ export default function DashboardPage() {
         );
       })()}
     </div>
+    </OwnerOnly>
   );
 }
 
