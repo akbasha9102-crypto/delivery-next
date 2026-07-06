@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getStaffContext, isPrivilegedRole } from '@/lib/staff-auth';
+import { resolveStaffIdentity } from '@/lib/staff-auth';
 
-// GET|POST /api/inventory/list?restaurant_id=&staff_id=
+// GET|POST /api/inventory/list?restaurant_id= + ترويسة x-staff-token اختيارية
 // نقطة جديدة (لا تعدّل أي شيء بصفحة المخزون الحالية) تُرجع المخزون بدون
-// cost_per_unit/supplier إذا كان دور staff_id = cashier. الوضع الافتراضي
-// الآمن (fail-safe deny): أي staff_id غير مُرسَل أو غير صالح أو دوره غير
-// معروف = يُخفى السعر (نفس معاملة الكاشير) — لا نُظهر التكلفة إلا لدور
-// owner/manager مؤكَّد من القاعدة.
-async function handle(restaurantId: string, staffId: string | null) {
+// cost_per_unit/supplier إذا لم يكن الطالب مالك/مدير مؤكَّداً. الوضع
+// الافتراضي الآمن (fail-safe deny): أي توكن غائب/غير صالح/دوره غير معروف
+// = يُخفى السعر (نفس معاملة الكاشير). إصلاح ثغرة أمنية: كانت هذه النقطة
+// تثق بـ staff_id من الـ query مباشرة بدون أي توقيع — أي كاشير يعرف
+// staff_id تبع المالك (مثلاً عبر تخمين/تسريب) يقدر يمرّره ليرى التكلفة.
+// الآن الهوية تُستخرَج فقط من توكن موقَّع بترويسة x-staff-token.
+async function handle(restaurantId: string, req: NextRequest) {
   if (!restaurantId) return NextResponse.json({ error: 'restaurant_id مطلوب' }, { status: 400 });
 
   let showCost = false;
-  if (staffId) {
-    const staff = await getStaffContext(staffId);
-    if (staff && staff.restaurant_id === restaurantId && isPrivilegedRole(staff.role)) {
-      showCost = true;
-    }
+  const identityRes = await resolveStaffIdentity(req);
+  if (identityRes.ok && identityRes.identity.restaurant_id === restaurantId && identityRes.identity.is_privileged) {
+    showCost = true;
   }
 
   const { data, error } = await supabaseAdmin
@@ -42,16 +42,15 @@ async function handle(restaurantId: string, staffId: string | null) {
 
 export async function GET(req: NextRequest) {
   const restaurantId = req.nextUrl.searchParams.get('restaurant_id') ?? '';
-  const staffId = req.nextUrl.searchParams.get('staff_id');
-  return handle(restaurantId, staffId);
+  return handle(restaurantId, req);
 }
 
 export async function POST(req: NextRequest) {
-  let body: { restaurant_id?: string; staff_id?: string };
+  let body: { restaurant_id?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'body غير صالح' }, { status: 400 });
   }
-  return handle(body.restaurant_id ?? '', body.staff_id ?? null);
+  return handle(body.restaurant_id ?? '', req);
 }

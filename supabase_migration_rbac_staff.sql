@@ -244,3 +244,12 @@ ALTER TABLE stock_movements
 
 CREATE INDEX IF NOT EXISTS idx_stock_mov_staff ON stock_movements(performed_by_staff_id)
   WHERE performed_by_staff_id IS NOT NULL;
+
+-- ─────────────────────────────────────────────────────────────
+-- 6. عمود إضافي على orders (additive فقط) — إصلاح ثغرة أمنية:
+-- تطبيق خصم ثانٍ على نفس الطلب كان يُحتسب فوق السعر المخصوم أصلاً
+-- (تراكم تلقائي يتجاوز max_discount_pct الفعلي دون أي موافقة). هذا
+-- العمود يحفظ السعر الأصلي قبل أول خصم فقط، ليُقاس كل خصم لاحق تراكمياً
+-- بالنسبة للسعر الأصلي الحقيقي وليس آخر سعر بعد خصم سابق.
+ALTER TABLE orders
+  ADD COLUMN IF NOT EXISTS pre_discount_total NUMERIC(12,2);

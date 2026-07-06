@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { resolveStaffIdentity } from '@/lib/staff-auth';
 import { logStaffAction } from '@/lib/staff-actions-log';
 import { notifyOwnerPush } from '@/lib/notify-owner-push';
 
@@ -7,9 +8,17 @@ import { notifyOwnerPush } from '@/lib/notify-owner-push';
 // افتراضية حسب مثال الخطة (القسم 5)، يمكن تحويلها لإعداد بالمطعم لاحقاً.
 const VARIANCE_ALERT_THRESHOLD = 5000;
 
-// POST /api/shifts/:id/close — { actual_closing_cash }
+// POST /api/shifts/:id/close — { actual_closing_cash } + ترويسة x-staff-token
+// إصلاح ثغرة أمنية (H3): سابقاً لم يكن هناك أي تحقق هوية — أي طرف يملك
+// الجلسة المشتركة يقدر يغلق وردية أي كاشير آخر ويفرض actual_closing_cash
+// كيفما شاء. الآن: يجب أن يكون المُغلِق إما صاحب الوردية نفسه (staff_id
+// مطابق)، أو مالك/مدير (إشراف).
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
+
+  const identityRes = await resolveStaffIdentity(req);
+  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
+  const requester = identityRes.identity;
 
   let body: { actual_closing_cash?: number };
   try {
@@ -19,8 +28,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   const actualClosingCash = Number(body.actual_closing_cash);
-  if (Number.isNaN(actualClosingCash)) {
-    return NextResponse.json({ error: 'actual_closing_cash مطلوب ويجب أن يكون رقماً' }, { status: 400 });
+  if (Number.isNaN(actualClosingCash) || actualClosingCash < 0) {
+    return NextResponse.json({ error: 'actual_closing_cash يجب أن يكون رقماً غير سالب' }, { status: 400 });
   }
 
   const { data: shift, error: shiftError } = await supabaseAdmin
@@ -31,6 +40,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   if (shiftError) return NextResponse.json({ error: shiftError.message }, { status: 500 });
   if (!shift) return NextResponse.json({ error: 'الوردية غير موجودة' }, { status: 404 });
+  if (shift.restaurant_id !== requester.restaurant_id) {
+    return NextResponse.json({ error: 'الوردية غير موجودة' }, { status: 404 });
+  }
+  if (!requester.is_privileged && requester.staff_id !== shift.staff_id) {
+    return NextResponse.json({ error: 'لا يمكنك إغلاق وردية موظف آخر' }, { status: 403 });
+  }
   if (shift.status !== 'open') return NextResponse.json({ error: 'الوردية مغلقة بالفعل' }, { status: 409 });
 
   const closedAt = new Date();

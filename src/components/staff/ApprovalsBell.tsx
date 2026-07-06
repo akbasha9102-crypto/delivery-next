@@ -6,6 +6,11 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
 import { listApprovals, resolveApproval, type ApprovalRequest } from '@/lib/staffApi';
 
+async function getAccessToken(): Promise<string | undefined> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token;
+}
+
 const TYPE_LABEL: Record<ApprovalRequest['request_type'], string> = {
   void_order: 'إلغاء طلب',
   refund: 'استرجاع مبلغ',
@@ -31,7 +36,8 @@ export function ApprovalsBell() {
 
   const load = useCallback(async () => {
     if (!restaurantId) return;
-    const res = await listApprovals(restaurantId, 'pending');
+    const token = await getAccessToken();
+    const res = await listApprovals(restaurantId, 'pending', token);
     if (res.ok) {
       const list = Array.isArray(res.data) ? res.data : ((res.data as { approvals?: ApprovalRequest[] })?.approvals ?? []);
       setPending(list as ApprovalRequest[]);
@@ -51,7 +57,9 @@ export function ApprovalsBell() {
   const resolve = async (id: string, action: 'approve' | 'reject') => {
     if (!activeStaff) return;
     setResolving(id);
-    const res = await resolveApproval(id, action, activeStaff.staffId || 'owner');
+    const token = await getAccessToken();
+    if (!token) { setResolving(null); return; }
+    const res = await resolveApproval(id, action, token);
     setResolving(null);
     if (res.ok) setPending(prev => prev.filter(p => p.id !== id));
   };

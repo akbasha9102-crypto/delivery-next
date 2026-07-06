@@ -1,10 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { verifyPin } from '@/lib/staff-auth';
+import { verifyPin, signStaffToken } from '@/lib/staff-auth';
 
 // عدد المحاولات الخاطئة المتتالية قبل القفل المؤقت (Soft Lock)، ومدة القفل.
+// ملاحظة أمن (بعد مراجعة أمنية): تقليل مدة القفل من 15 إلى 3 دقائق لتخفيف
+// أثر إمكانية الإغلاق الجماعي المتعمَّد (أي طرف يعرف restaurant_id فقط —
+// وهو ليس سرّاً، يُشتق من رابط المنيو العام — يقدر يستدعي هذه النقطة بلا
+// أي مصادقة). هذا تخفيف للأثر (mitigation) وليس حلاً جذرياً؛ الحل الكامل
+// يحتاج ربط PIN باسم مستخدم محدد أو rate-limiting حقيقي على مستوى الشبكة.
 const MAX_FAILED_ATTEMPTS = 5;
-const LOCK_DURATION_MINUTES = 15;
+const LOCK_DURATION_MINUTES = 3;
+
+// throttle بسيط (best-effort، بالذاكرة) لكل IP — يبطئ محاولات القفل الجماعي
+// الآلية المتكررة. غير مضمون بالبيئات serverless متعددة النسخ، لكنه يرفع
+// كلفة الاستغلال أعلى من "لا شيء إطلاقاً".
+const ipAttempts = new Map<string, { count: number; windowStart: number }>();
+const IP_WINDOW_MS = 60 * 1000;
+const IP_MAX_ATTEMPTS = 10;
+
+function isIpThrottled(ip: string): boolean {
+  const now = Date.now();
+  const entry = ipAttempts.get(ip);
+  if (!entry || now - entry.windowStart > IP_WINDOW_MS) {
+    ipAttempts.set(ip, { count: 1, windowStart: now });
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > IP_MAX_ATTEMPTS;
+}
 
 // ملاحظة أمن مهمة للفريق: العقد هنا { restaurant_id, pin } فقط (بدون
 // تعريف مسبق لهوية الموظف)، لذلك عند PIN خاطئ لا نعرف تقنياً "لمن" كانت
@@ -25,6 +48,11 @@ export async function POST(req: NextRequest) {
   const { restaurant_id, pin } = body;
   if (!restaurant_id || !pin) {
     return NextResponse.json({ error: 'restaurant_id و pin مطلوبان' }, { status: 400 });
+  }
+
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown';
+  if (isIpThrottled(ip)) {
+    return NextResponse.json({ error: 'محاولات كثيرة جداً، حاول لاحقاً' }, { status: 429 });
   }
 
   const now = new Date();
@@ -63,12 +91,15 @@ export async function POST(req: NextRequest) {
       .update({ failed_pin_attempts: 0, locked_until: null })
       .eq('id', match.id);
 
+    const staff_token = signStaffToken({ sid: match.id, rid: restaurant_id, role: match.role });
+
     return NextResponse.json({
       staff_id: match.id,
       display_name: match.display_name,
       role: match.role,
       max_discount_pct: match.max_discount_pct,
       max_void_amount: match.max_void_amount,
+      staff_token,
     });
   }
 

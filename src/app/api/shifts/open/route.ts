@@ -1,24 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getStaffContext } from '@/lib/staff-auth';
+import { resolveStaffIdentity } from '@/lib/staff-auth';
 import { logStaffAction } from '@/lib/staff-actions-log';
 
-// POST /api/shifts/open — { staff_id, opening_cash } → صف جديد بـ cashier_shifts
+// POST /api/shifts/open — { opening_cash } + ترويسة x-staff-token → صف جديد بـ cashier_shifts
+// الهوية تُستخرَج من توكن موقَّع (راجع resolveStaffIdentity)، لا من staff_id بجسم الطلب.
 export async function POST(req: NextRequest) {
-  let body: { staff_id?: string; opening_cash?: number };
+  const identityRes = await resolveStaffIdentity(req);
+  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
+  const staff = identityRes.identity;
+  if (!staff.staff_id) return NextResponse.json({ error: 'المالك لا يفتح وردية كاشير' }, { status: 400 });
+  const staff_id = staff.staff_id;
+
+  let body: { opening_cash?: number };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'body غير صالح' }, { status: 400 });
   }
 
-  const { staff_id, opening_cash } = body;
-  if (!staff_id) return NextResponse.json({ error: 'staff_id مطلوب' }, { status: 400 });
-
-  const staff = await getStaffContext(staff_id);
-  if (!staff) return NextResponse.json({ error: 'موظف غير صالح أو معطّل' }, { status: 404 });
-
-  const openingCash = Number(opening_cash ?? 0);
+  const openingCash = Number(body.opening_cash ?? 0);
   if (Number.isNaN(openingCash) || openingCash < 0) {
     return NextResponse.json({ error: 'opening_cash غير صالح' }, { status: 400 });
   }

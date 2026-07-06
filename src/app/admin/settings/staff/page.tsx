@@ -2,10 +2,16 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, KeyRound, Plus, ShieldCheck, ToggleLeft, ToggleRight, User, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
 import { OwnerOnly } from '@/components/OwnerOnly';
 import { createStaff, updateStaff, type StaffMember, type StaffRole } from '@/lib/staffApi';
+
+async function getAccessToken(): Promise<string | undefined> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token;
+}
 
 const ROLE_LABEL: Record<StaffRole, string> = { owner: 'مالك', manager: 'مدير', cashier: 'كاشير' };
 
@@ -42,13 +48,15 @@ export default function StaffManagementPage() {
     setSaving(true);
     setError(null);
 
+    const accessToken = await getAccessToken();
+
     if (editTarget) {
       const res = await updateStaff(editTarget.id, {
         display_name: form.display_name.trim(),
         role: form.role,
         max_discount_pct: parseFloat(form.max_discount_pct) || 0,
         max_void_amount: parseFloat(form.max_void_amount) || 0,
-      });
+      }, accessToken);
       setSaving(false);
       if (!res.ok) { setError('error' in res ? res.error : 'تعذّر الحفظ'); return; }
       showToast('✓ تم التحديث');
@@ -65,7 +73,7 @@ export default function StaffManagementPage() {
       pin: form.pin,
       max_discount_pct: parseFloat(form.max_discount_pct) || 0,
       max_void_amount: parseFloat(form.max_void_amount) || 0,
-    });
+    }, accessToken);
     setSaving(false);
     if (!res.ok) { setError('error' in res ? res.error : 'تعذّر الإضافة'); return; }
     showToast('✓ تمت الإضافة');
@@ -74,7 +82,7 @@ export default function StaffManagementPage() {
   };
 
   const toggleActive = async (s: StaffMember) => {
-    const res = await updateStaff(s.id, { is_active: !s.is_active });
+    const res = await updateStaff(s.id, { is_active: !s.is_active }, await getAccessToken());
     if (!res.ok) { showToast('error' in res ? res.error : 'تعذّر التحديث', false); return; }
     showToast(s.is_active ? '✓ تم تعطيل الموظف' : '✓ تم تفعيل الموظف');
     refreshStaffList();
@@ -82,7 +90,7 @@ export default function StaffManagementPage() {
 
   const submitResetPin = async () => {
     if (!resetTarget || !/^\d{4,6}$/.test(resetPin)) return;
-    const res = await updateStaff(resetTarget.id, { pin: resetPin });
+    const res = await updateStaff(resetTarget.id, { pin: resetPin }, await getAccessToken());
     if (!res.ok) { showToast('error' in res ? res.error : 'تعذّر إعادة تعيين الرمز', false); return; }
     showToast('✓ تم إعادة تعيين الرمز');
     setResetTarget(null);

@@ -1,30 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getStaffContext } from '@/lib/staff-auth';
+import { resolveStaffIdentity } from '@/lib/staff-auth';
 import { logStaffAction } from '@/lib/staff-actions-log';
 
-// POST /api/inventory/waste — { staff_id, item_id, quantity, reason }
-// يسجّل هدر/تلف مخزون باسم الكاشير (أو المالك). "السبب" إلزامي دائماً
-// (خطة RBAC قسم 4: "تسجيل هدر/تلف مخزون: نعم، لكن بسبب إلزامي").
-// restaurant_id يُشتق دائماً من staff_id عبر القاعدة، لا يُؤخذ من العميل.
+// POST /api/inventory/waste — { item_id, quantity, reason } + ترويسة x-staff-token
+// الهوية تُستخرَج حصراً من توكن موقَّع (راجع resolveStaffIdentity)، لا من
+// staff_id بجسم الطلب. "السبب" إلزامي دائماً (خطة RBAC قسم 4).
 export async function POST(req: NextRequest) {
-  let body: { staff_id?: string; item_id?: string; quantity?: number; reason?: string };
+  const identityRes = await resolveStaffIdentity(req);
+  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
+  const staff = identityRes.identity;
+
+  let body: { item_id?: string; quantity?: number; reason?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'body غير صالح' }, { status: 400 });
   }
 
-  const { staff_id, item_id, quantity, reason } = body;
-  if (!staff_id) return NextResponse.json({ error: 'staff_id مطلوب' }, { status: 400 });
+  const { item_id, quantity, reason } = body;
   if (!item_id) return NextResponse.json({ error: 'item_id مطلوب' }, { status: 400 });
   if (!reason?.trim()) return NextResponse.json({ error: 'سبب الهدر إلزامي' }, { status: 400 });
   if (typeof quantity !== 'number' || !(quantity > 0)) {
     return NextResponse.json({ error: 'quantity يجب أن تكون رقماً أكبر من صفر' }, { status: 400 });
   }
-
-  const staff = await getStaffContext(staff_id);
-  if (!staff) return NextResponse.json({ error: 'موظف غير صالح أو معطّل' }, { status: 403 });
 
   const { data: item, error: itemError } = await supabaseAdmin
     .from('inventory_items')
@@ -45,7 +44,7 @@ export async function POST(req: NextRequest) {
       movement_type: 'WASTE',
       quantity_changed: Math.abs(quantity),
       reference_type: 'manual',
-      performed_by_staff_id: staff_id,
+      performed_by_staff_id: staff.staff_id,
       notes: `${reason.trim()} (بواسطة: ${staff.display_name})`,
     })
     .select('*')
@@ -61,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   await logStaffAction({
     restaurant_id: staff.restaurant_id,
-    staff_id,
+    staff_id: staff.staff_id,
     action_type: 'inventory_waste',
     entity_type: 'inventory_item',
     entity_id: item_id,

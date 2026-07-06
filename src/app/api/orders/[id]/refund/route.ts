@@ -1,27 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getStaffContext, isPrivilegedRole } from '@/lib/staff-auth';
+import { resolveStaffIdentity } from '@/lib/staff-auth';
 import { logStaffAction } from '@/lib/staff-actions-log';
 import { notifyOwnerPush } from '@/lib/notify-owner-push';
 
-// POST /api/orders/:id/refund — { staff_id, reason }
+// POST /api/orders/:id/refund — { reason } + ترويسة x-staff-token
+// الهوية تُستخرَج حصراً من توكن موقَّع (راجع resolveStaffIdentity) — لا يُثَق
+// بأي staff_id من جسم الطلب (إصلاح ثغرة C1 بالمراجعة الأمنية).
 // مالك/مدير: ينفّذ مباشرة. كاشير: يحتاج موافقة دائماً بدون أي سقف (لا استثناء).
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id: orderId } = await ctx.params;
 
-  let body: { staff_id?: string; reason?: string };
+  const identityRes = await resolveStaffIdentity(req);
+  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
+  const staff = identityRes.identity;
+
+  let body: { reason?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'body غير صالح' }, { status: 400 });
   }
 
-  const { staff_id, reason } = body;
-  if (!staff_id) return NextResponse.json({ error: 'staff_id مطلوب' }, { status: 400 });
+  const { reason } = body;
   if (!reason?.trim()) return NextResponse.json({ error: 'reason مطلوب للاسترجاع' }, { status: 400 });
-
-  const staff = await getStaffContext(staff_id);
-  if (!staff) return NextResponse.json({ error: 'موظف غير صالح أو معطّل' }, { status: 403 });
 
   const { data: order, error: orderError } = await supabaseAdmin
     .from('orders')
@@ -40,12 +42,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const amount = Number(order.total_amount) || 0;
 
   // الكاشير: موافقة إلزامية دائماً بدون سقف. المالك/المدير فقط ينفّذ مباشرة.
-  if (!isPrivilegedRole(staff.role)) {
+  if (!staff.is_privileged) {
     const { data: approval, error: approvalError } = await supabaseAdmin
       .from('approval_requests')
       .insert({
         restaurant_id: staff.restaurant_id,
-        requested_by: staff_id,
+        requested_by: staff.staff_id,
         request_type: 'refund',
         order_id: order.id,
         amount,
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     await logStaffAction({
       restaurant_id: staff.restaurant_id,
-      staff_id,
+      staff_id: staff.staff_id,
       action_type: 'approval_requested',
       entity_type: 'approval_request',
       entity_id: approval.id,
@@ -88,7 +90,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   await logStaffAction({
     restaurant_id: staff.restaurant_id,
-    staff_id,
+    staff_id: staff.staff_id,
     action_type: 'order_refund',
     entity_type: 'order',
     entity_id: orderId,

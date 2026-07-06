@@ -32,7 +32,7 @@ function getExtras(item: MenuItem): MenuExtra[] {
 }
 
 /* ─────────────────────────── شاشة فتح الوردية ─────────────────────────── */
-function OpenShiftScreen({ staffId, onOpened }: { staffId: string; onOpened: (s: Shift) => void }) {
+function OpenShiftScreen({ staffToken, onOpened }: { staffToken: string; onOpened: (s: Shift) => void }) {
   const [cash, setCash] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,7 @@ function OpenShiftScreen({ staffId, onOpened }: { staffId: string; onOpened: (s:
     const amount = parseFloat(cash) || 0;
     setSaving(true);
     setError(null);
-    const res = await openShift({ staff_id: staffId, opening_cash: amount });
+    const res = await openShift({ opening_cash: amount }, staffToken);
     setSaving(false);
     if (!res.ok) { setError('error' in res ? res.error : 'تعذّر فتح الوردية'); return; }
     onOpened(res.data as Shift);
@@ -310,8 +310,8 @@ function QuickOrderSheet({ restaurantId, onClose, onCreated }: { restaurantId: s
 }
 
 /* ─────────────────────────── مودال إجراء حساس (خصم/إلغاء/استرجاع) ─────────────────────────── */
-function OrderActionSheet({ order, staffId, maxDiscountPct, maxVoidAmount, onClose, onDone }: {
-  order: LocalOrder; staffId: string; maxDiscountPct: number; maxVoidAmount: number;
+function OrderActionSheet({ order, staffToken, maxDiscountPct, maxVoidAmount, onClose, onDone }: {
+  order: LocalOrder; staffToken: string; maxDiscountPct: number; maxVoidAmount: number;
   onClose: () => void; onDone: (msg: string, pending: boolean) => void;
 }) {
   const [mode, setMode] = useState<'menu' | 'discount' | 'void' | 'refund'>('menu');
@@ -325,21 +325,21 @@ function OrderActionSheet({ order, staffId, maxDiscountPct, maxVoidAmount, onClo
     setError(null);
     if (mode === 'discount') {
       const pct = parseFloat(discountPct) || 0;
-      const res = await discountOrder(order.id, staffId, pct);
+      const res = await discountOrder(order.id, pct, staffToken);
       setSaving(false);
       if ('pending' in res && res.pending) { onDone('تم إرسال طلب الخصم — بانتظار موافقة المالك', true); return; }
       if (!res.ok) { setError(errorMessage(res, 'تعذّر تنفيذ الخصم')); return; }
       onDone('✓ تم تطبيق الخصم', false);
     } else if (mode === 'void') {
       if (!reason.trim()) { setError('السبب إلزامي'); setSaving(false); return; }
-      const res = await voidOrder(order.id, staffId, reason.trim());
+      const res = await voidOrder(order.id, reason.trim(), staffToken);
       setSaving(false);
       if ('pending' in res && res.pending) { onDone('تم إرسال طلب الإلغاء — بانتظار موافقة المالك', true); return; }
       if (!res.ok) { setError(errorMessage(res, 'تعذّر تنفيذ الإلغاء')); return; }
       onDone('✓ تم إلغاء الطلب', false);
     } else if (mode === 'refund') {
       if (!reason.trim()) { setError('السبب إلزامي'); setSaving(false); return; }
-      const res = await refundOrder(order.id, staffId, reason.trim());
+      const res = await refundOrder(order.id, reason.trim(), staffToken);
       setSaving(false);
       if ('pending' in res && res.pending) { onDone('تم إرسال طلب الاسترجاع — بانتظار موافقة المالك دائماً', true); return; }
       if (!res.ok) { setError(errorMessage(res, 'تعذّر تنفيذ الاسترجاع')); return; }
@@ -407,6 +407,7 @@ export default function LocalCashierPage() {
   const { restaurantId } = useRestaurant();
   const { activeStaff } = useStaff();
   const staffId = activeStaff?.staffId ?? null;
+  const staffToken = activeStaff?.staffToken ?? null;
 
   const [checkingShift, setCheckingShift] = useState(true);
   const [shift, setShift] = useState<Shift | null>(null);
@@ -422,9 +423,9 @@ export default function LocalCashierPage() {
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500); };
 
   const fetchShift = useCallback(async () => {
-    if (!restaurantId || !staffId) { setCheckingShift(false); return; }
+    if (!restaurantId || !staffToken) { setCheckingShift(false); return; }
     setCheckingShift(true);
-    const res = await listShifts(restaurantId, staffId);
+    const res = await listShifts(restaurantId, staffToken);
     if (res.ok) {
       const list = Array.isArray(res.data) ? res.data : ((res.data as { shifts?: Shift[] })?.shifts ?? []);
       const open = (list as Shift[]).find(s => s.status === 'open') ?? null;
@@ -433,7 +434,7 @@ export default function LocalCashierPage() {
       setShift(null);
     }
     setCheckingShift(false);
-  }, [restaurantId, staffId]);
+  }, [restaurantId, staffToken]);
 
   const fetchOrders = useCallback(async () => {
     if (!restaurantId) return;
@@ -463,9 +464,9 @@ export default function LocalCashierPage() {
   }, [restaurantId, shift, fetchOrders]);
 
   const submitCloseShift = async () => {
-    if (!shift) return;
+    if (!shift || !staffToken) return;
     setClosing(true);
-    const res = await closeShift(shift.id, parseFloat(closeCash) || 0);
+    const res = await closeShift(shift.id, parseFloat(closeCash) || 0, staffToken);
     setClosing(false);
     if (!res.ok) { showToast('error' in res ? res.error : 'تعذّر إغلاق الوردية', false); return; }
     const data = res.data as { expected_closing_cash: number; variance: number };
@@ -493,8 +494,8 @@ export default function LocalCashierPage() {
   }
 
   if (!shift) {
-    return staffId
-      ? <OpenShiftScreen staffId={staffId} onOpened={setShift} />
+    return staffId && staffToken
+      ? <OpenShiftScreen staffToken={staffToken} onOpened={setShift} />
       : (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center p-6 text-center" dir="rtl">
           <p className="text-gray-500 dark:text-slate-400">تعذّر تحديد هويتك الحالية لفتح وردية — أعد تسجيل الدخول</p>
@@ -567,10 +568,10 @@ export default function LocalCashierPage() {
         <QuickOrderSheet restaurantId={restaurantId} onClose={() => setShowQuickAdd(false)} onCreated={() => { setShowQuickAdd(false); fetchOrders(); showToast('✓ تم إتمام البيع'); }} />
       )}
 
-      {actionOrder && staffId && activeStaff && (
+      {actionOrder && staffToken && activeStaff && (
         <OrderActionSheet
           order={actionOrder}
-          staffId={staffId}
+          staffToken={staffToken}
           maxDiscountPct={activeStaff.maxDiscountPct}
           maxVoidAmount={activeStaff.maxVoidAmount}
           onClose={() => setActionOrder(null)}

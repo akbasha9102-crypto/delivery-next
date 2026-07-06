@@ -1,29 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getStaffContext, isPrivilegedRole } from '@/lib/staff-auth';
+import { resolveStaffIdentity } from '@/lib/staff-auth';
 import { logStaffAction } from '@/lib/staff-actions-log';
 import { notifyOwnerPush } from '@/lib/notify-owner-push';
 
-// POST /api/orders/:id/void — { staff_id, reason }
-// مالك/مدير: ينفّذ مباشرة. كاشير ضمن max_void_amount: ينفّذ مباشرة.
-// كاشير فوق الحد: يُنشئ approval_requests (status='pending') ويرجع 202.
+// حد أعلى تراكمي للإلغاءات بنفس الوردية (مضروب في max_void_amount) — يمنع
+// تفادي السقف الفردي بتقسيم الإلغاءات لعدة طلبات صغيرة (ثغرة H2 بالمراجعة
+// الأمنية). قيمة قابلة للتعديل لاحقاً كإعداد بالمطعم.
+const SHIFT_VOID_MULTIPLIER = 3;
+
+// POST /api/orders/:id/void — { reason } + ترويسة x-staff-token
+// الهوية (staff_id/role) تُستخرَج حصراً من توكن موقَّع (راجع resolveStaffIdentity)
+// وليس من أي حقل بجسم الطلب — يمنع انتحال هوية موظف آخر (ثغرة C1 بالمراجعة الأمنية).
+// مالك/مدير: ينفّذ مباشرة. كاشير ضمن max_void_amount (فردياً وتراكمياً بالوردية): ينفّذ مباشرة.
+// كاشير فوق أي من الحدين: يُنشئ approval_requests (status='pending') ويرجع 202.
 // "الإلغاء" = تغيير status فقط (لا حذف حقيقي أبداً) — راجع خطة RBAC قسم 5.
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id: orderId } = await ctx.params;
 
-  let body: { staff_id?: string; reason?: string };
+  const identityRes = await resolveStaffIdentity(req);
+  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
+  const staff = identityRes.identity;
+
+  let body: { reason?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'body غير صالح' }, { status: 400 });
   }
 
-  const { staff_id, reason } = body;
-  if (!staff_id) return NextResponse.json({ error: 'staff_id مطلوب' }, { status: 400 });
+  const { reason } = body;
   if (!reason?.trim()) return NextResponse.json({ error: 'reason مطلوب لإلغاء الطلب' }, { status: 400 });
-
-  const staff = await getStaffContext(staff_id);
-  if (!staff) return NextResponse.json({ error: 'موظف غير صالح أو معطّل' }, { status: 403 });
 
   const { data: order, error: orderError } = await supabaseAdmin
     .from('orders')
@@ -40,14 +47,41 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   const amount = Number(order.total_amount) || 0;
-  const needsApproval = !isPrivilegedRole(staff.role) && amount > Number(staff.max_void_amount);
+
+  let cumulativeVoided = 0;
+  if (!staff.is_privileged && staff.staff_id) {
+    const { data: openShift } = await supabaseAdmin
+      .from('cashier_shifts')
+      .select('opened_at')
+      .eq('staff_id', staff.staff_id)
+      .eq('status', 'open')
+      .maybeSingle();
+
+    if (openShift) {
+      const { data: priorVoids } = await supabaseAdmin
+        .from('staff_actions_log')
+        .select('after_data')
+        .eq('staff_id', staff.staff_id)
+        .eq('action_type', 'order_void')
+        .gte('created_at', openShift.opened_at);
+
+      cumulativeVoided = (priorVoids ?? []).reduce((sum, row) => {
+        const after = row.after_data as { amount?: number } | null;
+        return sum + (Number(after?.amount) || 0);
+      }, 0);
+    }
+  }
+
+  const needsApproval =
+    !staff.is_privileged &&
+    (amount > staff.max_void_amount || cumulativeVoided + amount > staff.max_void_amount * SHIFT_VOID_MULTIPLIER);
 
   if (needsApproval) {
     const { data: approval, error: approvalError } = await supabaseAdmin
       .from('approval_requests')
       .insert({
         restaurant_id: staff.restaurant_id,
-        requested_by: staff_id,
+        requested_by: staff.staff_id,
         request_type: 'void_order',
         order_id: order.id,
         amount,
@@ -61,7 +95,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     await logStaffAction({
       restaurant_id: staff.restaurant_id,
-      staff_id,
+      staff_id: staff.staff_id,
       action_type: 'approval_requested',
       entity_type: 'approval_request',
       entity_id: approval.id,
@@ -90,12 +124,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   await logStaffAction({
     restaurant_id: staff.restaurant_id,
-    staff_id,
+    staff_id: staff.staff_id,
     action_type: 'order_void',
     entity_type: 'order',
     entity_id: orderId,
     before_data: { status: beforeStatus },
-    after_data: { status: 'voided', reason: reason.trim() },
+    after_data: { status: 'voided', reason: reason.trim(), amount },
   });
 
   return NextResponse.json({ voided: true, order: updatedOrder });

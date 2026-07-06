@@ -17,7 +17,7 @@ import { AdminBottomNav } from '@/components/BottomNav';
 export default function CashierInventoryWastePage() {
   const { restaurantId } = useRestaurant();
   const { activeStaff } = useStaff();
-  const staffId = activeStaff?.staffId ?? null;
+  const staffToken = activeStaff?.staffToken ?? null;
 
   const [items, setItems] = useState<CashierInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ export default function CashierInventoryWastePage() {
   const fetchItems = useCallback(async () => {
     if (!restaurantId) return;
     setLoading(true);
-    const res = await listInventoryForStaff(restaurantId, staffId ?? undefined);
+    const res = await listInventoryForStaff(restaurantId, staffToken ?? undefined);
     if (res.ok) {
       const list = Array.isArray(res.data) ? res.data : ((res.data as { items?: CashierInventoryItem[] })?.items ?? []);
       setItems(list as CashierInventoryItem[]);
@@ -43,16 +43,16 @@ export default function CashierInventoryWastePage() {
       setErrorLoading(true);
     }
     setLoading(false);
-  }, [restaurantId, staffId]);
+  }, [restaurantId, staffToken]);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
   const submit = async () => {
-    if (!target || !restaurantId || !staffId || !qty || !reason.trim()) return;
+    if (!target || !restaurantId || !staffToken || !qty || !reason.trim()) return;
     const quantity = parseFloat(qty);
     if (isNaN(quantity) || quantity <= 0) return;
     setSaving(true);
-    const res = await registerWaste({ restaurant_id: restaurantId, staff_id: staffId, item_id: target.id, quantity, reason: reason.trim() });
+    const res = await registerWaste({ item_id: target.id, quantity, reason: reason.trim() }, staffToken);
     setSaving(false);
     if (!res.ok) { showToast('error' in res ? res.error : 'تعذّر تسجيل الهدر', false); return; }
     showToast('✓ تم تسجيل الهدر');

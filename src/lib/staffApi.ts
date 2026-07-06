@@ -25,6 +25,7 @@ export type VerifyPinSuccess = {
   role: StaffRole;
   max_discount_pct: number;
   max_void_amount: number;
+  staff_token: string;
 };
 
 export type ApiResult<T> =
@@ -37,6 +38,21 @@ export function errorMessage(res: ApiResult<unknown>, fallback = 'حدث خطأ 
   if (res.ok) return fallback;
   if ('pending' in res && res.pending) return 'بانتظار الموافقة';
   return ('error' in res && res.error) || fallback;
+}
+
+type AuthOpts = { staffToken?: string; accessToken?: string };
+
+/**
+ * ملاحظة أمن (بعد مراجعة أمنية): لم تعد أي دالة هنا ترسل staff_id/الدور
+ * بجسم الطلب لتحديد الهوية — الخادم يستخرج الهوية حصراً من x-staff-token
+ * (موقَّع HMAC، راجع src/lib/staff-auth.ts) أو من Authorization Bearer
+ * الحقيقي لجلسة Supabase (للنقاط "مالك فقط" التي تتحقق من owner_id).
+ */
+function authHeaders(opts?: AuthOpts): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (opts?.staffToken) headers['x-staff-token'] = opts.staffToken;
+  if (opts?.accessToken) headers['Authorization'] = `Bearer ${opts.accessToken}`;
+  return headers;
 }
 
 async function safeFetch<T>(input: string, init?: RequestInit): Promise<ApiResult<T>> {
@@ -70,9 +86,12 @@ export function verifyPin(restaurantId: string, pin: string) {
   });
 }
 
-/* ─── إدارة الموظفين (مالك فقط) ─── */
-export function listStaff(restaurantId: string) {
-  return safeFetch<{ staff: StaffMember[] } | StaffMember[]>(`/api/staff?restaurant_id=${encodeURIComponent(restaurantId)}`);
+/* ─── إدارة الموظفين (مالك فقط — يتطلب Authorization Bearer لجلسة Supabase الحقيقية) ─── */
+export function listStaff(restaurantId: string, accessToken?: string) {
+  return safeFetch<{ staff: StaffMember[] } | StaffMember[]>(
+    `/api/staff?restaurant_id=${encodeURIComponent(restaurantId)}`,
+    { headers: authHeaders({ accessToken }) }
+  );
 }
 
 export function createStaff(payload: {
@@ -82,8 +101,12 @@ export function createStaff(payload: {
   pin: string;
   max_discount_pct: number;
   max_void_amount: number;
-}) {
-  return safeFetch<StaffMember>('/api/staff', { method: 'POST', body: JSON.stringify(payload) });
+}, accessToken?: string) {
+  return safeFetch<StaffMember>('/api/staff', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: authHeaders({ accessToken }),
+  });
 }
 
 export function updateStaff(id: string, patch: Partial<{
@@ -93,22 +116,37 @@ export function updateStaff(id: string, patch: Partial<{
   pin: string;
   max_discount_pct: number;
   max_void_amount: number;
-}>) {
-  return safeFetch<StaffMember>(`/api/staff/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
-}
-
-/* ─── الورديات ─── */
-export function openShift(payload: { staff_id: string; opening_cash: number }) {
-  return safeFetch<{ id: string; opened_at: string; opening_cash: number; status: 'open' }>('/api/shifts/open', {
-    method: 'POST',
-    body: JSON.stringify(payload),
+}>, accessToken?: string) {
+  return safeFetch<StaffMember>(`/api/staff/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+    headers: authHeaders({ accessToken }),
   });
 }
 
-export function closeShift(shiftId: string, actualClosingCash: number) {
+/** يصدر staff_token موقَّع لهوية "المالك" بعد تحقق خادمي فعلي من الجلسة (يسدّ ثغرة C1/C2). */
+export function getOwnerSession(restaurantId: string, accessToken: string) {
+  return safeFetch<{ staff_token: string }>('/api/staff/owner-session', {
+    method: 'POST',
+    body: JSON.stringify({ restaurant_id: restaurantId }),
+    headers: authHeaders({ accessToken }),
+  });
+}
+
+/* ─── الورديات (تتطلب x-staff-token) ─── */
+export function openShift(payload: { opening_cash: number }, staffToken: string) {
+  return safeFetch<{ id: string; opened_at: string; opening_cash: number; status: 'open' }>('/api/shifts/open', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: authHeaders({ staffToken }),
+  });
+}
+
+export function closeShift(shiftId: string, actualClosingCash: number, staffToken: string) {
   return safeFetch<{ expected_closing_cash: number; variance: number }>(`/api/shifts/${shiftId}/close`, {
     method: 'POST',
     body: JSON.stringify({ actual_closing_cash: actualClosingCash }),
+    headers: authHeaders({ staffToken }),
   });
 }
 
@@ -125,35 +163,39 @@ export type Shift = {
   status: 'open' | 'closed';
 };
 
-export function listShifts(restaurantId: string, staffId?: string) {
+export function listShifts(restaurantId: string, staffToken: string) {
   const qs = new URLSearchParams({ restaurant_id: restaurantId });
-  if (staffId) qs.set('staff_id', staffId);
-  return safeFetch<{ shifts: Shift[] } | Shift[]>(`/api/shifts?${qs.toString()}`);
+  return safeFetch<{ shifts: Shift[] } | Shift[]>(`/api/shifts?${qs.toString()}`, {
+    headers: authHeaders({ staffToken }),
+  });
 }
 
-/* ─── عمليات الطلب الحساسة ─── */
-export function voidOrder(orderId: string, staffId: string, reason: string) {
+/* ─── عمليات الطلب الحساسة (تتطلب x-staff-token — الهوية تُستخرَج منه حصراً) ─── */
+export function voidOrder(orderId: string, reason: string, staffToken: string) {
   return safeFetch<{ ok: true }>(`/api/orders/${orderId}/void`, {
     method: 'POST',
-    body: JSON.stringify({ staff_id: staffId, reason }),
+    body: JSON.stringify({ reason }),
+    headers: authHeaders({ staffToken }),
   });
 }
 
-export function refundOrder(orderId: string, staffId: string, reason: string) {
+export function refundOrder(orderId: string, reason: string, staffToken: string) {
   return safeFetch<{ ok: true }>(`/api/orders/${orderId}/refund`, {
     method: 'POST',
-    body: JSON.stringify({ staff_id: staffId, reason }),
+    body: JSON.stringify({ reason }),
+    headers: authHeaders({ staffToken }),
   });
 }
 
-export function discountOrder(orderId: string, staffId: string, discountPct: number) {
+export function discountOrder(orderId: string, discountPct: number, staffToken: string) {
   return safeFetch<{ ok: true }>(`/api/orders/${orderId}/discount`, {
     method: 'POST',
-    body: JSON.stringify({ staff_id: staffId, discount_pct: discountPct }),
+    body: JSON.stringify({ discount_pct: discountPct }),
+    headers: authHeaders({ staffToken }),
   });
 }
 
-/* ─── الموافقات ─── */
+/* ─── الموافقات (مالك فقط — Authorization Bearer) ─── */
 export type ApprovalRequest = {
   id: string;
   restaurant_id: string;
@@ -168,15 +210,18 @@ export type ApprovalRequest = {
   resolved_at: string | null;
 };
 
-export function listApprovals(restaurantId: string, status: 'pending' | 'approved' | 'rejected' = 'pending') {
+export function listApprovals(restaurantId: string, status: 'pending' | 'approved' | 'rejected' = 'pending', accessToken?: string) {
   const qs = new URLSearchParams({ restaurant_id: restaurantId, status });
-  return safeFetch<{ approvals: ApprovalRequest[] } | ApprovalRequest[]>(`/api/approvals?${qs.toString()}`);
+  return safeFetch<{ approvals: ApprovalRequest[] } | ApprovalRequest[]>(`/api/approvals?${qs.toString()}`, {
+    headers: authHeaders({ accessToken }),
+  });
 }
 
-export function resolveApproval(id: string, action: 'approve' | 'reject', resolvedBy: string) {
+export function resolveApproval(id: string, action: 'approve' | 'reject', accessToken: string) {
   return safeFetch<{ ok: true }>(`/api/approvals/${id}/resolve`, {
     method: 'POST',
-    body: JSON.stringify({ action, resolved_by: resolvedBy }),
+    body: JSON.stringify({ action }),
+    headers: authHeaders({ accessToken }),
   });
 }
 
@@ -190,22 +235,20 @@ export type CashierInventoryItem = {
   min_alert_stock: number;
 };
 
-export function listInventoryForStaff(restaurantId: string, staffId?: string) {
+export function listInventoryForStaff(restaurantId: string, staffToken?: string) {
   const qs = new URLSearchParams({ restaurant_id: restaurantId });
-  if (staffId) qs.set('staff_id', staffId);
-  return safeFetch<{ items: CashierInventoryItem[] } | CashierInventoryItem[]>(`/api/inventory/list?${qs.toString()}`);
+  return safeFetch<{ items: CashierInventoryItem[] } | CashierInventoryItem[]>(`/api/inventory/list?${qs.toString()}`, {
+    headers: authHeaders({ staffToken }),
+  });
 }
 
-/**
- * تسجيل هدر/تلف مخزون من واجهة الكاشير.
- * ⚠️ نقطة غير موجودة ضمن العقد الأصلي المتفق عليه — أضفناها هنا لأن الخطة (قسم 4) تُلزم
- * بتمكين الكاشير من تسجيل هدر المخزون باسمه، والعقد المُعطى لم يتضمن نقطة POST مخصّصة لذلك.
- * يجب على فريق الـ Backend تأكيدها أو استبدالها بما يناسب تصميمهم الفعلي لجدول stock_movements.
- * الشكل المقترح هنا: { restaurant_id, staff_id, item_id, quantity, reason } → يُنشئ صف
- * stock_movements(movement_type='WASTE', performed_by=staff_id).
- */
-export function registerWaste(payload: { restaurant_id: string; staff_id: string; item_id: string; quantity: number; reason: string }) {
-  return safeFetch<{ ok: true }>('/api/inventory/waste', { method: 'POST', body: JSON.stringify(payload) });
+/** تسجيل هدر/تلف مخزون من واجهة الكاشير — الهوية عبر x-staff-token. */
+export function registerWaste(payload: { item_id: string; quantity: number; reason: string }, staffToken: string) {
+  return safeFetch<{ ok: true }>('/api/inventory/waste', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: authHeaders({ staffToken }),
+  });
 }
 
 /* ─── سجل التدقيق (عرض فقط — مالك) ─── */

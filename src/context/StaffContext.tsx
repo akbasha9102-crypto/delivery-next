@@ -1,7 +1,8 @@
 'use client';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { listStaff, verifyPin, type StaffMember, type StaffRole, type VerifyPinSuccess } from '@/lib/staffApi';
+import { supabase } from '@/lib/supabase';
+import { getOwnerSession, listStaff, verifyPin, type StaffMember, type StaffRole, type VerifyPinSuccess } from '@/lib/staffApi';
 
 export type ActiveStaff = {
   staffId: string | null;   // null = المالك (لا صف restaurant_staff بالضرورة)
@@ -9,12 +10,17 @@ export type ActiveStaff = {
   role: StaffRole;
   maxDiscountPct: number;
   maxVoidAmount: number;
+  // توكن موقَّع (HMAC) يُرسَل بترويسة x-staff-token لكل عملية حساسة — الخادم
+  // يستخرج الهوية منه حصراً، وليس من أي حقل بجسم الطلب (إصلاح ثغرة أمنية
+  // حرجة: كان أي طرف يملك الجلسة المشتركة يقدر يرسل staff_id تبع المالك
+  // مباشرة وينتحل صلاحياته). قد يكون null مؤقتاً أثناء تحميل جلسة المالك.
+  staffToken: string | null;
 };
 
-const OWNER_ACTIVE: ActiveStaff = {
+const OWNER_ACTIVE_BASE = {
   staffId: null,
   displayName: 'المالك',
-  role: 'owner',
+  role: 'owner' as StaffRole,
   maxDiscountPct: 100,
   maxVoidAmount: Number.MAX_SAFE_INTEGER,
 };
@@ -35,7 +41,7 @@ type StaffCtxValue = {
   isManager: boolean;
   isCashier: boolean;
   isRestricted: boolean;          // اختصار: الدور الحالي كاشير (كل قيود المصفوفة تُطبَّق)
-  setOwnerActive: () => void;
+  setOwnerActive: () => Promise<void>;
   loginWithPin: (pin: string) => Promise<{ ok: true } | { ok: false; status: number; error: string }>;
   switchUser: () => void;         // تسجيل خروج من الهوية الحالية (يدوي) — يعيد شاشة "من أنت؟"
   refreshStaffList: () => Promise<void>;
@@ -51,7 +57,7 @@ const StaffCtx = createContext<StaffCtxValue>({
   isManager: false,
   isCashier: false,
   isRestricted: false,
-  setOwnerActive: () => {},
+  setOwnerActive: async () => {},
   loginWithPin: async () => ({ ok: false, status: 0, error: 'غير جاهز' }),
   switchUser: () => {},
   refreshStaffList: async () => {},
@@ -73,10 +79,26 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
     } catch { /* sessionStorage قد يكون غير متاح (خصوصية متصفح) — تجاهل بصمت */ }
   }, [restaurantId]);
 
-  const setOwnerActive = useCallback(() => {
-    setActiveStaffState(OWNER_ACTIVE);
-    persist(OWNER_ACTIVE);
-  }, [persist]);
+  const setOwnerActive = useCallback(async () => {
+    // نضبط الحالة المحلية فوراً (بدون احتكاك بصري)، ثم نستبدل staffToken
+    // بتوكن حقيقي موقَّع من الخادم بعد التحقق الفعلي من جلسة Supabase —
+    // بدون هذا التحقق الخادمي، أي طرف يضغط زر "المالك" كان يُصدَّق محلياً
+    // فقط دون أي تحقق (ثغرة C1/C2 بالمراجعة الأمنية).
+    setActiveStaffState({ ...OWNER_ACTIVE_BASE, staffToken: null });
+    persist({ ...OWNER_ACTIVE_BASE, staffToken: null });
+
+    if (!restaurantId) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const res = await getOwnerSession(restaurantId, session.access_token);
+      if (res.ok) {
+        const withToken: ActiveStaff = { ...OWNER_ACTIVE_BASE, staffToken: res.data.staff_token };
+        setActiveStaffState(withToken);
+        persist(withToken);
+      }
+    } catch { /* best-effort — لو فشل، يبقى المالك بلا staffToken (لن تعمل عمليات /admin/local الحساسة فقط) */ }
+  }, [persist, restaurantId]);
 
   const switchUser = useCallback(() => {
     setActiveStaffState(null);
@@ -86,7 +108,8 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
   const refreshStaffList = useCallback(async () => {
     if (!restaurantId) return;
     setStaffListLoading(true);
-    const res = await listStaff(restaurantId);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await listStaff(restaurantId, session?.access_token);
     if (res.ok) {
       const list = Array.isArray(res.data) ? res.data : ((res.data as { staff?: StaffMember[] })?.staff ?? []);
       setStaffList((list as StaffMember[]).filter(s => s.is_active));
@@ -132,6 +155,7 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
       role: data.role,
       maxDiscountPct: data.max_discount_pct,
       maxVoidAmount: data.max_void_amount,
+      staffToken: data.staff_token,
     };
     setActiveStaffState(staff);
     persist(staff);

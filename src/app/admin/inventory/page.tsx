@@ -5,6 +5,7 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { OwnerOnly } from '@/components/OwnerOnly';
 import { useRestaurant } from '@/context/RestaurantContext';
+import { useStaff } from '@/context/StaffContext';
 import { Plus, Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus } from 'lucide-react';
 
 type InventoryItem = {
@@ -131,12 +132,20 @@ export default function InventoryPage() {
     setCategoriesList((data || []).map((c: { name: string }) => c.name));
   }, [restaurantId]);
 
+  // إصلاح ثغرة أمنية: هذه الصفحة (owner-only) لا يمكن لفها بـ layout.tsx
+  // على مستوى /admin/inventory لأن /admin/inventory/waste (شاشة الكاشير
+  // المبسّطة) مسار فرعي منها وسيُغلَق خطأً. لذلك الحارس هنا داخل الصفحة
+  // نفسها، لكن على مستوى شرط الجلب (fetch) وليس فقط العرض — لا نستدعي
+  // fetchItems/fetchMovements (اللذين يجيبان cost_per_unit/supplier مباشرة
+  // عبر Supabase client) إطلاقاً قبل التأكد من أن الدور النشط ليس كاشيراً.
+  const { ready: staffReady, isCashier } = useStaff();
   useEffect(() => {
+    if (!staffReady || isCashier) return;
     setLoading(true);
     fetchItems();
     fetchMovements();
     fetchCategoriesList();
-  }, [fetchItems, fetchMovements, fetchCategoriesList]);
+  }, [staffReady, isCashier, fetchItems, fetchMovements, fetchCategoriesList]);
 
   // قفل تمرير الصفحة خلف أي نافذة منبثقة حتى لا تتحرك الخلفية بدل النافذة
   useEffect(() => {
