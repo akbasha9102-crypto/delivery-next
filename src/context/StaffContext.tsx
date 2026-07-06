@@ -69,6 +69,15 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [staffListLoading, setStaffListLoading] = useState(true);
   const [hydrated, setHydrated] = useState(false);
+  // "ready" المعروض للخارج (تستخدمه كل حراسات OwnerOnly) يجب أن يثبت true
+  // بعد أول تحميل ناجح ولا يعود false مجدداً بسبب تحديث لاحق لقائمة الموظفين
+  // (مثلاً صفحة إدارة الموظفين تستدعي refreshStaffList() عند فتحها لعرض
+  // أحدث قائمة). خلاف ذلك: كل مرة يتحدّث فيها staffListLoading، OwnerOnly
+  // (المطبَّق الآن على مستوى layout) يُلغي mount الصفحة بالكامل، وحين يعاد
+  // mount لها من جديد تستدعي useEffect الخاص بها refreshStaffList() ثانية
+  // — فتُعاد الحلقة إلى ما لا نهاية (شاشة تحميل لا تتوقف). هذا العطل
+  // الفعلي الذي أبلغ عنه المستخدم بصفحة /admin/settings/staff.
+  const [everReady, setEverReady] = useState(false);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const persist = useCallback((staff: ActiveStaff | null) => {
@@ -125,11 +134,12 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!restaurantId) return;
     setHydrated(false);
+    setEverReady(false);
     try {
       const raw = sessionStorage.getItem(storageKey(restaurantId));
       if (raw) setActiveStaffState(JSON.parse(raw));
     } catch { /* تجاهل */ }
-    refreshStaffList().then(() => setHydrated(true));
+    refreshStaffList().then(() => { setHydrated(true); setEverReady(true); });
   }, [restaurantId, refreshStaffList]);
 
   // 2) إن لم تكن هناك هوية فعّالة محفوظة، وتبيّن بعد التحميل أن لا يوجد موظفون مُعرَّفون إطلاقاً
@@ -190,7 +200,7 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <StaffCtx.Provider value={{
-      ready: hydrated && !staffListLoading,
+      ready: everReady,
       activeStaff,
       staffList,
       staffListLoading,
