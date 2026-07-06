@@ -32,9 +32,11 @@ export function StaffGate({ children }: { children: React.ReactNode }) {
     <>
       {children}
 
-      {/* زر تبديل المستخدم — ثابت وظاهر بكل الداشبورد. يظهر فقط إن كانت ميزة الموظفين مفعّلة أصلاً
-          (أي أن صاحب المطعم أضاف كاشير واحداً على الأقل)، حتى لا نضيف عنصر واجهة لا معنى له لمن لم يفعّل الميزة. */}
-      {staffFeatureEnabled && (
+      {/* زر تبديل المستخدم/تسجيل الخروج — ثابت وظاهر بكل الداشبورد. يظهر إن كانت
+          ميزة الموظفين مفعّلة (صاحب المطعم أضاف كاشير واحداً على الأقل)، أو
+          إن كانت الهوية الحالية جلسة موظف حقيقية (دخل بكود+كلمة مرور) — تلك
+          الحالة تحتاج دائماً طريقة لتسجيل الخروج بصرف النظر عن staffList. */}
+      {(staffFeatureEnabled || activeStaff.viaRealSession) && (
         <>
           {confirmSwitch && (
             <div className="fixed inset-0 z-[90] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmSwitch(false)}>

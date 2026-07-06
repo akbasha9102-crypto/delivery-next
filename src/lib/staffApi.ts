@@ -15,6 +15,7 @@ export type StaffMember = {
   display_name: string;
   role: StaffRole;
   is_active: boolean;
+  code: string | null;
   max_discount_pct: number;
   max_void_amount: number;
 };
@@ -98,7 +99,8 @@ export function createStaff(payload: {
   restaurant_id: string;
   display_name: string;
   role: StaffRole;
-  pin: string;
+  password: string;
+  code?: string;
   max_discount_pct: number;
   max_void_amount: number;
 }, accessToken?: string) {
@@ -113,7 +115,7 @@ export function updateStaff(id: string, patch: Partial<{
   display_name: string;
   role: StaffRole;
   is_active: boolean;
-  pin: string;
+  password: string;
   max_discount_pct: number;
   max_void_amount: number;
 }>, accessToken?: string) {
@@ -129,6 +131,27 @@ export function getOwnerSession(restaurantId: string, accessToken: string) {
   return safeFetch<{ staff_token: string }>('/api/staff/owner-session', {
     method: 'POST',
     body: JSON.stringify({ restaurant_id: restaurantId }),
+    headers: authHeaders({ accessToken }),
+  });
+}
+
+export type MyStaffContext = {
+  staff_id: string;
+  restaurant_id: string;
+  display_name: string;
+  role: StaffRole;
+  max_discount_pct: number;
+  max_void_amount: number;
+  staff_token: string;
+};
+
+/**
+ * يتحقق هل الجلسة الحالية (Supabase Auth) تخص موظفاً دخل مباشرة بكود+كلمة
+ * مرور من /login (حساب Auth مستقل تماماً)، بدل جلسة المالك المشتركة.
+ * 404 يعني: هذه جلسة المالك نفسه، وليست موظفاً.
+ */
+export function getMyStaffContext(accessToken: string) {
+  return safeFetch<MyStaffContext>('/api/staff/my-context', {
     headers: authHeaders({ accessToken }),
   });
 }

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { hashPin, isValidPinFormat, verifyOwnerRequest, type StaffRole } from '@/lib/staff-auth';
+import { verifyOwnerRequest, type StaffRole } from '@/lib/staff-auth';
 
 const STAFF_SELECT_NO_PIN =
-  'id, restaurant_id, display_name, role, is_active, auth_user_id, max_discount_pct, max_void_amount, failed_pin_attempts, locked_until, created_at, updated_at';
+  'id, restaurant_id, display_name, role, is_active, auth_user_id, code, max_discount_pct, max_void_amount, failed_pin_attempts, locked_until, created_at, updated_at';
 
-// PATCH /api/staff/:id — تحديث جزئي (تعطيل، تغيير حدود، إعادة تعيين PIN)، مالك فقط
+// PATCH /api/staff/:id — تحديث جزئي (تعطيل، تغيير حدود، إعادة تعيين كلمة المرور)، مالك فقط
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
@@ -13,7 +13,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     display_name?: string;
     role?: StaffRole;
     is_active?: boolean;
-    pin?: string;
+    password?: string;
     max_discount_pct?: number;
     max_void_amount?: number;
     locked_until?: string | null;
@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
   const { data: existing, error: fetchError } = await supabaseAdmin
     .from('restaurant_staff')
-    .select('id, restaurant_id')
+    .select('id, restaurant_id, auth_user_id')
     .eq('id', id)
     .maybeSingle();
 
@@ -53,12 +53,18 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (body.max_void_amount !== undefined) update.max_void_amount = body.max_void_amount;
   if (body.locked_until !== undefined) update.locked_until = body.locked_until;
 
-  if (body.pin !== undefined) {
-    if (!isValidPinFormat(body.pin)) {
-      return NextResponse.json({ error: 'PIN يجب أن يكون 4-6 أرقام' }, { status: 400 });
+  if (body.password !== undefined) {
+    if (body.password.trim().length < 4) {
+      return NextResponse.json({ error: 'كلمة المرور يجب أن تكون 4 أحرف/أرقام على الأقل' }, { status: 400 });
     }
-    update.pin_hash = hashPin(body.pin);
-    // إعادة تعيين PIN تُصفّر أي soft-lock سابق
+    if (!existing.auth_user_id) {
+      return NextResponse.json({ error: 'هذا الموظف بلا حساب دخول (سجل قديم) — أعد إنشاءه' }, { status: 409 });
+    }
+    const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(existing.auth_user_id, {
+      password: body.password.trim(),
+    });
+    if (pwError) return NextResponse.json({ error: pwError.message }, { status: 500 });
+    // إعادة تعيين كلمة المرور تُصفّر أي soft-lock سابق
     update.failed_pin_attempts = 0;
     update.locked_until = null;
   }

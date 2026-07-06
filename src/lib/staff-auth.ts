@@ -24,6 +24,16 @@ export type StaffContext = {
 
 const SCRYPT_KEYLEN = 64;
 
+/** الإيميل الداخلي الصناعي لحساب الكاشير — نفس نمط slug@dasha.app لحساب المطعم. */
+export function staffCodeToEmail(code: string): string {
+  return `${code.trim().toLowerCase()}@cashier.dasha.app`;
+}
+
+/** يولّد كوداً رقمياً من 6 أرقام لتسجيل دخول الكاشير (يُعرض للمالك، لا يحتاج تذكّر كلمات). */
+export function generateStaffCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
 /** يحسب hash لـ PIN موظف بصيغة "salt:hash" (hex). لا يُخزَّن PIN كنص صريح أبداً. */
 export function hashPin(pin: string): string {
   const salt = randomBytes(16).toString('hex');

@@ -8,11 +8,28 @@ export async function GET(req: NextRequest) {
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: restaurant } = await supabaseAdmin
+  let restaurant = (await supabaseAdmin
     .from('restaurants')
     .select('id, name')
     .eq('owner_id', user.id)
-    .maybeSingle();
+    .maybeSingle()).data;
+
+  // ليست جلسة المالك؟ جرّب موظف (كاشير/مدير) دخل بحساب Auth مستقل (كود+كلمة مرور)
+  if (!restaurant) {
+    const { data: staff } = await supabaseAdmin
+      .from('restaurant_staff')
+      .select('restaurant_id, is_active')
+      .eq('auth_user_id', user.id)
+      .maybeSingle();
+
+    if (staff?.is_active) {
+      restaurant = (await supabaseAdmin
+        .from('restaurants')
+        .select('id, name')
+        .eq('id', staff.restaurant_id)
+        .maybeSingle()).data;
+    }
+  }
 
   const { data: settings } = await supabaseAdmin
     .from('restaurant_settings')

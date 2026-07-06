@@ -8,6 +8,7 @@ import { AdminBottomNav } from '@/components/BottomNav';
 import { OwnerOnly } from '@/components/OwnerOnly';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
+import { useStaff } from '@/context/StaffContext';
 
 /* ─── جدولة الدوام ─── */
 const DAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -370,6 +371,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded } = useSettings();
   const { dark, toggleDark } = useDarkMode();
+  const { isCashier } = useStaff();
 
   const [scheduleLocal,    setScheduleLocal]    = useState<WeekSchedule | null>(null);
   const [showClosedModal,  setShowClosedModal]  = useState(false);
@@ -497,25 +499,27 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* ─ حساب الدخول ─ */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4" dir="rtl">
-          <p className="font-bold text-gray-900 dark:text-slate-100 text-sm mb-3">حساب الدخول</p>
-          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
-            <p className="font-mono font-bold text-gray-800 dark:text-slate-200 text-sm" dir="ltr">{username}</p>
-            <p className="text-[10px] text-gray-400">اسم المستخدم</p>
+        {/* ─ حساب الدخول — مخفي عن الكاشير: هذا حساب المالك الأساسي بالموقع ─ */}
+        {!isCashier && (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4" dir="rtl">
+            <p className="font-bold text-gray-900 dark:text-slate-100 text-sm mb-3">حساب الدخول</p>
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
+              <p className="font-mono font-bold text-gray-800 dark:text-slate-200 text-sm" dir="ltr">{username}</p>
+              <p className="text-[10px] text-gray-400">اسم المستخدم</p>
+            </div>
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
+              <p className="font-mono text-gray-400 tracking-widest text-sm">••••••••</p>
+              <p className="text-[10px] text-gray-400">كلمة المرور</p>
+            </div>
+            <button
+              onClick={() => setShowChangePass(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
+            >
+              <KeyRound size={15} />
+              تغيير كلمة المرور
+            </button>
           </div>
-          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
-            <p className="font-mono text-gray-400 tracking-widest text-sm">••••••••</p>
-            <p className="text-[10px] text-gray-400">كلمة المرور</p>
-          </div>
-          <button
-            onClick={() => setShowChangePass(true)}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
-          >
-            <KeyRound size={15} />
-            تغيير كلمة المرور
-          </button>
-        </div>
+        )}
 
         {/* ─ حالة المطعم ─ */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3">
@@ -547,53 +551,57 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* ─ الأرشيف والإحصاء ─ */}
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={() => router.push('/admin/statistics')}
-            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصائيات</span>
-              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                <BarChart2 size={16} className="text-blue-500" />
+        {/* ─ الأرشيف والإحصاء — مخفية تماماً عن الكاشير (أرباح/بيانات مالية) ─ */}
+        {!isCashier && (
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => router.push('/admin/statistics')}
+              className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصائيات</span>
+                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                  <BarChart2 size={16} className="text-blue-500" />
+                </div>
               </div>
-            </div>
-          </button>
-          <button onClick={() => router.push('/admin/archive')}
-            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأرشيف</span>
-              <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-                <Archive size={16} className="text-amber-500" />
+            </button>
+            <button onClick={() => router.push('/admin/archive')}
+              className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأرشيف</span>
+                <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                  <Archive size={16} className="text-amber-500" />
+                </div>
               </div>
-            </div>
-          </button>
-        </div>
+            </button>
+          </div>
+        )}
 
-        {/* ─ إدارة الموظفين والصلاحيات (RBAC) ─ */}
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={() => router.push('/admin/settings/staff')}
-            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الموظفين</span>
-              <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
-                <User size={16} className="text-purple-500" />
+        {/* ─ إدارة الموظفين والصلاحيات (RBAC) — مالك فقط ─ */}
+        {!isCashier && (
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => router.push('/admin/settings/staff')}
+              className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الموظفين</span>
+                <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                  <User size={16} className="text-purple-500" />
+                </div>
               </div>
-            </div>
-          </button>
-          <button onClick={() => router.push('/admin/audit')}
-            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">سجل التدقيق</span>
-              <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                <KeyRound size={16} className="text-slate-500" />
+            </button>
+            <button onClick={() => router.push('/admin/audit')}
+              className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">سجل التدقيق</span>
+                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                  <KeyRound size={16} className="text-slate-500" />
+                </div>
               </div>
-            </div>
-          </button>
-        </div>
+            </button>
+          </div>
+        )}
 
         {/* ─ تسجيل الخروج ─ */}
         <button onClick={logout}

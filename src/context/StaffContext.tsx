@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { supabase } from '@/lib/supabase';
-import { getOwnerSession, listStaff, verifyPin, type StaffMember, type StaffRole, type VerifyPinSuccess } from '@/lib/staffApi';
+import { getMyStaffContext, getOwnerSession, listStaff, verifyPin, type StaffMember, type StaffRole, type VerifyPinSuccess } from '@/lib/staffApi';
 
 export type ActiveStaff = {
   staffId: string | null;   // null = المالك (لا صف restaurant_staff بالضرورة)
@@ -15,6 +15,11 @@ export type ActiveStaff = {
   // حرجة: كان أي طرف يملك الجلسة المشتركة يقدر يرسل staff_id تبع المالك
   // مباشرة وينتحل صلاحياته). قد يكون null مؤقتاً أثناء تحميل جلسة المالك.
   staffToken: string | null;
+  // true = هذه الهوية مثبَّتة بحساب Supabase Auth حقيقي مستقل (دخل بكود+كلمة
+  // مرور من /login)، وليست عبر شاشة PIN فوق جلسة المالك المشتركة. يحدّد
+  // سلوك "تبديل المستخدم": لجلسة حقيقية لازم supabase.auth.signOut() فعلياً
+  // (ما فيه جلسة مالك تحتها نرجعلها)، بعكس نمط PIN القديم.
+  viaRealSession: boolean;
 };
 
 const OWNER_ACTIVE_BASE = {
@@ -23,6 +28,7 @@ const OWNER_ACTIVE_BASE = {
   role: 'owner' as StaffRole,
   maxDiscountPct: 100,
   maxVoidAmount: Number.MAX_SAFE_INTEGER,
+  viaRealSession: false,
 };
 
 const IDLE_LOCK_MS = 2 * 60 * 1000; // دقيقتان خمول → قفل تلقائي (auto-lock) — للكاشير/المدير فقط، ليس للمالك
@@ -110,9 +116,20 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
   }, [persist, restaurantId]);
 
   const switchUser = useCallback(() => {
+    if (activeStaff?.viaRealSession) {
+      // جلسة Supabase Auth حقيقية مستقلة (كاشير دخل بكود+كلمة مرور) — لا
+      // يوجد "جلسة مالك تحتها" نرجع لها، فالخروج الفعلي الوحيد المنطقي هو
+      // تسجيل خروج كامل من Supabase والعودة لصفحة الدخول.
+      persist(null);
+      setActiveStaffState(null);
+      supabase.auth.signOut().finally(() => {
+        if (typeof window !== 'undefined') window.location.href = '/login';
+      });
+      return;
+    }
     setActiveStaffState(null);
     persist(null);
-  }, [persist]);
+  }, [activeStaff, persist]);
 
   const refreshStaffList = useCallback(async () => {
     if (!restaurantId) return;
@@ -130,17 +147,55 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
     setStaffListLoading(false);
   }, [restaurantId]);
 
-  // 1) عند توفر restaurantId: حاول استعادة الهوية الفعّالة من sessionStorage، وحمّل قائمة الموظفين
+  // 1) عند توفر restaurantId: أولاً تحقق هل الجلسة الحالية (Supabase Auth) تخص
+  //    موظفاً دخل مباشرة بكود+كلمة مرور من /login (حساب مستقل تماماً) — إن
+  //    كانت كذلك نثبّت هويته فوراً بلا أي شاشة "من أنت؟" (الهوية مؤكَّدة فعلاً
+  //    عبر Supabase Auth نفسه). وإلا: هذه جلسة المالك — نفس السلوك القديم
+  //    (استعادة من sessionStorage + تحميل قائمة الموظفين لعرض شاشة PIN إن لزم).
   useEffect(() => {
     if (!restaurantId) return;
+    let cancelled = false;
     setHydrated(false);
     setEverReady(false);
-    try {
-      const raw = sessionStorage.getItem(storageKey(restaurantId));
-      if (raw) setActiveStaffState(JSON.parse(raw));
-    } catch { /* تجاهل */ }
-    refreshStaffList().then(() => { setHydrated(true); setEverReady(true); });
-  }, [restaurantId, refreshStaffList]);
+
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+
+      if (session?.access_token) {
+        const myCtx = await getMyStaffContext(session.access_token);
+        if (cancelled) return;
+        if (myCtx.ok) {
+          const staff: ActiveStaff = {
+            staffId: myCtx.data.staff_id,
+            displayName: myCtx.data.display_name,
+            role: myCtx.data.role,
+            maxDiscountPct: myCtx.data.max_discount_pct,
+            maxVoidAmount: myCtx.data.max_void_amount,
+            staffToken: myCtx.data.staff_token,
+            viaRealSession: true,
+          };
+          setActiveStaffState(staff);
+          persist(staff);
+          setHydrated(true);
+          setEverReady(true);
+          return;
+        }
+      }
+
+      // جلسة المالك (أو لا جلسة بعد) — السلوك السابق كما هو
+      try {
+        const raw = sessionStorage.getItem(storageKey(restaurantId));
+        if (raw) setActiveStaffState(JSON.parse(raw));
+      } catch { /* تجاهل */ }
+      await refreshStaffList();
+      if (cancelled) return;
+      setHydrated(true);
+      setEverReady(true);
+    })();
+
+    return () => { cancelled = true; };
+  }, [restaurantId, refreshStaffList, persist]);
 
   // 2) إن لم تكن هناك هوية فعّالة محفوظة، وتبيّن بعد التحميل أن لا يوجد موظفون مُعرَّفون إطلاقاً
   //    (صاحب المطعم لم يفعّل نظام الكاشير بعد) → لا نعرض شاشة "من أنت؟" أبداً، ونُبقي المالك بنفس تجربته اليوم
@@ -166,6 +221,7 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
       maxDiscountPct: data.max_discount_pct,
       maxVoidAmount: data.max_void_amount,
       staffToken: data.staff_token,
+      viaRealSession: false,
     };
     setActiveStaffState(staff);
     persist(staff);

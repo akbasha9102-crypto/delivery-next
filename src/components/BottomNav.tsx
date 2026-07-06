@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { User, Route, UtensilsCrossed, ClipboardList, BarChart2, Car, Menu, Archive, ShoppingBag, Package, ShoppingCart } from 'lucide-react';
+import { User, Route, UtensilsCrossed, ClipboardList, BarChart2, Car, Menu, Archive, ShoppingBag, Package } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useStaff } from '@/context/StaffContext';
@@ -15,11 +15,17 @@ const adminTabs = [
   { href: '/admin/settings',    icon: Menu,            label: 'الإعدادات' },
 ];
 
-// شريط الكاشير — مبسّط جداً حسب مصفوفة صلاحيات RBAC (القسم 4): لا منيو إدارة، لا سائقين، لا إعدادات،
-// لا مخزون بالتكلفة. فقط نقطة البيع المحلي وتسجيل الهدر.
+// شريط الكاشير — نفس شريط المالك تقريباً (الطلبات/المنيو/السائقين/المخزون/الإعدادات)
+// حسب طلب صاحب المطعم، باستثناءين فقط: "الطلبات" تفتح شاشة POS المبسّطة
+// (/admin/local) بدل الداشبورد الكامل، و"المخزون" تفتح شاشة تسجيل الهدر
+// الآمنة (بدون تكلفة/مورّد) بدل صفحة المخزون الكاملة. الإحصائيات وإدارة
+// الموظفين وسجل التدقيق لا تظهر إطلاقاً للكاشير (ليست بهذه القائمة أصلاً).
 const cashierTabs = [
-  { href: '/admin/local',           icon: ShoppingCart, label: 'الكاشير' },
-  { href: '/admin/inventory/waste', icon: Package,      label: 'تسجيل هدر' },
+  { href: '/admin/local',           icon: ClipboardList, label: 'الطلبات' },
+  { href: '/admin/menu',            icon: UtensilsCrossed, label: 'المنيو' },
+  { href: '/admin/drivers',         icon: Car,           label: 'السائقين' },
+  { href: '/admin/inventory/waste', icon: Package,       label: 'المخزون' },
+  { href: '/admin/settings',        icon: Menu,          label: 'الإعدادات' },
 ];
 
 export function ClientBottomNav() {

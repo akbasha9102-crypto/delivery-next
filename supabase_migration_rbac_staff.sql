@@ -253,3 +253,21 @@ CREATE INDEX IF NOT EXISTS idx_stock_mov_staff ON stock_movements(performed_by_s
 -- بالنسبة للسعر الأصلي الحقيقي وليس آخر سعر بعد خصم سابق.
 ALTER TABLE orders
   ADD COLUMN IF NOT EXISTS pre_discount_total NUMERIC(12,2);
+
+-- ─────────────────────────────────────────────────────────────
+-- 7. دخول مستقل حقيقي للكاشير (كود + كلمة مرور) — additive فقط
+-- ─────────────────────────────────────────────────────────────
+-- بدل شاشة "من أنت؟" بالـ PIN بعد جلسة المالك المشتركة، الكاشير الآن
+-- يملك حساب Supabase Auth حقيقي مستقل (نفس نمط حساب المطعم `slug@dasha.app`
+-- الموجود فعلاً)، بإيميل صناعي `<code>@cashier.dasha.app`. هذا يحل أيضاً
+-- إشكال مشاركة JWT بين المالك والكاشير المذكور بالقسم 3 أعلاه.
+-- pin_hash يبقى NOT NULL اختيارياً الآن (الكاشيرية الجدد يدخلون بكود+كلمة
+-- مرور بدل PIN، والـ auth_user_id أصبح إلزامياً عملياً بدلاً من اختياري).
+ALTER TABLE restaurant_staff
+  ALTER COLUMN pin_hash DROP NOT NULL;
+
+ALTER TABLE restaurant_staff
+  ADD COLUMN IF NOT EXISTS code TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_staff_code_unique
+  ON restaurant_staff (LOWER(code)) WHERE code IS NOT NULL;
