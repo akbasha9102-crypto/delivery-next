@@ -231,3 +231,16 @@ CREATE POLICY "staff_actions_log: super_admin can do all"
   ON staff_actions_log FOR ALL
   USING (is_super_admin())
   WITH CHECK (is_super_admin());
+
+-- ─────────────────────────────────────────────────────────────
+-- 5. عمود إضافي على stock_movements (additive فقط — لا حذف/تعديل)
+-- ─────────────────────────────────────────────────────────────
+-- performed_by الحالي يشير إلى auth.users(id)، والكاشير (PIN فقط بدون
+-- حساب Auth) لا يملك صفاً بهذا الجدول. هذا العمود الإضافي يسمح بتسجيل
+-- هوية الكاشير الفعلي (restaurant_staff.id) عند WASTE مسجَّل من واجهة
+-- الكاشير، دون المساس بعمود performed_by الأصلي أو أي بيانات موجودة.
+ALTER TABLE stock_movements
+  ADD COLUMN IF NOT EXISTS performed_by_staff_id UUID REFERENCES restaurant_staff(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_stock_mov_staff ON stock_movements(performed_by_staff_id)
+  WHERE performed_by_staff_id IS NOT NULL;
