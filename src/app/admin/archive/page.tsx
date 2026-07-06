@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
+import { OwnerOnly } from '@/components/OwnerOnly';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { MessageSquare, AlertCircle, ChevronRight, ChevronDown, ChevronUp, MapPin, Car } from 'lucide-react';
@@ -145,6 +146,7 @@ export default function ArchivePage() {
   const totalDriverRevenue = driverGroups.reduce((s, g) => s + g.total, 0);
 
   return (
+    <OwnerOnly>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-28 md:pb-0 md:mr-[70px]">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
         <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
@@ -418,6 +420,7 @@ export default function ArchivePage() {
 
       <AdminBottomNav />
     </div>
+    </OwnerOnly>
   );
 }
 

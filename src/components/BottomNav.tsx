@@ -2,9 +2,10 @@
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { User, Route, UtensilsCrossed, ClipboardList, BarChart2, Car, Menu, Archive, ShoppingBag, Package } from 'lucide-react';
+import { User, Route, UtensilsCrossed, ClipboardList, BarChart2, Car, Menu, Archive, ShoppingBag, Package, ShoppingCart } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
+import { useStaff } from '@/context/StaffContext';
 
 const adminTabs = [
   { href: '/admin/dashboard',   icon: ClipboardList,   label: 'الطلبات' },
@@ -12,6 +13,13 @@ const adminTabs = [
   { href: '/admin/drivers',     icon: Car,             label: 'السائقين' },
   { href: '/admin/inventory',   icon: Package,         label: 'المخزون' },
   { href: '/admin/settings',    icon: Menu,            label: 'الإعدادات' },
+];
+
+// شريط الكاشير — مبسّط جداً حسب مصفوفة صلاحيات RBAC (القسم 4): لا منيو إدارة، لا سائقين، لا إعدادات،
+// لا مخزون بالتكلفة. فقط نقطة البيع المحلي وتسجيل الهدر.
+const cashierTabs = [
+  { href: '/admin/local',           icon: ShoppingCart, label: 'الكاشير' },
+  { href: '/admin/inventory/waste', icon: Package,      label: 'تسجيل هدر' },
 ];
 
 export function ClientBottomNav() {
@@ -68,10 +76,16 @@ export function ClientBottomNav() {
 export function AdminBottomNav() {
   const path = usePathname();
   const { newCount } = useNewOrders();
+  const { isCashier } = useStaff();
+
+  // ملاحظة: لا يتغيّر شيء بتاتاً بالنسبة للمالك/المدير — نفس adminTabs الحالية بالضبط.
+  // فقط عندما يكون الدور النشط "كاشير" نستبدل الشريط بالكامل بنسخة مبسّطة، وليس إخفاء CSS —
+  // العناصر غير المسموحة لا توجد إطلاقاً بالـ render.
+  const tabs = isCashier ? cashierTabs : adminTabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex z-50 md:top-0 md:bottom-0 md:left-auto md:w-[70px] md:flex-col md:border-t-0 md:border-l">
-      {adminTabs.map(({ href, icon: Icon, label }) => {
+      {tabs.map(({ href, icon: Icon, label }) => {
         const active = path === href;
         const showBadge = href === '/admin/dashboard' && path !== '/admin/dashboard' && newCount > 0;
         return (

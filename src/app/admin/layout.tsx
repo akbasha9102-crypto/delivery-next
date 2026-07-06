@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { NewOrdersProvider } from '@/context/NewOrdersContext';
 import { AdminGuard } from '@/components/AdminGuard';
 import { useRestaurant } from '@/context/RestaurantContext';
+import { StaffProvider } from '@/context/StaffContext';
+import { StaffGate } from '@/components/staff/StaffGate';
 
 function makeBellWavUrl(): string | null {
   if (typeof window === 'undefined') return null;
@@ -52,7 +54,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminGuard>
-      <NewOrdersProvider>{children}</NewOrdersProvider>
+      <StaffProvider>
+        <StaffGate>
+          <NewOrdersProvider>{children}</NewOrdersProvider>
+        </StaffGate>
+      </StaffProvider>
     </AdminGuard>
   );
 }

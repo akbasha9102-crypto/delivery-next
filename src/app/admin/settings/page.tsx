@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
 import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
+import { OwnerOnly } from '@/components/OwnerOnly';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
 
@@ -450,6 +451,7 @@ export default function SettingsPage() {
   );
 
   return (
+    <OwnerOnly>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* هيدر */}
@@ -569,6 +571,30 @@ export default function SettingsPage() {
           </button>
         </div>
 
+        {/* ─ إدارة الموظفين والصلاحيات (RBAC) ─ */}
+        <div className="grid grid-cols-2 gap-3">
+          <button onClick={() => router.push('/admin/settings/staff')}
+            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الموظفين</span>
+              <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                <User size={16} className="text-purple-500" />
+              </div>
+            </div>
+          </button>
+          <button onClick={() => router.push('/admin/audit')}
+            className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">سجل التدقيق</span>
+              <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                <KeyRound size={16} className="text-slate-500" />
+              </div>
+            </div>
+          </button>
+        </div>
+
         {/* ─ تسجيل الخروج ─ */}
         <button onClick={logout}
           className="w-full py-4 rounded-2xl bg-red-500 text-white font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
@@ -639,5 +665,6 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
+    </OwnerOnly>
   );
 }
