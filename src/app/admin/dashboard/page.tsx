@@ -1722,7 +1722,7 @@ export default function DashboardPage() {
                           <span className="text-sm font-semibold" dir="ltr">{order.client_phone}</span>
                         </a>
                       )}
-                      {order.delivery_address && (
+                      {(order.delivery_address || (order.client_lat && order.client_lng)) && (
                         <div className="flex items-center gap-2">
                           {order.client_lat && order.client_lng ? (
                             <button onClick={() => setLocationOrder(order)} className="flex items-center gap-1.5 text-blue-500 active:scale-95 transition-transform flex-shrink-0">
@@ -1735,7 +1735,9 @@ export default function DashboardPage() {
                               <span className="text-sm">العنوان:</span>
                             </div>
                           )}
-                          <span className="text-gray-600 dark:text-slate-300 text-sm">{order.delivery_address}</span>
+                          {order.delivery_address && (
+                            <span className="text-gray-600 dark:text-slate-300 text-sm">{order.delivery_address}</span>
+                          )}
                         </div>
                       )}
                     </div>
