@@ -8,6 +8,7 @@ import { ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, 
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
+import { LowStockAlert } from '@/components/LowStockAlert';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 type OrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };
@@ -1009,6 +1010,8 @@ export default function DashboardPage() {
           <div className="w-10" />
         )}
       </header>
+
+      <LowStockAlert />
 
       {/* تبويب: توصيل الطلب / استلام الطلب */}
       <div className="grid grid-cols-2 gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">

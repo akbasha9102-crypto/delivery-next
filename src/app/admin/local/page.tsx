@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
 import { AdminBottomNav } from '@/components/BottomNav';
+import { LowStockAlert } from '@/components/LowStockAlert';
 import {
   ShoppingCart, Plus, Minus, X, Check, Wallet, LogOut, Clock,
   Percent, Ban, RotateCcw, ChevronLeft,
@@ -517,6 +518,8 @@ export default function LocalCashierPage() {
           <Clock size={12} /> وردية مفتوحة
         </div>
       </header>
+
+      <LowStockAlert />
 
       {toast && (
         <div className={`mx-4 mt-3 px-4 py-3 rounded-xl border text-center font-bold text-sm ${toast.ok ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'}`}>
