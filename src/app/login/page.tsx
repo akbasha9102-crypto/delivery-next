@@ -2,7 +2,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { staffCodeToEmail } from '@/lib/staff-auth';
+
+// ملاحظة مهمة: لا تستورد من '@/lib/staff-auth' هنا — تلك الوحدة تستخدم
+// Node crypto وعميل supabaseAdmin (Service Role) وهي مخصّصة للخادم فقط.
+// استيرادها بمكوّن 'use client' يُدرجها بالكامل داخل حزمة المتصفح (bundle)،
+// وهذا سبّب فعلياً تعطّل صفحة الدخول عند العملاء (Node crypto/متغيرات بيئة
+// الخادم غير متوفرة بالمتصفح) — لذلك الدالة مكرَّرة هنا بسطر واحد بدل استيرادها.
+function staffCodeToEmail(code: string): string {
+  return `${code.trim().toLowerCase()}@cashier.dasha.app`;
+}
 
 type Mode = 'owner' | 'staff';
 
