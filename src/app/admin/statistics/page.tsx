@@ -6,7 +6,7 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { OwnerOnly } from '@/components/OwnerOnly';
-import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown, Flame } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; order_type?: string | null; items: OrderItem[] };
@@ -213,6 +213,19 @@ export default function StatisticsPage() {
     return [...map.values()].sort((a, b) => b.revenue - a.revenue);
   }, [orders, catMap, categories]);
 
+  const topItemsStats = useMemo(() => {
+    const map = new Map<string, { name: string; qty: number; revenue: number }>();
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        const e = map.get(item.item_name) || { name: item.item_name, qty: 0, revenue: 0 };
+        e.qty += item.quantity;
+        e.revenue += item.price * item.quantity;
+        map.set(item.item_name, e);
+      });
+    });
+    return [...map.values()].sort((a, b) => b.qty - a.qty);
+  }, [orders]);
+
   const s = {
     bg:      dark ? '#0f172a' : '#f8fafc',
     surface: dark ? '#1e293b' : '#fff',
@@ -380,6 +393,40 @@ export default function StatisticsPage() {
                     </div>
                     <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: s.muted }}>
                       <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: '#f97316' }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* الأصناف الأكثر مبيعاً */}
+        {topItemsStats.length > 0 && (
+          <div className="mx-4 mb-3 rounded-2xl border p-4" style={{ backgroundColor: s.surface, borderColor: s.border }}>
+            <div className="flex items-center gap-2 mb-4 justify-end">
+              <h3 className="font-bold text-right" style={{ color: s.text }}>الأصناف الأكثر مبيعاً</h3>
+              <Flame size={18} style={{ color: '#f97316' }} />
+            </div>
+            <div className="space-y-3">
+              {topItemsStats.slice(0, 10).map((it, idx) => {
+                const maxQty = topItemsStats[0].qty;
+                const pct = maxQty > 0 ? (it.qty / maxQty) * 100 : 0;
+                return (
+                  <div key={it.name}>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="font-bold text-sm" style={{ color: '#f97316' }}>{Math.round(it.revenue).toLocaleString()} د.ع</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs" style={{ color: s.sub }}>{it.qty}× مباع</span>
+                        <span className="font-bold text-sm" style={{ color: s.text }}>{it.name}</span>
+                        <span className="text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: idx === 0 ? 'rgba(249,115,22,0.15)' : s.muted, color: idx === 0 ? '#f97316' : s.sub }}>
+                          {idx + 1}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: s.muted }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: '#f97316' }} />
                     </div>
                   </div>
                 );
