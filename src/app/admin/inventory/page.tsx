@@ -523,12 +523,23 @@ export default function InventoryPage() {
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">الفئة</p>
               <div className="flex gap-1.5 flex-wrap mb-2 justify-end">
-                {formCategories.map(c => (
-                  <button key={c} onClick={() => setForm(p => ({ ...p, category: c }))}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${form.category === c ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
-                    {c}
-                  </button>
-                ))}
+                {formCategories.map(c => {
+                  const dbCat = categoryRows.find(cr => cr.name === c);
+                  return (
+                    <span key={c} className={`flex items-center rounded-full text-xs font-bold border transition-all ${form.category === c ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                      <button onClick={() => setForm(p => ({ ...p, category: c }))}
+                        className="px-3 py-1.5 active:scale-95 transition-all">
+                        {c}
+                      </button>
+                      {dbCat && (
+                        <button onClick={() => deleteCategory(dbCat)} title="حذف الفئة"
+                          className="pl-1 pr-2.5 py-1.5 active:scale-90 transition-all">
+                          <Trash2 size={11} />
+                        </button>
+                      )}
+                    </span>
+                  );
+                })}
                 <button onClick={() => setShowCustomCat(v => !v)}
                   className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${showCustomCat ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                   + قسم جديد
