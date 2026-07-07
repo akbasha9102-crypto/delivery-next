@@ -12,11 +12,34 @@ const ACTION_LABEL: Record<string, string> = {
   order_refund: 'استرجاع مبلغ',
   discount_applied: 'تطبيق خصم',
   price_edit: 'تعديل سعر',
+  item_deleted: 'حذف مادة',
+  category_deleted: 'حذف قسم',
+  settings_changed: 'تغيير إعدادات',
   inventory_adjust: 'تعديل مخزون',
   waste_registered: 'تسجيل هدر',
   shift_open: 'فتح وردية',
   shift_close: 'إغلاق وردية',
 };
+
+type JsonRecord = Record<string, unknown>;
+const asRecord = (v: unknown): JsonRecord | null => (v && typeof v === 'object' ? v as JsonRecord : null);
+
+function describeChange(l: StaffActionLog): string | null {
+  const before = asRecord(l.before_data);
+  const after  = asRecord(l.after_data);
+  if (l.action_type === 'price_edit' && before && after) {
+    return `${before.name ?? ''}: ${Number(before.price).toLocaleString()} ⟵ ${Number(after.price).toLocaleString()} د.ع`;
+  }
+  if ((l.action_type === 'item_deleted' || l.action_type === 'category_deleted') && before) {
+    return `${before.name ?? ''}`;
+  }
+  if (l.action_type === 'settings_changed' && before && after) {
+    const changedKeys = Object.keys(after).filter(k => JSON.stringify(after[k]) !== JSON.stringify(before[k]));
+    if (changedKeys.length === 0) return null;
+    return `تغيّر: ${changedKeys.join('، ')}`;
+  }
+  return null;
+}
 
 /**
  * سجل التدقيق — عرض فقط للمالك. لا توجد نقطة GET مخصّصة لـ staff_actions_log ضمن العقد
@@ -27,6 +50,7 @@ export default function AuditLogPage() {
   const router = useRouter();
   const { restaurantId } = useRestaurant();
   const [logs, setLogs] = useState<StaffActionLog[]>([]);
+  const [staffNames, setStaffNames] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [errored, setErrored] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -46,6 +70,16 @@ export default function AuditLogPage() {
   }, [restaurantId, fromDate, toDate]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    supabase.from('restaurant_staff').select('id, display_name').eq('restaurant_id', restaurantId).then(({ data }) => {
+      setStaffNames(new Map((data || []).map(s => [s.id as string, s.display_name as string])));
+    });
+  }, [restaurantId]);
+
+  const actorLabel = (l: StaffActionLog): string =>
+    l.performed_by_label || (l.staff_id ? staffNames.get(l.staff_id) : null) || 'غير معروف';
 
   const types = [...new Set(logs.map(l => l.action_type))];
   const filtered = typeFilter ? logs.filter(l => l.action_type === typeFilter) : logs;
@@ -94,17 +128,24 @@ export default function AuditLogPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {filtered.map(l => (
-              <div key={l.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-gray-400">{new Date(l.created_at).toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                  <span className="font-bold text-sm text-gray-900 dark:text-slate-100">{ACTION_LABEL[l.action_type] ?? l.action_type}</span>
+            {filtered.map(l => {
+              const detail = describeChange(l);
+              return (
+                <div key={l.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-400">{new Date(l.created_at).toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                    <span className="font-bold text-sm text-gray-900 dark:text-slate-100">{ACTION_LABEL[l.action_type] ?? l.action_type}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs font-bold" style={{ color: '#2563eb' }}>{actorLabel(l)}</span>
+                    <span className="text-xs text-gray-400">بواسطة</span>
+                  </div>
+                  {detail && (
+                    <p className="text-xs text-gray-500 dark:text-slate-400 text-right mt-1.5 border-t border-gray-50 dark:border-slate-700 pt-1.5">{detail}</p>
+                  )}
                 </div>
-                {l.entity_type && (
-                  <p className="text-xs text-gray-400 text-right mt-1">العنصر: {l.entity_type}{l.entity_id ? ` #${l.entity_id.slice(0, 8)}` : ''}</p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

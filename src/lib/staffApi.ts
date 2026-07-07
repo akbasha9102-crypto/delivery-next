@@ -284,5 +284,7 @@ export type StaffActionLog = {
   entity_id: string | null;
   before_data: unknown;
   after_data: unknown;
+  performed_by_auth_id: string | null;
+  performed_by_label: string | null;
   created_at: string;
 };
