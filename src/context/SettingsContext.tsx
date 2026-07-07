@@ -17,6 +17,7 @@ export type Settings = {
   whatsapp_number: string | null;
   location_url: string | null;
   is_suspended?: boolean | null;
+  delivery_fee: number;
 };
 
 const DEFAULTS: Settings = {
@@ -30,6 +31,7 @@ const DEFAULTS: Settings = {
   whatsapp_number: null,
   location_url: null,
   is_suspended: false,
+  delivery_fee: 0,
 };
 
 // مفتاح cache مرتبط بـ restaurant_id لعزل كل مطعم

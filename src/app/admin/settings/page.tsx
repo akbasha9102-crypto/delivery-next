@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock } from 'lucide-react';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -368,7 +368,7 @@ function ChangePasswordSheet({ onClose, username }: { onClose: () => void; usern
 /* ─── الصفحة الرئيسية ─── */
 export default function SettingsPage() {
   const router = useRouter();
-  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded } = useSettings();
+  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee } = useSettings();
   const { dark, toggleDark } = useDarkMode();
   const { isCashier } = useStaff();
 
@@ -381,6 +381,9 @@ export default function SettingsPage() {
   const [username,         setUsername]         = useState('');
   const [tick,             setTick]             = useState(0);
   const [toggleError,      setToggleError]      = useState<string | null>(null);
+  const [deliveryFeeInput, setDeliveryFeeInput] = useState('0');
+  const [feeSaving,        setFeeSaving]        = useState(false);
+  const [feeSaved,         setFeeSaved]         = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -391,6 +394,7 @@ export default function SettingsPage() {
   const isClosedRef = useRef(is_closed);
   useEffect(() => { isClosedRef.current = is_closed; }, [is_closed]);
   useEffect(() => { setScheduleLocal(ctxSchedule); }, [ctxSchedule]);
+  useEffect(() => { setDeliveryFeeInput(String(delivery_fee ?? 0)); }, [delivery_fee]);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(id);
@@ -443,6 +447,19 @@ export default function SettingsPage() {
     setShowClosedModal(false);
     await refreshSettings();
   };
+  const saveDeliveryFee = async () => {
+    const value = parseFloat(deliveryFeeInput);
+    if (isNaN(value) || value < 0) return;
+    setFeeSaving(true);
+    const { error } = await supabase.from('restaurant_settings').update({ delivery_fee: value }).eq('id', settingsId);
+    if (!error) {
+      await refreshSettings();
+      setFeeSaved(true);
+      setTimeout(() => setFeeSaved(false), 2000);
+    }
+    setFeeSaving(false);
+  };
+
   const logout = async () => { await supabase.auth.signOut(); router.replace('/login'); };
 
   if (!loaded) return (
@@ -548,6 +565,32 @@ export default function SettingsPage() {
             <p className="text-red-500 text-xs text-center font-bold">{toggleError}</p>
           )}
         </div>
+
+        {/* ─ رسوم التوصيل — مخفية عن الكاشير: مبلغ مالي حسّاس يضبطه المالك فقط ─ */}
+        {!isCashier && (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3" dir="rtl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <Truck size={18} className="text-gray-600 dark:text-slate-400" />
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">رسوم التوصيل</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">تُضاف تلقائياً لفاتورة الزبون عند اختيار &quot;توصيل&quot; من قائمة الطلب</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="number" min="0" inputMode="decimal" value={deliveryFeeInput}
+                onChange={e => setDeliveryFeeInput(e.target.value)}
+                className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
+              <span className="text-xs text-gray-400 flex-shrink-0">د.ع</span>
+              <button onClick={saveDeliveryFee} disabled={feeSaving}
+                className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50 flex-shrink-0">
+                {feeSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {feeSaved ? '✓ تم' : 'حفظ'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ─ الأرشيف والإحصاء — للكاشير: تظهر مقفلة بعلامة قفل بدل الاختفاء التام ─ */}
         <div className="grid grid-cols-2 gap-3">

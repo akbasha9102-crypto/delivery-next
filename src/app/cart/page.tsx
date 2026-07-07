@@ -73,7 +73,7 @@ function saveInfo(info: SavedInfo) {
 
 export default function CartPage() {
   const { items, addItem, decrementItem, removeItem, clearCart, restoreCart, total, orderType, setOrderType } = useCart();
-  const { primary_color } = useSettings();
+  const { primary_color, delivery_fee } = useSettings();
   const { dark } = useDarkMode();
   const router = useRouter();
 
@@ -119,7 +119,8 @@ export default function CartPage() {
     return sum + cost * item.quantity;
   }, 0);
 
-  const grandTotal = total + extrasTotal;
+  const deliveryFee = orderType === 'delivery' ? (delivery_fee || 0) : 0;
+  const grandTotal = total + extrasTotal + deliveryFee;
 
   useEffect(() => {
     if (grandTotal > prevGrandTotal.current) {
@@ -623,6 +624,7 @@ const proceedFromReview = () => {
       client_note: note || null,
       total_amount: grandTotal, status: 'pending',
       order_type: orderType,
+      delivery_fee: deliveryFee,
       ...(session?.user?.id ? { user_id: session.user.id } : {}),
       ...(clientLat !== null && clientLng !== null && orderType === 'delivery' ? { client_lat: clientLat, client_lng: clientLng } : {}),
       ...(restaurantId ? { restaurant_id: restaurantId } : {}),
@@ -1065,6 +1067,14 @@ const proceedFromReview = () => {
                   </div>
                 );
               })}
+
+              {/* رسوم التوصيل */}
+              {deliveryFee > 0 && (
+                <div className="flex items-center justify-between px-1">
+                  <span className="font-bold text-gray-500 dark:text-slate-400 text-sm">{deliveryFee.toLocaleString()} د.ع</span>
+                  <span className="text-xs text-gray-400 dark:text-slate-500">🛵 رسوم التوصيل</span>
+                </div>
+              )}
 
               {/* Total */}
               <div className="rounded-xl px-4 py-3 flex items-center justify-between"

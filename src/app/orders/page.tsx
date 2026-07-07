@@ -68,7 +68,7 @@ function fmtDateFull(iso: string) {
 
 export default function OrdersPage() {
   const router = useRouter();
-  const { primary_color } = useSettings();
+  const { primary_color, delivery_fee } = useSettings();
   const { dark } = useDarkMode();
 
   const rawColor   = primary_color || '#e67e22';
@@ -320,6 +320,7 @@ export default function OrdersPage() {
     const addr = localStorage.getItem('deliveryAddressDetails') || reorderTarget.delivery_address || '';
     const clientName = nick ? `${name} (${nick})` : name;
     const total = reorderItems.reduce((s, i) => s + i.price * i.quantity, 0);
+    const fee   = isInternal ? 0 : (delivery_fee || 0);
     const lat   = latRef.current;
     const lng   = lngRef.current;
 
@@ -327,9 +328,10 @@ export default function OrdersPage() {
       client_name:      clientName,
       client_phone:     ph,
       delivery_address: isInternal ? null : (addr || null),
-      total_amount:     total,
+      total_amount:     total + fee,
       status:           'pending',
       order_type:       orderType,
+      delivery_fee:     fee,
       ...(!isInternal && lat && lng ? { client_lat: lat, client_lng: lng } : {}),
     }]).select().single();
 
@@ -557,9 +559,15 @@ export default function OrdersPage() {
                     </div>
                   ))}
                 </div>
+                {reorderTarget.order_type !== 'pickup' && (delivery_fee || 0) > 0 && (
+                  <div className="flex items-center justify-between px-4 py-2" dir="rtl">
+                    <span className="font-bold text-sm text-gray-500 dark:text-slate-400">{(delivery_fee || 0).toLocaleString()} د.ع</span>
+                    <span className="text-xs text-gray-400 dark:text-slate-500">🛵 رسوم التوصيل</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800" dir="rtl">
                   <span className="font-black text-lg" style={{ color: '#ef4444' }}>
-                    {reorderItems.reduce((s, i) => s + i.price * i.quantity, 0).toLocaleString()} د.ع
+                    {(reorderItems.reduce((s, i) => s + i.price * i.quantity, 0) + (reorderTarget.order_type !== 'pickup' ? (delivery_fee || 0) : 0)).toLocaleString()} د.ع
                   </span>
                   <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">المجموع</span>
                 </div>
