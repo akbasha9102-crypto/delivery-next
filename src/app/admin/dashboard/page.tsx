@@ -929,6 +929,9 @@ export default function DashboardPage() {
     if (!next) return;
     await updateStatus(order.id, next);
 
+    // عند قبول الطلب، ننتقل تلقائياً لتاب "قيد التجهيز" لمتابعته
+    if (order.status === 'pending') setFilter('preparing');
+
     // عند قبول الطلب وبدء التجهيز، نخصم مكونات الوجبات من المخزون تلقائياً
     if (order.status === 'pending' && restaurantId) {
       deductStockForOrder(restaurantId, order.id, order.client_name, order.items || [])
