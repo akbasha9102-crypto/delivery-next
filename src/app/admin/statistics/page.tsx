@@ -6,7 +6,7 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { OwnerOnly } from '@/components/OwnerOnly';
-import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown, Flame } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown, Flame, Car } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; order_type?: string | null; items: OrderItem[] };
@@ -247,6 +247,21 @@ export default function StatisticsPage() {
         <h1 className="text-xl font-bold" style={{ color: s.text }}>الإحصائيات</h1>
         <div className="w-9" />
       </header>
+
+      {/* رابط إحصائيات السائقين */}
+      <div className="px-4 pt-4">
+        <button onClick={() => router.push('/admin/statistics/drivers')}
+          className="w-full flex items-center justify-between px-4 py-4 rounded-2xl border transition-all active:scale-95"
+          style={{ backgroundColor: s.surface, borderColor: s.border }}>
+          <ChevronLeft size={16} style={{ color: s.sub }} />
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-sm" style={{ color: s.text }}>إحصائيات السائقين</span>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(59,130,246,0.1)' }}>
+              <Car size={16} style={{ color: '#3b82f6' }} />
+            </div>
+          </div>
+        </button>
+      </div>
 
       {/* Quick range */}
       <div className="flex gap-2 px-4 pt-4 pb-2">
