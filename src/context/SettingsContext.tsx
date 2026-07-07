@@ -18,6 +18,7 @@ export type Settings = {
   location_url: string | null;
   is_suspended?: boolean | null;
   delivery_fee: number;
+  min_order_amount: number;
 };
 
 const DEFAULTS: Settings = {
@@ -32,6 +33,7 @@ const DEFAULTS: Settings = {
   location_url: null,
   is_suspended: false,
   delivery_fee: 0,
+  min_order_amount: 0,
 };
 
 // مفتاح cache مرتبط بـ restaurant_id لعزل كل مطعم

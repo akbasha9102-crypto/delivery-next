@@ -73,7 +73,7 @@ function saveInfo(info: SavedInfo) {
 
 export default function CartPage() {
   const { items, addItem, decrementItem, removeItem, clearCart, restoreCart, total, orderType, setOrderType } = useCart();
-  const { primary_color, delivery_fee } = useSettings();
+  const { primary_color, delivery_fee, min_order_amount } = useSettings();
   const { dark } = useDarkMode();
   const router = useRouter();
 
@@ -106,6 +106,7 @@ export default function CartPage() {
   // extras selection per item in review
   const [itemSelectedExtras, setItemSelectedExtras] = useState<Record<string, Set<string>>>({});
   const [cartPriceFlash, setCartPriceFlash] = useState(false);
+  const [minOrderShake, setMinOrderShake] = useState(false);
   const prevGrandTotal = useRef(0);
 
   const getExtras = (extrasJson?: string): Extra[] => {
@@ -121,6 +122,13 @@ export default function CartPage() {
 
   const deliveryFee = orderType === 'delivery' ? (delivery_fee || 0) : 0;
   const grandTotal = total + extrasTotal + deliveryFee;
+
+  // الحد الأدنى للطلب — ينطبق فقط على طلبات التوصيل، ويُحتسب على قيمة الوجبات
+  // + الإضافات (بدون رسوم التوصيل، لأنها ليست جزءاً من "قيمة الطلب")
+  const orderSubtotal   = total + extrasTotal;
+  const minOrderShortfall = orderType === 'delivery' && min_order_amount > 0
+    ? Math.max(0, min_order_amount - orderSubtotal)
+    : 0;
 
   useEffect(() => {
     if (grandTotal > prevGrandTotal.current) {
@@ -559,6 +567,11 @@ export default function CartPage() {
   };
 
 const proceedFromReview = () => {
+    if (minOrderShortfall > 0) {
+      setMinOrderShake(true);
+      setTimeout(() => setMinOrderShake(false), 600);
+      return;
+    }
     setShowOrderReview(false);
     setShowOrderSummary(true);
   };
@@ -594,6 +607,7 @@ const proceedFromReview = () => {
     if (!name.trim()) { alert('الرجاء إدخال الاسم'); return; }
     if (!phone.trim()) { alert('الرجاء إدخال رقم الهاتف'); return; }
     if (items.length === 0) { alert('السلة فارغة'); return; }
+    if (minOrderShortfall > 0) { alert(`الحد الأدنى للطلب عند التوصيل ${min_order_amount.toLocaleString()} د.ع، أضف ${minOrderShortfall.toLocaleString()} د.ع أخرى`); return; }
 
     if (orderType === 'delivery') {
       if (!addressDetails.trim()) {
@@ -988,8 +1002,13 @@ const proceedFromReview = () => {
 
             {/* Footer ثابت — المجموع الكلي + زر التالي */}
             <div className="flex-shrink-0 px-4 pb-5 pt-3 border-t border-gray-100 dark:border-slate-700">
+              {minOrderShortfall > 0 && (
+                <p className={`text-xs font-bold text-center mb-2 ${minOrderShake ? 'shake' : ''}`} style={{ color: '#ef4444' }} dir="rtl">
+                  الحد الأدنى للطلب {min_order_amount.toLocaleString()} د.ع — أضف {minOrderShortfall.toLocaleString()} د.ع أخرى
+                </p>
+              )}
               <button onClick={proceedFromReview}
-                className="w-full rounded-xl px-4 py-3 flex items-center justify-between transition-all active:scale-95"
+                className={`w-full rounded-xl px-4 py-3 flex items-center justify-between transition-all active:scale-95${minOrderShortfall > 0 ? ' opacity-60' : ''}`}
                 style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 12px #ef444440' }}>
                 <div className="flex items-center gap-1">
                   <ChevronLeft size={15} className="text-white"/>

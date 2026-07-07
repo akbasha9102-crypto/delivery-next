@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck } from 'lucide-react';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -368,7 +368,7 @@ function ChangePasswordSheet({ onClose, username }: { onClose: () => void; usern
 /* ─── الصفحة الرئيسية ─── */
 export default function SettingsPage() {
   const router = useRouter();
-  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee } = useSettings();
+  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount } = useSettings();
   const { dark, toggleDark } = useDarkMode();
   const { isCashier } = useStaff();
 
@@ -384,6 +384,9 @@ export default function SettingsPage() {
   const [deliveryFeeInput, setDeliveryFeeInput] = useState('0');
   const [feeSaving,        setFeeSaving]        = useState(false);
   const [feeSaved,         setFeeSaved]         = useState(false);
+  const [minOrderInput,    setMinOrderInput]    = useState('0');
+  const [minOrderSaving,   setMinOrderSaving]   = useState(false);
+  const [minOrderSaved,    setMinOrderSaved]    = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -395,6 +398,7 @@ export default function SettingsPage() {
   useEffect(() => { isClosedRef.current = is_closed; }, [is_closed]);
   useEffect(() => { setScheduleLocal(ctxSchedule); }, [ctxSchedule]);
   useEffect(() => { setDeliveryFeeInput(String(delivery_fee ?? 0)); }, [delivery_fee]);
+  useEffect(() => { setMinOrderInput(String(min_order_amount ?? 0)); }, [min_order_amount]);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(id);
@@ -458,6 +462,18 @@ export default function SettingsPage() {
       setTimeout(() => setFeeSaved(false), 2000);
     }
     setFeeSaving(false);
+  };
+  const saveMinOrderAmount = async () => {
+    const value = parseFloat(minOrderInput);
+    if (isNaN(value) || value < 0) return;
+    setMinOrderSaving(true);
+    const { error } = await supabase.from('restaurant_settings').update({ min_order_amount: value }).eq('id', settingsId);
+    if (!error) {
+      await refreshSettings();
+      setMinOrderSaved(true);
+      setTimeout(() => setMinOrderSaved(false), 2000);
+    }
+    setMinOrderSaving(false);
   };
 
   const logout = async () => { await supabase.auth.signOut(); router.replace('/login'); };
@@ -587,6 +603,32 @@ export default function SettingsPage() {
                 className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50 flex-shrink-0">
                 {feeSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 {feeSaved ? '✓ تم' : 'حفظ'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ─ الحد الأدنى للطلب — مخفي عن الكاشير: قيد مالي يضبطه المالك فقط ─ */}
+        {!isCashier && (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3" dir="rtl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <Wallet size={18} className="text-gray-600 dark:text-slate-400" />
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحد الأدنى للطلب</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">أقل قيمة مسموحة لطلب &quot;توصيل&quot; من قائمة الزبون — اتركه 0 لتعطيله</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="number" min="0" inputMode="decimal" value={minOrderInput}
+                onChange={e => setMinOrderInput(e.target.value)}
+                className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
+              <span className="text-xs text-gray-400 flex-shrink-0">د.ع</span>
+              <button onClick={saveMinOrderAmount} disabled={minOrderSaving}
+                className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50 flex-shrink-0">
+                {minOrderSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {minOrderSaved ? '✓ تم' : 'حفظ'}
               </button>
             </div>
           </div>
