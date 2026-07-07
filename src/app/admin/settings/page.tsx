@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User } from 'lucide-react';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { OwnerOnly } from '@/components/OwnerOnly';
 import { useRestaurant } from '@/context/RestaurantContext';
@@ -551,57 +551,57 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* ─ الأرشيف والإحصاء — مخفية تماماً عن الكاشير (أرباح/بيانات مالية) ─ */}
-        {!isCashier && (
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => router.push('/admin/statistics')}
-              className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصائيات</span>
-                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                  <BarChart2 size={16} className="text-blue-500" />
-                </div>
+        {/* ─ الأرشيف والإحصاء — للكاشير: تظهر مقفلة بعلامة قفل بدل الاختفاء التام ─ */}
+        <div className="grid grid-cols-2 gap-3">
+          <button onClick={() => !isCashier && router.push('/admin/statistics')}
+            disabled={isCashier}
+            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
+            {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصائيات</span>
+              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                <BarChart2 size={16} className="text-blue-500" />
               </div>
-            </button>
-            <button onClick={() => router.push('/admin/archive')}
-              className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأرشيف</span>
-                <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-                  <Archive size={16} className="text-amber-500" />
-                </div>
+            </div>
+          </button>
+          <button onClick={() => !isCashier && router.push('/admin/archive')}
+            disabled={isCashier}
+            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
+            {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأرشيف</span>
+              <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                <Archive size={16} className="text-amber-500" />
               </div>
-            </button>
-          </div>
-        )}
+            </div>
+          </button>
+        </div>
 
-        {/* ─ إدارة الموظفين والصلاحيات (RBAC) — مالك فقط ─ */}
-        {!isCashier && (
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => router.push('/admin/settings/staff')}
-              className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الموظفين</span>
-                <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
-                  <User size={16} className="text-purple-500" />
-                </div>
+        {/* ─ إدارة الموظفين والصلاحيات (RBAC) — للكاشير: تظهر مقفلة بعلامة قفل بدل الاختفاء التام ─ */}
+        <div className="grid grid-cols-2 gap-3">
+          <button onClick={() => !isCashier && router.push('/admin/settings/staff')}
+            disabled={isCashier}
+            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
+            {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الموظفين</span>
+              <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                <User size={16} className="text-purple-500" />
               </div>
-            </button>
-            <button onClick={() => router.push('/admin/audit')}
-              className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">سجل التدقيق</span>
-                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                  <KeyRound size={16} className="text-slate-500" />
-                </div>
+            </div>
+          </button>
+          <button onClick={() => !isCashier && router.push('/admin/audit')}
+            disabled={isCashier}
+            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
+            {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">سجل التدقيق</span>
+              <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                <KeyRound size={16} className="text-slate-500" />
               </div>
-            </button>
-          </div>
-        )}
+            </div>
+          </button>
+        </div>
 
         {/* ─ تسجيل الخروج ─ */}
         <button onClick={logout}
