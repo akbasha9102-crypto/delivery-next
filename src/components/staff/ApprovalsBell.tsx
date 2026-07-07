@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { Bell, Check, X, Clock } from 'lucide-react';
+import { Bell, Check, X, Clock, ChevronLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
@@ -19,12 +19,13 @@ const TYPE_LABEL: Record<ApprovalRequest['request_type'], string> = {
 };
 
 /**
- * جرس الموافقات الفورية — يظهر فقط للمالك/المدير. يعرض طلبات approval_requests المعلّقة
- * ويسمح بالموافقة/الرفض بضغطة واحدة. يعتمد على نفس نمط Supabase Realtime المستخدم فعلاً
- * في admin/layout.tsx (قناة postgres_changes) — بدون أي endpoint جديد للقراءة اللحظية.
+ * زر "طلبات الموافقة" — عنصر داخل صفحة الإعدادات (يظهر فقط للمالك/المدير)، وليس عائماً فوق
+ * الشاشة. يعرض طلبات approval_requests المعلّقة ويسمح بالموافقة/الرفض بضغطة واحدة. يعتمد على
+ * نفس نمط Supabase Realtime المستخدم فعلاً في admin/layout.tsx (قناة postgres_changes) — بدون
+ * أي endpoint جديد للقراءة اللحظية.
  *
  * ⚠️ نقطة GET /api/approvals تُستخدم للتحميل الأولي فقط حسب العقد؛ إن لم تكن منشورة بعد
- * (فريق الـ Backend يبنيها بالتوازي) فسيبقى الجرس فارغاً بصمت دون كسر الواجهة، والتحديث اللحظي
+ * (فريق الـ Backend يبنيها بالتوازي) فسيبقى العداد صفراً بصمت دون كسر الواجهة، والتحديث اللحظي
  * سيعمل بمجرد أن يبدأ جدول approval_requests فعلياً بالتلقي (الجدول يُنشئه فريق الـ Backend أيضاً).
  */
 export function ApprovalsBell() {
@@ -64,23 +65,22 @@ export function ApprovalsBell() {
     if (res.ok) setPending(prev => prev.filter(p => p.id !== id));
   };
 
-  if (pending.length === 0 && !open) {
-    return (
-      <button onClick={() => setOpen(true)} className="fixed bottom-24 left-4 md:bottom-6 md:left-[86px] z-40 w-11 h-11 rounded-full bg-slate-800/90 dark:bg-slate-700 text-slate-300 flex items-center justify-center shadow-lg active:scale-90 transition-all">
-        <Bell size={18} />
-      </button>
-    );
-  }
-
   return (
     <>
-      <button onClick={() => setOpen(v => !v)} className="fixed bottom-24 left-4 md:bottom-6 md:left-[86px] z-40 w-11 h-11 rounded-full bg-[#2563eb] text-white flex items-center justify-center shadow-lg active:scale-90 transition-all">
-        <Bell size={18} />
-        {pending.length > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1">
-            {pending.length > 9 ? '9+' : pending.length}
-          </span>
-        )}
+      <button onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+        <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">طلبات الموافقة</span>
+          <div className="relative w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+            <Bell size={16} className="text-blue-500" />
+            {pending.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1">
+                {pending.length > 9 ? '9+' : pending.length}
+              </span>
+            )}
+          </div>
+        </div>
       </button>
 
       {open && (
