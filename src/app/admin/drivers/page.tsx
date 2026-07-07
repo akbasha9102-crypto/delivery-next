@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { OwnerOnly } from '@/components/OwnerOnly';
 import { Plus, Trash2, CheckCircle, Circle, Copy, Check, KeyRound, X, RefreshCw, Loader2 } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 
@@ -110,7 +109,6 @@ export default function DriversPage() {
   };
 
   return (
-    <OwnerOnly>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* هيدر */}
@@ -266,7 +264,6 @@ export default function DriversPage() {
         </div>
       )}
     </div>
-    </OwnerOnly>
   );
 }
 

@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
 import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { OwnerOnly } from '@/components/OwnerOnly';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useStaff } from '@/context/StaffContext';
@@ -453,7 +452,6 @@ export default function SettingsPage() {
   );
 
   return (
-    <OwnerOnly>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* هيدر */}
@@ -673,6 +671,5 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
-    </OwnerOnly>
   );
 }
