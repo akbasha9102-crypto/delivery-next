@@ -62,6 +62,7 @@ export default function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [categoriesList, setCategoriesList] = useState<string[]>([]);
+  const [categoryRows, setCategoryRows] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -126,9 +127,10 @@ export default function InventoryPage() {
     if (!restaurantId) return;
     const { data } = await supabase
       .from('inventory_categories')
-      .select('name')
+      .select('id, name')
       .eq('restaurant_id', restaurantId)
       .order('name');
+    setCategoryRows(data || []);
     setCategoriesList((data || []).map((c: { name: string }) => c.name));
   }, [restaurantId]);
 
@@ -245,6 +247,15 @@ export default function InventoryPage() {
       setShowCatForm(false);
       fetchCategoriesList();
     }
+    setCatSaving(false);
+  };
+
+  const deleteCategory = async (cat: { id: string; name: string }) => {
+    if (!confirm(`هل أنت متأكد من حذف فئة "${cat.name}"؟`)) return;
+    setCatSaving(true);
+    const { error } = await supabase.from('inventory_categories').delete().eq('id', cat.id);
+    if (error) showToast('تعذّر حذف الفئة', false);
+    else { showToast('✓ تم حذف الفئة'); fetchCategoriesList(); }
     setCatSaving(false);
   };
 
@@ -653,10 +664,10 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* ═══ موديل إضافة فئة جديدة ═══ */}
+      {/* ═══ موديل إضافة/حذف فئة ═══ */}
       {showCatForm && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowCatForm(false)}>
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-6">
               <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-4">فئة جديدة</p>
               <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="اسم الفئة" dir="rtl"
@@ -666,6 +677,23 @@ export default function InventoryPage() {
                 className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
                 {catSaving ? 'جاري الحفظ...' : 'إضافة الفئة'}
               </button>
+
+              {categoryRows.length > 0 && (
+                <div>
+                  <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-sm mb-3">الفئات الحالية</p>
+                  <div className="space-y-2">
+                    {categoryRows.map(cat => (
+                      <div key={cat.id} className="flex items-center justify-between gap-3 bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3">
+                        <button onClick={() => deleteCategory(cat)} disabled={catSaving}
+                          className="text-red-500 dark:text-red-400 active:scale-90 transition-all disabled:opacity-40">
+                          <Trash2 size={16} />
+                        </button>
+                        <span className="flex-1 text-right text-gray-900 dark:text-slate-100 text-sm">{cat.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
