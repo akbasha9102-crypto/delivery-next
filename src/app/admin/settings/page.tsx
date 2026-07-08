@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Users, Ticket } from 'lucide-react';
+import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Users, Ticket, Flame } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -390,7 +390,7 @@ function ChangePasswordSheet({ onClose, username }: { onClose: () => void; usern
 /* ─── الصفحة الرئيسية ─── */
 export default function SettingsPage() {
   const router = useRouter();
-  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled } = useSettings();
+  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled, show_best_sellers } = useSettings();
   const { dark, toggleDark } = useDarkMode();
   const { isCashier, activeStaff, switchUser } = useStaff();
   const [confirmSwitch, setConfirmSwitch] = useState(false);
@@ -418,6 +418,8 @@ export default function SettingsPage() {
   const [couponEnabledLocal, setCouponEnabledLocal] = useState(false);
   const [couponSaving,     setCouponSaving]     = useState(false);
   const [couponSaved,      setCouponSaved]      = useState(false);
+  const [bestSellersLocal, setBestSellersLocal] = useState(true);
+  const [bestSellersSaving, setBestSellersSaving] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -430,6 +432,7 @@ export default function SettingsPage() {
   useEffect(() => { setScheduleLocal(ctxSchedule); }, [ctxSchedule]);
   useEffect(() => { setDeliveryFeeInput(String(delivery_fee ?? 0)); }, [delivery_fee]);
   useEffect(() => { setMinOrderInput(String(min_order_amount ?? 0)); }, [min_order_amount]);
+  useEffect(() => { setBestSellersLocal(show_best_sellers); }, [show_best_sellers]);
   useEffect(() => { setCouponCodeInput(coupon_code ?? ''); }, [coupon_code]);
   useEffect(() => { setCouponPctInput(String(coupon_discount_pct ?? 0)); }, [coupon_discount_pct]);
   useEffect(() => { setCouponEnabledLocal(!!coupon_enabled); }, [coupon_enabled]);
@@ -525,6 +528,16 @@ export default function SettingsPage() {
       setTimeout(() => setCouponSaved(false), 2000);
     }
     setCouponSaving(false);
+  };
+  const toggleBestSellers = async () => {
+    if (!settingsId || bestSellersSaving) return;
+    const next = !bestSellersLocal;
+    setBestSellersLocal(next);
+    setBestSellersSaving(true);
+    const { error } = await supabase.from('restaurant_settings').update({ show_best_sellers: next }).eq('id', settingsId);
+    if (error) setBestSellersLocal(!next);
+    else await refreshSettings();
+    setBestSellersSaving(false);
   };
 
   const logout = async () => { await supabase.auth.signOut(); router.replace('/login'); };
@@ -693,6 +706,25 @@ export default function SettingsPage() {
             </div>
           </button>
         )}
+
+        {/* ─ الأكثر مبيعاً — قسم ثابت يظهر دائماً أولاً في منيو الزبون، بأفضل 3 وجبات مبيعاً ─ */}
+        <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+              <Flame size={18} className="text-[#f97316]" />
+            </div>
+            <div className="text-right">
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأكثر مبيعاً</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">يظهر دائماً أول قسم بمنيو الزبون، بأفضل 3 وجبات مبيعاً</p>
+            </div>
+          </div>
+          <button type="button" onClick={toggleBestSellers} dir="ltr"
+            className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
+            style={{ backgroundColor: bestSellersLocal ? '#22c55e' : '#d1d5db' }}>
+            <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+              style={{ right: bestSellersLocal ? '2px' : '22px' }} />
+          </button>
+        </div>
 
         {/* ─ الأرشيف والإحصاء — للكاشير: تظهر مقفلة بعلامة قفل بدل الاختفاء التام ─ */}
         <div className="grid grid-cols-2 gap-3">
