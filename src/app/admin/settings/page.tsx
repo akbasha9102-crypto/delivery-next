@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Users, Ticket } from 'lucide-react';
+import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Users, Ticket } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -222,33 +222,6 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
             <input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
               placeholder="https://maps.google.com/..." dir="ltr"
               className={inputCls} />
-          </Field>
-
-          {/* معاينة مصغرة */}
-          <Field label="معاينة">
-            <div className="flex gap-3">
-              {[false, true].map(isDark => (
-                <div key={isDark ? 'dark' : 'light'} className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5 text-center">{isDark ? '🌙 ليلي' : '☀️ نهاري'}</p>
-                  <div className="p-3 rounded-2xl border border-gray-200 transition-colors duration-300" style={{ background: isDark ? '#020617' : '#f8fafc' }}>
-                    <div className="px-3 h-11 flex items-center justify-between rounded-xl mb-2.5 shadow-sm transition-colors duration-300" style={{ background: isDark ? '#0f172a' : '#ffffff' }}>
-                      <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: isDark ? '#1e293b' : '#f3f4f6' }}>
-                        <Moon size={11} style={{ color: isDark ? '#64748b' : '#9ca3af' }} />
-                      </div>
-                      <p className="text-xs font-black truncate flex-1 min-w-0 px-1.5 text-center transition-colors duration-300" style={{ color: isDark ? '#f1f5f9' : '#111827' }}>{form.name || 'اسم المطعم'}</p>
-                      {form.logo
-                        ? <img src={form.logo} alt="" className="h-7 w-7 object-cover rounded-lg flex-shrink-0" />
-                        : <div className="w-7 h-7 rounded-lg text-white flex items-center justify-center bg-orange-400 flex-shrink-0"><ImageIcon size={12} /></div>
-                      }
-                    </div>
-                    <div className="flex gap-2 flex-row-reverse">
-                      <span className="px-3 py-1 rounded-lg text-[10px] font-black text-white bg-orange-400">مختار</span>
-                      <span className="px-3 py-1 rounded-lg text-[10px] font-black transition-colors duration-300" style={{ background: isDark ? '#1e293b' : '#ffffff', color: isDark ? '#94a3b8' : '#9ca3af' }}>قسم آخر</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </Field>
 
           <div className="pb-2" />
