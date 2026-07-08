@@ -492,7 +492,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 </div>
 
                 {/* ── Items Grid ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-7 md:gap-10 px-1 sm:px-2">
+                <div className={isBestSellers ? 'grid grid-cols-3 gap-2 sm:gap-4 px-1 sm:px-2' : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-7 md:gap-10 px-1 sm:px-2'}>
                   {catItems.map((item) => {
                     const count  = qty(item.id);
                     const status = getStatus(item);
@@ -505,11 +505,11 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                           if (is_closed) setShowClosedToast(true);
                           else setSelectedItem(item);
                         }}
-                        className={`relative group rounded-[1.8rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${!catCardColor ? 'bg-white dark:bg-slate-900' : ''} ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}
+                        className={`relative group overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${isBestSellers ? 'rounded-2xl' : 'rounded-[1.8rem] sm:rounded-[2.5rem]'} ${!catCardColor ? 'bg-white dark:bg-slate-900' : ''} ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}
                         style={catCardColor ? { backgroundColor: catCardColor } : undefined}>
 
                         {/* Image Wrapper */}
-                        <div className="relative flex-shrink-0 overflow-hidden m-2 rounded-[1.4rem] sm:rounded-[2.2rem]">
+                        <div className={`relative flex-shrink-0 overflow-hidden m-2 ${isBestSellers ? 'rounded-xl' : 'rounded-[1.4rem] sm:rounded-[2.2rem]'}`}>
                           <motion.div
                             animate={{ scale: 1 + Math.min(count, 5) * 0.05 }}
                             transition={{ type: 'spring', stiffness: 300, damping: 15 }}
@@ -518,7 +518,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                               src={item.image_url || 'https://placehold.co/400x300/f5f5f5/ccc?text='}
                               alt={item.name}
                               width={400} height={300}
-                              className={`w-full h-32 sm:h-56 object-cover transition-transform duration-700 group-hover:scale-110 ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
+                              className={`w-full object-cover transition-transform duration-700 group-hover:scale-110 ${isBestSellers ? 'h-16 sm:h-24' : 'h-32 sm:h-56'} ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
                               unoptimized
                             />
                           </motion.div>
@@ -538,26 +538,26 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                         </div>
 
                         {/* Details */}
-                        <div className="p-3 sm:p-6 flex flex-col flex-1">
-                          <p className="font-black text-sm sm:text-xl text-gray-900 dark:text-slate-100 text-right leading-tight mb-1 sm:mb-2">
+                        <div className={`flex flex-col flex-1 ${isBestSellers ? 'p-2' : 'p-3 sm:p-6'}`}>
+                          <p className={`font-black text-gray-900 dark:text-slate-100 text-right leading-tight ${isBestSellers ? 'text-[11px] sm:text-xs mb-1 line-clamp-1' : 'text-sm sm:text-xl mb-1 sm:mb-2'}`}>
                             {item.name}
                           </p>
-                          {item.description && (
+                          {item.description && !isBestSellers && (
                             <p className="text-[10px] sm:text-xs text-gray-400 dark:text-slate-500 text-right mb-2 sm:mb-6 line-clamp-1 sm:line-clamp-2 leading-relaxed font-medium">
                               {item.description}
                             </p>
                           )}
 
-                          <div className="mt-auto flex flex-col sm:flex-row-reverse sm:items-center sm:justify-between gap-2 sm:gap-4">
+                          <div className={`mt-auto flex ${isBestSellers ? 'flex-col items-stretch gap-1' : 'flex-col sm:flex-row-reverse sm:items-center sm:justify-between gap-2 sm:gap-4'}`}>
                             <div className="text-right flex-shrink-0">
-                              <p className="font-black text-base sm:text-2xl text-black dark:text-white">
+                              <p className={`font-black text-black dark:text-white ${isBestSellers ? 'text-xs' : 'text-base sm:text-2xl'}`}>
                                 {item.price.toLocaleString()}
                               </p>
-                              <p className="text-[8px] sm:text-[10px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>
+                              {!isBestSellers && <p className="text-[8px] sm:text-[10px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>}
                             </div>
 
                             {isAvailable ? (
-                              <div className="relative h-8 sm:h-12 flex items-center justify-end sm:justify-start">
+                              <div className={`relative flex items-center ${isBestSellers ? 'h-6 justify-center' : 'h-8 sm:h-12 justify-end sm:justify-start'}`}>
                                 <AnimatePresence mode="wait">
                                   {count > 0 ? (
                                     <motion.div
@@ -565,29 +565,29 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                       initial={{ opacity: 0, scale: 0.8 }}
                                       animate={{ opacity: 1, scale: 1 }}
                                       exit={{ opacity: 0, scale: 0.8 }}
-                                      className="flex items-center gap-2 sm:gap-3 p-1 rounded-full shadow-xl"
+                                      className={`flex items-center p-1 rounded-full shadow-xl ${isBestSellers ? 'gap-1' : 'gap-2 sm:gap-3'}`}
                                       style={{ backgroundColor: catColor }}>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
-                                        className="w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center"
+                                        className={`rounded-full flex items-center justify-center ${isBestSellers ? 'w-5 h-5' : 'w-7 h-7 sm:w-10 sm:h-10'}`}
                                         style={{ backgroundColor: dark ? '#ffffff' : catTextColor, color: dark ? '#000000' : catColor }}>
-                                        <Plus size={14} strokeWidth={3}/>
+                                        <Plus size={isBestSellers ? 10 : 14} strokeWidth={3}/>
                                       </motion.button>
                                       <motion.span
                                         key={count}
                                         initial={{ scale: 1.5, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
-                                        className="font-black text-xs sm:text-base w-4 sm:w-5 text-center"
+                                        className={`font-black text-center ${isBestSellers ? 'text-[10px] w-3' : 'text-xs sm:text-base w-4 sm:w-5'}`}
                                         style={{ color: catTextColor }}>
                                         {count}
                                       </motion.span>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={(e) => { e.stopPropagation(); decrementItem(item.id); }}
-                                        className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white/10 flex items-center justify-center"
+                                        className={`rounded-full bg-white/10 flex items-center justify-center ${isBestSellers ? 'w-5 h-5' : 'w-7 h-7 sm:w-10 sm:h-10'}`}
                                         style={{ color: catTextColor }}>
-                                        <Minus size={14} strokeWidth={3}/>
+                                        <Minus size={isBestSellers ? 10 : 14} strokeWidth={3}/>
                                       </motion.button>
                                     </motion.div>
                                   ) : (
@@ -599,7 +599,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                       whileHover={{ scale: 1.05 }}
                                       whileTap={{ scale: 0.95 }}
                                       onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-                                      className="h-10 sm:h-12 px-5 sm:px-7 rounded-full font-black text-xs sm:text-sm shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap"
+                                      className={`rounded-full font-black shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap ${isBestSellers ? 'h-6 px-2 text-[9px]' : 'h-10 sm:h-12 px-5 sm:px-7 text-xs sm:text-sm'}`}
                                       style={{ backgroundColor: dark ? '#ffffff' : catColor, color: dark ? '#000000' : catTextColor }}>
                                       إضافة
                                     </motion.button>
@@ -608,8 +608,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                               </div>
                             ) : (
                               !is_closed && (
-                                <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-100 dark:bg-slate-700 rounded-xl text-center">
-                                  <span className="text-xs sm:text-sm font-black text-gray-500 dark:text-slate-300">
+                                <div className={`bg-gray-100 dark:bg-slate-700 rounded-xl text-center ${isBestSellers ? 'px-2 py-1' : 'px-3 py-1.5 sm:px-4 sm:py-2'}`}>
+                                  <span className={`font-black text-gray-500 dark:text-slate-300 ${isBestSellers ? 'text-[9px]' : 'text-xs sm:text-sm'}`}>
                                     {status === 'unavailable' ? 'غير متوفر' : 'انتهى'}
                                   </span>
                                 </div>
