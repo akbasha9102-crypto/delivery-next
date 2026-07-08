@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Users } from 'lucide-react';
+import { Save, Palette, Type, Image as ImageIcon, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Users, Ticket } from 'lucide-react';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -369,7 +369,7 @@ function ChangePasswordSheet({ onClose, username }: { onClose: () => void; usern
 /* ─── الصفحة الرئيسية ─── */
 export default function SettingsPage() {
   const router = useRouter();
-  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount } = useSettings();
+  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled } = useSettings();
   const { dark, toggleDark } = useDarkMode();
   const { isCashier, isOwner, isManager, activeStaff, switchUser } = useStaff();
   const [confirmSwitch, setConfirmSwitch] = useState(false);
@@ -389,6 +389,11 @@ export default function SettingsPage() {
   const [minOrderInput,    setMinOrderInput]    = useState('0');
   const [minOrderSaving,   setMinOrderSaving]   = useState(false);
   const [minOrderSaved,    setMinOrderSaved]    = useState(false);
+  const [couponCodeInput,  setCouponCodeInput]  = useState('');
+  const [couponPctInput,   setCouponPctInput]   = useState('0');
+  const [couponEnabledLocal, setCouponEnabledLocal] = useState(false);
+  const [couponSaving,     setCouponSaving]     = useState(false);
+  const [couponSaved,      setCouponSaved]      = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -401,6 +406,9 @@ export default function SettingsPage() {
   useEffect(() => { setScheduleLocal(ctxSchedule); }, [ctxSchedule]);
   useEffect(() => { setDeliveryFeeInput(String(delivery_fee ?? 0)); }, [delivery_fee]);
   useEffect(() => { setMinOrderInput(String(min_order_amount ?? 0)); }, [min_order_amount]);
+  useEffect(() => { setCouponCodeInput(coupon_code ?? ''); }, [coupon_code]);
+  useEffect(() => { setCouponPctInput(String(coupon_discount_pct ?? 0)); }, [coupon_discount_pct]);
+  useEffect(() => { setCouponEnabledLocal(!!coupon_enabled); }, [coupon_enabled]);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(id);
@@ -476,6 +484,23 @@ export default function SettingsPage() {
       setTimeout(() => setMinOrderSaved(false), 2000);
     }
     setMinOrderSaving(false);
+  };
+  const saveCoupon = async () => {
+    const pct = parseFloat(couponPctInput);
+    if (isNaN(pct) || pct < 0 || pct > 100) return;
+    const code = couponCodeInput.trim().toUpperCase();
+    setCouponSaving(true);
+    const { error } = await supabase.from('restaurant_settings').update({
+      coupon_code: code || null,
+      coupon_discount_pct: pct,
+      coupon_enabled: couponEnabledLocal && !!code && pct > 0,
+    }).eq('id', settingsId);
+    if (!error) {
+      await refreshSettings();
+      setCouponSaved(true);
+      setTimeout(() => setCouponSaved(false), 2000);
+    }
+    setCouponSaving(false);
   };
 
   const logout = async () => { await supabase.auth.signOut(); router.replace('/login'); };
@@ -631,6 +656,44 @@ export default function SettingsPage() {
                 className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50 flex-shrink-0">
                 {minOrderSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 {minOrderSaved ? '✓ تم' : 'حفظ'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ─ كوبون الخصم — مخفي عن الكاشير: يضبطه المالك فقط. كوبون واحد لكل مطعم،
+            خصم نسبة مئوية، يدخله الزبون بصفحة السلة عند إتمام الطلب. ─ */}
+        {!isCashier && (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3" dir="rtl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                  <Ticket size={18} className="text-gray-600 dark:text-slate-400" />
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">كوبون الخصم</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">كود يدخله الزبون بالسلة فيحصل على خصم بالنسبة المحددة</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setCouponEnabledLocal(v => !v)} dir="ltr"
+                className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
+                style={{ backgroundColor: couponEnabledLocal ? '#22c55e' : '#d1d5db' }}>
+                <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                  style={{ right: couponEnabledLocal ? '2px' : '22px' }} />
+              </button>
+            </div>
+            <input type="text" value={couponCodeInput} onChange={e => setCouponCodeInput(e.target.value)}
+              placeholder="كود الكوبون (مثال: SAVE10)" dir="rtl"
+              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]" />
+            <div className="flex items-center gap-2">
+              <input type="number" min="0" max="100" inputMode="decimal" value={couponPctInput}
+                onChange={e => setCouponPctInput(e.target.value)}
+                className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
+              <span className="text-xs text-gray-400 flex-shrink-0">%</span>
+              <button onClick={saveCoupon} disabled={couponSaving}
+                className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50 flex-shrink-0">
+                {couponSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {couponSaved ? '✓ تم' : 'حفظ'}
               </button>
             </div>
           </div>

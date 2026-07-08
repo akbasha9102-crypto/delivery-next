@@ -5,7 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { ClientBottomNav } from '@/components/BottomNav';
 import { CustomerGuard } from '@/components/CustomerGuard';
-import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChevronLeft, Plus, Minus, Check, LogOut } from 'lucide-react';
+import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChevronLeft, Plus, Minus, Check, LogOut, Ticket } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -73,7 +73,7 @@ function saveInfo(info: SavedInfo) {
 
 export default function CartPage() {
   const { items, addItem, decrementItem, removeItem, clearCart, restoreCart, total, orderType, setOrderType } = useCart();
-  const { primary_color, delivery_fee, min_order_amount } = useSettings();
+  const { primary_color, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled } = useSettings();
   const { dark } = useDarkMode();
   const router = useRouter();
 
@@ -100,6 +100,23 @@ export default function CartPage() {
   const [note,            setNote]            = useState('');
   const [addressError,    setAddressError]    = useState(false);
 
+  // ── كوبون الخصم ─────────────────────────────────────────────────────────
+  const [couponInput,      setCouponInput]      = useState('');
+  const [appliedCouponPct, setAppliedCouponPct] = useState(0);
+  const [couponMsg,        setCouponMsg]        = useState<{ ok: boolean; text: string } | null>(null);
+
+  const applyCoupon = () => {
+    const entered = couponInput.trim().toUpperCase();
+    if (!entered) return;
+    if (coupon_enabled && coupon_code && entered === coupon_code.trim().toUpperCase()) {
+      setAppliedCouponPct(coupon_discount_pct || 0);
+      setCouponMsg({ ok: true, text: `تم تطبيق خصم ${coupon_discount_pct}%` });
+    } else {
+      setAppliedCouponPct(0);
+      setCouponMsg({ ok: false, text: 'كود الكوبون غير صحيح' });
+    }
+  };
+
   // نوع الطلب: توصيل الطلب / استلام الطلب — مصدره الموحّد CartContext
   // (يُختار مبدئياً من صفحة المنيو، وقابل للتغيير هنا أيضاً بنفس المبدّل)
 
@@ -121,7 +138,6 @@ export default function CartPage() {
   }, 0);
 
   const deliveryFee = orderType === 'delivery' ? (delivery_fee || 0) : 0;
-  const grandTotal = total + extrasTotal + deliveryFee;
 
   // الحد الأدنى للطلب — ينطبق فقط على طلبات التوصيل، ويُحتسب على قيمة الوجبات
   // + الإضافات (بدون رسوم التوصيل، لأنها ليست جزءاً من "قيمة الطلب")
@@ -129,6 +145,10 @@ export default function CartPage() {
   const minOrderShortfall = orderType === 'delivery' && min_order_amount > 0
     ? Math.max(0, min_order_amount - orderSubtotal)
     : 0;
+
+  // خصم الكوبون يُحتسب على قيمة الطلب (الوجبات + الإضافات) فقط، بدون رسوم التوصيل
+  const discountAmount = appliedCouponPct > 0 ? Math.round(orderSubtotal * appliedCouponPct / 100 * 100) / 100 : 0;
+  const grandTotal = orderSubtotal + deliveryFee - discountAmount;
 
   useEffect(() => {
     if (grandTotal > prevGrandTotal.current) {
@@ -639,6 +659,8 @@ const proceedFromReview = () => {
       total_amount: grandTotal, status: 'pending',
       order_type: orderType,
       delivery_fee: deliveryFee,
+      discount_amount: discountAmount,
+      ...(discountAmount > 0 ? { coupon_code: couponInput.trim().toUpperCase() } : {}),
       ...(session?.user?.id ? { user_id: session.user.id } : {}),
       ...(clientLat !== null && clientLng !== null && orderType === 'delivery' ? { client_lat: clientLat, client_lng: clientLng } : {}),
       ...(restaurantId ? { restaurant_id: restaurantId } : {}),
@@ -843,6 +865,33 @@ const proceedFromReview = () => {
                   style={{ '--tw-ring-color': brandColor } as React.CSSProperties}
                 />
               </>
+            )}
+
+            {/* كوبون الخصم — يظهر فقط إن فعّله المالك من الإعدادات */}
+            {coupon_enabled && coupon_code && (
+              <div className="pt-1">
+                <div className="flex items-center bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl overflow-hidden focus-within:ring-2"
+                  style={{ '--tw-ring-color': brandColor } as React.CSSProperties}>
+                  <div className="px-3 py-3 border-l border-gray-200 dark:border-slate-600 flex-shrink-0">
+                    <Ticket size={16} className="text-gray-400" />
+                  </div>
+                  <input type="text" value={couponInput}
+                    onChange={e => { setCouponInput(e.target.value); setCouponMsg(null); setAppliedCouponPct(0); }}
+                    placeholder="كود الكوبون (اختياري)" dir="rtl"
+                    className="flex-1 bg-transparent px-3 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none"
+                  />
+                  <button type="button" onClick={applyCoupon} disabled={!couponInput.trim()}
+                    className="px-4 py-3 text-sm font-bold flex-shrink-0 disabled:opacity-40 active:scale-95 transition-all"
+                    style={{ color: brandColor }}>
+                    تطبيق
+                  </button>
+                </div>
+                {couponMsg && (
+                  <p className={`text-xs font-bold mt-1.5 text-right ${couponMsg.ok ? 'text-green-500' : 'text-red-500'}`}>
+                    {couponMsg.ok ? '✓' : '✕'} {couponMsg.text}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}

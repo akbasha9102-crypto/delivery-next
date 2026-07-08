@@ -19,6 +19,9 @@ export type Settings = {
   is_suspended?: boolean | null;
   delivery_fee: number;
   min_order_amount: number;
+  coupon_code: string | null;
+  coupon_discount_pct: number;
+  coupon_enabled: boolean;
 };
 
 const DEFAULTS: Settings = {
@@ -34,6 +37,9 @@ const DEFAULTS: Settings = {
   is_suspended: false,
   delivery_fee: 0,
   min_order_amount: 0,
+  coupon_code: null,
+  coupon_discount_pct: 0,
+  coupon_enabled: false,
 };
 
 // مفتاح cache مرتبط بـ restaurant_id لعزل كل مطعم
