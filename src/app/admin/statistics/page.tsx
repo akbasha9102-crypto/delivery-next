@@ -6,7 +6,7 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { OwnerOnly } from '@/components/OwnerOnly';
-import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown, Flame, Car } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown, Flame, Car, LayoutGrid, ClipboardList } from 'lucide-react';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; order_type?: string | null; items: OrderItem[] };
@@ -63,6 +63,8 @@ export default function StatisticsPage() {
   const [invOrderNames, setInvOrderNames] = useState<Map<string, string>>(new Map());
   const [invLoading,  setInvLoading]  = useState(true);
   const [expandedIng, setExpandedIng] = useState<string | null>(null);
+  const [invSectionOpen, setInvSectionOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders'>('overview');
 
   const fetchData = useCallback(async () => {
     if (!restaurantId) { setLoading(false); return; }
@@ -315,9 +317,25 @@ export default function StatisticsPage() {
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="flex gap-2 px-4 pb-3">
+        <button onClick={() => setActiveTab('overview')}
+          className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95 flex items-center justify-center gap-1.5"
+          style={{ backgroundColor: activeTab==='overview' ? s.text : s.surface, borderColor: activeTab==='overview' ? s.text : s.border, color: activeTab==='overview' ? s.bg : s.sub }}>
+          <LayoutGrid size={15} />
+          نظرة عامة
+        </button>
+        <button onClick={() => setActiveTab('orders')}
+          className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95 flex items-center justify-center gap-1.5"
+          style={{ backgroundColor: activeTab==='orders' ? s.text : s.surface, borderColor: activeTab==='orders' ? s.text : s.border, color: activeTab==='orders' ? s.bg : s.sub }}>
+          <ClipboardList size={15} />
+          الطلبات {filtered.length > 0 ? `(${filtered.length})` : ''}
+        </button>
+      </div>
+
       {loading ? (
         <div className="flex justify-center mt-20"><div className="w-10 h-10 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
-      ) : (<>
+      ) : activeTab === 'overview' ? (<>
 
         {/* Summary */}
         <div className="grid grid-cols-3 gap-2 px-4 pb-3">
@@ -451,12 +469,19 @@ export default function StatisticsPage() {
         )}
 
         {/* إحصائيات المخزون */}
-        <div className="mx-4 mb-3 rounded-2xl border p-4" style={{ backgroundColor: s.surface, borderColor: s.border }}>
-          <div className="flex items-center gap-2 mb-4 justify-end">
+        <div className="mx-4 mb-3 rounded-2xl border overflow-hidden" style={{ backgroundColor: s.surface, borderColor: s.border }}>
+          <button onClick={() => setInvSectionOpen(o => !o)}
+            className="w-full flex items-center gap-2 p-4 justify-end active:scale-[0.99] transition-all">
+            {!invSectionOpen && ingredientStats.length > 0 && (
+              <span className="text-xs" style={{ color: s.sub }}>{ingredientStats.length} مادة</span>
+            )}
             <h3 className="font-bold text-right" style={{ color: s.text }}>إحصائيات المخزون</h3>
             <Package size={18} style={{ color: '#f97316' }} />
-          </div>
+            <ChevronDown size={16} style={{ color: s.sub, transform: invSectionOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
 
+          {invSectionOpen && (
+          <div className="px-4 pb-4">
           {invLoading ? (
             <div className="flex justify-center py-6"><div className="w-7 h-7 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
           ) : ingredientStats.length === 0 ? (
@@ -501,7 +526,11 @@ export default function StatisticsPage() {
               })}
             </div>
           )}
+          </div>
+          )}
         </div>
+
+      </>) : (<>
 
         {/* Search */}
         <div className="px-4 mb-2">
