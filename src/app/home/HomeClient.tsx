@@ -120,7 +120,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   const [items,        setItems]        = useState<Item[]>(initialItems);
   const [dataLoading,  setDataLoading]  = useState(initialItems.length === 0);
   const [dataError,    setDataError]    = useState<string | null>(null);
-  const [activeCategory,   setActiveCategory]   = useState('all');
+  const [activeCategory,   setActiveCategory]   = useState('');
   const [showClosedToast,  setShowClosedToast]  = useState(false);
   const [showCartResetToast, setShowCartResetToast] = useState(false);
   const [showCartPanel,  setShowCartPanel]  = useState(false);
@@ -273,10 +273,6 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
     setActiveCategory(catId);
     scrolling.current = true;
     setTimeout(() => { scrolling.current = false; }, 800);
-    if (catId === 'all') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
     const el = sectionRefs.current[catId];
     if (el) {
       const offset = el.getBoundingClientRect().top + window.scrollY - 160;
@@ -414,7 +410,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
               <div key={i} className="h-9 w-20 bg-gray-200 dark:bg-slate-700 rounded-2xl animate-pulse flex-shrink-0"/>
             ))
           )}
-          {[{ id: 'all', name: 'الكل' } as Category, ...displayCategories].map((cat, idx) => {
+          {displayCategories.map((cat, idx) => {
             const isActive = activeCategory === cat.id;
             const isBestSellers = cat.id === BEST_SELLERS_ID;
             const catColor = (dark && cat.color_dark) ? cat.color_dark : (cat.color || brandColor);
