@@ -110,6 +110,55 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
   );
 }
 
+/* ─── نافذة عامة نصف الشاشة (تُستخدم لرسوم التوصيل / الحد الأدنى / الكوبون) ─── */
+function BottomSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  const [animateIn, setAnimateIn] = useState(false);
+
+  useEffect(() => {
+    requestAnimationFrame(() => setAnimateIn(true));
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  const close = () => { setAnimateIn(false); setTimeout(onClose, 300); };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end" onClick={close}>
+      <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`} />
+      <div
+        className={`relative w-full bg-white dark:bg-slate-900 rounded-t-3xl transition-transform duration-300 ease-out flex flex-col max-h-[65vh] ${animateIn ? 'translate-y-0' : 'translate-y-full'}`}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex-shrink-0 px-5 pt-4 pb-4 border-b border-gray-100 dark:border-slate-800">
+          <div className="w-10 h-1 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4" />
+          <div className="flex items-center justify-between">
+            <div className="w-9" />
+            <p className="font-bold text-gray-900 dark:text-slate-100">{title}</p>
+            <button onClick={close} className="p-1.5 rounded-xl text-gray-400 active:scale-90 transition-all">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-3" dir="rtl">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── نافذة معلومات المطعم ─── */
 function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
   onClose: () => void;
@@ -352,6 +401,9 @@ export default function SettingsPage() {
   const [showSchedule,     setShowSchedule]     = useState(false);
   const [showInfo,         setShowInfo]         = useState(false);
   const [showChangePass,   setShowChangePass]   = useState(false);
+  const [showDeliveryFee,  setShowDeliveryFee]  = useState(false);
+  const [showMinOrder,     setShowMinOrder]     = useState(false);
+  const [showCoupon,       setShowCoupon]       = useState(false);
   const [username,         setUsername]         = useState('');
   const [tick,             setTick]             = useState(0);
   const [toggleError,      setToggleError]      = useState<string | null>(null);
@@ -581,94 +633,65 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* ─ رسوم التوصيل — مخفية عن الكاشير: مبلغ مالي حسّاس يضبطه المالك فقط ─ */}
+        {/* رسوم التوصيل — مخفية عن الكاشير: مبلغ مالي حسّاس يضبطه المالك فقط */}
         {!isCashier && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3" dir="rtl">
+          <button onClick={() => setShowDeliveryFee(true)}
+            className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <p className="text-xs font-bold text-gray-400 dark:text-slate-500">{(delivery_fee ?? 0).toLocaleString()} د.ع</p>
+              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+            </div>
             <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">رسوم التوصيل</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">تُضاف تلقائياً عند اختيار &quot;توصيل&quot;</p>
+              </div>
               <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
                 <Truck size={18} className="text-gray-600 dark:text-slate-400" />
               </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">رسوم التوصيل</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">تُضاف تلقائياً لفاتورة الزبون عند اختيار &quot;توصيل&quot; من قائمة الطلب</p>
-              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input type="number" min="0" inputMode="decimal" value={deliveryFeeInput}
-                onChange={e => setDeliveryFeeInput(e.target.value)}
-                className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
-              <span className="text-xs text-gray-400 flex-shrink-0">د.ع</span>
-              <button onClick={saveDeliveryFee} disabled={feeSaving}
-                className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50 flex-shrink-0">
-                {feeSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                {feeSaved ? '✓ تم' : 'حفظ'}
-              </button>
-            </div>
-          </div>
+          </button>
         )}
 
-        {/* ─ الحد الأدنى للطلب — مخفي عن الكاشير: قيد مالي يضبطه المالك فقط ─ */}
+        {/* الحد الأدنى للطلب — مخفي عن الكاشير: قيد مالي يضبطه المالك فقط */}
         {!isCashier && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3" dir="rtl">
+          <button onClick={() => setShowMinOrder(true)}
+            className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <p className="text-xs font-bold text-gray-400 dark:text-slate-500">{(min_order_amount ?? 0).toLocaleString()} د.ع</p>
+              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+            </div>
             <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحد الأدنى للطلب</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">أقل قيمة مسموحة لطلب &quot;توصيل&quot;</p>
+              </div>
               <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
                 <Wallet size={18} className="text-gray-600 dark:text-slate-400" />
               </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحد الأدنى للطلب</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">أقل قيمة مسموحة لطلب &quot;توصيل&quot; من قائمة الزبون — اتركه 0 لتعطيله</p>
-              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input type="number" min="0" inputMode="decimal" value={minOrderInput}
-                onChange={e => setMinOrderInput(e.target.value)}
-                className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
-              <span className="text-xs text-gray-400 flex-shrink-0">د.ع</span>
-              <button onClick={saveMinOrderAmount} disabled={minOrderSaving}
-                className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50 flex-shrink-0">
-                {minOrderSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                {minOrderSaved ? '✓ تم' : 'حفظ'}
-              </button>
-            </div>
-          </div>
+          </button>
         )}
 
-        {/* ─ كوبون الخصم — مخفي عن الكاشير: يضبطه المالك فقط. كوبون واحد لكل مطعم،
-            خصم نسبة مئوية، يدخله الزبون بصفحة السلة عند إتمام الطلب. ─ */}
+        {/* كوبون الخصم — مخفي عن الكاشير: يضبطه المالك فقط. كوبون واحد لكل مطعم،
+            خصم نسبة مئوية، يدخله الزبون بصفحة السلة عند إتمام الطلب. */}
         {!isCashier && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3" dir="rtl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                  <Ticket size={18} className="text-gray-600 dark:text-slate-400" />
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">كوبون الخصم</p>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">كود يدخله الزبون بالسلة فيحصل على خصم بالنسبة المحددة</p>
-                </div>
+          <button onClick={() => setShowCoupon(true)}
+            className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <p className="text-xs font-bold text-gray-400 dark:text-slate-500">{couponEnabledLocal ? 'مفعّل' : 'غير مفعّل'}</p>
+              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">كوبون الخصم</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">كود خصم يدخله الزبون بالسلة</p>
               </div>
-              <button type="button" onClick={() => setCouponEnabledLocal(v => !v)} dir="ltr"
-                className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
-                style={{ backgroundColor: couponEnabledLocal ? '#22c55e' : '#d1d5db' }}>
-                <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
-                  style={{ right: couponEnabledLocal ? '2px' : '22px' }} />
-              </button>
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <Ticket size={18} className="text-gray-600 dark:text-slate-400" />
+              </div>
             </div>
-            <input type="text" value={couponCodeInput} onChange={e => setCouponCodeInput(e.target.value)}
-              placeholder="كود الكوبون (مثال: SAVE10)" dir="rtl"
-              className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]" />
-            <div className="flex items-center gap-2">
-              <input type="number" min="0" max="100" inputMode="decimal" value={couponPctInput}
-                onChange={e => setCouponPctInput(e.target.value)}
-                className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
-              <span className="text-xs text-gray-400 flex-shrink-0">%</span>
-              <button onClick={saveCoupon} disabled={couponSaving}
-                className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50 flex-shrink-0">
-                {couponSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                {couponSaved ? '✓ تم' : 'حفظ'}
-              </button>
-            </div>
-          </div>
+          </button>
         )}
 
         {/* ─ الأرشيف والإحصاء — للكاشير: تظهر مقفلة بعلامة قفل بدل الاختفاء التام ─ */}
@@ -761,7 +784,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {!showInfo && !showChangePass && <AdminBottomNav />}
+      {!showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && <AdminBottomNav />}
 
       {/* نافذة تغيير كلمة المرور */}
       {showChangePass && (
@@ -778,6 +801,71 @@ export default function SettingsPage() {
           settingsId={settingsId}
           refreshSettings={refreshSettings}
         />
+      )}
+
+      {/* نافذة رسوم التوصيل */}
+      {showDeliveryFee && (
+        <BottomSheet title="رسوم التوصيل" onClose={() => setShowDeliveryFee(false)}>
+          <p className="text-xs text-gray-500 dark:text-slate-400">تُضاف تلقائياً لفاتورة الزبون عند اختيار &quot;توصيل&quot; من قائمة الطلب</p>
+          <div className="flex items-center gap-2">
+            <input type="number" min="0" inputMode="decimal" value={deliveryFeeInput}
+              onChange={e => setDeliveryFeeInput(e.target.value)}
+              className="flex-1 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
+            <span className="text-xs text-gray-400 flex-shrink-0">د.ع</span>
+          </div>
+          <button onClick={saveDeliveryFee} disabled={feeSaving}
+            className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+            {feeSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {feeSaved ? '✓ تم' : 'حفظ'}
+          </button>
+        </BottomSheet>
+      )}
+
+      {/* نافذة الحد الأدنى للطلب */}
+      {showMinOrder && (
+        <BottomSheet title="الحد الأدنى للطلب" onClose={() => setShowMinOrder(false)}>
+          <p className="text-xs text-gray-500 dark:text-slate-400">أقل قيمة مسموحة لطلب &quot;توصيل&quot; من قائمة الزبون — اتركه 0 لتعطيله</p>
+          <div className="flex items-center gap-2">
+            <input type="number" min="0" inputMode="decimal" value={minOrderInput}
+              onChange={e => setMinOrderInput(e.target.value)}
+              className="flex-1 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
+            <span className="text-xs text-gray-400 flex-shrink-0">د.ع</span>
+          </div>
+          <button onClick={saveMinOrderAmount} disabled={minOrderSaving}
+            className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+            {minOrderSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {minOrderSaved ? '✓ تم' : 'حفظ'}
+          </button>
+        </BottomSheet>
+      )}
+
+      {/* نافذة كوبون الخصم */}
+      {showCoupon && (
+        <BottomSheet title="كوبون الخصم" onClose={() => setShowCoupon(false)}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500 dark:text-slate-400 flex-1">كود يدخله الزبون بالسلة فيحصل على خصم بالنسبة المحددة</p>
+            <button type="button" onClick={() => setCouponEnabledLocal(v => !v)} dir="ltr"
+              className="w-11 h-6 rounded-full transition-all relative flex-shrink-0 mr-3"
+              style={{ backgroundColor: couponEnabledLocal ? '#22c55e' : '#d1d5db' }}>
+              <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                style={{ right: couponEnabledLocal ? '2px' : '22px' }} />
+            </button>
+          </div>
+          <input type="text" value={couponCodeInput} onChange={e => setCouponCodeInput(e.target.value)}
+            placeholder="كود الكوبون (مثال: SAVE10)" dir="rtl"
+            className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]" />
+          <div className="flex items-center gap-2">
+            <input type="number" min="0" max="100" inputMode="decimal" value={couponPctInput}
+              onChange={e => setCouponPctInput(e.target.value)}
+              className="flex-1 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
+            <span className="text-xs text-gray-400 flex-shrink-0">%</span>
+          </div>
+          <button onClick={saveCoupon} disabled={couponSaving}
+            className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+            {couponSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {couponSaved ? '✓ تم' : 'حفظ'}
+          </button>
+        </BottomSheet>
       )}
 
       {/* موديل جدولة الدوام */}
