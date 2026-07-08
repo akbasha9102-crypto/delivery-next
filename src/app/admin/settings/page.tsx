@@ -8,7 +8,6 @@ import { AdminBottomNav } from '@/components/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useStaff } from '@/context/StaffContext';
-import { ApprovalsBell } from '@/components/staff/ApprovalsBell';
 
 /* ─── جدولة الدوام ─── */
 const DAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -344,7 +343,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled } = useSettings();
   const { dark, toggleDark } = useDarkMode();
-  const { isCashier, isOwner, isManager, activeStaff, switchUser } = useStaff();
+  const { isCashier, activeStaff, switchUser } = useStaff();
   const [confirmSwitch, setConfirmSwitch] = useState(false);
 
   const [scheduleLocal,    setScheduleLocal]    = useState<WeekSchedule | null>(null);
@@ -723,9 +722,6 @@ export default function SettingsPage() {
             </div>
           </button>
         </div>
-
-        {/* ─ طلبات الموافقة (RBAC) — للمالك/المدير فقط ─ */}
-        {(isOwner || isManager) && <ApprovalsBell />}
 
         {/* ─ تبديل المستخدم — يظهر فقط لجلسة موظف حقيقية (دخل بكود+كلمة مرور من /login)،
             فهذه الحالة الوحيدة التي يعني فيها "التبديل" شيئاً فعلياً (تسجيل خروج حقيقي).
