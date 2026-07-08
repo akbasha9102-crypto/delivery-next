@@ -997,27 +997,17 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
-        <div className="w-9" />
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-center">
         <div className="flex items-center gap-1.5">
           <ClipboardList size={18} className="text-[#f97316]" />
           <p className="font-bold text-red-500">الطلبات</p>
         </div>
-        {scope === 'internal' ? (
-          <button onClick={() => setShowQuickAdd(true)}
-            className="p-2 rounded-full bg-[#f97316] active:scale-90 transition-all"
-            aria-label="إضافة طلب زبون بدون جوال">
-            <Plus size={16} className="text-white" />
-          </button>
-        ) : (
-          <div className="w-10" />
-        )}
       </header>
 
       <LowStockAlert />
 
-      {/* تبويب: توصيل الطلب / استلام الطلب */}
-      <div className="grid grid-cols-2 gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
+      {/* تبويب: توصيل الطلب / استلام الطلب / المحل (طلب زبون بدون جوال) */}
+      <div className="grid grid-cols-3 gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
         {([
           { key: 'delivery' as const, label: 'توصيل الطلب' },
           { key: 'internal' as const, label: 'استلام الطلب' },
@@ -1037,6 +1027,11 @@ export default function DashboardPage() {
             )}
           </button>
         ))}
+        <button onClick={() => setShowQuickAdd(true)}
+          className="flex items-center justify-center gap-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2 border-[#f97316] bg-[#f97316] text-white"
+          aria-label="إضافة طلب زبون بدون جوال">
+          <Plus size={16} /> المحل
+        </button>
       </div>
 
       {/* إشعار طلب جديد — Dynamic Island */}
