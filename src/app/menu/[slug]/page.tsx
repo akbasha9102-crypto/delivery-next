@@ -26,11 +26,17 @@ export default async function MenuPage({ params }: Props) {
   );
 
   // البحث عن المطعم بالـ slug
-  const { data: restaurant } = await supabaseAdmin
+  const { data: restaurant, error: restaurantError } = await supabaseAdmin
     .from('restaurants')
     .select('id, name, slug')
     .eq('slug', slug)
     .maybeSingle();
+
+  if (restaurantError) {
+    // خطأ حقيقي (مفتاح خاطئ، مشكلة اتصال...) يجب أن يظهر كخطأ سيرفر
+    // وليس صفحة 404 مضلِّلة تخفي المشكلة الحقيقية
+    throw new Error(`Failed to fetch restaurant "${slug}": ${restaurantError.message}`);
+  }
 
   if (!restaurant) notFound();
 
