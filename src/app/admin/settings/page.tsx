@@ -371,7 +371,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount } = useSettings();
   const { dark, toggleDark } = useDarkMode();
-  const { isCashier, isOwner, isManager, activeStaff, staffFeatureEnabled, switchUser } = useStaff();
+  const { isCashier, isOwner, isManager, activeStaff, switchUser } = useStaff();
   const [confirmSwitch, setConfirmSwitch] = useState(false);
 
   const [scheduleLocal,    setScheduleLocal]    = useState<WeekSchedule | null>(null);
@@ -691,9 +691,10 @@ export default function SettingsPage() {
         {/* ─ طلبات الموافقة (RBAC) — للمالك/المدير فقط ─ */}
         {(isOwner || isManager) && <ApprovalsBell />}
 
-        {/* ─ تبديل المستخدم — يظهر إن كانت ميزة الموظفين مفعّلة أو كانت الهوية الحالية
-            جلسة موظف حقيقية (دخل بكود+كلمة مرور)، تلك الحالة تحتاج دائماً طريقة للتبديل. ─ */}
-        {(staffFeatureEnabled || activeStaff?.viaRealSession) && (
+        {/* ─ تبديل المستخدم — يظهر فقط لجلسة موظف حقيقية (دخل بكود+كلمة مرور من /login)،
+            فهذه الحالة الوحيدة التي يعني فيها "التبديل" شيئاً فعلياً (تسجيل خروج حقيقي).
+            شاشة اختيار الهوية للجلسة المشتركة أُزيلت نهائياً — لا فائدة من الزر لغيرها. ─ */}
+        {activeStaff?.viaRealSession && (
           <button onClick={() => setConfirmSwitch(true)}
             className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
             <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />

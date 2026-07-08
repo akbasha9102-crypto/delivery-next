@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { supabase } from '@/lib/supabase';
-import { getMyStaffContext, getOwnerSession, listStaff, verifyPin, type StaffMember, type StaffRole, type VerifyPinSuccess } from '@/lib/staffApi';
+import { getMyStaffContext, getOwnerSession, listStaff, type StaffMember, type StaffRole } from '@/lib/staffApi';
 
 export type ActiveStaff = {
   staffId: string | null;   // null = المالك (لا صف restaurant_staff بالضرورة)
@@ -48,8 +48,7 @@ type StaffCtxValue = {
   isCashier: boolean;
   isRestricted: boolean;          // اختصار: الدور الحالي كاشير (كل قيود المصفوفة تُطبَّق)
   setOwnerActive: () => Promise<void>;
-  loginWithPin: (pin: string) => Promise<{ ok: true } | { ok: false; status: number; error: string }>;
-  switchUser: () => void;         // تسجيل خروج من الهوية الحالية (يدوي) — يعيد شاشة "من أنت؟"
+  switchUser: () => void;         // تسجيل خروج من الهوية الحالية (يدوي) — لا فائدة عملية إلا لجلسة موظف حقيقية (يُعيد لصفحة /login)
   refreshStaffList: () => Promise<void>;
 };
 
@@ -64,7 +63,6 @@ const StaffCtx = createContext<StaffCtxValue>({
   isCashier: false,
   isRestricted: false,
   setOwnerActive: async () => {},
-  loginWithPin: async () => ({ ok: false, status: 0, error: 'غير جاهز' }),
   switchUser: () => {},
   refreshStaffList: async () => {},
 });
@@ -197,36 +195,13 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [restaurantId, refreshStaffList, persist]);
 
-  // 2) إن لم تكن هناك هوية فعّالة محفوظة، وتبيّن بعد التحميل أن لا يوجد موظفون مُعرَّفون إطلاقاً
-  //    (صاحب المطعم لم يفعّل نظام الكاشير بعد) → لا نعرض شاشة "من أنت؟" أبداً، ونُبقي المالك بنفس تجربته اليوم
-  //    بالضبط (بدون أي احتكاك إضافي) — هذا أهم قرار للحفاظ على "لا تعديل على تجربة المالك الحالية".
+  // 2) إن لم تكن هناك هوية فعّالة محفوظة (ولم تُحدَّد كجلسة موظف حقيقية أعلاه) → تُفعَّل هوية
+  //    "المالك" تلقائياً دائماً. شاشة اختيار الهوية ("من أنت؟") أُزيلت نهائياً بناءً على طلب المستخدم؛
+  //    الجلسة المشتركة تُعامَل كمالك دوماً (الموظفون الحقيقيون عبر /login غير متأثرين، انظر الخطوة 1).
   useEffect(() => {
     if (!hydrated || staffListLoading || activeStaff) return;
-    if (staffList.length === 0) setOwnerActive();
-  }, [hydrated, staffListLoading, activeStaff, staffList, setOwnerActive]);
-
-  const loginWithPin = useCallback(async (pin: string) => {
-    if (!restaurantId) return { ok: false as const, status: 0, error: 'تعذّر تحديد المطعم' };
-    const res = await verifyPin(restaurantId, pin);
-    if (!res.ok) {
-      const status = res.status;
-      const error = 'pending' in res && res.pending ? 'بانتظار موافقة' : (('error' in res && res.error) || 'PIN غير صحيح');
-      return { ok: false as const, status, error };
-    }
-    const data = res.data as VerifyPinSuccess;
-    const staff: ActiveStaff = {
-      staffId: data.staff_id,
-      displayName: data.display_name,
-      role: data.role,
-      maxDiscountPct: data.max_discount_pct,
-      maxVoidAmount: data.max_void_amount,
-      staffToken: data.staff_token,
-      viaRealSession: false,
-    };
-    setActiveStaffState(staff);
-    persist(staff);
-    return { ok: true as const };
-  }, [restaurantId, persist]);
+    setOwnerActive();
+  }, [hydrated, staffListLoading, activeStaff, setOwnerActive]);
 
   // 3) قفل تلقائي بعد خمول (Auto-lock) — يُطبَّق فقط على الأدوار المقيَّدة (كاشير/مدير)، وليس المالك،
   //    حتى لا نضيف أي احتكاك جديد لتجربة المالك الحالية التي لا تعرف مفهوم "الخمول" أصلاً اليوم.
@@ -266,7 +241,6 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
       isCashier,
       isRestricted: isCashier,
       setOwnerActive,
-      loginWithPin,
       switchUser,
       refreshStaffList,
     }}>
