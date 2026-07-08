@@ -696,6 +696,13 @@ const proceedFromReview = () => {
     clearCart();
     setLoading(false);
     setShowConfirmModal(false);
+
+    // زبون مسجّل دخوله مسبقاً — لا داعي لعرض نافذة "أنشئ حساباً/تابع كضيف"، ينتقل مباشرة لتتبع طلبه
+    if (session) {
+      router.push('/track');
+      return;
+    }
+
     setAuthPhone(phone.trim());
     setAuthPassword('');
     setAuthError('');
