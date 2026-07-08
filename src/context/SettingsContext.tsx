@@ -22,6 +22,7 @@ export type Settings = {
   coupon_code: string | null;
   coupon_discount_pct: number;
   coupon_enabled: boolean;
+  show_best_sellers: boolean;
 };
 
 const DEFAULTS: Settings = {
@@ -40,6 +41,7 @@ const DEFAULTS: Settings = {
   coupon_code: null,
   coupon_discount_pct: 0,
   coupon_enabled: false,
+  show_best_sellers: true,
 };
 
 // مفتاح cache مرتبط بـ restaurant_id لعزل كل مطعم

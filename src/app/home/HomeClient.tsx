@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -47,9 +47,13 @@ type Props = {
   initialItems: Item[];
   restaurantId?: string;
   restaurantSlug?: string;
+  showBestSellers?: boolean;
+  bestSellerItemIds?: string[];
 };
 
-export default function HomeClient({ initialCategories, initialItems, restaurantId, restaurantSlug }: Props) {
+const BEST_SELLERS_ID = '__best_sellers__';
+
+export default function HomeClient({ initialCategories, initialItems, restaurantId, restaurantSlug, showBestSellers, bestSellerItemIds }: Props) {
   const { dark } = useDarkMode();
   const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total, orderType, setOrderType, ensureRestaurant } = useCart();
   const [priceFlash, setPriceFlash] = useState(false);
@@ -171,10 +175,21 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId]);
 
+  // "الأكثر مبيعاً" — قسم ثابت يظهر دائماً أولاً، بأفضل 3 وجبات مبيعاً (إن كان مفعّلاً وتوفرت وجبات)
+  const bestSellerItems = useMemo(() => (bestSellerItemIds || [])
+    .map(id => items.find(i => i.id === id))
+    .filter((i): i is Item => !!i && getStatus(i) !== 'hidden'), [bestSellerItemIds, items]);
+
+  const displayCategories = useMemo(() => (
+    showBestSellers && bestSellerItems.length > 0
+      ? [{ id: BEST_SELLERS_ID, name: 'الأكثر مبيعاً' } as Category, ...categories]
+      : categories
+  ), [showBestSellers, bestSellerItems, categories]);
+
   useEffect(() => {
-    if (categories.length === 0) return;
+    if (displayCategories.length === 0) return;
     const observers: IntersectionObserver[] = [];
-    categories.forEach(cat => {
+    displayCategories.forEach(cat => {
       const el = sectionRefs.current[cat.id];
       if (!el) return;
       const obs = new IntersectionObserver(
@@ -187,7 +202,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
       observers.push(obs);
     });
     return () => observers.forEach(o => o.disconnect());
-  }, [categories, items]);
+  }, [displayCategories, items]);
 
   useEffect(() => {
     const container = pillsRef.current;
@@ -399,8 +414,9 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
               <div key={i} className="h-9 w-20 bg-gray-200 dark:bg-slate-700 rounded-2xl animate-pulse flex-shrink-0"/>
             ))
           )}
-          {[{ id: 'all', name: 'الكل' } as Category, ...categories].map((cat, idx) => {
+          {[{ id: 'all', name: 'الكل' } as Category, ...displayCategories].map((cat, idx) => {
             const isActive = activeCategory === cat.id;
+            const isBestSellers = cat.id === BEST_SELLERS_ID;
             const catColor = (dark && cat.color_dark) ? cat.color_dark : (cat.color || brandColor);
             const catTextColor = getTextColor(catColor);
             return (
@@ -419,7 +435,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 }`}
                 style={isActive ? { backgroundColor: dark ? '#ffffff' : catColor, color: dark ? '#000000' : catTextColor } : {}}
               >
-                {cat.name}
+                {isBestSellers ? `🔥 ${cat.name}` : cat.name}
               </motion.button>
             );
           })}
@@ -460,8 +476,9 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
           </div>
         )}
         <div className="space-y-12">
-          {categories.map((cat) => {
-            const catItems = items.filter(i => i.category_id === cat.id);
+          {displayCategories.map((cat) => {
+            const isBestSellers = cat.id === BEST_SELLERS_ID;
+            const catItems = isBestSellers ? bestSellerItems : items.filter(i => i.category_id === cat.id);
             if (catItems.length === 0) return null;
             const catColor = (dark && cat.color_dark) ? cat.color_dark : (cat.color || brandColor);
             const catCardColor = dark ? (cat.card_color_dark || null) : (cat.card_color || null);
@@ -473,7 +490,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
                 <div className="flex items-center gap-4 mb-6 flex-row-reverse px-2">
                   <h2 className="text-xl font-black text-gray-900 dark:text-white whitespace-nowrap tracking-tight">
-                    {cat.name}
+                    {isBestSellers ? `🔥 ${cat.name}` : cat.name}
                   </h2>
                   <div className="flex-1 h-[2px] bg-gradient-to-l from-black/10 to-transparent dark:from-white/10"/>
                 </div>

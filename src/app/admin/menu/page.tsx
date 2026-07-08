@@ -3,8 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
-import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, FolderPlus, UtensilsCrossed } from 'lucide-react';
+import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, FolderPlus, UtensilsCrossed, Flame } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
+import { useSettings } from '@/context/SettingsContext';
 import { HexColorPicker } from 'react-colorful';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
@@ -39,6 +40,20 @@ const getTextColor = (hex: string): string => {
 export default function MenuPage() {
   const { dark } = useDarkMode();
   const { restaurantId } = useRestaurant();
+  const { id: settingsId, show_best_sellers, refreshSettings } = useSettings();
+  const [bestSellersLocal, setBestSellersLocal] = useState(true);
+  const [bestSellersSaving, setBestSellersSaving] = useState(false);
+  useEffect(() => { setBestSellersLocal(show_best_sellers); }, [show_best_sellers]);
+  const toggleBestSellers = async () => {
+    if (!settingsId || bestSellersSaving) return;
+    const next = !bestSellersLocal;
+    setBestSellersLocal(next);
+    setBestSellersSaving(true);
+    const { error } = await supabase.from('restaurant_settings').update({ show_best_sellers: next }).eq('id', settingsId);
+    if (error) setBestSellersLocal(!next);
+    else await refreshSettings();
+    setBestSellersSaving(false);
+  };
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -725,6 +740,25 @@ export default function MenuPage() {
           </div>
         ) : (
           <div className="space-y-6 pb-8">
+            {/* ─ الأكثر مبيعاً — قسم ثابت يظهر دائماً أولاً في منيو الزبون، بأفضل 3 وجبات مبيعاً ─ */}
+            <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+                  <Flame size={18} className="text-[#f97316]" />
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأكثر مبيعاً</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">يظهر دائماً أول قسم بمنيو الزبون، بأفضل 3 وجبات مبيعاً</p>
+                </div>
+              </div>
+              <button type="button" onClick={toggleBestSellers} dir="ltr"
+                className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
+                style={{ backgroundColor: bestSellersLocal ? '#22c55e' : '#d1d5db' }}>
+                <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                  style={{ right: bestSellersLocal ? '2px' : '22px' }} />
+              </button>
+            </div>
+
             {/* Search */}
             <div className="relative">
               <Search size={16} className="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 dark:text-slate-500" />
