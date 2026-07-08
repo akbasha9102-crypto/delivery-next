@@ -726,22 +726,23 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* ─ الأرشيف والإحصاء — للكاشير: تظهر مقفلة بعلامة قفل بدل الاختفاء التام ─ */}
+        {/* ─ الإحصائيات — مخفية بالكامل عن الكاشير (لا تظهر حتى مقفلة). الأرشيف: يظهر مقفل بعلامة قفل ─ */}
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={() => !isCashier && router.push('/admin/statistics')}
-            disabled={isCashier}
-            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
-            {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصائيات</span>
-              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                <BarChart2 size={16} className="text-blue-500" />
+          {!isCashier && (
+            <button onClick={() => router.push('/admin/statistics')}
+              className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all active:scale-95">
+              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصائيات</span>
+                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                  <BarChart2 size={16} className="text-blue-500" />
+                </div>
               </div>
-            </div>
-          </button>
+            </button>
+          )}
           <button onClick={() => !isCashier && router.push('/admin/archive')}
             disabled={isCashier}
-            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
+            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed col-span-2' : 'active:scale-95'}`}>
             {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأرشيف</span>
