@@ -899,7 +899,12 @@ const proceedFromReview = () => {
         {/* ── الإجمالي + زر الإرسال ── */}
         <div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 flex justify-between items-center mb-4">
-            <span className="font-bold text-xl" style={{ color: brandColor }}>{grandTotal.toLocaleString()} د.ع</span>
+            <div className="flex items-center gap-2">
+              {discountAmount > 0 && (
+                <span className="text-gray-400 text-sm line-through">{(grandTotal + discountAmount).toLocaleString()}</span>
+              )}
+              <span className="font-bold text-xl" style={{ color: brandColor }}>{grandTotal.toLocaleString()} د.ع</span>
+            </div>
             <span className="font-bold text-gray-900 dark:text-slate-100">الإجمالي</span>
           </div>
           {editing ? (

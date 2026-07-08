@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { OwnerOnly } from '@/components/OwnerOnly';
-import { ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check, Bell, Plus, Minus } from 'lucide-react';
+import { ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check, Bell, Plus, Minus, Ticket } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
@@ -12,7 +12,7 @@ import { LowStockAlert } from '@/components/LowStockAlert';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 type OrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'pickup' | 'local' | null };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; discount_amount?: number | null; coupon_code?: string | null; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'pickup' | 'local' | null };
 
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز', color: '#f59e0b', dot: 'bg-yellow-400',  btnColor: '#3b82f6' },
@@ -1749,9 +1749,24 @@ export default function DashboardPage() {
                     {/* 5. الإجمالي */}
                     <div className="flex items-center justify-between px-4 py-3">
                       <span className="font-bold text-gray-900 dark:text-slate-100 text-base">الإجمالي:</span>
-                      <span className="text-red-500 font-black text-xl">
-                        {order.total_amount.toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span>
-                      </span>
+                      <div className="text-left">
+                        {!!order.discount_amount && order.discount_amount > 0 && (
+                          <div className="flex items-center gap-1.5 justify-end mb-0.5">
+                            <Ticket size={11} className="text-green-500" />
+                            <span className="text-[10px] font-bold text-green-500">استُخدم كوبون خصم{order.coupon_code ? ` «${order.coupon_code}»` : ''}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 justify-end">
+                          {!!order.discount_amount && order.discount_amount > 0 && (
+                            <span className="text-gray-400 text-sm line-through">
+                              {(order.total_amount + order.discount_amount).toLocaleString()}
+                            </span>
+                          )}
+                          <span className="text-red-500 font-black text-xl">
+                            {order.total_amount.toLocaleString()} <span className="text-xs font-normal text-gray-400">د.ع</span>
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* 6. أزرار الإجراءات */}
