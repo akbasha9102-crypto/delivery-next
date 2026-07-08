@@ -71,6 +71,42 @@ function saveInfo(info: SavedInfo) {
   localStorage.setItem(KEYS.addressDetails, info.addressDetails);
 }
 
+// مربع كوبون الخصم — يُستخدم بمسارين: فورم "معلومات الطلب" (زبون جديد يعبّي معلوماته)،
+// وشاشة التأكيد النهائية (زبون عنده معلومات محفوظة واختار "نعم" فتخطّى الفورم بالكامل).
+function CouponBox({ value, onChange, onApply, msg, brandColor }: {
+  value: string;
+  onChange: (v: string) => void;
+  onApply: () => void;
+  msg: { ok: boolean; text: string } | null;
+  brandColor: string;
+}) {
+  return (
+    <div className="pt-1">
+      <div className="flex items-center bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl overflow-hidden focus-within:ring-2"
+        style={{ '--tw-ring-color': brandColor } as React.CSSProperties}>
+        <div className="px-3 py-3 border-l border-gray-200 dark:border-slate-600 flex-shrink-0">
+          <Ticket size={16} className="text-gray-400" />
+        </div>
+        <input type="text" value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="كود الكوبون (اختياري)" dir="rtl"
+          className="flex-1 bg-transparent px-3 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none"
+        />
+        <button type="button" onClick={onApply} disabled={!value.trim()}
+          className="px-4 py-3 text-sm font-bold flex-shrink-0 disabled:opacity-40 active:scale-95 transition-all"
+          style={{ color: brandColor }}>
+          تطبيق
+        </button>
+      </div>
+      {msg && (
+        <p className={`text-xs font-bold mt-1.5 text-right ${msg.ok ? 'text-green-500' : 'text-red-500'}`}>
+          {msg.ok ? '✓' : '✕'} {msg.text}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function CartPage() {
   const { items, addItem, decrementItem, removeItem, clearCart, restoreCart, total, orderType, setOrderType } = useCart();
   const { primary_color, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled } = useSettings();
@@ -116,6 +152,7 @@ export default function CartPage() {
       setCouponMsg({ ok: false, text: 'كود الكوبون غير صحيح' });
     }
   };
+  const handleCouponInputChange = (v: string) => { setCouponInput(v); setCouponMsg(null); setAppliedCouponPct(0); };
 
   // نوع الطلب: توصيل الطلب / استلام الطلب — مصدره الموحّد CartContext
   // (يُختار مبدئياً من صفحة المنيو، وقابل للتغيير هنا أيضاً بنفس المبدّل)
@@ -876,29 +913,7 @@ const proceedFromReview = () => {
 
             {/* كوبون الخصم — يظهر فقط إن فعّله المالك من الإعدادات */}
             {coupon_enabled && coupon_code && (
-              <div className="pt-1">
-                <div className="flex items-center bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl overflow-hidden focus-within:ring-2"
-                  style={{ '--tw-ring-color': brandColor } as React.CSSProperties}>
-                  <div className="px-3 py-3 border-l border-gray-200 dark:border-slate-600 flex-shrink-0">
-                    <Ticket size={16} className="text-gray-400" />
-                  </div>
-                  <input type="text" value={couponInput}
-                    onChange={e => { setCouponInput(e.target.value); setCouponMsg(null); setAppliedCouponPct(0); }}
-                    placeholder="كود الكوبون (اختياري)" dir="rtl"
-                    className="flex-1 bg-transparent px-3 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none"
-                  />
-                  <button type="button" onClick={applyCoupon} disabled={!couponInput.trim()}
-                    className="px-4 py-3 text-sm font-bold flex-shrink-0 disabled:opacity-40 active:scale-95 transition-all"
-                    style={{ color: brandColor }}>
-                    تطبيق
-                  </button>
-                </div>
-                {couponMsg && (
-                  <p className={`text-xs font-bold mt-1.5 text-right ${couponMsg.ok ? 'text-green-500' : 'text-red-500'}`}>
-                    {couponMsg.ok ? '✓' : '✕'} {couponMsg.text}
-                  </p>
-                )}
-              </div>
+              <CouponBox value={couponInput} onChange={handleCouponInputChange} onApply={applyCoupon} msg={couponMsg} brandColor={brandColor} />
             )}
           </div>
         )}
@@ -1406,6 +1421,12 @@ const proceedFromReview = () => {
                   })}
                 </div>
               </div>
+
+              {/* كوبون الخصم — يظهر هنا أيضاً لأن الزبون اللي عنده معلومات محفوظة يوصل
+                  مباشرة لهذه الشاشة متخطياً فورم "معلومات الطلب" بالكامل */}
+              {coupon_enabled && coupon_code && (
+                <CouponBox value={couponInput} onChange={handleCouponInputChange} onApply={applyCoupon} msg={couponMsg} brandColor={brandColor} />
+              )}
             </div>
 
             {/* Buttons */}
