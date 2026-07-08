@@ -6,7 +6,7 @@ import { AdminBottomNav } from '@/components/BottomNav';
 import { OwnerOnly } from '@/components/OwnerOnly';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
-import { Plus, Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus } from 'lucide-react';
+import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus } from 'lucide-react';
 
 type InventoryItem = {
   id: string;
@@ -58,7 +58,7 @@ export default function InventoryPage() {
   const { dark } = useDarkMode();
   const { restaurantId } = useRestaurant();
 
-  const [tab, setTab] = useState<'items' | 'movements'>('items');
+  const [tab, setTab] = useState<'items' | 'movements' | 'add'>('items');
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [categoriesList, setCategoriesList] = useState<string[]>([]);
@@ -72,9 +72,6 @@ export default function InventoryPage() {
   const [movCatFilter, setMovCatFilter] = useState<string | null>(null);
   const [showCustomCat, setShowCustomCat] = useState(false);
   const [customCat, setCustomCat] = useState('');
-
-  // قائمة اختيار "مادة جديدة / فئة جديدة" عند الضغط على +
-  const [showAddMenu, setShowAddMenu] = useState(false);
 
   // فورم إضافة فئة جديدة مستقلة
   const [showCatForm, setShowCatForm] = useState(false);
@@ -151,7 +148,7 @@ export default function InventoryPage() {
 
   // قفل تمرير الصفحة خلف أي نافذة منبثقة حتى لا تتحرك الخلفية بدل النافذة
   useEffect(() => {
-    const isModalOpen = showForm || !!movementTarget || showAddMenu || showCatForm;
+    const isModalOpen = showForm || !!movementTarget || showCatForm;
     if (isModalOpen) {
       const scrollY = window.scrollY;
       document.body.style.position = 'fixed';
@@ -164,7 +161,7 @@ export default function InventoryPage() {
         window.scrollTo(0, scrollY);
       };
     }
-  }, [showForm, movementTarget, showAddMenu, showCatForm]);
+  }, [showForm, movementTarget, showCatForm]);
 
   const openAdd = () => {
     setEditItem(null);
@@ -312,10 +309,7 @@ export default function InventoryPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <button onClick={() => setShowAddMenu(true)} className="w-9 h-9 flex items-center justify-center rounded-full bg-[#f97316] text-white active:scale-90 transition-all">
-          <Plus size={18} />
-        </button>
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-center">
         <div className="flex items-center gap-2">
           <Package size={18} className="text-[#f97316]" />
           <p className="font-bold text-gray-900 dark:text-slate-100">المخزون</p>
@@ -325,7 +319,6 @@ export default function InventoryPage() {
             </span>
           )}
         </div>
-        <div className="w-9" />
       </header>
 
       {toast && (
@@ -342,7 +335,36 @@ export default function InventoryPage() {
         <button onClick={() => setTab('movements')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'movements' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
           الحركات
         </button>
+        <button onClick={() => setTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'add' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
+          إضافة
+        </button>
       </div>
+
+      {tab === 'add' && (
+        <div className="px-4 space-y-3 pb-4">
+          <button onClick={openAdd}
+            className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+            <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+              <PackagePlus size={26} className="text-[#f97316]" />
+            </div>
+            <div className="text-right flex-1">
+              <p className="font-bold text-gray-900 dark:text-slate-100">مادة جديدة</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500">إضافة مادة جديدة إلى المخزون</p>
+            </div>
+          </button>
+
+          <button onClick={() => { setNewCatName(''); setShowCatForm(true); }}
+            className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+            <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+              <FolderPlus size={26} className="text-[#f97316]" />
+            </div>
+            <div className="text-right flex-1">
+              <p className="font-bold text-gray-900 dark:text-slate-100">فئة جديدة</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500">إضافة فئة جديدة تظهر عند إضافة مادة</p>
+            </div>
+          </button>
+        </div>
+      )}
 
       {tab === 'items' && (
         <div className="px-4">
@@ -639,36 +661,6 @@ export default function InventoryPage() {
               <button onClick={submitMovement} disabled={movSaving || !movQty}
                 className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
                 {movSaving ? 'جاري الحفظ...' : 'تسجيل الحركة'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ قائمة اختيار: مادة جديدة / فئة جديدة ═══ */}
-      {showAddMenu && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowAddMenu(false)}>
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-6 space-y-2">
-              <button onClick={() => { setShowAddMenu(false); openAdd(); }}
-                className="w-full flex items-center gap-3 bg-gray-50 dark:bg-slate-700 rounded-2xl p-4 text-right active:scale-[0.98] transition-all">
-                <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-[#f97316]/10 text-[#f97316]">
-                  <PackagePlus size={18} />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">مادة جديدة</p>
-                  <p className="text-xs text-gray-400 dark:text-slate-500">إضافة مادة جديدة إلى المخزون</p>
-                </div>
-              </button>
-              <button onClick={() => { setShowAddMenu(false); setNewCatName(''); setShowCatForm(true); }}
-                className="w-full flex items-center gap-3 bg-gray-50 dark:bg-slate-700 rounded-2xl p-4 text-right active:scale-[0.98] transition-all">
-                <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-[#f97316]/10 text-[#f97316]">
-                  <FolderPlus size={18} />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">فئة جديدة</p>
-                  <p className="text-xs text-gray-400 dark:text-slate-500">إضافة فئة جديدة تظهر عند إضافة مادة</p>
-                </div>
               </button>
             </div>
           </div>
