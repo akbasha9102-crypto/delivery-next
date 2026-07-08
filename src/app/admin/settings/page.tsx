@@ -420,6 +420,14 @@ export default function SettingsPage() {
   const [couponSaved,      setCouponSaved]      = useState(false);
   const [bestSellersLocal, setBestSellersLocal] = useState(true);
   const [bestSellersSaving, setBestSellersSaving] = useState(false);
+  const { restaurantId } = useRestaurant();
+  const [discCategories,   setDiscCategories]   = useState<{ id: string; name: string; discount_pct: number }[]>([]);
+  const [discItems,        setDiscItems]        = useState<{ id: string; name: string; discount_pct: number; category_id: string }[]>([]);
+  const [discType,         setDiscType]         = useState<'category' | 'item'>('category');
+  const [discTargetId,     setDiscTargetId]     = useState('');
+  const [discPctInput,     setDiscPctInput]     = useState('');
+  const [discSaving,       setDiscSaving]       = useState(false);
+  const [discRemovingId,   setDiscRemovingId]   = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -538,6 +546,39 @@ export default function SettingsPage() {
     if (error) setBestSellersLocal(!next);
     else await refreshSettings();
     setBestSellersSaving(false);
+  };
+
+  const fetchDiscountTargets = async () => {
+    if (!restaurantId) return;
+    const [{ data: cats }, { data: its }] = await Promise.all([
+      supabase.from('categories').select('id, name, discount_pct').eq('restaurant_id', restaurantId).order('name'),
+      supabase.from('items').select('id, name, discount_pct, category_id').eq('restaurant_id', restaurantId).order('name'),
+    ]);
+    setDiscCategories((cats || []).map(c => ({ ...c, discount_pct: c.discount_pct ?? 0 })));
+    setDiscItems((its || []).map(i => ({ ...i, discount_pct: i.discount_pct ?? 0 })));
+  };
+  useEffect(() => { if (showCoupon) fetchDiscountTargets(); }, [showCoupon, restaurantId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const applyTargetDiscount = async () => {
+    const pct = parseFloat(discPctInput);
+    if (!discTargetId || isNaN(pct) || pct < 0 || pct > 100) return;
+    setDiscSaving(true);
+    const table = discType === 'category' ? 'categories' : 'items';
+    const { error } = await supabase.from(table).update({ discount_pct: pct }).eq('id', discTargetId);
+    if (!error) {
+      setDiscTargetId('');
+      setDiscPctInput('');
+      await fetchDiscountTargets();
+    }
+    setDiscSaving(false);
+  };
+
+  const removeTargetDiscount = async (type: 'category' | 'item', id: string) => {
+    setDiscRemovingId(id);
+    const table = type === 'category' ? 'categories' : 'items';
+    const { error } = await supabase.from(table).update({ discount_pct: 0 }).eq('id', id);
+    if (!error) await fetchDiscountTargets();
+    setDiscRemovingId(null);
   };
 
   const logout = async () => { await supabase.auth.signOut(); router.replace('/login'); };
@@ -686,8 +727,8 @@ export default function SettingsPage() {
           </button>
         )}
 
-        {/* كوبون الخصم — مخفي عن الكاشير: يضبطه المالك فقط. كوبون واحد لكل مطعم،
-            خصم نسبة مئوية، يدخله الزبون بصفحة السلة عند إتمام الطلب. */}
+        {/* الخصومات — مخفي عن الكاشير: يضبطه المالك فقط. يضم كوبون خصم عام يدخله
+            الزبون بالسلة، بالإضافة لخصم نسبة مئوية على وجبة محددة أو قسم كامل بمنيو الزبون. */}
         {!isCashier && (
           <button onClick={() => setShowCoupon(true)}
             className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
@@ -697,8 +738,8 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">كوبون الخصم</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">كود خصم يدخله الزبون بالسلة</p>
+                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الخصومات</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">كوبون عام + خصم على وجبة أو قسم محدد</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
                 <Ticket size={18} className="text-gray-600 dark:text-slate-400" />
@@ -872,9 +913,10 @@ export default function SettingsPage() {
         </BottomSheet>
       )}
 
-      {/* نافذة كوبون الخصم */}
+      {/* نافذة الخصومات */}
       {showCoupon && (
-        <BottomSheet title="كوبون الخصم" onClose={() => setShowCoupon(false)}>
+        <BottomSheet title="الخصومات" onClose={() => setShowCoupon(false)}>
+          <p className="text-xs font-bold text-gray-400 dark:text-slate-500">كوبون خصم عام</p>
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-500 dark:text-slate-400 flex-1">كود يدخله الزبون بالسلة فيحصل على خصم بالنسبة المحددة</p>
             <button type="button" onClick={() => setCouponEnabledLocal(v => !v)} dir="ltr"
@@ -898,6 +940,75 @@ export default function SettingsPage() {
             {couponSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {couponSaved ? '✓ تم' : 'حفظ'}
           </button>
+
+          <div className="pt-3 mt-1 border-t border-gray-100 dark:border-slate-800 space-y-3">
+            <p className="text-xs font-bold text-gray-400 dark:text-slate-500">خصم على وجبة أو قسم محدد</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400 -mt-2">ينعكس فوراً كسعر مخفّض بمنيو الزبون — خصم الوجبة له الأولوية إن كان قسمها مخفّضاً أيضاً</p>
+
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setDiscType('category'); setDiscTargetId(''); }}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${discType === 'category' ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white' : 'bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700'}`}>
+                قسم كامل
+              </button>
+              <button type="button" onClick={() => { setDiscType('item'); setDiscTargetId(''); }}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${discType === 'item' ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white' : 'bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700'}`}>
+                وجبة محددة
+              </button>
+            </div>
+
+            <select value={discTargetId} onChange={e => setDiscTargetId(e.target.value)} dir="rtl"
+              className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]">
+              <option value="">{discType === 'category' ? 'اختر القسم' : 'اختر الوجبة'}</option>
+              {(discType === 'category' ? discCategories : discItems).map(t => (
+                <option key={t.id} value={t.id}>{t.name}{t.discount_pct > 0 ? ` (خصم حالي ${t.discount_pct}%)` : ''}</option>
+              ))}
+            </select>
+
+            <div className="flex items-center gap-2">
+              <input type="number" min="0" max="100" inputMode="decimal" value={discPctInput}
+                onChange={e => setDiscPctInput(e.target.value)} placeholder="نسبة الخصم"
+                className="flex-1 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]" />
+              <span className="text-xs text-gray-400 flex-shrink-0">%</span>
+            </div>
+
+            <button onClick={applyTargetDiscount} disabled={discSaving || !discTargetId || !discPctInput}
+              className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#f97316] text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+              {discSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              تطبيق الخصم
+            </button>
+
+            {(discCategories.some(c => c.discount_pct > 0) || discItems.some(i => i.discount_pct > 0)) && (
+              <div className="space-y-2 pt-1">
+                <p className="text-xs font-bold text-gray-400 dark:text-slate-500">الخصومات الحالية</p>
+                {discCategories.filter(c => c.discount_pct > 0).map(c => (
+                  <div key={c.id} className="flex items-center justify-between bg-gray-50 dark:bg-slate-800 rounded-xl px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => removeTargetDiscount('category', c.id)} disabled={discRemovingId === c.id}
+                        className="text-red-400 active:scale-90 disabled:opacity-40"><X size={14} /></button>
+                      <span className="text-xs font-black text-green-500">{c.discount_pct}%</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-gray-800 dark:text-slate-200">{c.name}</p>
+                      <p className="text-[10px] text-gray-400">قسم كامل</p>
+                    </div>
+                  </div>
+                ))}
+                {discItems.filter(i => i.discount_pct > 0).map(i => (
+                  <div key={i.id} className="flex items-center justify-between bg-gray-50 dark:bg-slate-800 rounded-xl px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => removeTargetDiscount('item', i.id)} disabled={discRemovingId === i.id}
+                        className="text-red-400 active:scale-90 disabled:opacity-40"><X size={14} /></button>
+                      <span className="text-xs font-black text-green-500">{i.discount_pct}%</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-gray-800 dark:text-slate-200">{i.name}</p>
+                      <p className="text-[10px] text-gray-400">{discCategories.find(c => c.id === i.category_id)?.name || 'وجبة'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </BottomSheet>
       )}
 
