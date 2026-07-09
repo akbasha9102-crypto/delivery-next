@@ -2,11 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import HomeClient from '@/app/home/HomeClient';
 
-export const revalidate = 60; // يعيد بناء الصفحة كل 60 ثانية على السيرفر
-// إجبار كل fetch داخل هذه الصفحة (بما فيها استعلامات Supabase) على تجاوز
-// Data Cache الخاص بـ Vercel (اللي يبقى محفوظ حتى عبر عمليات نشر جديدة) —
-// كان يخفي أي إصلاح لاحق لمفاتيح Supabase خلف نتيجة قديمة مخزَّنة.
-export const fetchCache = 'force-no-store';
+// تم استبدال revalidate=60 (ISR) بالعرض الديناميكي الكامل — تبيّن أن كاش
+// الصفحة (ISR) كان يعلق على نتيجة 404 قديمة (من قبل ما يتوفر المطعم أو
+// وقت عطل بمفاتيح Supabase) ويستمر بتقديمها حتى بعد ما تصير البيانات
+// والمفاتيح صحيحة، لأن Vercel يبقي كاش ISR القديم عبر عمليات نشر جديدة
+// ويعرضه دائماً إذا فشلت إعادة التوليد بالخلفية.
+export const dynamic = 'force-dynamic';
 
 function daysAgoISO(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -41,17 +42,6 @@ export default async function MenuPage({ params }: Props) {
     // وليس صفحة 404 مضلِّلة تخفي المشكلة الحقيقية
     throw new Error(`Failed to fetch restaurant "${slug}": ${restaurantError.message}`);
   }
-
-  // تشخيص مؤقت: يظهر فقط بسجلات السيرفر الخاصة (Vercel Runtime Logs)،
-  // ما يكشف أي قيمة سرّية — بس معلومات تشخيصية عامة. يُحذف بعد حل المشكلة.
-  console.log('[menu-debug]', {
-    slug,
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    serviceKeyLen: process.env.SUPABASE_SERVICE_ROLE_KEY?.length ?? 0,
-    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    restaurantFound: !!restaurant,
-  });
 
   if (!restaurant) notFound();
 
