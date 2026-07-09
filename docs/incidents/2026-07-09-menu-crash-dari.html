@@ -1,0 +1,549 @@
+<title>ليش صارت مشكلة قائمة الطلب؟</title>
+<style>
+  :root {
+    --paper: #EDE7DA;
+    --card: #F7F3EA;
+    --card-raised: #FFFDF8;
+    --ink: #211C16;
+    --ink-soft: #5B5348;
+    --ink-faint: #8C826F;
+    --line: #D8CFBC;
+    --line-strong: #C4B99F;
+    --amber: #B5701F;
+    --amber-bg: #F1DFB9;
+    --red: #A8402A;
+    --red-bg: #F1D4C9;
+    --green: #3F7A52;
+    --green-bg: #D9E8DA;
+    --shadow: 0 1px 2px rgba(33,28,22,0.06), 0 6px 20px rgba(33,28,22,0.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #17140F;
+      --card: #1F1B14;
+      --card-raised: #262019;
+      --ink: #F1EAD9;
+      --ink-soft: #B3A890;
+      --ink-faint: #7C7261;
+      --line: #362F24;
+      --line-strong: #463D2E;
+      --amber: #E3A354;
+      --amber-bg: #3A2D18;
+      --red: #E2604A;
+      --red-bg: #3B2019;
+      --green: #6FBE8B;
+      --green-bg: #1E2E22;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #17140F; --card: #1F1B14; --card-raised: #262019;
+    --ink: #F1EAD9; --ink-soft: #B3A890; --ink-faint: #7C7261;
+    --line: #362F24; --line-strong: #463D2E;
+    --amber: #E3A354; --amber-bg: #3A2D18;
+    --red: #E2604A; --red-bg: #3B2019;
+    --green: #6FBE8B; --green-bg: #1E2E22;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.35);
+  }
+  :root[data-theme="light"] {
+    --paper: #EDE7DA; --card: #F7F3EA; --card-raised: #FFFDF8;
+    --ink: #211C16; --ink-soft: #5B5348; --ink-faint: #8C826F;
+    --line: #D8CFBC; --line-strong: #C4B99F;
+    --amber: #B5701F; --amber-bg: #F1DFB9;
+    --red: #A8402A; --red-bg: #F1D4C9;
+    --green: #3F7A52; --green-bg: #D9E8DA;
+    --shadow: 0 1px 2px rgba(33,28,22,0.06), 0 6px 20px rgba(33,28,22,0.05);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    direction: rtl;
+    background: var(--paper);
+    color: var(--ink);
+    margin: 0;
+    font-family: "Dubai", "Segoe UI", Tahoma, "Noto Naskh Arabic", "Noto Sans Arabic", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+
+  .eyebrow {
+    font-size: 13px;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-size: clamp(26px, 4.5vw, 36px);
+    line-height: 1.35;
+    margin: 0 0 14px;
+    text-wrap: balance;
+    font-weight: 800;
+  }
+
+  .lede {
+    font-size: 17px;
+    line-height: 1.85;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0 0 28px;
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 36px;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid color-mix(in srgb, var(--green) 35%, transparent);
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .status-pill::before {
+    content: "";
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+  }
+  .status-meta { font-size: 13px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+
+  /* ===== 3-stage strip ===== */
+  .stages {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+  @media (max-width: 620px) {
+    .stages { grid-template-columns: 1fr; }
+  }
+  .stage {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 18px 20px;
+    position: relative;
+    box-shadow: var(--shadow);
+  }
+  .stage .bar {
+    position: absolute; inset-inline-start: 0; top: 0; bottom: 0;
+    width: 4px; border-radius: 14px 0 0 14px;
+  }
+  [dir="rtl"] .stage .bar { inset-inline-start: auto; inset-inline-end: 0; border-radius: 0 14px 14px 0; }
+  .stage.problem .bar { background: var(--red); }
+  .stage.cause .bar { background: var(--amber); }
+  .stage.fix .bar { background: var(--green); }
+  .stage-label {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.03em;
+    margin-bottom: 8px; display: block;
+  }
+  .stage.problem .stage-label { color: var(--red); }
+  .stage.cause .stage-label { color: var(--amber); }
+  .stage.fix .stage-label { color: var(--green); }
+  .stage h3 { font-size: 16px; margin: 0 0 6px; font-weight: 800; }
+  .stage p { font-size: 14px; line-height: 1.7; color: var(--ink-soft); margin: 0; }
+
+  section { margin-top: 56px; }
+  h2 {
+    font-size: 21px; font-weight: 800; margin: 0 0 6px;
+  }
+  .section-sub {
+    font-size: 14px; color: var(--ink-faint); margin: 0 0 22px;
+  }
+
+  /* ===== analogy card ===== */
+  .analogy {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 26px;
+    box-shadow: var(--shadow);
+  }
+  .analogy p { font-size: 16px; line-height: 1.9; margin: 0 0 14px; }
+  .analogy p:last-child { margin-bottom: 0; }
+  .analogy strong { color: var(--ink); }
+
+  /* ===== error toast (real content) ===== */
+  .toast {
+    margin-top: 20px;
+    background: var(--card-raised);
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .toast .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--red); margin-top: 6px; flex-shrink: 0;
+  }
+  .toast-body { flex: 1; min-width: 0; }
+  .toast-title { font-size: 12px; color: var(--ink-faint); margin-bottom: 6px; }
+  .toast pre {
+    margin: 0;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+    color: var(--red);
+    direction: ltr;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.6;
+  }
+  .toast-translate {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+  }
+
+  /* ===== weekly schedule grid (real data) ===== */
+  .week {
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+  @media (max-width: 560px) {
+    .week { grid-template-columns: repeat(4, 1fr); }
+  }
+  .day {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .day.missing { background: var(--red-bg); border-color: color-mix(in srgb, var(--red) 30%, transparent); }
+  .day.ok { background: var(--green-bg); border-color: color-mix(in srgb, var(--green) 30%, transparent); }
+  .day-name { font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--ink-soft); }
+  .day.missing .day-name { color: var(--red); }
+  .day.ok .day-name { color: var(--green); }
+  .day-time { font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; line-height: 1.5; }
+  .day-icon { font-size: 15px; margin-bottom: 4px; }
+  .week-legend {
+    display: flex; gap: 18px; margin-top: 14px; font-size: 13px; color: var(--ink-faint);
+  }
+  .week-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .week-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+  .week-legend .i-ok { background: var(--green); }
+  .week-legend .i-missing { background: var(--red); }
+
+  /* ===== before/after ===== */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  @media (max-width: 620px) { .compare { grid-template-columns: 1fr; } }
+  .compare-card {
+    border-radius: 14px;
+    padding: 20px;
+    border: 1px solid var(--line);
+  }
+  .compare-card.before { background: var(--red-bg); border-color: color-mix(in srgb, var(--red) 25%, transparent); }
+  .compare-card.after { background: var(--green-bg); border-color: color-mix(in srgb, var(--green) 25%, transparent); }
+  .compare-label { font-size: 12px; font-weight: 700; margin-bottom: 10px; }
+  .compare-card.before .compare-label { color: var(--red); }
+  .compare-card.after .compare-label { color: var(--green); }
+  .compare-card p { font-size: 14px; line-height: 1.75; margin: 0; color: var(--ink); }
+
+  /* ===== investigation timeline ===== */
+  .timeline { margin-top: 22px; }
+  .tl-item {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 14px;
+    position: relative;
+    padding-bottom: 22px;
+  }
+  .tl-item:last-child { padding-bottom: 0; }
+  .tl-num {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--card-raised);
+    border: 1px solid var(--line-strong);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+  .tl-item:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    top: 34px; bottom: 0;
+    inset-inline-start: 16px;
+    width: 1px;
+    background: var(--line);
+  }
+  .tl-text { padding-top: 6px; }
+  .tl-text b { display: block; font-size: 14.5px; margin-bottom: 3px; }
+  .tl-text span { font-size: 13.5px; color: var(--ink-faint); line-height: 1.6; }
+
+  /* ===== checklist ===== */
+  .checklist { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .checklist li {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 14.5px;
+    line-height: 1.7;
+  }
+  .checklist .num {
+    width: 24px; height: 24px; border-radius: 7px;
+    background: var(--amber-bg); color: var(--amber);
+    font-size: 12px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    direction: ltr;
+    text-align: left;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .stage, .analogy, .toast { transition: transform 0.2s ease; }
+  }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">تقرير عطل · قائمة الطلب (منيو الزبون) · delivery-next</p>
+  <h1>ليش كانت صفحة المنيو "ما تفتح"، وشلون انحلّت</h1>
+  <p class="lede">
+    شرح كامل، بدون أي مصطلحات برمجية، لكل شي صار: وين بالضبط كانت المشكلة،
+    ليش صارت بكل الأجهزة بنفس الوقت، وشلون تم إيجادها وإصلاحها خطوة بخطوة.
+  </p>
+
+  <div class="status-row">
+    <span class="status-pill">تم الحل ونشر الإصلاح</span>
+    <span class="status-meta">2026-07-09</span>
+  </div>
+
+  <div class="stages">
+    <div class="stage problem">
+      <div class="bar"></div>
+      <span class="stage-label">المشكلة</span>
+      <h3>الصفحة توقف فجأة</h3>
+      <p>الزبون يفتح رابط منيو "داري"، يشوف جزء من الصفحة ثانية وحدة، وبعدها تظهر شاشة "This page couldn't load".</p>
+    </div>
+    <div class="stage cause">
+      <div class="bar"></div>
+      <span class="stage-label">السبب</span>
+      <h3>سطر برمجي يفترض شي مو موجود</h3>
+      <p>الكود يحاول يقرأ "وقت إغلاق المطعم اليوم" بدون ما يتأكد إنه مكتوب أصلاً — وما كان مكتوب لأغلب الأيام.</p>
+    </div>
+    <div class="stage fix">
+      <div class="bar"></div>
+      <span class="stage-label">الحل</span>
+      <h3>خطوة تحقق قبل القراءة</h3>
+      <p>أضفنا شرط: "تأكد أول إنه فيه وقت إغلاق مكتوب، وإلا لا تحاول تقرأه" — سطر وحد غيّر كل شي.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>شنو صار بالضبط — بالتشبيه</h2>
+    <p class="section-sub">بدون أي تقنية، بس منطق بسيط</p>
+    <div class="analogy">
+      <p>
+        تخيّل موظف استقبال بالمطعم، مهمته يرحّب بكل زبون داخل ويقوله "نغلق الساعة كذا".
+        عنده ورقة مكتوب فيها جدول الأسبوع: كل يوم مكتوب جنبه "مفتوح ✓" أو "مسكر".
+      </p>
+      <p>
+        المشكلة: بأغلب أيام الأسبوع، الورقة مكتوب فيها "مفتوح ✓" بس <strong>بدون ما يكتبون
+        وقت الإغلاق جنبها</strong>. الموظف مدرّب يقرأ الوقت مباشرة من غير ما يشوف "أكو وقت مكتوب أصلاً ولا لا؟".
+      </p>
+      <p>
+        فلما يجي زبون وقت ما فيه وقت مكتوب، الموظف يوقف بالنص، ما يعرف شنو يكمل، ويسكر الباب
+        بوجه كل الزبائن اللي جاوا بعده — <strong>مو لأن المطعم مسكر فعلاً، بس لأن الموظف انصدم</strong>.
+        هذا بالضبط اللي كان يصير لكل زبون يفتح صفحة "داري": البرنامج "ينصدم" ويوقف الصفحة كاملة.
+      </p>
+    </div>
+
+    <div class="toast">
+      <span class="dot"></span>
+      <div class="toast-body">
+        <div class="toast-title">هذا الخطأ الحقيقي اللي كان يطلع بمتصفح الزبون (بالإنجليزي، رسالة تقنية داخلية)</div>
+        <pre>TypeError: Cannot read properties of undefined (reading 'split')</pre>
+        <div class="toast-translate">
+          ترجمتها البسيطة: "البرنامج حاول يقرأ وقت مو موجود أصلاً — مثل واحد يحاول يفتح صندوق فاضي ويطلع منه غاضب لأنه ما لقى شي بداخله."
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>جدول دوام "داري" — هذا سبب المشكلة فعلياً</h2>
+    <p class="section-sub">البيانات الحقيقية المسجلة بإعدادات المطعم وقت التشخيص</p>
+    <div class="week">
+      <div class="day ok">
+        <div class="day-icon">✓</div>
+        <div class="day-name">الأحد</div>
+        <div class="day-time">10:00 – 03:00</div>
+      </div>
+      <div class="day missing">
+        <div class="day-icon">!</div>
+        <div class="day-name">الاثنين</div>
+        <div class="day-time">مفعّل، بلا وقت</div>
+      </div>
+      <div class="day missing">
+        <div class="day-icon">!</div>
+        <div class="day-name">الثلاثاء</div>
+        <div class="day-time">وقت إغلاق ناقص</div>
+      </div>
+      <div class="day missing">
+        <div class="day-icon">!</div>
+        <div class="day-name">الأربعاء</div>
+        <div class="day-time">مفعّل، بلا وقت</div>
+      </div>
+      <div class="day missing">
+        <div class="day-icon">!</div>
+        <div class="day-name">الخميس</div>
+        <div class="day-time">مفعّل، بلا وقت</div>
+      </div>
+      <div class="day missing">
+        <div class="day-icon">!</div>
+        <div class="day-name">الجمعة</div>
+        <div class="day-time">مفعّل، بلا وقت</div>
+      </div>
+      <div class="day missing">
+        <div class="day-icon">!</div>
+        <div class="day-name">السبت</div>
+        <div class="day-time">مفعّل، بلا وقت</div>
+      </div>
+    </div>
+    <div class="week-legend">
+      <span><i class="i-ok"></i> يوم كامل البيانات</span>
+      <span><i class="i-missing"></i> يوم ناقصه وقت الإغلاق</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>شلون اهتديت للسبب — بالترتيب</h2>
+    <p class="section-sub">كل خطوة فحص فعلياً سوّيتها قبل ما ألقى السطر المسبب للمشكلة</p>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-num">١</div>
+        <div class="tl-text">
+          <b>تأكدت المطعم موجود بقاعدة البيانات</b>
+          <span>"داري" مو محذوف — موجود بالكامل مع كل أصنافه وفئاته.</span>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">٢</div>
+        <div class="tl-text">
+          <b>تأكدت آخر نسخة من الموقع منشورة وشغالة</b>
+          <span>Vercel كانت ناشرة آخر تحديث بنجاح، بلا أي خطأ بالنشر نفسه.</span>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">٣</div>
+        <div class="tl-text">
+          <b>طلبت الصفحة مباشرة من السيرفر (بدون متصفح)</b>
+          <span>رجعت البيانات صحيحة 100% — يعني المشكلة مو بالسيرفر ولا بقاعدة البيانات.</span>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">٤</div>
+        <div class="tl-text">
+          <b>سألتك: جربت أجهزة/شبكات/متصفحات مختلفة؟</b>
+          <span>جاوبت: كلها نفس النتيجة، حتى بيانات موبايل من شركة ثانية — هذا استبعد مشكلة الجهاز أو النت تماماً.</span>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">٥</div>
+        <div class="tl-text">
+          <b>ثبّتت متصفح حقيقي وشغّلت الصفحة فعلياً كأنك زبون</b>
+          <span>هذا أول مرة شفت رسالة الخطأ التقنية الحقيقية اللي يرميها المتصفح.</span>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">٦</div>
+        <div class="tl-text">
+          <b>تتبعت رسالة الخطأ لين السطر المحدد بالكود</b>
+          <span>لقيت سطر يقرأ "وقت الإغلاق" بدون ما يتأكد إنه موجود أصلاً.</span>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">٧</div>
+        <div class="tl-text">
+          <b>رجعت لبيانات دوام "داري" الحقيقية</b>
+          <span>تأكدت: أغلب الأيام فعلاً مفعّلة بدون وقت إغلاق مسجّل — هذا اللي كان يفعّل الخطأ.</span>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">٨</div>
+        <div class="tl-text">
+          <b>أضفت سطر تحقق، رفعت التعديل، ونشرته</b>
+          <span>Vercel نشرت النسخة الجديدة تلقائياً خلال ثوانٍ من رفع الكود.</span>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">٩</div>
+        <div class="tl-text">
+          <b>جربت الصفحة من جديد بنفس المتصفح الحقيقي</b>
+          <span>فتحت طبيعي 100%: الأقسام، الأصناف، الأسعار — كل شي ظاهر وشغال.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>قبل الإصلاح، وبعده</h2>
+    <div class="compare">
+      <div class="compare-card before">
+        <div class="compare-label">قبل</div>
+        <p>"روح اقرأ وقت الإغلاق" — حتى لو ما أكو وقت مكتوب. النتيجة: توقف كامل للصفحة.</p>
+      </div>
+      <div class="compare-card after">
+        <div class="compare-label">بعد</div>
+        <p>"أكو وقت إغلاق مكتوب أصلاً؟ إذا لا، تجاهل هالجزء وكمّل عرض باقي الصفحة عادي."</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>شنو يبقى عليك تسويه</h2>
+    <p class="section-sub">الإصلاح البرمجي منع التوقف نهائياً، بس بيانات الدوام لسا ناقصة</p>
+    <ul class="checklist">
+      <li><span class="num">١</span> افتح لوحة تحكم مطعم "داري" ← إعدادات ← أوقات الدوام.</li>
+      <li><span class="num">٢</span> لاحظ إن كل الأيام ماعدا الأحد مفعّلة بدون وقت إغلاق (وبعضها بدون وقت فتح).</li>
+      <li><span class="num">٣</span> سجّل وقت الفتح والإغلاق الصحيح لكل يوم شغّال فعلاً بالمطعم.</li>
+      <li><span class="num">٤</span> بعد التسجيل، رسالة "يغلق الساعة..." برأس صفحة المنيو راح تظهر صحيحة بدل ما تكون فاضية.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>src/app/home/HomeClient.tsx · line 112</span>
+    <span>commit 2f663a1</span>
+  </footer>
+</div>
