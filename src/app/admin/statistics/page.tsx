@@ -6,7 +6,8 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { AdminBottomNav } from '@/components/BottomNav';
 import { OwnerOnly } from '@/components/OwnerOnly';
-import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown, Flame, Car, LayoutGrid, ClipboardList } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown, Flame, Car, LayoutGrid, ClipboardList, Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { exportStatisticsToExcel, exportStatisticsToWord, type StatsExportData } from '@/lib/exportStatistics';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; order_type?: string | null; items: OrderItem[] };
@@ -65,6 +66,8 @@ export default function StatisticsPage() {
   const [expandedIng, setExpandedIng] = useState<string | null>(null);
   const [invSectionOpen, setInvSectionOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'orders'>('overview');
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!restaurantId) { setLoading(false); return; }
@@ -228,6 +231,51 @@ export default function StatisticsPage() {
     return [...map.values()].sort((a, b) => b.qty - a.qty);
   }, [orders]);
 
+  const buildExportData = useCallback((): StatsExportData => ({
+    fromDate,
+    toDate,
+    summary: { ordersCount: filtered.length, totalRevenue, avgOrder },
+    byOrderType: [
+      { name: 'محلي', count: localOrders.length, revenue: localRevenue },
+      { name: 'توصيل', count: deliveryOrders.length, revenue: deliveryRevenue },
+      { name: 'داخلي', count: internalOrders.length, revenue: internalRevenue },
+    ].filter(r => r.count > 0),
+    byCategory: catBreakdown,
+    topItems: topItemsStats,
+    inventory: ingredientStats.map(i => ({ name: i.name, unit: i.unit, total: i.total })),
+    inventoryDetail: ingredientStats.flatMap(i =>
+      [...i.byOrder.entries()].map(([orderId, info]) => ({
+        itemName: i.name,
+        unit: i.unit,
+        orderClient: invOrderNames.get(orderId) || 'طلب محذوف',
+        qty: info.qty,
+        time: new Date(info.time).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' }),
+      }))
+    ),
+    orders: filtered.map(o => ({
+      id: o.id,
+      createdAt: new Date(o.created_at).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' }),
+      clientName: o.client_name,
+      clientPhone: o.client_phone,
+      address: o.delivery_address || '',
+      note: o.client_note || '',
+      total: o.total_amount,
+      itemsText: o.items.map(it => `${it.item_name}×${it.quantity}`).join('، '),
+    })),
+  }), [fromDate, toDate, filtered, totalRevenue, avgOrder, localOrders, deliveryOrders, internalOrders, localRevenue, deliveryRevenue, internalRevenue, catBreakdown, topItemsStats, ingredientStats, invOrderNames]);
+
+  const handleExport = async (kind: 'excel' | 'word') => {
+    setExportOpen(false);
+    setExporting(true);
+    try {
+      const data = buildExportData();
+      if (kind === 'excel') await exportStatisticsToExcel(data);
+      else exportStatisticsToWord(data);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const s = {
     bg:      dark ? '#0f172a' : '#f8fafc',
     surface: dark ? '#1e293b' : '#fff',
@@ -247,7 +295,36 @@ export default function StatisticsPage() {
           <ChevronRight size={20} style={{ color: s.sub }} />
         </button>
         <h1 className="text-xl font-bold" style={{ color: s.text }}>الإحصائيات</h1>
-        <div className="w-9" />
+        <div className="relative">
+          <button onClick={() => setExportOpen(o => !o)} disabled={exporting}
+            className="w-9 h-9 flex items-center justify-center rounded-xl active:scale-90 transition-all disabled:opacity-50"
+            style={{ backgroundColor: s.muted }}>
+            {exporting
+              ? <div className="w-4 h-4 border-2 border-[#f97316] border-t-transparent rounded-full animate-spin" />
+              : <Download size={18} style={{ color: s.sub }} />}
+          </button>
+          {exportOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setExportOpen(false)} />
+              <div className="absolute left-0 top-11 z-50 w-44 rounded-xl border shadow-lg overflow-hidden"
+                style={{ backgroundColor: s.surface, borderColor: s.border }}>
+                <button onClick={() => handleExport('excel')}
+                  className="w-full flex items-center gap-2 justify-end px-3 py-2.5 text-sm font-bold active:scale-[0.98] transition-all"
+                  style={{ color: s.text }}>
+                  تصدير Excel
+                  <FileSpreadsheet size={16} style={{ color: '#22c55e' }} />
+                </button>
+                <div className="h-px" style={{ backgroundColor: s.border }} />
+                <button onClick={() => handleExport('word')}
+                  className="w-full flex items-center gap-2 justify-end px-3 py-2.5 text-sm font-bold active:scale-[0.98] transition-all"
+                  style={{ color: s.text }}>
+                  تصدير Word
+                  <FileText size={16} style={{ color: '#3b82f6' }} />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </header>
 
       {/* رابط إحصائيات السائقين */}
