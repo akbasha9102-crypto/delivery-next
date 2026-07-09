@@ -12,11 +12,11 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/CustomerGuard';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; discount_pct?: number };
+type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string };
 type Extra    = { id: string; name: string; price: number };
 type Item     = {
   id: string; name: string; price: number; description: string;
-  image_url: string | null; category_id: string; is_available: boolean; item_status?: string; extras_json?: string; discount_pct?: number;
+  image_url: string | null; category_id: string; is_available: boolean; item_status?: string; extras_json?: string;
 };
 
 function formatOpenTime(time: string | null): string {
@@ -284,23 +284,12 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
     try { return JSON.parse(item.extras_json || '[]'); } catch { return []; }
   };
 
-  // خصم الوجبة له الأولوية على خصم القسم عند وجود الاثنين معاً
-  const getDiscountPct = (item: Item): number => {
-    if (item.discount_pct && item.discount_pct > 0) return item.discount_pct;
-    const cat = categories.find(c => c.id === item.category_id);
-    return (cat?.discount_pct && cat.discount_pct > 0) ? cat.discount_pct : 0;
-  };
-  const getEffectivePrice = (item: Item): number => {
-    const pct = getDiscountPct(item);
-    return pct > 0 ? Math.round(item.price * (1 - pct / 100) * 100) / 100 : item.price;
-  };
-
   useEffect(() => {
     if (!selectedItem) { prevModalPrice.current = 0; return; }
     const extras = getExtras(selectedItem);
     const extrasSum = extras.filter(e => selectedModalExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
     const quantity = cartItems.find(i => i.id === selectedItem.id)?.quantity || 0;
-    const dp = quantity * (getEffectivePrice(selectedItem) + extrasSum);
+    const dp = quantity * (selectedItem.price + extrasSum);
     if (dp > prevModalPrice.current) {
       setModalPriceFlash(true);
       const t = setTimeout(() => setModalPriceFlash(false), 700);
@@ -312,7 +301,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
   const handleAdd = (item: Item, selectedExtrasNames?: string[], extrasPrice = 0) => {
     if (getStatus(item) !== 'available') return;
-    addItem({ id: item.id, name: item.name, price: getEffectivePrice(item) + extrasPrice, image_url: item.image_url, extras_json: item.extras_json, selected_extras_names: selectedExtrasNames });
+    addItem({ id: item.id, name: item.name, price: item.price + extrasPrice, image_url: item.image_url, extras_json: item.extras_json, selected_extras_names: selectedExtrasNames });
   };
 
   const qty = (id: string) => cartItems.find(i => i.id === id)?.quantity || 0;
@@ -508,8 +497,6 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                     const count  = qty(item.id);
                     const status = getStatus(item);
                     const isAvailable = !is_closed && status === 'available';
-                    const itemDiscountPct = getDiscountPct(item);
-                    const itemEffectivePrice = getEffectivePrice(item);
                     return (
                       <motion.div
                         key={item.id}
@@ -563,17 +550,9 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
                           <div className={`mt-auto flex ${isBestSellers ? 'flex-col items-stretch gap-1' : 'flex-col sm:flex-row-reverse sm:items-center sm:justify-between gap-2 sm:gap-4'}`}>
                             <div className="text-right flex-shrink-0">
-                              {itemDiscountPct > 0 && !isBestSellers && (
-                                <p className="text-[10px] sm:text-xs text-gray-400 line-through -mb-0.5">{item.price.toLocaleString()}</p>
-                              )}
-                              <div className="flex items-center gap-1.5 justify-end">
-                                <p className={`font-black ${itemDiscountPct > 0 ? 'text-red-500' : 'text-black dark:text-white'} ${isBestSellers ? 'text-xs' : 'text-base sm:text-2xl'}`}>
-                                  {itemEffectivePrice.toLocaleString()}
-                                </p>
-                                {itemDiscountPct > 0 && (
-                                  <span className="text-[9px] sm:text-[10px] font-black bg-red-500 text-white rounded-full px-1.5 py-0.5">-{itemDiscountPct}%</span>
-                                )}
-                              </div>
+                              <p className={`font-black text-black dark:text-white ${isBestSellers ? 'text-xs' : 'text-base sm:text-2xl'}`}>
+                                {item.price.toLocaleString()}
+                              </p>
                               {!isBestSellers && <p className="text-[8px] sm:text-[10px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>}
                             </div>
 
@@ -590,7 +569,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                       style={{ backgroundColor: catColor }}>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
-                                        onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: itemEffectivePrice, image_url: item.image_url }); }}
+                                        onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
                                         className={`rounded-full flex items-center justify-center ${isBestSellers ? 'w-5 h-5' : 'w-7 h-7 sm:w-10 sm:h-10'}`}
                                         style={{ backgroundColor: dark ? '#ffffff' : catTextColor, color: dark ? '#000000' : catColor }}>
                                         <Plus size={isBestSellers ? 10 : 14} strokeWidth={3}/>
@@ -914,17 +893,13 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                       {(() => {
                         const modalExtras = getExtras(selectedItem);
                         const extrasSum = modalExtras.filter(e => selectedModalExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
-                        const modalDiscountPct = getDiscountPct(selectedItem);
-                        const displayPrice = getEffectivePrice(selectedItem) + extrasSum;
+                        const displayPrice = selectedItem.price + extrasSum;
                         return (
                           <>
                             <div className="flex justify-between items-center flex-row-reverse mb-4 sm:mb-6">
                               <h3 className="text-xl sm:text-3xl font-black text-right">{selectedItem.name}</h3>
                               <div className="text-left">
-                                {modalDiscountPct > 0 && (
-                                  <p className="text-xs sm:text-sm text-gray-400 line-through">{(selectedItem.price + extrasSum).toLocaleString()}</p>
-                                )}
-                                <p className={`text-xl sm:text-2xl font-black ${modalDiscountPct > 0 ? 'text-red-500' : 'dark:text-white'}`}>{displayPrice.toLocaleString()} <span className="text-[10px] opacity-40">د.ع</span></p>
+                                <p className="text-xl sm:text-2xl font-black dark:text-white">{displayPrice.toLocaleString()} <span className="text-[10px] opacity-40">د.ع</span></p>
                               </div>
                             </div>
                             <p className="text-gray-500 dark:text-slate-400 text-right leading-relaxed text-sm sm:text-lg">
@@ -976,7 +951,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                           {(() => {
                             const extras = getExtras(selectedItem);
                             const extrasSum = extras.filter(e => selectedModalExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
-                            return (qty(selectedItem.id) * (getEffectivePrice(selectedItem) + extrasSum)).toLocaleString();
+                            return (qty(selectedItem.id) * (selectedItem.price + extrasSum)).toLocaleString();
                           })()} <span className="text-[10px] opacity-40">د.ع</span>
                         </motion.p>
                       </div>
@@ -996,7 +971,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                               >
                                 <motion.button
                                   whileTap={{ scale: 0.8 }}
-                                  onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const sel = extras.filter(ex => selectedModalExtras.has(ex.id)); const selectedNames = sel.map(ex => ex.name); const extrasPrice = sel.reduce((s, ex) => s + ex.price, 0); addItem({ id: selectedItem.id, name: selectedItem.name, price: getEffectivePrice(selectedItem) + extrasPrice, image_url: selectedItem.image_url, extras_json: selectedItem.extras_json, selected_extras_names: selectedNames.length > 0 ? selectedNames : undefined }); }}
+                                  onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const sel = extras.filter(ex => selectedModalExtras.has(ex.id)); const selectedNames = sel.map(ex => ex.name); const extrasPrice = sel.reduce((s, ex) => s + ex.price, 0); addItem({ id: selectedItem.id, name: selectedItem.name, price: selectedItem.price + extrasPrice, image_url: selectedItem.image_url, extras_json: selectedItem.extras_json, selected_extras_names: selectedNames.length > 0 ? selectedNames : undefined }); }}
                                   className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center"
                                 >
                                   <Plus size={16} strokeWidth={3}/>
