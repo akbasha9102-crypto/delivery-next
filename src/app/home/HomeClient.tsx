@@ -107,7 +107,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   })();
 
   const isClosingSoon = (() => {
-    if (!todayHours || is_closed) return false;
+    if (!todayHours?.close || is_closed) return false;
     const now = new Date();
     const [closeH, closeM] = todayHours.close.split(':').map(Number);
     const closeMinutes = closeH * 60 + closeM;
