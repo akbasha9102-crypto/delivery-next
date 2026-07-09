@@ -9,15 +9,18 @@ export type StatsExportData = {
   topItems: { name: string; qty: number; revenue: number }[];
   inventory: { name: string; unit: string; total: number }[];
   inventoryDetail: { itemName: string; unit: string; orderClient: string; qty: number; time: string }[];
-  orders: {
-    id: string;
+  orderItems: {
+    orderId: string;
     createdAt: string;
     clientName: string;
     clientPhone: string;
     address: string;
     note: string;
-    total: number;
-    itemsText: string;
+    itemName: string;
+    qty: number;
+    unitPrice: number;
+    lineTotal: number;
+    orderTotal: number;
   }[];
 };
 
@@ -92,9 +95,9 @@ export async function exportStatisticsToExcel(data: StatsExportData) {
       data.inventoryDetail.map(r => [r.itemName, r.orderClient, r.qty, r.time]));
   }
 
-  if (data.orders.length) {
-    addSheet('الطلبات', ['التاريخ', 'الزبون', 'الهاتف', 'العنوان', 'ملاحظة', 'الإجمالي (د.ع)', 'الأصناف'],
-      data.orders.map(o => [o.createdAt, o.clientName, o.clientPhone, o.address, o.note, o.total, o.itemsText]));
+  if (data.orderItems.length) {
+    addSheet('الطلبات', ['رقم الطلب', 'التاريخ', 'الزبون', 'الهاتف', 'العنوان', 'ملاحظة', 'الصنف', 'الكمية', 'سعر الوحدة (د.ع)', 'إجمالي الصنف (د.ع)', 'إجمالي الطلب (د.ع)'],
+      data.orderItems.map(o => [o.orderId, o.createdAt, o.clientName, o.clientPhone, o.address, o.note, o.itemName, o.qty, o.unitPrice, o.lineTotal, o.orderTotal]));
   }
 
   const buffer = await wb.xlsx.writeBuffer();
@@ -139,9 +142,9 @@ export function exportStatisticsToWord(data: StatsExportData) {
       data.inventory.map(r => [r.name, r.unit, r.total])));
   }
 
-  if (data.orders.length) {
-    sections.push(`<h2>الطلبات</h2>` + table(['التاريخ', 'الزبون', 'الهاتف', 'العنوان', 'ملاحظة', 'الإجمالي (د.ع)', 'الأصناف'],
-      data.orders.map(o => [o.createdAt, o.clientName, o.clientPhone, o.address, o.note, o.total, o.itemsText])));
+  if (data.orderItems.length) {
+    sections.push(`<h2>الطلبات</h2>` + table(['رقم الطلب', 'التاريخ', 'الزبون', 'الهاتف', 'العنوان', 'ملاحظة', 'الصنف', 'الكمية', 'سعر الوحدة (د.ع)', 'إجمالي الصنف (د.ع)', 'إجمالي الطلب (د.ع)'],
+      data.orderItems.map(o => [o.orderId, o.createdAt, o.clientName, o.clientPhone, o.address, o.note, o.itemName, o.qty, o.unitPrice, o.lineTotal, o.orderTotal])));
   }
 
   const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>

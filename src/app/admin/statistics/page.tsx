@@ -252,16 +252,12 @@ export default function StatisticsPage() {
         time: new Date(info.time).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' }),
       }))
     ),
-    orders: filtered.map(o => ({
-      id: o.id,
-      createdAt: new Date(o.created_at).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' }),
-      clientName: o.client_name,
-      clientPhone: o.client_phone,
-      address: o.delivery_address || '',
-      note: o.client_note || '',
-      total: o.total_amount,
-      itemsText: o.items.map(it => `${it.item_name}×${it.quantity}`).join('، '),
-    })),
+    orderItems: filtered.flatMap(o => {
+      const createdAt = new Date(o.created_at).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' });
+      const base = { orderId: o.id, createdAt, clientName: o.client_name, clientPhone: o.client_phone, address: o.delivery_address || '', note: o.client_note || '', orderTotal: o.total_amount };
+      if (o.items.length === 0) return [{ ...base, itemName: '', qty: 0, unitPrice: 0, lineTotal: 0 }];
+      return o.items.map(it => ({ ...base, itemName: it.item_name, qty: it.quantity, unitPrice: it.price, lineTotal: it.price * it.quantity }));
+    }),
   }), [fromDate, toDate, filtered, totalRevenue, avgOrder, localOrders, deliveryOrders, internalOrders, localRevenue, deliveryRevenue, internalRevenue, catBreakdown, topItemsStats, ingredientStats, invOrderNames]);
 
   const handleExport = async (kind: 'excel' | 'word') => {
