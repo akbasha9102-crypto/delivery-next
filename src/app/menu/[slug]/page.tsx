@@ -47,69 +47,82 @@ export default async function MenuPage({ params }: Props) {
 
   if (!restaurant) notFound();
 
-  // جلب فئات وأصناف هذا المطعم فقط
-  const [{ data: categories }, { data: items }, { data: settings }] = await Promise.all([
-    anonClient
-      .from('categories')
-      .select('*')
-      .eq('restaurant_id', restaurant.id)
-      .order('sort_order', { ascending: true, nullsFirst: false }),
-    anonClient
-      .from('items')
-      .select('*')
-      .eq('restaurant_id', restaurant.id)
-      .order('name'),
-    supabaseAdmin
-      .from('restaurant_settings')
-      .select('show_best_sellers')
-      .eq('restaurant_id', restaurant.id)
-      .maybeSingle(),
-  ]);
+  try {
+    // جلب فئات وأصناف هذا المطعم فقط
+    const [{ data: categories }, { data: items }, { data: settings }] = await Promise.all([
+      anonClient
+        .from('categories')
+        .select('*')
+        .eq('restaurant_id', restaurant.id)
+        .order('sort_order', { ascending: true, nullsFirst: false }),
+      anonClient
+        .from('items')
+        .select('*')
+        .eq('restaurant_id', restaurant.id)
+        .order('name'),
+      supabaseAdmin
+        .from('restaurant_settings')
+        .select('show_best_sellers')
+        .eq('restaurant_id', restaurant.id)
+        .maybeSingle(),
+    ]);
 
-  const showBestSellers = settings?.show_best_sellers ?? true;
+    const showBestSellers = settings?.show_best_sellers ?? true;
 
-  // أفضل 3 وجبات مبيعاً (حسب الكمية) من آخر 60 يوم من الطلبات المكتملة لهذا المطعم فقط
-  let bestSellerItemIds: string[] = [];
-  if (showBestSellers) {
-    const since = daysAgoISO(60);
-    const { data: recentOrders } = await supabaseAdmin
-      .from('orders')
-      .select('id')
-      .eq('restaurant_id', restaurant.id)
-      .eq('status', 'completed')
-      .gte('created_at', since)
-      .limit(1000);
+    // أفضل 3 وجبات مبيعاً (حسب الكمية) من آخر 60 يوم من الطلبات المكتملة لهذا المطعم فقط
+    let bestSellerItemIds: string[] = [];
+    if (showBestSellers) {
+      const since = daysAgoISO(60);
+      const { data: recentOrders } = await supabaseAdmin
+        .from('orders')
+        .select('id')
+        .eq('restaurant_id', restaurant.id)
+        .eq('status', 'completed')
+        .gte('created_at', since)
+        .limit(1000);
 
-    const orderIds = (recentOrders || []).map((o) => o.id as string);
-    if (orderIds.length > 0) {
-      const { data: orderItems } = await supabaseAdmin
-        .from('order_items')
-        .select('item_id, quantity')
-        .in('order_id', orderIds)
-        .not('item_id', 'is', null);
+      const orderIds = (recentOrders || []).map((o) => o.id as string);
+      if (orderIds.length > 0) {
+        const { data: orderItems } = await supabaseAdmin
+          .from('order_items')
+          .select('item_id, quantity')
+          .in('order_id', orderIds)
+          .not('item_id', 'is', null);
 
-      const qtyByItem = new Map<string, number>();
-      (orderItems || []).forEach((row) => {
-        const id = row.item_id as string | null;
-        if (!id) return;
-        qtyByItem.set(id, (qtyByItem.get(id) || 0) + (row.quantity as number));
-      });
+        const qtyByItem = new Map<string, number>();
+        (orderItems || []).forEach((row) => {
+          const id = row.item_id as string | null;
+          if (!id) return;
+          qtyByItem.set(id, (qtyByItem.get(id) || 0) + (row.quantity as number));
+        });
 
-      bestSellerItemIds = [...qtyByItem.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([id]) => id);
+        bestSellerItemIds = [...qtyByItem.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([id]) => id);
+      }
     }
-  }
 
-  return (
-    <HomeClient
-      initialCategories={categories || []}
-      initialItems={items || []}
-      restaurantId={restaurant.id}
-      restaurantSlug={slug}
-      showBestSellers={showBestSellers}
-      bestSellerItemIds={bestSellerItemIds}
-    />
-  );
+    console.log('[menu-debug3] about to render HomeClient', {
+      categoriesCount: categories?.length,
+      itemsCount: items?.length,
+    });
+
+    return (
+      <HomeClient
+        initialCategories={categories || []}
+        initialItems={items || []}
+        restaurantId={restaurant.id}
+        restaurantSlug={slug}
+        showBestSellers={showBestSellers}
+        bestSellerItemIds={bestSellerItemIds}
+      />
+    );
+  } catch (err) {
+    console.log('[menu-debug3-CAUGHT]', {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    throw err;
+  }
 }
