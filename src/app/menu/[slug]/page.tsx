@@ -42,6 +42,17 @@ export default async function MenuPage({ params }: Props) {
     throw new Error(`Failed to fetch restaurant "${slug}": ${restaurantError.message}`);
   }
 
+  // تشخيص مؤقت: يظهر فقط بسجلات السيرفر الخاصة (Vercel Runtime Logs)،
+  // ما يكشف أي قيمة سرّية — بس معلومات تشخيصية عامة. يُحذف بعد حل المشكلة.
+  console.log('[menu-debug]', {
+    slug,
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    serviceKeyLen: process.env.SUPABASE_SERVICE_ROLE_KEY?.length ?? 0,
+    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    restaurantFound: !!restaurant,
+  });
+
   if (!restaurant) notFound();
 
   // جلب فئات وأصناف هذا المطعم فقط
