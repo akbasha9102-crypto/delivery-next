@@ -43,6 +43,8 @@ export default async function MenuPage({ params }: Props) {
     throw new Error(`Failed to fetch restaurant "${slug}": ${restaurantError.message}`);
   }
 
+  console.log('[menu-debug2]', { slug, restaurantFound: !!restaurant, restaurant, restaurantError });
+
   if (!restaurant) notFound();
 
   // جلب فئات وأصناف هذا المطعم فقط
