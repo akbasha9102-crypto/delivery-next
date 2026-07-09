@@ -10,7 +10,7 @@ import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown, Flame, Car,
 import { exportStatisticsToExcel, exportStatisticsToWord, type StatsExportData } from '@/lib/exportStatistics';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; order_type?: string | null; items: OrderItem[] };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; order_type?: string | null; table_number?: number | string | null; delivery_fee?: number | null; discount_amount?: number | null; coupon_code?: string | null; items: OrderItem[] };
 type Category = { id: string; name: string };
 
 type StockMovementRow = {
@@ -231,9 +231,19 @@ export default function StatisticsPage() {
     return [...map.values()].sort((a, b) => b.qty - a.qty);
   }, [orders]);
 
+  const orderTypeLabel = (ot?: string | null) => ot === 'local' ? 'محلي' : ot === 'pickup' ? 'داخلي' : 'توصيل';
+
+  const exportRangeLabel = useMemo(() => {
+    if (range === 'today') return dayView === today ? 'اليوم' : formatDayLabel(dayView);
+    if (range === 'week') return 'الأسبوع';
+    if (range === 'month') return 'الشهر';
+    return 'فترة مخصصة';
+  }, [range, dayView, today]);
+
   const buildExportData = useCallback((): StatsExportData => ({
     fromDate,
     toDate,
+    rangeLabel: exportRangeLabel,
     summary: { ordersCount: filtered.length, totalRevenue, avgOrder },
     byOrderType: [
       { name: 'محلي', count: localOrders.length, revenue: localRevenue },
@@ -254,11 +264,26 @@ export default function StatisticsPage() {
     ),
     orderItems: filtered.flatMap(o => {
       const createdAt = new Date(o.created_at).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' });
-      const base = { orderId: o.id, createdAt, clientName: o.client_name, clientPhone: o.client_phone, address: o.delivery_address || '', note: o.client_note || '', orderTotal: o.total_amount };
+      const subtotal = o.items.reduce((s2, it) => s2 + it.price * it.quantity, 0);
+      const base = {
+        orderId: o.id,
+        createdAt,
+        orderTypeLabel: orderTypeLabel(o.order_type),
+        tableNumber: o.table_number ?? '',
+        clientName: o.client_name,
+        clientPhone: o.client_phone,
+        address: o.delivery_address || '',
+        note: o.client_note || '',
+        subtotal,
+        deliveryFee: o.delivery_fee || 0,
+        discountAmount: o.discount_amount || 0,
+        couponCode: o.coupon_code || '',
+        orderTotal: o.total_amount,
+      };
       if (o.items.length === 0) return [{ ...base, itemName: '', qty: 0, unitPrice: 0, lineTotal: 0 }];
       return o.items.map(it => ({ ...base, itemName: it.item_name, qty: it.quantity, unitPrice: it.price, lineTotal: it.price * it.quantity }));
     }),
-  }), [fromDate, toDate, filtered, totalRevenue, avgOrder, localOrders, deliveryOrders, internalOrders, localRevenue, deliveryRevenue, internalRevenue, catBreakdown, topItemsStats, ingredientStats, invOrderNames]);
+  }), [fromDate, toDate, exportRangeLabel, filtered, totalRevenue, avgOrder, localOrders, deliveryOrders, internalOrders, localRevenue, deliveryRevenue, internalRevenue, catBreakdown, topItemsStats, ingredientStats, invOrderNames]);
 
   const handleExport = async (kind: 'excel' | 'word') => {
     setExportOpen(false);

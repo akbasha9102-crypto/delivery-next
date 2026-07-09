@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 export type StatsExportData = {
   fromDate: string;
   toDate: string;
+  rangeLabel: string;
   summary: { ordersCount: number; totalRevenue: number; avgOrder: number };
   byOrderType: { name: string; count: number; revenue: number }[];
   byCategory: { name: string; count: number; revenue: number }[];
@@ -12,6 +13,8 @@ export type StatsExportData = {
   orderItems: {
     orderId: string;
     createdAt: string;
+    orderTypeLabel: string;
+    tableNumber: string | number;
     clientName: string;
     clientPhone: string;
     address: string;
@@ -20,6 +23,10 @@ export type StatsExportData = {
     qty: number;
     unitPrice: number;
     lineTotal: number;
+    subtotal: number;
+    deliveryFee: number;
+    discountAmount: number;
+    couponCode: string;
     orderTotal: number;
   }[];
 };
@@ -36,7 +43,8 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 function periodLabel(data: StatsExportData) {
-  return data.fromDate === data.toDate ? data.fromDate : `${data.fromDate}_إلى_${data.toDate}`;
+  const dates = data.fromDate === data.toDate ? data.fromDate : `${data.fromDate}_إلى_${data.toDate}`;
+  return `${data.rangeLabel}_${dates}`;
 }
 
 export async function exportStatisticsToExcel(data: StatsExportData) {
@@ -63,6 +71,7 @@ export async function exportStatisticsToExcel(data: StatsExportData) {
   };
 
   addSheet('ملخص', ['البيان', 'القيمة'], [
+    ['النطاق', data.rangeLabel],
     ['الفترة من', data.fromDate],
     ['الفترة إلى', data.toDate],
     ['عدد الطلبات المكتملة', data.summary.ordersCount],
@@ -96,8 +105,9 @@ export async function exportStatisticsToExcel(data: StatsExportData) {
   }
 
   if (data.orderItems.length) {
-    addSheet('الطلبات', ['رقم الطلب', 'التاريخ', 'الزبون', 'الهاتف', 'العنوان', 'ملاحظة', 'الصنف', 'الكمية', 'سعر الوحدة (د.ع)', 'إجمالي الصنف (د.ع)', 'إجمالي الطلب (د.ع)'],
-      data.orderItems.map(o => [o.orderId, o.createdAt, o.clientName, o.clientPhone, o.address, o.note, o.itemName, o.qty, o.unitPrice, o.lineTotal, o.orderTotal]));
+    addSheet('الطلبات',
+      ['رقم الطلب', 'التاريخ', 'نوع الطلب', 'رقم الطاولة', 'الزبون', 'الهاتف', 'العنوان', 'ملاحظة', 'الصنف', 'الكمية', 'سعر الوحدة (د.ع)', 'إجمالي الصنف (د.ع)', 'مجموع المشتريات (د.ع)', 'رسوم التوصيل (د.ع)', 'الخصم (د.ع)', 'كود الكوبون', 'الإجمالي المدفوع (د.ع)'],
+      data.orderItems.map(o => [o.orderId, o.createdAt, o.orderTypeLabel, o.tableNumber, o.clientName, o.clientPhone, o.address, o.note, o.itemName, o.qty, o.unitPrice, o.lineTotal, o.subtotal, o.deliveryFee, o.discountAmount, o.couponCode, o.orderTotal]));
   }
 
   const buffer = await wb.xlsx.writeBuffer();
@@ -114,7 +124,7 @@ function table(headers: string[], rows: (string | number)[][]) {
 export function exportStatisticsToWord(data: StatsExportData) {
   const sections: string[] = [];
 
-  sections.push(`<h1>تقرير الإحصائيات</h1><p>الفترة: من ${data.fromDate} إلى ${data.toDate}</p>`);
+  sections.push(`<h1>تقرير الإحصائيات</h1><p>النطاق: ${data.rangeLabel} — من ${data.fromDate} إلى ${data.toDate}</p>`);
 
   sections.push(`<h2>ملخص</h2>` + table(['البيان', 'القيمة'], [
     ['عدد الطلبات المكتملة', data.summary.ordersCount],
@@ -143,8 +153,9 @@ export function exportStatisticsToWord(data: StatsExportData) {
   }
 
   if (data.orderItems.length) {
-    sections.push(`<h2>الطلبات</h2>` + table(['رقم الطلب', 'التاريخ', 'الزبون', 'الهاتف', 'العنوان', 'ملاحظة', 'الصنف', 'الكمية', 'سعر الوحدة (د.ع)', 'إجمالي الصنف (د.ع)', 'إجمالي الطلب (د.ع)'],
-      data.orderItems.map(o => [o.orderId, o.createdAt, o.clientName, o.clientPhone, o.address, o.note, o.itemName, o.qty, o.unitPrice, o.lineTotal, o.orderTotal])));
+    sections.push(`<h2>الطلبات</h2>` + table(
+      ['رقم الطلب', 'التاريخ', 'نوع الطلب', 'رقم الطاولة', 'الزبون', 'الهاتف', 'العنوان', 'ملاحظة', 'الصنف', 'الكمية', 'سعر الوحدة (د.ع)', 'إجمالي الصنف (د.ع)', 'مجموع المشتريات (د.ع)', 'رسوم التوصيل (د.ع)', 'الخصم (د.ع)', 'كود الكوبون', 'الإجمالي المدفوع (د.ع)'],
+      data.orderItems.map(o => [o.orderId, o.createdAt, o.orderTypeLabel, o.tableNumber, o.clientName, o.clientPhone, o.address, o.note, o.itemName, o.qty, o.unitPrice, o.lineTotal, o.subtotal, o.deliveryFee, o.discountAmount, o.couponCode, o.orderTotal])));
   }
 
   const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
