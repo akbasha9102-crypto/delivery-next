@@ -3,6 +3,10 @@ import { notFound } from 'next/navigation';
 import HomeClient from '@/app/home/HomeClient';
 
 export const revalidate = 60; // يعيد بناء الصفحة كل 60 ثانية على السيرفر
+// إجبار كل fetch داخل هذه الصفحة (بما فيها استعلامات Supabase) على تجاوز
+// Data Cache الخاص بـ Vercel (اللي يبقى محفوظ حتى عبر عمليات نشر جديدة) —
+// كان يخفي أي إصلاح لاحق لمفاتيح Supabase خلف نتيجة قديمة مخزَّنة.
+export const fetchCache = 'force-no-store';
 
 function daysAgoISO(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
