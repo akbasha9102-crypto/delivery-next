@@ -1,20 +1,21 @@
 /**
- * قراءة الدور/المطعم من الـ JWT نفسه (app_metadata.role / app_metadata.restaurant_id)
- * — الـ claims يحقنها custom_access_token_hook (راجع supabase/migrations/20260710120000_rbac_custom_claims.sql)
- * عند كل إصدار/تجديد جلسة. supabase.auth.getUser() لا يرجعها (يقرأ صف auth.users
- * الخام، ليس claims الـ hook الديناميكية) — لذلك لازم فكّ الـ JWT مباشرة.
+ * قراءة sub/exp من الـ JWT نفسه — بدون توقيع/تحقق (ذلك بمسؤولية
+ * verifySessionClaims). لا تحمل هذه الدالة أي دور/مطعم بعد اليوم: كانا
+ * يُقرآن من app_metadata.role/app_metadata.restaurant_id التي يحقنها
+ * custom_access_token_hook (راجع supabase/migrations/20260710120000_rbac_custom_claims.sql)
+ * — لكن Custom Access Token Hooks مقفلة على خطة Supabase المجانية، فالدالة
+ * لا تُستدعى أبداً والـ claims هذي تبقى فارغة دائماً. الدور/المطعم الآن
+ * يُقرآن دائماً باستعلام مباشر من user_roles/restaurants (راجع staff-auth.ts)
+ * باستخدام userId المستخرج هنا فقط.
  */
 
 export type SessionClaims = {
   userId: string;
-  role: 'owner' | 'manager' | 'cashier' | 'driver' | null;
-  restaurantId: string | null;
   exp: number | null;
 };
 
 type JwtPayload = {
   sub: string;
-  app_metadata?: { role?: string; restaurant_id?: string };
   exp?: number;
 };
 
@@ -37,11 +38,8 @@ function decodePayload(token: string): JwtPayload | null {
 
 function toClaims(payload: JwtPayload | null): SessionClaims | null {
   if (!payload?.sub) return null;
-  const role = payload.app_metadata?.role;
   return {
     userId: payload.sub,
-    role: role === 'owner' || role === 'manager' || role === 'cashier' || role === 'driver' ? role : null,
-    restaurantId: payload.app_metadata?.restaurant_id ?? null,
     exp: typeof payload.exp === 'number' ? payload.exp : null,
   };
 }

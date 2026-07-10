@@ -3,9 +3,10 @@ import { decodeSessionClaims, type SessionClaims } from './session-claims';
 
 /**
  * تحقق سيرفر-سايد كامل (توقيع + انتهاء صلاحية) من Supabase access token،
- * ويرجع claims الدور المحقونة عبر custom_access_token_hook. يحل محل نظام
- * توكن x-staff-token الموقَّع يدوياً (staff-auth.ts القديم) — كل نقاط الـ
- * API الحساسة تتحقق الآن من جلسة Supabase الحقيقية للمستخدم مباشرة.
+ * ويرجع userId/exp الموثَّقين فقط (لا دور/مطعم — هذي تُستعلَم مباشرة من
+ * user_roles/restaurants في staff-auth.ts، راجع تعليق session-claims.ts).
+ * يحل محل نظام توكن x-staff-token الموقَّع يدوياً (staff-auth.ts القديم) —
+ * كل نقاط الـ API الحساسة تتحقق الآن من جلسة Supabase الحقيقية مباشرة.
  *
  * يتطلب SUPABASE_JWT_SECRET بمتغيرات البيئة (Supabase Dashboard → Settings
  * → API → JWT Settings → JWT Secret). لو المشروع يستخدم مفاتيح توقيع

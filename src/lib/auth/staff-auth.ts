@@ -1,11 +1,14 @@
 // طبقة مساعدة لنظام RBAC (owner/manager/cashier/driver).
 //
-// كل جلسة (مالك أو موظف) هي حساب Supabase Auth حقيقي ومستقل، والدور
-// (role/restaurant_id) موجود داخل الـ JWT نفسه عبر custom_access_token_hook
-// (راجع supabase/migrations/20260710120000_rbac_custom_claims.sql). كل
-// route حساس يتحقق من توقيع الجلسة عبر verifyRequestClaims ثم يجيب
-// الحدود المالية (max_discount_pct/max_void_amount) حيّة من القاعدة —
-// لا يوجد أي توكن موقَّع يدوياً بعد الآن، ولا أي دور يُرسَل/يُوثَق به من جسم الطلب.
+// كل جلسة (مالك أو موظف) هي حساب Supabase Auth حقيقي ومستقل. الدور
+// (owner/manager/cashier/driver) والحدود المالية لا تُقرأ من الـ JWT —
+// Custom Access Token Hooks (التي كانت ستحقن role/restaurant_id داخل
+// الـ claims، راجع supabase/migrations/20260710120000_rbac_custom_claims.sql)
+// مقفلة على خطة Supabase المجانية، فالدالة لا تُستدعى أبداً عملياً. كل
+// route حساس يتحقق من توقيع الجلسة عبر verifyRequestClaims (لاستخراج
+// userId موثَّق فقط) ثم يستعلم الدور/الحدود مباشرة (Direct Query) من
+// restaurants.owner_id / user_roles حيّة من القاعدة في كل طلب — لا يوجد
+// أي توكن موقَّع يدوياً، ولا أي دور يُرسَل/يُوثَق به من جسم الطلب أو من الـ JWT.
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { verifyRequestClaims } from './verify-session';
@@ -48,6 +51,26 @@ export async function getStaffContext(userId: string, restaurantId: string): Pro
 
   if (error || !data || !data.is_active) return null;
   return data as StaffContext;
+}
+
+/**
+ * نفس getStaffContext لكن بدون معرفة restaurant_id مسبقاً — تُستخدم فقط
+ * لاكتشاف دور الجلسة الحالية (مثل /api/staff/my-context) حين لا يكون
+ * المطعم معروفاً بعد. تفترض عضوية واحدة نشطة لكل مستخدم (نفس افتراض
+ * custom_access_token_hook الأصلي بـ LIMIT 1) — أي route يعرف
+ * restaurant_id مسبقاً يجب أن يستخدم getStaffContext مباشرة بدل هذي.
+ */
+export async function findStaffContextByUserId(userId: string): Promise<StaffContext | null> {
+  if (!userId) return null;
+  const { data, error } = await supabaseAdmin
+    .from('user_roles')
+    .select('id, restaurant_id, display_name, role, is_active, max_discount_pct, max_void_amount')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .limit(1);
+
+  if (error || !data || data.length === 0) return null;
+  return data[0] as StaffContext;
 }
 
 /** المسؤول = owner أو manager (نفس عمود "المسؤول (Owner/Manager)" بمصفوفة الصلاحيات). */
@@ -97,12 +120,14 @@ export type ResolvedIdentity = {
 
 /**
  * نقطة الدخول الموحّدة لكل route حساس: تتحقق من توقيع جلسة Supabase
- * الحقيقية (Authorization: Bearer) وتقرأ role/restaurant_id من claims
- * الـ JWT نفسه — لا يوجد أي توكن موقَّع يدوياً أو دور مُرسَل من العميل بعد
- * الآن. restaurantId المتوقَّع يُمرَّر من الـ route (مثلاً من الطلب نفسه
- * الذي يُنفَّذ عليه الإجراء) لأن claim المالك لا يحمل restaurant_id (تفادياً
- * لإشكال المالك متعدد الفروع) — التحقق الفعلي لملكية المالك لهذا المطعم
- * بالذات يمر عبر restaurants.owner_id هنا.
+ * الحقيقية (Authorization: Bearer) لاستخراج userId موثَّق، ثم تستعلم
+ * الدور مباشرة (Direct Query) من القاعدة — لا من claims الـ JWT (مقفلة
+ * عملياً، راجع تعليق أعلى الملف). restaurantId المتوقَّع يُمرَّر من الـ
+ * route (مثلاً من الطلب نفسه الذي يُنفَّذ عليه الإجراء)؛ أولوية الفحص:
+ * owner عبر restaurants.owner_id، وإلا staff نشط عبر user_roles — كلا
+ * الاستعلامين مُقيَّدان بـ expectedRestaurantId بالذات، فلا يقدر مستخدم له
+ * دور بمطعم آخر (أو دور أُلغي للتو) يمرّ هنا حتى لو كان الـ access_token
+ * الحالي لسا صالحاً (تحقّق حيّ من القاعدة في كل طلب، لا يعتمد على تجديد الـ JWT).
  */
 export async function resolveStaffIdentity(req: NextRequest, expectedRestaurantId: string): Promise<
   { ok: true; identity: ResolvedIdentity } | { ok: false; status: number; error: string }
@@ -112,14 +137,14 @@ export async function resolveStaffIdentity(req: NextRequest, expectedRestaurantI
   const claims = verifyRequestClaims(req);
   if (!claims) return { ok: false, status: 401, error: 'جلسة غير صالحة أو منتهية — الرجاء تسجيل الدخول من جديد' };
 
-  if (claims.role === 'owner') {
-    const { data: restaurant } = await supabaseAdmin
-      .from('restaurants')
-      .select('id')
-      .eq('id', expectedRestaurantId)
-      .eq('owner_id', claims.userId)
-      .maybeSingle();
-    if (!restaurant) return { ok: false, status: 403, error: 'ليست لديك صلاحية على هذا المطعم' };
+  const { data: restaurant } = await supabaseAdmin
+    .from('restaurants')
+    .select('id')
+    .eq('id', expectedRestaurantId)
+    .eq('owner_id', claims.userId)
+    .maybeSingle();
+
+  if (restaurant) {
     return {
       ok: true,
       identity: {
@@ -135,12 +160,8 @@ export async function resolveStaffIdentity(req: NextRequest, expectedRestaurantI
     };
   }
 
-  if (!claims.role || claims.restaurantId !== expectedRestaurantId) {
-    return { ok: false, status: 403, error: 'لا تملك صلاحية على هذا المطعم' };
-  }
-
   const staff = await getStaffContext(claims.userId, expectedRestaurantId);
-  if (!staff) return { ok: false, status: 403, error: 'حساب غير صالح أو معطّل' };
+  if (!staff) return { ok: false, status: 403, error: 'لا تملك صلاحية على هذا المطعم' };
 
   return {
     ok: true,
