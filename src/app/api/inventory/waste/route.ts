@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
   if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
   const staff = identityRes.identity;
 
+  // تسجيل الهدر عملية كاشير/owner/manager فقط — سائق لا علاقة له بالمخزون إطلاقاً.
+  if (staff.role === 'driver') {
+    return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
+  }
+
   const { data: movement, error: movementError } = await supabaseAdmin
     .from('stock_movements')
     .insert({
@@ -59,6 +64,7 @@ export async function POST(req: NextRequest) {
   await logStaffAction({
     restaurant_id: staff.restaurant_id,
     performed_by_auth_id: staff.user_id,
+    performed_by_label: staff.display_name,
     action_type: 'inventory_waste',
     entity_type: 'inventory_item',
     entity_id: item_id,

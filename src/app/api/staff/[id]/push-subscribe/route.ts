@@ -22,23 +22,21 @@ export async function POST(req: NextRequest) {
   if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
   const requester = identityRes.identity;
 
-  // user_roles أولاً (النموذج الجديد — manager/cashier/driver)
-  if (requester.staff_id) {
+  // مالك: عمود مباشر على restaurants (لا صف user_roles/restaurant_staff له عمداً)
+  if (requester.role === 'owner') {
     const { error } = await supabaseAdmin
-      .from('user_roles')
-      .update({ push_subscription: body.subscription })
-      .eq('id', requester.staff_id);
+      .from('restaurants')
+      .update({ owner_push_subscription: body.subscription })
+      .eq('id', requester.restaurant_id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
   }
 
-  // مالك (أو موظف قديم لم يُنقَل بعد) — restaurant_staff عبر auth_user_id
+  // manager/cashier/driver — user_roles
   const { error } = await supabaseAdmin
-    .from('restaurant_staff')
+    .from('user_roles')
     .update({ push_subscription: body.subscription })
-    .eq('restaurant_id', requester.restaurant_id)
-    .eq('auth_user_id', requester.user_id);
-
+    .eq('id', requester.staff_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

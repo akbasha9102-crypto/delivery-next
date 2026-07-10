@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
   await logStaffAction({
     restaurant_id: staff.restaurant_id,
     performed_by_auth_id: staff.user_id,
+      performed_by_label: staff.display_name,
     action_type: 'shift_open',
     entity_type: 'cashier_shift',
     entity_id: shift.id,

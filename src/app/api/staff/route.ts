@@ -53,7 +53,9 @@ export async function POST(req: NextRequest) {
   if (!display_name?.trim()) {
     return NextResponse.json({ error: 'display_name مطلوب' }, { status: 400 });
   }
-  if (!role || !['manager', 'cashier', 'driver'].includes(role)) {
+  // driver مستبعَد عمداً — للسائقين تدفّق إنشاء منفصل (/api/driver) يُنشئ
+  // صف drivers المرتبط أيضاً، وإلا يبقى حساب driver بلا صف drivers مقابل.
+  if (!role || !['manager', 'cashier'].includes(role)) {
     return NextResponse.json({ error: 'role غير صالح' }, { status: 400 });
   }
   if (!password || password.trim().length < 4) {

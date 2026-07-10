@@ -495,7 +495,7 @@ export default function LocalCashierPage() {
   }
 
   if (!shift) {
-    return staffId && staffToken && restaurantId
+    return staffId && staffToken && restaurantId && activeStaff.role !== 'owner'
       ? <OpenShiftScreen staffToken={staffToken} restaurantId={restaurantId} onOpened={setShift} />
       : (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center p-6 text-center" dir="rtl">

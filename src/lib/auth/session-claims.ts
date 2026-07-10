@@ -9,6 +9,7 @@ export type SessionClaims = {
   userId: string;
   role: 'owner' | 'manager' | 'cashier' | 'driver' | null;
   restaurantId: string | null;
+  exp: number | null;
 };
 
 type JwtPayload = {
@@ -41,6 +42,7 @@ function toClaims(payload: JwtPayload | null): SessionClaims | null {
     userId: payload.sub,
     role: role === 'owner' || role === 'manager' || role === 'cashier' || role === 'driver' ? role : null,
     restaurantId: payload.app_metadata?.restaurant_id ?? null,
+    exp: typeof payload.exp === 'number' ? payload.exp : null,
   };
 }
 

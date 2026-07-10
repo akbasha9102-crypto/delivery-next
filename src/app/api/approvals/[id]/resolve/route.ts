@@ -54,6 +54,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     await logStaffAction({
       restaurant_id: approval.restaurant_id,
       performed_by_auth_id: auth.userId,
+      performed_by_label: 'المالك',
       action_type: 'approval_rejected',
       entity_type: 'approval_request',
       entity_id: approvalId,
@@ -62,6 +63,18 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     });
 
     return NextResponse.json({ resolved: true, approval: updated });
+  }
+
+  // اسم الكاشير الأصلي الذي طلب الموافقة — لعرضه بسجل التدقيق بدل "غير معروف"
+  let requesterLabel: string | null = null;
+  if (approval.requested_by_user_id) {
+    const { data: requesterRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('display_name')
+      .eq('user_id', approval.requested_by_user_id)
+      .eq('restaurant_id', approval.restaurant_id)
+      .maybeSingle();
+    requesterLabel = requesterRole?.display_name ?? null;
   }
 
   // action === 'approve' — نفّذ العملية المعلّقة فعلياً حسب request_type
@@ -80,6 +93,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       await logStaffAction({
         restaurant_id: approval.restaurant_id,
         performed_by_auth_id: approval.requested_by_user_id,
+        performed_by_label: requesterLabel,
         action_type: 'order_void',
         entity_type: 'order',
         entity_id: order.id,
@@ -91,6 +105,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       await logStaffAction({
         restaurant_id: approval.restaurant_id,
         performed_by_auth_id: approval.requested_by_user_id,
+        performed_by_label: requesterLabel,
         action_type: 'order_refund',
         entity_type: 'order',
         entity_id: order.id,
@@ -105,6 +120,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       await logStaffAction({
         restaurant_id: approval.restaurant_id,
         performed_by_auth_id: approval.requested_by_user_id,
+        performed_by_label: requesterLabel,
         action_type: 'discount_applied',
         entity_type: 'order',
         entity_id: order.id,
@@ -127,6 +143,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   await logStaffAction({
     restaurant_id: approval.restaurant_id,
     performed_by_auth_id: auth.userId,
+    performed_by_label: 'المالك',
     action_type: 'approval_approved',
     entity_type: 'approval_request',
     entity_id: approvalId,

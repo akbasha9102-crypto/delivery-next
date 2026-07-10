@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 export type LogStaffActionParams = {
   restaurant_id: string;
   performed_by_auth_id?: string | null;  // auth.uid() لمن نفّذ العملية (owner/manager/cashier)
+  performed_by_label?: string | null;    // اسم معروض جاهز (مثلاً identity.display_name) — يمنع ظهور "غير معروف" بسجل التدقيق
   action_type: string;
   entity_type?: string | null;
   entity_id?: string | null;
@@ -26,6 +27,7 @@ export async function logStaffAction(params: LogStaffActionParams): Promise<void
   const { error } = await supabaseAdmin.from('staff_actions_log').insert({
     restaurant_id: params.restaurant_id,
     performed_by_auth_id: params.performed_by_auth_id ?? null,
+    performed_by_label: params.performed_by_label ?? null,
     action_type: params.action_type,
     entity_type: params.entity_type ?? null,
     entity_id: params.entity_id ?? null,

@@ -88,6 +88,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   await logStaffAction({
     restaurant_id: shift.restaurant_id,
     performed_by_auth_id: shift.staff_user_id,
+    performed_by_label: requester.user_id === shift.staff_user_id ? requester.display_name : null,
     action_type: 'shift_close',
     entity_type: 'cashier_shift',
     entity_id: shift.id,

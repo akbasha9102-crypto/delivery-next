@@ -27,8 +27,8 @@ export function verifySessionClaims(accessToken: string): SessionClaims | null {
   const claims = decodeSessionClaims(accessToken);
   if (!claims) return null;
 
-  const payloadJson = JSON.parse(Buffer.from(payloadB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
-  if (typeof payloadJson.exp === 'number' && payloadJson.exp * 1000 < Date.now()) return null;
+  // فشل مغلق: توكن بلا exp (غير طبيعي لتوكن Supabase حقيقي) يُرفض، لا يُعامَل كأنه لا ينتهي أبداً.
+  if (claims.exp === null || claims.exp * 1000 < Date.now()) return null;
 
   return claims;
 }

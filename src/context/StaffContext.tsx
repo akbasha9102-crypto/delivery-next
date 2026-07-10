@@ -97,7 +97,9 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
       const myCtx = await getMyStaffContext(session.access_token);
       if (cancelled) return;
 
+      let role: ActiveStaff['role'] | null = null;
       if (myCtx.ok) {
+        role = myCtx.data.role;
         setActiveStaff({
           staffId: myCtx.data.staff_id,
           displayName: myCtx.data.display_name,
@@ -111,7 +113,10 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
         setActiveStaff(null);
       }
 
-      await refreshStaffList();
+      // GET /api/staff مالك فقط — استدعاؤه لجلسة كاشير/مدير/سائق مضمون الفشل
+      // (403) على كل تحميل صفحة بلا فائدة (قائمة الموظفين تُعرض للمالك فقط).
+      if (role === 'owner') await refreshStaffList();
+      else setStaffListLoading(false);
       if (cancelled) return;
       setReady(true);
     })();

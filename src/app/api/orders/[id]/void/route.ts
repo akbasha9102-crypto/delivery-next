@@ -95,6 +95,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     await logStaffAction({
       restaurant_id: staff.restaurant_id,
       performed_by_auth_id: staff.user_id,
+      performed_by_label: staff.display_name,
       action_type: 'approval_requested',
       entity_type: 'approval_request',
       entity_id: approval.id,
@@ -124,6 +125,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   await logStaffAction({
     restaurant_id: staff.restaurant_id,
     performed_by_auth_id: staff.user_id,
+    performed_by_label: staff.display_name,
     action_type: 'order_void',
     entity_type: 'order',
     entity_id: orderId,

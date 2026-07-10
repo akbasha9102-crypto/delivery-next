@@ -22,11 +22,15 @@ export type NotifyOwnerPayload = {
   tag?: string;
 };
 
+type Recipient = { table: 'user_roles' | 'restaurant_staff' | 'restaurants'; column: 'push_subscription' | 'owner_push_subscription'; id: string; push_subscription: webpush.PushSubscription | null };
+
 /**
  * يرسل push لكل owner/manager نشط عنده push_subscription مسجّل لهذا
- * المطعم — من user_roles (النموذج الجديد) ومن restaurant_staff (موظفون
- * مسجَّلون بالنظام القديم، مؤقتاً حتى حذف الجدول). لا يرمي استثناءً عند
- * الفشل (best effort) — الإشعار تحسين تجربة، وليس جزءاً من صحة العملية المالية نفسها.
+ * المطعم — المالك عبر restaurants.owner_push_subscription (لا صف
+ * user_roles/restaurant_staff له عمداً)، manager عبر user_roles، بالإضافة
+ * لـ restaurant_staff (موظفون مسجَّلون بالنظام القديم، مؤقتاً حتى حذف
+ * الجدول). لا يرمي استثناءً عند الفشل (best effort) — الإشعار تحسين
+ * تجربة، وليس جزءاً من صحة العملية المالية نفسها.
  */
 export async function notifyOwnerPush(restaurantId: string, payload: NotifyOwnerPayload): Promise<{ sent: number }> {
   try {
@@ -36,7 +40,13 @@ export async function notifyOwnerPush(restaurantId: string, payload: NotifyOwner
       return { sent: 0 };
     }
 
-    const [{ data: newRecipients }, { data: legacyRecipients }] = await Promise.all([
+    const [{ data: owner }, { data: newRecipients }, { data: legacyRecipients }] = await Promise.all([
+      supabaseAdmin
+        .from('restaurants')
+        .select('id, owner_push_subscription')
+        .eq('id', restaurantId)
+        .not('owner_push_subscription', 'is', null)
+        .maybeSingle(),
       supabaseAdmin
         .from('user_roles')
         .select('id, push_subscription')
@@ -53,9 +63,10 @@ export async function notifyOwnerPush(restaurantId: string, payload: NotifyOwner
         .not('push_subscription', 'is', null),
     ]);
 
-    const recipients = [
-      ...(newRecipients ?? []).map((r) => ({ table: 'user_roles' as const, id: r.id, push_subscription: r.push_subscription })),
-      ...(legacyRecipients ?? []).map((r) => ({ table: 'restaurant_staff' as const, id: r.id, push_subscription: r.push_subscription })),
+    const recipients: Recipient[] = [
+      ...(owner ? [{ table: 'restaurants' as const, column: 'owner_push_subscription' as const, id: owner.id, push_subscription: owner.owner_push_subscription }] : []),
+      ...(newRecipients ?? []).map((r) => ({ table: 'user_roles' as const, column: 'push_subscription' as const, id: r.id, push_subscription: r.push_subscription })),
+      ...(legacyRecipients ?? []).map((r) => ({ table: 'restaurant_staff' as const, column: 'push_subscription' as const, id: r.id, push_subscription: r.push_subscription })),
     ];
 
     if (!recipients.length) return { sent: 0 };
@@ -76,7 +87,7 @@ export async function notifyOwnerPush(restaurantId: string, payload: NotifyOwner
         } catch (err: unknown) {
           const statusCode = (err as { statusCode?: number })?.statusCode;
           if (statusCode === 410) {
-            await supabaseAdmin.from(r.table).update({ push_subscription: null }).eq('id', r.id);
+            await supabaseAdmin.from(r.table).update({ [r.column]: null }).eq('id', r.id);
           }
         }
       })

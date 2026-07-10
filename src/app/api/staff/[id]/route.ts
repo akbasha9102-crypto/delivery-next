@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     update.display_name = body.display_name.trim();
   }
   if (body.role !== undefined) {
-    if (!['manager', 'cashier', 'driver'].includes(body.role)) {
+    if (!['manager', 'cashier'].includes(body.role)) {
       return NextResponse.json({ error: 'role غير صالح' }, { status: 400 });
     }
     update.role = body.role;
@@ -60,6 +60,14 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       password: body.password.trim(),
     });
     if (pwError) return NextResponse.json({ error: pwError.message }, { status: 500 });
+    // إبطال أي جلسة قديمة بجهاز آخر بعد تغيير كلمة المرور
+    try { await supabaseAdmin.rpc('revoke_user_sessions', { p_user_id: existing.user_id }); } catch { /* best-effort */ }
+  }
+
+  // تعطيل الحساب: لا يكفي منع دخول جديد — يجب إبطال الجلسة الحالية (JWT)
+  // فوراً وإلا تبقى صالحة بجهاز الموظف لحد انتهاء صلاحيتها الطبيعية.
+  if (body.is_active === false) {
+    try { await supabaseAdmin.rpc('revoke_user_sessions', { p_user_id: existing.user_id }); } catch { /* best-effort */ }
   }
 
   if (Object.keys(update).length === 0 && body.password === undefined) {
