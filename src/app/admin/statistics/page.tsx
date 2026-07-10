@@ -262,6 +262,14 @@ export default function StatisticsPage() {
         time: new Date(info.time).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' }),
       }))
     ),
+    ordersSummary: filtered.map(o => ({
+      orderId: o.id,
+      createdAt: new Date(o.created_at).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' }),
+      orderTypeLabel: orderTypeLabel(o.order_type),
+      customerOrTable: o.table_number ? `طاولة ${o.table_number}` : o.client_name,
+      status: 'مكتمل',
+      total: o.total_amount,
+    })),
     orderItems: filtered.flatMap(o => {
       const createdAt = new Date(o.created_at).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' });
       const subtotal = o.items.reduce((s2, it) => s2 + it.price * it.quantity, 0);
