@@ -134,7 +134,7 @@ export async function resolveStaffIdentity(req: NextRequest, expectedRestaurantI
 > {
   if (!expectedRestaurantId) return { ok: false, status: 400, error: 'restaurant_id مطلوب' };
 
-  const claims = verifyRequestClaims(req);
+  const claims = await verifyRequestClaims(req);
   if (!claims) return { ok: false, status: 401, error: 'جلسة غير صالحة أو منتهية — الرجاء تسجيل الدخول من جديد' };
 
   const { data: restaurant } = await supabaseAdmin

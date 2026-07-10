@@ -9,7 +9,7 @@ import { verifyRequestClaims } from '@/lib/auth/verify-session';
 // restaurants.owner_id / user_roles حيّ من القاعدة — لا من claims الـ JWT
 // (custom_access_token_hook مقفلة على خطة Supabase المجانية، راجع staff-auth.ts).
 export async function GET(req: NextRequest) {
-  const claims = verifyRequestClaims(req);
+  const claims = await verifyRequestClaims(req);
   if (!claims) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data: restaurant } = await supabaseAdmin
