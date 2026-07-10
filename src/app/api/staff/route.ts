@@ -5,7 +5,9 @@ import { generateStaffCode, staffCodeToEmail, verifyOwnerRequest, type StaffRole
 const STAFF_SELECT =
   'id, restaurant_id, display_name, role, is_active, user_id, code, max_discount_pct, max_void_amount, created_at, updated_at';
 
-// GET /api/staff?restaurant_id= — قائمة الموظفين (manager/cashier/driver)، مالك فقط
+// GET /api/staff?restaurant_id= — قائمة موظفي الكاشير (manager/cashier)، مالك فقط.
+// السائقون (driver) لهم صفحة/تدفّق إدارة منفصل تماماً (/admin/drivers)
+// رغم مشاركتهم نفس جدول user_roles تحت الغطاء — لا يظهرون هنا.
 export async function GET(req: NextRequest) {
   const restaurantId = req.nextUrl.searchParams.get('restaurant_id') ?? '';
   const auth = await verifyOwnerRequest(req, restaurantId);
@@ -15,6 +17,7 @@ export async function GET(req: NextRequest) {
     .from('user_roles')
     .select(STAFF_SELECT)
     .eq('restaurant_id', restaurantId)
+    .in('role', ['manager', 'cashier'])
     .order('created_at', { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
