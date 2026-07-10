@@ -14,7 +14,25 @@ export async function GET(req: NextRequest) {
     .eq('owner_id', user.id)
     .maybeSingle()).data;
 
-  // ليست جلسة المالك؟ جرّب موظف (كاشير/مدير) دخل بحساب Auth مستقل (كود+كلمة مرور)
+  // ليست جلسة المالك؟ جرّب موظف (manager/cashier/driver) دخل بحساب Auth مستقل.
+  // user_roles أولاً (النموذج الجديد)، ثم restaurant_staff (موظفون لم تُرحَّل
+  // صلاحياتهم بعد — مؤقت حتى حذف الجدول القديم).
+  if (!restaurant) {
+    const { data: roleRow } = await supabaseAdmin
+      .from('user_roles')
+      .select('restaurant_id, is_active')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (roleRow?.is_active) {
+      restaurant = (await supabaseAdmin
+        .from('restaurants')
+        .select('id, name')
+        .eq('id', roleRow.restaurant_id)
+        .maybeSingle()).data;
+    }
+  }
+
   if (!restaurant) {
     const { data: staff } = await supabaseAdmin
       .from('restaurant_staff')

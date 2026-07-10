@@ -3,42 +3,40 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
 
 // POST /api/staff/:id/push-subscribe — تسجيل اشتراك Push لجهاز موظف
-// (owner/manager عادة) لاستلام تنبيهات الموافقة الفورية وفروقات الكاش.
-//
-// إصلاح ثغرة أمنية (H4): سابقاً لم يكن هناك أي تحقق هوية — أي طرف يملك
-// الجلسة المشتركة يقدر يستبدل اشتراك Push الخاص بالمالك بجهازه هو،
-// فيختطف تنبيهات "طلب موافقة" الفورية. الآن: يجب توكن موظف صالح، وأن
-// يكون إما صاحب الصف نفسه (id مطابق لتوكنه) أو مالك/مدير مميّز (owner
-// بلا staff_id لا يملك صفاً يطابقه — لذلك المالك يسجّل اشتراكه فقط عبر
-// إنشاء صف "manager" لنفسه أولاً من شاشة إدارة الموظفين).
-export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const { id } = await ctx.params;
-
-  const identityRes = await resolveStaffIdentity(req);
-  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
-  const requester = identityRes.identity;
-
-  if (requester.staff_id !== id) {
-    return NextResponse.json({ error: 'لا يمكنك تسجيل اشتراك لموظف آخر' }, { status: 403 });
-  }
-
-  let body: { subscription?: unknown };
+// (owner/manager) لاستلام تنبيهات الموافقة الفورية وفروقات الكاش.
+// :id لم يعد يُستخدَم لتحديد الهدف (الهوية تُشتق من الجلسة الموثَّقة فقط —
+// لا يمكن تسجيل اشتراك لأي هوية غير هوية المتصل نفسه). يُبقى بالمسار
+// فقط توافقاً مع الشكل الحالي للاستدعاء.
+export async function POST(req: NextRequest) {
+  let body: { subscription?: unknown; restaurant_id?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'body غير صالح' }, { status: 400 });
   }
 
-  if (!body.subscription) {
-    return NextResponse.json({ error: 'subscription مطلوب' }, { status: 400 });
+  if (!body.subscription) return NextResponse.json({ error: 'subscription مطلوب' }, { status: 400 });
+  if (!body.restaurant_id) return NextResponse.json({ error: 'restaurant_id مطلوب' }, { status: 400 });
+
+  const identityRes = await resolveStaffIdentity(req, body.restaurant_id);
+  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
+  const requester = identityRes.identity;
+
+  // مالك: عمود مباشر على restaurants (لا صف user_roles/restaurant_staff له عمداً)
+  if (requester.role === 'owner') {
+    const { error } = await supabaseAdmin
+      .from('restaurants')
+      .update({ owner_push_subscription: body.subscription })
+      .eq('id', requester.restaurant_id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
   }
 
+  // manager/cashier/driver — user_roles
   const { error } = await supabaseAdmin
-    .from('restaurant_staff')
+    .from('user_roles')
     .update({ push_subscription: body.subscription })
-    .eq('id', id)
-    .eq('restaurant_id', requester.restaurant_id);
-
+    .eq('id', requester.staff_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

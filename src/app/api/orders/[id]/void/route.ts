@@ -18,10 +18,6 @@ const SHIFT_VOID_MULTIPLIER = 3;
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id: orderId } = await ctx.params;
 
-  const identityRes = await resolveStaffIdentity(req);
-  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
-  const staff = identityRes.identity;
-
   let body: { reason?: string };
   try {
     body = await req.json();
@@ -39,9 +35,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     .maybeSingle();
 
   if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 });
-  if (!order || order.restaurant_id !== staff.restaurant_id) {
-    return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
-  }
+  if (!order) return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
+
+  const identityRes = await resolveStaffIdentity(req, order.restaurant_id);
+  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
+  const staff = identityRes.identity;
+
   if (order.status === 'voided' || order.status === 'refunded') {
     return NextResponse.json({ error: 'الطلب ملغى/مسترجع بالفعل' }, { status: 409 });
   }
@@ -49,11 +48,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const amount = Number(order.total_amount) || 0;
 
   let cumulativeVoided = 0;
-  if (!staff.is_privileged && staff.staff_id) {
+  if (!staff.is_privileged) {
     const { data: openShift } = await supabaseAdmin
       .from('cashier_shifts')
       .select('opened_at')
-      .eq('staff_id', staff.staff_id)
+      .eq('staff_user_id', staff.user_id)
       .eq('status', 'open')
       .maybeSingle();
 
@@ -61,7 +60,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       const { data: priorVoids } = await supabaseAdmin
         .from('staff_actions_log')
         .select('after_data')
-        .eq('staff_id', staff.staff_id)
+        .eq('performed_by_auth_id', staff.user_id)
         .eq('action_type', 'order_void')
         .gte('created_at', openShift.opened_at);
 
@@ -81,7 +80,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       .from('approval_requests')
       .insert({
         restaurant_id: staff.restaurant_id,
-        requested_by: staff.staff_id,
+        requested_by_user_id: staff.user_id,
         request_type: 'void_order',
         order_id: order.id,
         amount,
@@ -95,7 +94,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     await logStaffAction({
       restaurant_id: staff.restaurant_id,
-      staff_id: staff.staff_id,
+      performed_by_auth_id: staff.user_id,
+      performed_by_label: staff.display_name,
       action_type: 'approval_requested',
       entity_type: 'approval_request',
       entity_id: approval.id,
@@ -124,7 +124,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   await logStaffAction({
     restaurant_id: staff.restaurant_id,
-    staff_id: staff.staff_id,
+    performed_by_auth_id: staff.user_id,
+    performed_by_label: staff.display_name,
     action_type: 'order_void',
     entity_type: 'order',
     entity_id: orderId,

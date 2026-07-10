@@ -5,7 +5,7 @@ import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { Plus, Trash2, CheckCircle, Circle, Copy, Check, KeyRound, X, RefreshCw, Loader2 } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 
-type Driver = { id: string; name: string; phone: string; status: string; password?: string | null };
+type Driver = { id: string; name: string; phone: string; status: string };
 
 function generatePassword() {
   const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -26,10 +26,13 @@ export default function DriversPage() {
   const [editPw,      setEditPw]      = useState<string | null>(null);
   const [newPw,       setNewPw]       = useState('');
   const [savingPw,    setSavingPw]    = useState(false);
+  // كلمة المرور تُعرَض فقط لحظة إنشاء/إعادة تعيينها (لا تُخزَّن نصاً صريحاً
+  // بعد الآن — حساب Supabase Auth حقيقي، لا عمود password على drivers).
+  const [knownPasswords, setKnownPasswords] = useState<Record<string, string>>({});
 
   const fetchDrivers = useCallback(async () => {
     if (!restaurantId) { setDrivers([]); setLoading(false); return; }
-    const { data } = await supabase.from('drivers').select('*')
+    const { data } = await supabase.from('drivers').select('id, name, phone, status')
       .eq('restaurant_id', restaurantId)
       .order('created_at', { ascending: false });
     setDrivers(data || []);
@@ -65,14 +68,16 @@ export default function DriversPage() {
     setAdding(true);
     const localNumber = phone.trim().replace(/^0/, '');
     const fullPhone = `+964${localNumber}`;
-    await supabase.from('drivers').insert({
-      name: name.trim(),
-      phone: fullPhone,
-      password: password.trim(),
-      status: 'unavailable',
-      restaurant_id: restaurantId,
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/driver', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ restaurant_id: restaurantId, name: name.trim(), phone: fullPhone, password: password.trim() }),
     });
+    const body = await res.json().catch(() => ({}));
     setAdding(false);
+    if (!res.ok) { alert(body.error || 'تعذّر إضافة السائق'); return; }
+    setKnownPasswords(prev => ({ ...prev, [body.driver.id]: password.trim() }));
     closeAdd();
     fetchDrivers();
   };
@@ -85,13 +90,21 @@ export default function DriversPage() {
   };
 
   const deleteDriver = async (id: string) => {
-    await supabase.from('drivers').delete().eq('id', id);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`/api/driver/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
+    });
+    if (!res.ok) { alert('تعذّر حذف السائق'); return; }
     setDrivers(prev => prev.filter(x => x.id !== id));
   };
 
   const copyLink = (d: Driver) => {
     const link = `${window.location.origin}/driver`;
-    const text = `🏍️ بوابة السائق\n${link}\n\nرقم الهاتف: ${d.phone}\nكلمة المرور: ${d.password || '—'}`;
+    const pw = knownPasswords[d.id];
+    const text = pw
+      ? `🏍️ بوابة السائق\n${link}\n\nرقم الهاتف: ${d.phone}\nكلمة المرور: ${pw}`
+      : `🏍️ بوابة السائق\n${link}\n\nرقم الهاتف: ${d.phone}`;
     navigator.clipboard.writeText(text).then(() => {
       setCopied(d.id);
       setTimeout(() => setCopied(null), 2000);
@@ -101,9 +114,15 @@ export default function DriversPage() {
   const savePassword = async (driverId: string) => {
     if (!newPw.trim()) return;
     setSavingPw(true);
-    await supabase.from('drivers').update({ password: newPw.trim() }).eq('id', driverId);
-    setDrivers(prev => prev.map(d => d.id === driverId ? { ...d, password: newPw.trim() } : d));
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`/api/driver/${driverId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ password: newPw.trim() }),
+    });
     setSavingPw(false);
+    if (!res.ok) { alert('تعذّر تحديث كلمة المرور'); return; }
+    setKnownPasswords(prev => ({ ...prev, [driverId]: newPw.trim() }));
     setEditPw(null);
     setNewPw('');
   };
@@ -187,7 +206,7 @@ export default function DriversPage() {
                         <button onClick={() => { setEditPw(d.id); setNewPw(''); }}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-lg text-xs font-bold active:scale-95 transition-all mr-auto">
                           <KeyRound size={13} />
-                          {d.password ? '••••' : 'تعيين كلمة مرور'}
+                          {knownPasswords[d.id] ? '••••' : 'إعادة تعيين كلمة مرور'}
                         </button>
                       </>
                     )}

@@ -17,7 +17,7 @@ function generateCodePreview(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-const ROLE_LABEL: Record<StaffRole, string> = { owner: 'مالك', manager: 'مدير', cashier: 'كاشير' };
+const ROLE_LABEL: Record<StaffRole, string> = { owner: 'مالك', manager: 'مدير', cashier: 'كاشير', driver: 'سائق' };
 
 const emptyForm = { display_name: '', role: 'cashier' as StaffRole, password: '', max_discount_pct: '0', max_void_amount: '0' };
 

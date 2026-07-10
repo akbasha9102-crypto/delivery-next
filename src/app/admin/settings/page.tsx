@@ -779,10 +779,9 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* ─ تبديل المستخدم — يظهر فقط لجلسة موظف حقيقية (دخل بكود+كلمة مرور من /login)،
-            فهذه الحالة الوحيدة التي يعني فيها "التبديل" شيئاً فعلياً (تسجيل خروج حقيقي).
-            شاشة اختيار الهوية للجلسة المشتركة أُزيلت نهائياً — لا فائدة من الزر لغيرها. ─ */}
-        {activeStaff?.viaRealSession && (
+        {/* ─ تبديل المستخدم — كل جلسة (مالك أو موظف) حساب Supabase Auth حقيقي
+            ومستقل الآن، فـ"التبديل" يعني دائماً تسجيل خروج حقيقي فعلي. ─ */}
+        {!!activeStaff && (
           <button onClick={() => setConfirmSwitch(true)}
             className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
             <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />

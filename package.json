@@ -11,7 +11,8 @@
     "agent2": "npx tsx --env-file=.env.local scripts/agent2-dashboard-tenant.ts",
     "agent3": "npx tsx --env-file=.env.local scripts/agent3-menu-link.ts",
     "agents": "bash scripts/run-all-agents.sh",
-    "fix-duplicates": "npx tsx --env-file=.env.local scripts/fix-duplicate-settings.ts"
+    "fix-duplicates": "npx tsx --env-file=.env.local scripts/fix-duplicate-settings.ts",
+    "migrate-drivers-to-auth": "npx tsx --env-file=.env.local scripts/migrate-drivers-to-auth.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",

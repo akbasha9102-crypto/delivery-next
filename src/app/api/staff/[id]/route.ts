@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { verifyOwnerRequest, type StaffRole } from '@/lib/auth/staff-auth';
 
-const STAFF_SELECT_NO_PIN =
-  'id, restaurant_id, display_name, role, is_active, auth_user_id, code, max_discount_pct, max_void_amount, failed_pin_attempts, locked_until, created_at, updated_at';
+const STAFF_SELECT =
+  'id, restaurant_id, display_name, role, is_active, user_id, code, max_discount_pct, max_void_amount, created_at, updated_at';
 
 // PATCH /api/staff/:id — تحديث جزئي (تعطيل، تغيير حدود، إعادة تعيين كلمة المرور)، مالك فقط
+// :id هو user_roles.id (وليس restaurant_staff.id القديم).
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
@@ -16,7 +17,6 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     password?: string;
     max_discount_pct?: number;
     max_void_amount?: number;
-    locked_until?: string | null;
   };
   try {
     body = await req.json();
@@ -25,8 +25,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 
   const { data: existing, error: fetchError } = await supabaseAdmin
-    .from('restaurant_staff')
-    .select('id, restaurant_id, auth_user_id')
+    .from('user_roles')
+    .select('id, restaurant_id, user_id')
     .eq('id', id)
     .maybeSingle();
 
@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     update.display_name = body.display_name.trim();
   }
   if (body.role !== undefined) {
-    if (!['owner', 'manager', 'cashier'].includes(body.role)) {
+    if (!['manager', 'cashier'].includes(body.role)) {
       return NextResponse.json({ error: 'role غير صالح' }, { status: 400 });
     }
     update.role = body.role;
@@ -51,33 +51,39 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (body.is_active !== undefined) update.is_active = !!body.is_active;
   if (body.max_discount_pct !== undefined) update.max_discount_pct = body.max_discount_pct;
   if (body.max_void_amount !== undefined) update.max_void_amount = body.max_void_amount;
-  if (body.locked_until !== undefined) update.locked_until = body.locked_until;
 
   if (body.password !== undefined) {
     if (body.password.trim().length < 4) {
       return NextResponse.json({ error: 'كلمة المرور يجب أن تكون 4 أحرف/أرقام على الأقل' }, { status: 400 });
     }
-    if (!existing.auth_user_id) {
-      return NextResponse.json({ error: 'هذا الموظف بلا حساب دخول (سجل قديم) — أعد إنشاءه' }, { status: 409 });
-    }
-    const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(existing.auth_user_id, {
+    const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(existing.user_id, {
       password: body.password.trim(),
     });
     if (pwError) return NextResponse.json({ error: pwError.message }, { status: 500 });
-    // إعادة تعيين كلمة المرور تُصفّر أي soft-lock سابق
-    update.failed_pin_attempts = 0;
-    update.locked_until = null;
+    // إبطال أي جلسة قديمة بجهاز آخر بعد تغيير كلمة المرور
+    try { await supabaseAdmin.rpc('revoke_user_sessions', { p_user_id: existing.user_id }); } catch { /* best-effort */ }
   }
 
-  if (Object.keys(update).length === 0) {
+  // تعطيل الحساب: لا يكفي منع دخول جديد — يجب إبطال الجلسة الحالية (JWT)
+  // فوراً وإلا تبقى صالحة بجهاز الموظف لحد انتهاء صلاحيتها الطبيعية.
+  if (body.is_active === false) {
+    try { await supabaseAdmin.rpc('revoke_user_sessions', { p_user_id: existing.user_id }); } catch { /* best-effort */ }
+  }
+
+  if (Object.keys(update).length === 0 && body.password === undefined) {
     return NextResponse.json({ error: 'لا يوجد حقل لتحديثه' }, { status: 400 });
   }
 
+  if (Object.keys(update).length === 0) {
+    const { data } = await supabaseAdmin.from('user_roles').select(STAFF_SELECT).eq('id', id).single();
+    return NextResponse.json({ staff: data });
+  }
+
   const { data, error } = await supabaseAdmin
-    .from('restaurant_staff')
+    .from('user_roles')
     .update(update)
     .eq('id', id)
-    .select(STAFF_SELECT_NO_PIN)
+    .select(STAFF_SELECT)
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

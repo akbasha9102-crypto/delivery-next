@@ -16,10 +16,6 @@ const VARIANCE_ALERT_THRESHOLD = 5000;
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  const identityRes = await resolveStaffIdentity(req);
-  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
-  const requester = identityRes.identity;
-
   let body: { actual_closing_cash?: number };
   try {
     body = await req.json();
@@ -34,16 +30,18 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const { data: shift, error: shiftError } = await supabaseAdmin
     .from('cashier_shifts')
-    .select('id, restaurant_id, staff_id, opening_cash, opened_at, status')
+    .select('id, restaurant_id, staff_user_id, opening_cash, opened_at, status')
     .eq('id', id)
     .maybeSingle();
 
   if (shiftError) return NextResponse.json({ error: shiftError.message }, { status: 500 });
   if (!shift) return NextResponse.json({ error: 'الوردية غير موجودة' }, { status: 404 });
-  if (shift.restaurant_id !== requester.restaurant_id) {
-    return NextResponse.json({ error: 'الوردية غير موجودة' }, { status: 404 });
-  }
-  if (!requester.is_privileged && requester.staff_id !== shift.staff_id) {
+
+  const identityRes = await resolveStaffIdentity(req, shift.restaurant_id);
+  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
+  const requester = identityRes.identity;
+
+  if (!requester.is_privileged && requester.user_id !== shift.staff_user_id) {
     return NextResponse.json({ error: 'لا يمكنك إغلاق وردية موظف آخر' }, { status: 403 });
   }
   if (shift.status !== 'open') return NextResponse.json({ error: 'الوردية مغلقة بالفعل' }, { status: 409 });
@@ -89,7 +87,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   await logStaffAction({
     restaurant_id: shift.restaurant_id,
-    staff_id: shift.staff_id,
+    performed_by_auth_id: shift.staff_user_id,
+    performed_by_label: requester.user_id === shift.staff_user_id ? requester.display_name : null,
     action_type: 'shift_close',
     entity_type: 'cashier_shift',
     entity_id: shift.id,

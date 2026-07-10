@@ -17,7 +17,7 @@ export function MyApprovalToast() {
   useEffect(() => {
     if (!restaurantId || !activeStaff?.staffId) return;
     const ch = supabase.channel('approvals-mine-' + activeStaff.staffId)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'approval_requests', filter: `requested_by=eq.${activeStaff.staffId}` }, ({ new: row }: { new: { status?: string } }) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'approval_requests', filter: `requested_by_user_id=eq.${activeStaff.staffId}` }, ({ new: row }: { new: { status?: string } }) => {
         if (row?.status === 'approved') setToast({ ok: true, msg: '✓ تمت الموافقة على طلبك' });
         else if (row?.status === 'rejected') setToast({ ok: false, msg: '✗ تم رفض طلبك' });
         if (row?.status !== 'pending') setTimeout(() => setToast(null), 5000);

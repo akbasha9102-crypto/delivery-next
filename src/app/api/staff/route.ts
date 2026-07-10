@@ -2,19 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { generateStaffCode, staffCodeToEmail, verifyOwnerRequest, type StaffRole } from '@/lib/auth/staff-auth';
 
-const STAFF_SELECT_NO_PIN =
-  'id, restaurant_id, display_name, role, is_active, auth_user_id, code, max_discount_pct, max_void_amount, failed_pin_attempts, locked_until, created_at, updated_at';
+const STAFF_SELECT =
+  'id, restaurant_id, display_name, role, is_active, user_id, code, max_discount_pct, max_void_amount, created_at, updated_at';
 
-// GET /api/staff?restaurant_id= — قائمة الموظفين، مالك فقط، لا يُرجع pin_hash أبداً
+// GET /api/staff?restaurant_id= — قائمة موظفي الكاشير (manager/cashier)، مالك فقط.
+// السائقون (driver) لهم صفحة/تدفّق إدارة منفصل تماماً (/admin/drivers)
+// رغم مشاركتهم نفس جدول user_roles تحت الغطاء — لا يظهرون هنا.
 export async function GET(req: NextRequest) {
   const restaurantId = req.nextUrl.searchParams.get('restaurant_id') ?? '';
   const auth = await verifyOwnerRequest(req, restaurantId);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const { data, error } = await supabaseAdmin
-    .from('restaurant_staff')
-    .select(STAFF_SELECT_NO_PIN)
+    .from('user_roles')
+    .select(STAFF_SELECT)
     .eq('restaurant_id', restaurantId)
+    .in('role', ['manager', 'cashier'])
     .order('created_at', { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -50,7 +53,9 @@ export async function POST(req: NextRequest) {
   if (!display_name?.trim()) {
     return NextResponse.json({ error: 'display_name مطلوب' }, { status: 400 });
   }
-  if (!role || !['owner', 'manager', 'cashier'].includes(role)) {
+  // driver مستبعَد عمداً — للسائقين تدفّق إنشاء منفصل (/api/driver) يُنشئ
+  // صف drivers المرتبط أيضاً، وإلا يبقى حساب driver بلا صف drivers مقابل.
+  if (!role || !['manager', 'cashier'].includes(role)) {
     return NextResponse.json({ error: 'role غير صالح' }, { status: 400 });
   }
   if (!password || password.trim().length < 4) {
@@ -63,7 +68,7 @@ export async function POST(req: NextRequest) {
   let code = body.code && /^\d{6}$/.test(body.code) ? body.code : generateStaffCode();
   for (let attempt = 0; attempt < 5; attempt++) {
     const { data: clash } = await supabaseAdmin
-      .from('restaurant_staff')
+      .from('user_roles')
       .select('id')
       .ilike('code', code)
       .maybeSingle();
@@ -80,17 +85,17 @@ export async function POST(req: NextRequest) {
   if (authError) return NextResponse.json({ error: authError.message }, { status: 500 });
 
   const { data, error } = await supabaseAdmin
-    .from('restaurant_staff')
+    .from('user_roles')
     .insert({
       restaurant_id,
       display_name: display_name.trim(),
       role,
       code,
-      auth_user_id: authData.user.id,
+      user_id: authData.user.id,
       max_discount_pct: max_discount_pct ?? 0,
       max_void_amount: max_void_amount ?? 0,
     })
-    .select(STAFF_SELECT_NO_PIN)
+    .select(STAFF_SELECT)
     .single();
 
   if (error) {

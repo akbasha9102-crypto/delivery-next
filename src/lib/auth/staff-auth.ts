@@ -1,15 +1,19 @@
-// طبقة مساعدة لنظام RBAC (المالك/المدير مقابل الكاشير) — راجع
-// خطة_نظام_الصلاحيات_RBAC.md القسم 3 و 6.
+// طبقة مساعدة لنظام RBAC (owner/manager/cashier/driver).
 //
-// نقطة أمان جوهرية: الكاشير والمالك يشاركان نفس Supabase JWT (نفس الجلسة)،
-// لذلك RLS لا يميّز بينهما. الإنفاذ الحقيقي هنا: كل route حساس يستقبل
-// staff_id من العميل، لكنه **لا يثق بأي دور/حد مُرسل بالـ body** — يجيب
-// الدور والحدود دائماً من قاعدة البيانات عبر getStaffContext() أدناه.
-import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'crypto';
+// كل جلسة (مالك أو موظف) هي حساب Supabase Auth حقيقي ومستقل. الدور
+// (owner/manager/cashier/driver) والحدود المالية لا تُقرأ من الـ JWT —
+// Custom Access Token Hooks (التي كانت ستحقن role/restaurant_id داخل
+// الـ claims، راجع supabase/migrations/20260710120000_rbac_custom_claims.sql)
+// مقفلة على خطة Supabase المجانية، فالدالة لا تُستدعى أبداً عملياً. كل
+// route حساس يتحقق من توقيع الجلسة عبر verifyRequestClaims (لاستخراج
+// userId موثَّق فقط) ثم يستعلم الدور/الحدود مباشرة (Direct Query) من
+// restaurants.owner_id / user_roles حيّة من القاعدة في كل طلب — لا يوجد
+// أي توكن موقَّع يدوياً، ولا أي دور يُرسَل/يُوثَق به من جسم الطلب أو من الـ JWT.
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { verifyRequestClaims } from './verify-session';
 
-export type StaffRole = 'owner' | 'manager' | 'cashier';
+export type StaffRole = 'owner' | 'manager' | 'cashier' | 'driver';
 
 export type StaffContext = {
   id: string;
@@ -19,12 +23,9 @@ export type StaffContext = {
   is_active: boolean;
   max_discount_pct: number;
   max_void_amount: number;
-  locked_until: string | null;
 };
 
-const SCRYPT_KEYLEN = 64;
-
-/** الإيميل الداخلي الصناعي لحساب الكاشير — نفس نمط slug@dasha.app لحساب المطعم. */
+/** الإيميل الداخلي الصناعي لحساب الكاشير/السائق — نفس نمط slug@dasha.app لحساب المطعم. */
 export function staffCodeToEmail(code: string): string {
   return `${code.trim().toLowerCase()}@cashier.dasha.app`;
 }
@@ -34,47 +35,42 @@ export function generateStaffCode(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-/** يحسب hash لـ PIN موظف بصيغة "salt:hash" (hex). لا يُخزَّن PIN كنص صريح أبداً. */
-export function hashPin(pin: string): string {
-  const salt = randomBytes(16).toString('hex');
-  const hash = scryptSync(pin, salt, SCRYPT_KEYLEN).toString('hex');
-  return `${salt}:${hash}`;
-}
-
-/** يقارن PIN مُدخَل مع الـ hash المخزَّن، بمقارنة زمن ثابت (timing-safe). */
-export function verifyPin(pin: string, stored: string): boolean {
-  const [salt, hash] = stored.split(':');
-  if (!salt || !hash) return false;
-  try {
-    const storedBuf = Buffer.from(hash, 'hex');
-    const suppliedBuf = scryptSync(pin, salt, SCRYPT_KEYLEN);
-    if (storedBuf.length !== suppliedBuf.length) return false;
-    return timingSafeEqual(storedBuf, suppliedBuf);
-  } catch {
-    return false;
-  }
-}
-
-/** PIN من 4 إلى 6 أرقام فقط. */
-export function isValidPinFormat(pin: unknown): pin is string {
-  return typeof pin === 'string' && /^\d{4,6}$/.test(pin);
-}
-
 /**
- * يجيب دور وحدود staff_id مباشرة من القاعدة (supabaseAdmin/service role).
- * هذا هو مصدر الحقيقة الوحيد للدور — لا تستخدم أبداً دوراً مُرسلاً من العميل.
- * يرجع null إذا لم يوجد الموظف أو كان معطّلاً (is_active = false).
+ * يجيب دور وحدود موظف (manager/cashier/driver) من user_roles مباشرة —
+ * مصدر الحقيقة الوحيد للحدود المالية، حيّ دائماً من القاعدة.
+ * يرجع null إذا لم يوجد الصف أو كان معطّلاً (is_active = false).
  */
-export async function getStaffContext(staffId: string): Promise<StaffContext | null> {
-  if (!staffId) return null;
+export async function getStaffContext(userId: string, restaurantId: string): Promise<StaffContext | null> {
+  if (!userId || !restaurantId) return null;
   const { data, error } = await supabaseAdmin
-    .from('restaurant_staff')
-    .select('id, restaurant_id, display_name, role, is_active, max_discount_pct, max_void_amount, locked_until')
-    .eq('id', staffId)
+    .from('user_roles')
+    .select('id, restaurant_id, display_name, role, is_active, max_discount_pct, max_void_amount')
+    .eq('user_id', userId)
+    .eq('restaurant_id', restaurantId)
     .maybeSingle();
 
   if (error || !data || !data.is_active) return null;
   return data as StaffContext;
+}
+
+/**
+ * نفس getStaffContext لكن بدون معرفة restaurant_id مسبقاً — تُستخدم فقط
+ * لاكتشاف دور الجلسة الحالية (مثل /api/staff/my-context) حين لا يكون
+ * المطعم معروفاً بعد. تفترض عضوية واحدة نشطة لكل مستخدم (نفس افتراض
+ * custom_access_token_hook الأصلي بـ LIMIT 1) — أي route يعرف
+ * restaurant_id مسبقاً يجب أن يستخدم getStaffContext مباشرة بدل هذي.
+ */
+export async function findStaffContextByUserId(userId: string): Promise<StaffContext | null> {
+  if (!userId) return null;
+  const { data, error } = await supabaseAdmin
+    .from('user_roles')
+    .select('id, restaurant_id, display_name, role, is_active, max_discount_pct, max_void_amount')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .limit(1);
+
+  if (error || !data || data.length === 0) return null;
+  return data[0] as StaffContext;
 }
 
 /** المسؤول = owner أو manager (نفس عمود "المسؤول (Owner/Manager)" بمصفوفة الصلاحيات). */
@@ -111,73 +107,10 @@ export async function verifyOwnerRequest(
   return { ok: true, userId: data.user.id };
 }
 
-// ─────────────────────────────────────────────────────────────
-// طبقة توقيع الهوية (Staff Session Token) — إصلاح ثغرة أمنية حرجة
-// اكتشفتها مراجعة أمنية مستقلة: كانت كل route حساسة تستقبل staff_id من
-// جسم الطلب مباشرة وتثق به لتحديد "من ينفّذ العملية". بما أن الكاشير
-// والمالك يشتركان بنفس JWT، فإن أي طرف يملك الجلسة (كاشير) كان يقدر
-// يرسل staff_id تبع المالك نفسه فينفّذ عمليات بصلاحيات غير صلاحياته
-// الفعلية (خصم 100%، استرجاع مباشر، حذف سجل تدقيق... إلخ) — دون الحاجة
-// لمعرفة أي PIN، فقط بمعرفة معرّف الموظف (المُسرَّب أصلاً عبر GET /api/staff).
-//
-// الحل: عند نجاح التحقق من PIN (أو تأكيد جلسة المالك)، الخادم يوقّع
-// توكن HMAC قصير العمر يحمل الهوية + الدور، ويُرسَل بترويسة x-staff-token
-// بكل طلب حساس لاحق. كل route يتحقق من التوقيع بنفسه (لا يثق بأي شيء
-// غير موقَّع من العميل) ويستخرج staff_id/role من التوكن نفسه — ليس من
-// أي حقل آخر بالطلب. الحدود المالية (max_discount_pct/max_void_amount)
-// تبقى تُقرأ دائماً حيّة من القاعدة عبر getStaffContext (وليس من التوكن)
-// حتى تنعكس أي تعديلات يجريها المالك على الفور.
-const STAFF_TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 ساعة (مدة وردية عمل نموذجية)
-
-function staffTokenSecret(): string {
-  const secret = process.env.STAFF_TOKEN_SECRET || process.env.API_SECRET;
-  if (!secret) throw new Error('STAFF_TOKEN_SECRET أو API_SECRET غير مضبوط بالبيئة');
-  return secret;
-}
-
-export type StaffTokenPayload = {
-  sid: string | null;   // restaurant_staff.id، أو null إذا كانت الهوية "مالك" بلا صف موظف
-  rid: string;           // restaurant_id
-  role: StaffRole;
-  exp: number;           // انتهاء الصلاحية (epoch ms)
-};
-
-function b64url(input: Buffer | string): string {
-  return Buffer.from(input).toString('base64url');
-}
-
-/** يوقّع هوية موظف/مالك بتوكن HMAC قصير العمر — يُستخدم بترويسة x-staff-token. */
-export function signStaffToken(payload: Omit<StaffTokenPayload, 'exp'>): string {
-  const full: StaffTokenPayload = { ...payload, exp: Date.now() + STAFF_TOKEN_TTL_MS };
-  const body = b64url(JSON.stringify(full));
-  const sig = createHmac('sha256', staffTokenSecret()).update(body).digest('base64url');
-  return `${body}.${sig}`;
-}
-
-/** يتحقق توقيع/صلاحية التوكن. يرجع null إن كان مزوَّراً أو منتهياً أو مشوَّهاً. */
-export function verifyStaffToken(token: string | null | undefined): StaffTokenPayload | null {
-  if (!token) return null;
-  const [body, sig] = token.split('.');
-  if (!body || !sig) return null;
-
-  const expectedSig = createHmac('sha256', staffTokenSecret()).update(body).digest('base64url');
-  const sigBuf = Buffer.from(sig);
-  const expectedBuf = Buffer.from(expectedSig);
-  if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) return null;
-
-  try {
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as StaffTokenPayload;
-    if (typeof payload.exp !== 'number' || payload.exp < Date.now()) return null;
-    if (typeof payload.rid !== 'string' || !payload.rid) return null;
-    return payload;
-  } catch {
-    return null;
-  }
-}
-
 export type ResolvedIdentity = {
   restaurant_id: string;
-  staff_id: string | null;
+  user_id: string;             // auth.uid() لهذه الجلسة — المعرّف الموثوق الوحيد
+  staff_id: string | null;     // user_roles.id إن وُجد (owner: null دائماً)
   role: StaffRole;
   display_name: string;
   is_privileged: boolean;
@@ -186,24 +119,37 @@ export type ResolvedIdentity = {
 };
 
 /**
- * نقطة الدخول الموحّدة لكل route حساس: تتحقق من x-staff-token، وتُرجع
- * هوية موثوقة (لا تثق بأي staff_id/role مُرسَل بالـ body بعد اليوم).
- * للمالك (sid=null): حدود غير مقيَّدة. للموظف: الحدود تُقرأ حيّة من
- * القاعدة عبر getStaffContext (وليس من التوكن) كي تبقى دقيقة لحظياً.
+ * نقطة الدخول الموحّدة لكل route حساس: تتحقق من توقيع جلسة Supabase
+ * الحقيقية (Authorization: Bearer) لاستخراج userId موثَّق، ثم تستعلم
+ * الدور مباشرة (Direct Query) من القاعدة — لا من claims الـ JWT (مقفلة
+ * عملياً، راجع تعليق أعلى الملف). restaurantId المتوقَّع يُمرَّر من الـ
+ * route (مثلاً من الطلب نفسه الذي يُنفَّذ عليه الإجراء)؛ أولوية الفحص:
+ * owner عبر restaurants.owner_id، وإلا staff نشط عبر user_roles — كلا
+ * الاستعلامين مُقيَّدان بـ expectedRestaurantId بالذات، فلا يقدر مستخدم له
+ * دور بمطعم آخر (أو دور أُلغي للتو) يمرّ هنا حتى لو كان الـ access_token
+ * الحالي لسا صالحاً (تحقّق حيّ من القاعدة في كل طلب، لا يعتمد على تجديد الـ JWT).
  */
-export async function resolveStaffIdentity(req: NextRequest): Promise<
+export async function resolveStaffIdentity(req: NextRequest, expectedRestaurantId: string): Promise<
   { ok: true; identity: ResolvedIdentity } | { ok: false; status: number; error: string }
 > {
-  const token = req.headers.get('x-staff-token');
-  const payload = verifyStaffToken(token);
-  if (!payload) return { ok: false, status: 401, error: 'جلسة الموظف غير صالحة أو منتهية — الرجاء إعادة إدخال PIN' };
+  if (!expectedRestaurantId) return { ok: false, status: 400, error: 'restaurant_id مطلوب' };
 
-  if (payload.sid === null) {
-    if (payload.role !== 'owner') return { ok: false, status: 403, error: 'توكن غير صالح' };
+  const claims = verifyRequestClaims(req);
+  if (!claims) return { ok: false, status: 401, error: 'جلسة غير صالحة أو منتهية — الرجاء تسجيل الدخول من جديد' };
+
+  const { data: restaurant } = await supabaseAdmin
+    .from('restaurants')
+    .select('id')
+    .eq('id', expectedRestaurantId)
+    .eq('owner_id', claims.userId)
+    .maybeSingle();
+
+  if (restaurant) {
     return {
       ok: true,
       identity: {
-        restaurant_id: payload.rid,
+        restaurant_id: expectedRestaurantId,
+        user_id: claims.userId,
         staff_id: null,
         role: 'owner',
         display_name: 'المالك',
@@ -214,15 +160,14 @@ export async function resolveStaffIdentity(req: NextRequest): Promise<
     };
   }
 
-  const staff = await getStaffContext(payload.sid);
-  if (!staff || staff.restaurant_id !== payload.rid) {
-    return { ok: false, status: 403, error: 'موظف غير صالح أو معطّل' };
-  }
+  const staff = await getStaffContext(claims.userId, expectedRestaurantId);
+  if (!staff) return { ok: false, status: 403, error: 'لا تملك صلاحية على هذا المطعم' };
 
   return {
     ok: true,
     identity: {
       restaurant_id: staff.restaurant_id,
+      user_id: claims.userId,
       staff_id: staff.id,
       role: staff.role,
       display_name: staff.display_name,
