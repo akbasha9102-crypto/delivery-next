@@ -75,11 +75,27 @@ export default function DriverDashboard() {
   useEffect(() => { setInterval(() => {}, 60_000); }, []);
 
   useEffect(() => {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('driver_session') : null;
-    if (!raw) { router.replace('/driver'); return; }
-    const s = JSON.parse(raw) as Session;
-    setSession(s);
-    sessionRef.current = s;
+    let cancelled = false;
+    (async () => {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      if (!authSession) { router.replace('/driver'); return; }
+
+      // بحث السائق المرتبط بهذه الجلسة عبر user_id — RLS (is_own_driver_row)
+      // يسمح للسائق برؤية صفّه هو فقط، وليس أي سائق آخر.
+      const { data: driver } = await supabase
+        .from('drivers')
+        .select('id, name, phone')
+        .eq('user_id', authSession.user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (!driver) { await supabase.auth.signOut(); router.replace('/driver'); return; }
+
+      const s: Session = { id: driver.id, name: driver.name, phone: driver.phone };
+      setSession(s);
+      sessionRef.current = s;
+    })();
+    return () => { cancelled = true; };
   }, [router]);
 
   useEffect(() => {
@@ -234,8 +250,7 @@ export default function DriverDashboard() {
   };
 
   const logout = () => {
-    localStorage.removeItem('driver_session');
-    router.replace('/driver');
+    supabase.auth.signOut().finally(() => router.replace('/driver'));
   };
 
   if (!session) return null;

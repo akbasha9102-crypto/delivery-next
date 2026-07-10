@@ -12,24 +12,35 @@ export default function DriverLoginPage() {
   const [loading,  setLoading]  = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('driver_session')) {
-      router.replace('/driver/dashboard');
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.replace('/driver/dashboard');
+    });
   }, [router]);
 
   const login = async () => {
     setError('');
     if (!phone.trim() || !password.trim()) { setError('أدخل رقم الهاتف وكلمة المرور'); return; }
     setLoading(true);
-    const { data } = await supabase
-      .from('drivers')
-      .select('id, name, phone')
-      .eq('phone', phone.trim())
-      .eq('password', password.trim())
-      .single();
+
+    const res = await fetch('/api/driver/resolve-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phone.trim() }),
+    });
+    const resolved = await res.json().catch(() => ({}));
+
+    if (!res.ok || !resolved.email) {
+      setLoading(false);
+      setError('رقم الهاتف أو كلمة المرور غير صحيحة');
+      return;
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: resolved.email,
+      password: password.trim(),
+    });
     setLoading(false);
-    if (!data) { setError('رقم الهاتف أو كلمة المرور غير صحيحة'); return; }
-    localStorage.setItem('driver_session', JSON.stringify({ id: data.id, name: data.name, phone: data.phone }));
+    if (signInError) { setError('رقم الهاتف أو كلمة المرور غير صحيحة'); return; }
     router.replace('/driver/dashboard');
   };
 
