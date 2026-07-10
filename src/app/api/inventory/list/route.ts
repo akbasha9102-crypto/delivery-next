@@ -14,8 +14,8 @@ async function handle(restaurantId: string, req: NextRequest) {
   if (!restaurantId) return NextResponse.json({ error: 'restaurant_id مطلوب' }, { status: 400 });
 
   let showCost = false;
-  const identityRes = await resolveStaffIdentity(req);
-  if (identityRes.ok && identityRes.identity.restaurant_id === restaurantId && identityRes.identity.is_privileged) {
+  const identityRes = await resolveStaffIdentity(req, restaurantId);
+  if (identityRes.ok && identityRes.identity.is_privileged) {
     showCost = true;
   }
 

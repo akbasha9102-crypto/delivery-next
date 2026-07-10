@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export type LogStaffActionParams = {
   restaurant_id: string;
-  staff_id?: string | null;
+  performed_by_auth_id?: string | null;  // auth.uid() لمن نفّذ العملية (owner/manager/cashier)
   action_type: string;
   entity_type?: string | null;
   entity_id?: string | null;
@@ -25,7 +25,7 @@ export type LogStaffActionParams = {
 export async function logStaffAction(params: LogStaffActionParams): Promise<void> {
   const { error } = await supabaseAdmin.from('staff_actions_log').insert({
     restaurant_id: params.restaurant_id,
-    staff_id: params.staff_id ?? null,
+    performed_by_auth_id: params.performed_by_auth_id ?? null,
     action_type: params.action_type,
     entity_type: params.entity_type ?? null,
     entity_id: params.entity_id ?? null,

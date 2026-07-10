@@ -112,7 +112,6 @@ export type MyStaffContext = {
   role: StaffRole;
   max_discount_pct: number;
   max_void_amount: number;
-  staff_token: string;
 };
 
 /**
@@ -127,7 +126,7 @@ export function getMyStaffContext(accessToken: string) {
 }
 
 /* ─── الورديات (تتطلب Authorization: Bearer لجلسة Supabase) ─── */
-export function openShift(payload: { opening_cash: number }, staffToken: string) {
+export function openShift(payload: { opening_cash: number; restaurant_id: string }, staffToken: string) {
   return safeFetch<{ id: string; opened_at: string; opening_cash: number; status: 'open' }>('/api/shifts/open', {
     method: 'POST',
     body: JSON.stringify(payload),

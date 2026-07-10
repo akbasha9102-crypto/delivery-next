@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { verifyOwnerRequest } from '@/lib/auth/staff-auth';
 import { logStaffAction } from '@/lib/utils/staff-actions-log';
 
-// POST /api/approvals/:id/resolve — { action: 'approve'|'reject', resolved_by }
+// POST /api/approvals/:id/resolve — { action: 'approve'|'reject' }
 // مالك فقط (جلسة Supabase). عند approve: ينفّذ العملية المعلّقة فعلياً
 // (void/refund/discount_override)، ويحدّث approval_requests.status —
 // هذا التحديث يُبَث تلقائياً عبر Supabase Realtime الموجود فعلاً للعميل
@@ -11,14 +11,14 @@ import { logStaffAction } from '@/lib/utils/staff-actions-log';
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id: approvalId } = await ctx.params;
 
-  let body: { action?: 'approve' | 'reject'; resolved_by?: string };
+  let body: { action?: 'approve' | 'reject' };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'body غير صالح' }, { status: 400 });
   }
 
-  const { action, resolved_by } = body;
+  const { action } = body;
   if (action !== 'approve' && action !== 'reject') {
     return NextResponse.json({ error: "action يجب أن يكون 'approve' أو 'reject'" }, { status: 400 });
   }
@@ -38,24 +38,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const auth = await verifyOwnerRequest(req, approval.restaurant_id);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  // resolved_by اختياري — فقط للتسجيل، يجب أن يطابق موظفاً حقيقياً بنفس المطعم وإلا يُهمل
-  let resolvedByStaffId: string | null = null;
-  if (resolved_by) {
-    const { data: staffRow } = await supabaseAdmin
-      .from('restaurant_staff')
-      .select('id')
-      .eq('id', resolved_by)
-      .eq('restaurant_id', approval.restaurant_id)
-      .maybeSingle();
-    if (staffRow) resolvedByStaffId = staffRow.id;
-  }
-
+  // من حلّ الطلب يُسجَّل من auth.userId (هوية موثَّقة من الجلسة)، لا من حقل بجسم الطلب.
   const resolvedAt = new Date().toISOString();
 
   if (action === 'reject') {
     const { data: updated, error: updateError } = await supabaseAdmin
       .from('approval_requests')
-      .update({ status: 'rejected', resolved_by: resolvedByStaffId, resolved_at: resolvedAt })
+      .update({ status: 'rejected', resolved_at: resolvedAt })
       .eq('id', approvalId)
       .select('*')
       .single();
@@ -64,7 +53,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     await logStaffAction({
       restaurant_id: approval.restaurant_id,
-      staff_id: resolvedByStaffId,
+      performed_by_auth_id: auth.userId,
       action_type: 'approval_rejected',
       entity_type: 'approval_request',
       entity_id: approvalId,
@@ -90,7 +79,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       await supabaseAdmin.from('orders').update({ status: 'voided' }).eq('id', order.id);
       await logStaffAction({
         restaurant_id: approval.restaurant_id,
-        staff_id: approval.requested_by,
+        performed_by_auth_id: approval.requested_by_user_id,
         action_type: 'order_void',
         entity_type: 'order',
         entity_id: order.id,
@@ -101,7 +90,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       await supabaseAdmin.from('orders').update({ status: 'refunded' }).eq('id', order.id);
       await logStaffAction({
         restaurant_id: approval.restaurant_id,
-        staff_id: approval.requested_by,
+        performed_by_auth_id: approval.requested_by_user_id,
         action_type: 'order_refund',
         entity_type: 'order',
         entity_id: order.id,
@@ -115,7 +104,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       await supabaseAdmin.from('orders').update({ total_amount: newTotal }).eq('id', order.id);
       await logStaffAction({
         restaurant_id: approval.restaurant_id,
-        staff_id: approval.requested_by,
+        performed_by_auth_id: approval.requested_by_user_id,
         action_type: 'discount_applied',
         entity_type: 'order',
         entity_id: order.id,
@@ -128,7 +117,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const { data: updatedApproval, error: updateError } = await supabaseAdmin
     .from('approval_requests')
-    .update({ status: 'approved', resolved_by: resolvedByStaffId, resolved_at: resolvedAt })
+    .update({ status: 'approved', resolved_at: resolvedAt })
     .eq('id', approvalId)
     .select('*')
     .single();
@@ -137,7 +126,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   await logStaffAction({
     restaurant_id: approval.restaurant_id,
-    staff_id: resolvedByStaffId,
+    performed_by_auth_id: auth.userId,
     action_type: 'approval_approved',
     entity_type: 'approval_request',
     entity_id: approvalId,

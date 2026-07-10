@@ -11,12 +11,9 @@ export async function GET(req: NextRequest) {
   const restaurantId = req.nextUrl.searchParams.get('restaurant_id') ?? '';
   if (!restaurantId) return NextResponse.json({ error: 'restaurant_id مطلوب' }, { status: 400 });
 
-  const identityRes = await resolveStaffIdentity(req);
+  const identityRes = await resolveStaffIdentity(req, restaurantId);
   if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
   const staff = identityRes.identity;
-  if (staff.restaurant_id !== restaurantId) {
-    return NextResponse.json({ error: 'موظف غير صالح لهذا المطعم' }, { status: 403 });
-  }
 
   let query = supabaseAdmin
     .from('cashier_shifts')
@@ -25,7 +22,7 @@ export async function GET(req: NextRequest) {
     .order('opened_at', { ascending: false });
 
   if (!staff.is_privileged) {
-    query = query.eq('staff_id', staff.staff_id ?? '');
+    query = query.eq('staff_user_id', staff.user_id);
   }
 
   const { data, error } = await query;

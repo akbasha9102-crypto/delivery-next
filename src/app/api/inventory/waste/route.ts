@@ -7,10 +7,6 @@ import { logStaffAction } from '@/lib/utils/staff-actions-log';
 // الهوية تُستخرَج حصراً من توكن موقَّع (راجع resolveStaffIdentity)، لا من
 // staff_id بجسم الطلب. "السبب" إلزامي دائماً (خطة RBAC قسم 4).
 export async function POST(req: NextRequest) {
-  const identityRes = await resolveStaffIdentity(req);
-  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
-  const staff = identityRes.identity;
-
   let body: { item_id?: string; quantity?: number; reason?: string };
   try {
     body = await req.json();
@@ -32,9 +28,11 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (itemError) return NextResponse.json({ error: itemError.message }, { status: 500 });
-  if (!item || item.restaurant_id !== staff.restaurant_id) {
-    return NextResponse.json({ error: 'المادة غير موجودة' }, { status: 404 });
-  }
+  if (!item) return NextResponse.json({ error: 'المادة غير موجودة' }, { status: 404 });
+
+  const identityRes = await resolveStaffIdentity(req, item.restaurant_id);
+  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
+  const staff = identityRes.identity;
 
   const { data: movement, error: movementError } = await supabaseAdmin
     .from('stock_movements')
@@ -44,7 +42,7 @@ export async function POST(req: NextRequest) {
       movement_type: 'WASTE',
       quantity_changed: Math.abs(quantity),
       reference_type: 'manual',
-      performed_by_staff_id: staff.staff_id,
+      performed_by_user_id: staff.user_id,
       notes: `${reason.trim()} (بواسطة: ${staff.display_name})`,
     })
     .select('*')
@@ -60,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   await logStaffAction({
     restaurant_id: staff.restaurant_id,
-    staff_id: staff.staff_id,
+    performed_by_auth_id: staff.user_id,
     action_type: 'inventory_waste',
     entity_type: 'inventory_item',
     entity_id: item_id,

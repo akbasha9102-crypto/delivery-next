@@ -33,7 +33,7 @@ function getExtras(item: MenuItem): MenuExtra[] {
 }
 
 /* ─────────────────────────── شاشة فتح الوردية ─────────────────────────── */
-function OpenShiftScreen({ staffToken, onOpened }: { staffToken: string; onOpened: (s: Shift) => void }) {
+function OpenShiftScreen({ staffToken, restaurantId, onOpened }: { staffToken: string; restaurantId: string; onOpened: (s: Shift) => void }) {
   const [cash, setCash] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +42,7 @@ function OpenShiftScreen({ staffToken, onOpened }: { staffToken: string; onOpene
     const amount = parseFloat(cash) || 0;
     setSaving(true);
     setError(null);
-    const res = await openShift({ opening_cash: amount }, staffToken);
+    const res = await openShift({ opening_cash: amount, restaurant_id: restaurantId }, staffToken);
     setSaving(false);
     if (!res.ok) { setError('error' in res ? res.error : 'تعذّر فتح الوردية'); return; }
     onOpened(res.data as Shift);
@@ -495,8 +495,8 @@ export default function LocalCashierPage() {
   }
 
   if (!shift) {
-    return staffId && staffToken
-      ? <OpenShiftScreen staffToken={staffToken} onOpened={setShift} />
+    return staffId && staffToken && restaurantId
+      ? <OpenShiftScreen staffToken={staffToken} restaurantId={restaurantId} onOpened={setShift} />
       : (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center p-6 text-center" dir="rtl">
           <p className="text-gray-500 dark:text-slate-400">تعذّر تحديد هويتك الحالية لفتح وردية — أعد تسجيل الدخول</p>

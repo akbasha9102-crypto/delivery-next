@@ -6,18 +6,20 @@ import { logStaffAction } from '@/lib/utils/staff-actions-log';
 // POST /api/shifts/open — { opening_cash } + ترويسة x-staff-token → صف جديد بـ cashier_shifts
 // الهوية تُستخرَج من توكن موقَّع (راجع resolveStaffIdentity)، لا من staff_id بجسم الطلب.
 export async function POST(req: NextRequest) {
-  const identityRes = await resolveStaffIdentity(req);
-  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
-  const staff = identityRes.identity;
-  if (!staff.staff_id) return NextResponse.json({ error: 'المالك لا يفتح وردية كاشير' }, { status: 400 });
-  const staff_id = staff.staff_id;
-
-  let body: { opening_cash?: number };
+  let body: { opening_cash?: number; restaurant_id?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'body غير صالح' }, { status: 400 });
   }
+
+  const restaurantId = body.restaurant_id ?? '';
+  if (!restaurantId) return NextResponse.json({ error: 'restaurant_id مطلوب' }, { status: 400 });
+
+  const identityRes = await resolveStaffIdentity(req, restaurantId);
+  if (!identityRes.ok) return NextResponse.json({ error: identityRes.error }, { status: identityRes.status });
+  const staff = identityRes.identity;
+  if (staff.role === 'owner') return NextResponse.json({ error: 'المالك لا يفتح وردية كاشير' }, { status: 400 });
 
   const openingCash = Number(body.opening_cash ?? 0);
   if (Number.isNaN(openingCash) || openingCash < 0) {
@@ -28,7 +30,7 @@ export async function POST(req: NextRequest) {
   const { data: existingOpen } = await supabaseAdmin
     .from('cashier_shifts')
     .select('id')
-    .eq('staff_id', staff_id)
+    .eq('staff_user_id', staff.user_id)
     .eq('status', 'open')
     .maybeSingle();
 
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
     .from('cashier_shifts')
     .insert({
       restaurant_id: staff.restaurant_id,
-      staff_id,
+      staff_user_id: staff.user_id,
       opening_cash: openingCash,
       status: 'open',
     })
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   await logStaffAction({
     restaurant_id: staff.restaurant_id,
-    staff_id,
+    performed_by_auth_id: staff.user_id,
     action_type: 'shift_open',
     entity_type: 'cashier_shift',
     entity_id: shift.id,
