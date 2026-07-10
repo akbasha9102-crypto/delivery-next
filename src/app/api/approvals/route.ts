@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { verifyOwnerRequest } from '@/lib/staff-auth';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { verifyOwnerRequest } from '@/lib/auth/staff-auth';
 
 // GET /api/approvals?restaurant_id=&status=pending — مالك فقط (جلسة Supabase)
 export async function GET(req: NextRequest) {

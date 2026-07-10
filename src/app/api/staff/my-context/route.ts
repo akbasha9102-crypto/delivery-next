@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { signStaffToken } from '@/lib/staff-auth';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { signStaffToken } from '@/lib/auth/staff-auth';
 
 // GET /api/staff/my-context — Authorization: Bearer <supabase access_token>
 // يتحقق هل الجلسة الحالية تخص موظفاً (كاشير/مدير) دخل مباشرة بكود+كلمة

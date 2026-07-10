@@ -2,14 +2,14 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { useCart } from '@/context/CartContext';
 import { useDarkMode } from '@/context/ThemeContext';
-import { ClientBottomNav } from '@/components/BottomNav';
+import { ClientBottomNav } from '@/components/layout/BottomNav';
 import { Plus, Minus, ShoppingBag, ShoppingCart, Trash2, MapPin, MessageCircle, ChevronDown, Check, X } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { CustomerGuard } from '@/components/CustomerGuard';
+import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string };

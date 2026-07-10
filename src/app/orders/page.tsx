@@ -1,10 +1,10 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { ClientBottomNav } from '@/components/BottomNav';
+import { supabase } from '@/lib/supabase/client';
+import { ClientBottomNav } from '@/components/layout/BottomNav';
 import { useSettings } from '@/context/SettingsContext';
-import { CustomerGuard } from '@/components/CustomerGuard';
+import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
 import {
   ShoppingBag, RefreshCw, X, CheckCircle2, Loader2,

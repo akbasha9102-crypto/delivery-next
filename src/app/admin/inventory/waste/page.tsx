@@ -3,8 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Package, Search, Trash2, X } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
-import { listInventoryForStaff, registerWaste, type CashierInventoryItem } from '@/lib/staffApi';
-import { AdminBottomNav } from '@/components/BottomNav';
+import { listInventoryForStaff, registerWaste, type CashierInventoryItem } from '@/lib/api/staffApi';
+import { AdminBottomNav } from '@/components/layout/BottomNav';
 
 /**
  * شاشة مخزون الكاشير المبسّطة — عرض الكمية فقط (بدون تكلفة الشراء أو المورّد إطلاقاً)

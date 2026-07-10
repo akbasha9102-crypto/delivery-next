@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { resolveStaffIdentity } from '@/lib/staff-auth';
-import { logStaffAction } from '@/lib/staff-actions-log';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
+import { logStaffAction } from '@/lib/utils/staff-actions-log';
 
 // POST /api/shifts/open — { opening_cash } + ترويسة x-staff-token → صف جديد بـ cashier_shifts
 // الهوية تُستخرَج من توكن موقَّع (راجع resolveStaffIdentity)، لا من staff_id بجسم الطلب.

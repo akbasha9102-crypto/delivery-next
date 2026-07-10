@@ -12,7 +12,7 @@
 
 عند إرسال الطلب، يُحفظ في قاعدة البيانات: `order_type` (delivery / dine_in / pickup) و `table_number` (فقط للطلب الداخلي).
 
-### 2. قاعدة البيانات — `supabase_migration_order_type.sql`
+### 2. قاعدة البيانات — `supabase/migrations/20260606110920_order_type.sql`
 كود SQL جاهز يضيف عمودين لجدول `orders`:
 - `order_type` — نص، يقبل فقط: `delivery` أو `dine_in` أو `pickup` أو `local` (كاشير المحل)، وقيمته الافتراضية `delivery`.
 - `table_number` — رقم، لرقم الطاولة.
@@ -42,11 +42,11 @@
 
 1. افتح مشروعك بـ Supabase.
 2. روح لـ **SQL Editor** من القائمة الجانبية.
-3. افتح ملف `supabase_migration_order_type_ALL.sql` (يجمع كل أكواد الميزة بملف واحد) وانسخ محتواه كامل، الصقه واضغط **Run**.
+3. افتح ملف `supabase/migrations/20260702203440_order_type_all.sql` (يجمع كل أكواد الميزة بملف واحد) وانسخ محتواه كامل، الصقه واضغط **Run**.
 
 بعدها الميزة تكون شغالة فوراً بدون أي إعادة تشغيل أو تعديل إضافي — لأن الكود بالموقع (Next.js) جاهز ومرفوع على GitHub.
 
-(الملفات المنفصلة `supabase_migration_order_type.sql` و`supabase_migration_no_driver_on_internal_orders.sql` لسه موجودة بنفس المحتوى لو تفضّل تشغلهم لحالهم بدل الملف المجمّع.)
+(الملفات المنفصلة `supabase/migrations/20260606110920_order_type.sql` و`supabase/migrations/20260702203129_no_driver_on_internal_orders.sql` لسه موجودة بنفس المحتوى لو تفضّل تشغلهم لحالهم بدل الملف المجمّع.)
 
 ### ملاحظة مهمة
 كل ملفات الـ SQL بهذا المشروع آمنة تتكرر تشغيلها (`IF NOT EXISTS` / `DROP CONSTRAINT IF EXISTS` ثم إعادة الإضافة) بدون ما تأثر على أي بيانات موجودة.

@@ -1,6 +1,6 @@
 // مساعد موحّد لكتابة staff_actions_log — بدل تكرار نفس كود الـ insert
 // بكل route حساس (void/refund/discount/shifts/approvals...).
-import { supabaseAdmin } from './supabase-admin';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export type LogStaffActionParams = {
   restaurant_id: string;

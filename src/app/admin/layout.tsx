@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { NewOrdersProvider } from '@/context/NewOrdersContext';
-import { AdminGuard } from '@/components/AdminGuard';
+import { AdminGuard } from '@/components/guards/AdminGuard';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { StaffProvider } from '@/context/StaffContext';
-import { StaffGate } from '@/components/staff/StaffGate';
+import { StaffGate } from '@/components/guards/StaffGate';
 
 function makeBellWavUrl(): string | null {
   if (typeof window === 'undefined') return null;

@@ -1,8 +1,8 @@
 'use client';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { supabase } from '@/lib/supabase';
-import { getMyStaffContext, getOwnerSession, listStaff, type StaffMember, type StaffRole } from '@/lib/staffApi';
+import { supabase } from '@/lib/supabase/client';
+import { getMyStaffContext, getOwnerSession, listStaff, type StaffMember, type StaffRole } from '@/lib/api/staffApi';
 
 export type ActiveStaff = {
   staffId: string | null;   // null = المالك (لا صف restaurant_staff بالضرورة)

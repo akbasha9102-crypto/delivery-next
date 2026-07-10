@@ -2,7 +2,7 @@
 // src/app/api/push/broadcast/route.ts و src/app/api/push/notify/route.ts
 // بالضبط، لكن يستهدف restaurant_staff (role owner/manager) بدل drivers.
 import webpush from 'web-push';
-import { supabaseAdmin } from './supabase-admin';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 let vapidConfigured = false;
 

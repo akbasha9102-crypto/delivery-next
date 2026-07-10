@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { resolveStaffIdentity } from '@/lib/staff-auth';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
 
 // GET|POST /api/inventory/list?restaurant_id= + ترويسة x-staff-token اختيارية
 // نقطة جديدة (لا تعدّل أي شيء بصفحة المخزون الحالية) تُرجع المخزون بدون

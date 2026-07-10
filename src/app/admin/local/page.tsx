@@ -1,10 +1,10 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
-import { AdminBottomNav } from '@/components/BottomNav';
-import { LowStockAlert } from '@/components/LowStockAlert';
+import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { LowStockAlert } from '@/components/shared/LowStockAlert';
 import {
   ShoppingCart, Plus, Minus, X, Check, Wallet, LogOut, Clock,
   Percent, Ban, RotateCcw, ChevronLeft,
@@ -12,7 +12,7 @@ import {
 import {
   openShift, closeShift, listShifts, voidOrder, refundOrder, discountOrder, errorMessage,
   type Shift,
-} from '@/lib/staffApi';
+} from '@/lib/api/staffApi';
 
 type MenuCategory = { id: string; name: string };
 type MenuItem = { id: string; category_id: string; name: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };

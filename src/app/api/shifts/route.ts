@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { resolveStaffIdentity } from '@/lib/staff-auth';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
 
 // GET /api/shifts?restaurant_id= + ترويسة x-staff-token — المالك/المدير
 // يرى كل ورديات المطعم، الكاشير يرى وردياته فقط. الهوية تُستخرَج حصراً من

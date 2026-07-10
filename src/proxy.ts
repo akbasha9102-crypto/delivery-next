@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/super-admin/dashboard')) {
     const token = request.cookies.get('sa_session')?.value;
     const expected = process.env.SUPER_ADMIN_SESSION_TOKEN;

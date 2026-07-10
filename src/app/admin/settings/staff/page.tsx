@@ -2,11 +2,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, KeyRound, Plus, ShieldCheck, ToggleLeft, ToggleRight, User, X, Copy, Check } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
-import { OwnerOnly } from '@/components/OwnerOnly';
-import { createStaff, updateStaff, type StaffMember, type StaffRole } from '@/lib/staffApi';
+import { OwnerOnly } from '@/components/guards/OwnerOnly';
+import { createStaff, updateStaff, type StaffMember, type StaffRole } from '@/lib/api/staffApi';
 
 async function getAccessToken(): Promise<string | undefined> {
   const { data: { session } } = await supabase.auth.getSession();
