@@ -10,7 +10,7 @@ import { Plus, Minus, ShoppingBag, ShoppingCart, Trash2, MapPin, MessageCircle, 
 import { useSettings } from '@/context/SettingsContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/guards/CustomerGuard';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionTemplate } from 'framer-motion';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string };
 type Extra    = { id: string; name: string; price: number };
@@ -141,6 +141,17 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const pillsRef    = useRef<HTMLDivElement>(null);
   const scrolling   = useRef(false);
+
+  // ── هيدر الأقسام: يتحول شوي شوي إلى "ليكويد كلاس" مع السكرول ──
+  const { scrollY } = useScroll();
+  const headerBgOpacity = useTransform(scrollY, [0, 160], [0.97, 0.55]);
+  const headerBlur      = useTransform(scrollY, [0, 160], [8, 26]);
+  const headerBorder    = useTransform(scrollY, [0, 160], [0.06, 0.18]);
+  const headerShadow    = useTransform(scrollY, [0, 160], [0, 0.12]);
+  const headerBackground = useMotionTemplate`rgba(${dark ? '2, 6, 23' : '249, 250, 251'}, ${headerBgOpacity})`;
+  const headerBackdropFilter = useMotionTemplate`saturate(180%) blur(${headerBlur}px)`;
+  const headerBorderColor = useMotionTemplate`rgba(${dark ? '255,255,255' : '0,0,0'}, ${headerBorder})`;
+  const headerBoxShadow = useMotionTemplate`0 8px 30px rgba(0,0,0,${headerShadow})`;
 
   const fetchData = async (id: string | undefined) => {
     if (!id) return; // لا نجلب بدون restaurant_id — يمنع تسريب بيانات مطاعم أخرى
@@ -402,8 +413,17 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
         </div>
       )}
 
-      {/* ══ CATEGORY PILLS (Sticky at top-0) ══ */}
-      <div className="sticky top-0 z-40 bg-gray-50/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-800">
+      {/* ══ CATEGORY PILLS (Sticky at top-0, ليكويد كلاس تدريجي مع السكرول) ══ */}
+      <motion.div
+        className="sticky top-0 z-40 border-b"
+        style={{
+          backgroundColor: headerBackground,
+          backdropFilter: headerBackdropFilter,
+          WebkitBackdropFilter: headerBackdropFilter,
+          borderColor: headerBorderColor,
+          boxShadow: headerBoxShadow,
+        }}
+      >
         <div ref={pillsRef} className={`flex gap-2.5 overflow-x-auto scrollbar-hide flex-row-reverse px-4 py-3 ${is_closed ? 'pointer-events-none opacity-50' : ''}`}>
           {dataLoading && categories.length === 0 && (
             Array.from({ length: 4 }).map((_, i) => (
@@ -436,7 +456,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
             );
           })}
         </div>
-      </div>
+      </motion.div>
 
       {/* ══ CONTENT ══ */}
       <div className="px-4 pt-2">
