@@ -23,9 +23,10 @@ export type NotifyOwnerPayload = {
 };
 
 /**
- * يرسل push لكل restaurant_staff نشط بدور owner/manager عنده push_subscription
- * مسجّل لهذا المطعم. لا يرمي استثناءً عند الفشل (best effort) — الإشعار
- * تحسين تجربة، وليس جزءاً من صحة العملية المالية نفسها.
+ * يرسل push لكل owner/manager نشط عنده push_subscription مسجّل لهذا
+ * المطعم — من user_roles (النموذج الجديد) ومن restaurant_staff (موظفون
+ * مسجَّلون بالنظام القديم، مؤقتاً حتى حذف الجدول). لا يرمي استثناءً عند
+ * الفشل (best effort) — الإشعار تحسين تجربة، وليس جزءاً من صحة العملية المالية نفسها.
  */
 export async function notifyOwnerPush(restaurantId: string, payload: NotifyOwnerPayload): Promise<{ sent: number }> {
   try {
@@ -35,15 +36,29 @@ export async function notifyOwnerPush(restaurantId: string, payload: NotifyOwner
       return { sent: 0 };
     }
 
-    const { data: recipients, error } = await supabaseAdmin
-      .from('restaurant_staff')
-      .select('id, push_subscription')
-      .eq('restaurant_id', restaurantId)
-      .in('role', ['owner', 'manager'])
-      .eq('is_active', true)
-      .not('push_subscription', 'is', null);
+    const [{ data: newRecipients }, { data: legacyRecipients }] = await Promise.all([
+      supabaseAdmin
+        .from('user_roles')
+        .select('id, push_subscription')
+        .eq('restaurant_id', restaurantId)
+        .eq('role', 'manager')
+        .eq('is_active', true)
+        .not('push_subscription', 'is', null),
+      supabaseAdmin
+        .from('restaurant_staff')
+        .select('id, push_subscription')
+        .eq('restaurant_id', restaurantId)
+        .in('role', ['owner', 'manager'])
+        .eq('is_active', true)
+        .not('push_subscription', 'is', null),
+    ]);
 
-    if (error || !recipients?.length) return { sent: 0 };
+    const recipients = [
+      ...(newRecipients ?? []).map((r) => ({ table: 'user_roles' as const, id: r.id, push_subscription: r.push_subscription })),
+      ...(legacyRecipients ?? []).map((r) => ({ table: 'restaurant_staff' as const, id: r.id, push_subscription: r.push_subscription })),
+    ];
+
+    if (!recipients.length) return { sent: 0 };
 
     await Promise.allSettled(
       recipients.map(async (r) => {
@@ -61,7 +76,7 @@ export async function notifyOwnerPush(restaurantId: string, payload: NotifyOwner
         } catch (err: unknown) {
           const statusCode = (err as { statusCode?: number })?.statusCode;
           if (statusCode === 410) {
-            await supabaseAdmin.from('restaurant_staff').update({ push_subscription: null }).eq('id', r.id);
+            await supabaseAdmin.from(r.table).update({ push_subscription: null }).eq('id', r.id);
           }
         }
       })
