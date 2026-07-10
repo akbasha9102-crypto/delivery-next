@@ -1,13 +1,10 @@
 /**
- * طبقة نداء واجهات نظام RBAC (الموظفين/الورديات/الموافقات) — عقد الـ API المتفق عليه مع فريق الـ Backend.
+ * طبقة نداء واجهات نظام RBAC (الموظفين/الورديات/الموافقات).
  *
- * ملاحظة مهمة: هذه النقاط تُبنى بالتوازي من فريق آخر في نفس اللحظة، لذلك:
- * - لا تفترض أنها موجودة فعلياً أثناء التطوير — أي استدعاء قد يرجع 404 قبل الدمج.
- * - كل الدوال هنا تتعامل مع الفشل بلطف (لا تُسقط الواجهة) وتُرجع نتيجة موحّدة.
- * - المسارات والـ payloads مطابقة تماماً لما هو متفق عليه في خطة RBAC.
+ * كل الدوال هنا تتعامل مع الفشل بلطف (لا تُسقط الواجهة) وتُرجع نتيجة موحّدة.
  */
 
-export type StaffRole = 'owner' | 'manager' | 'cashier';
+export type StaffRole = 'owner' | 'manager' | 'cashier' | 'driver';
 
 export type StaffMember = {
   id: string;
@@ -18,15 +15,6 @@ export type StaffMember = {
   code: string | null;
   max_discount_pct: number;
   max_void_amount: number;
-};
-
-export type VerifyPinSuccess = {
-  staff_id: string;
-  display_name: string;
-  role: StaffRole;
-  max_discount_pct: number;
-  max_void_amount: number;
-  staff_token: string;
 };
 
 export type ApiResult<T> =
@@ -44,16 +32,15 @@ export function errorMessage(res: ApiResult<unknown>, fallback = 'حدث خطأ 
 type AuthOpts = { staffToken?: string; accessToken?: string };
 
 /**
- * ملاحظة أمن (بعد مراجعة أمنية): لم تعد أي دالة هنا ترسل staff_id/الدور
- * بجسم الطلب لتحديد الهوية — الخادم يستخرج الهوية حصراً من x-staff-token
- * (موقَّع HMAC، راجع src/lib/staff-auth.ts) أو من Authorization Bearer
- * الحقيقي لجلسة Supabase (للنقاط "مالك فقط" التي تتحقق من owner_id).
+ * لا توجد أي هوية تُرسَل بجسم الطلب. الخادم يستخرج الهوية حصراً من
+ * Authorization: Bearer — جلسة Supabase الحقيقية، يتحقق من توقيعها ويقرأ
+ * role/restaurant_id من claims الـ JWT نفسه (custom_access_token_hook).
+ * `staffToken` هنا هو access_token تبع الجلسة (اسم الحقل أُبقي كما هو
+ * لتفادي تعديل كل نقاط الاستدعاء)، وليس توكن HMAC موقَّع يدوياً كالسابق.
  */
 function authHeaders(opts?: AuthOpts): Record<string, string> {
-  const headers: Record<string, string> = {};
-  if (opts?.staffToken) headers['x-staff-token'] = opts.staffToken;
-  if (opts?.accessToken) headers['Authorization'] = `Bearer ${opts.accessToken}`;
-  return headers;
+  const token = opts?.staffToken || opts?.accessToken;
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function safeFetch<T>(input: string, init?: RequestInit): Promise<ApiResult<T>> {
@@ -79,15 +66,7 @@ async function safeFetch<T>(input: string, init?: RequestInit): Promise<ApiResul
   }
 }
 
-/* ─── PIN / هوية الموظف ─── */
-export function verifyPin(restaurantId: string, pin: string) {
-  return safeFetch<VerifyPinSuccess>('/api/staff/verify-pin', {
-    method: 'POST',
-    body: JSON.stringify({ restaurant_id: restaurantId, pin }),
-  });
-}
-
-/* ─── إدارة الموظفين (مالك فقط — يتطلب Authorization Bearer لجلسة Supabase الحقيقية) ─── */
+/* ─── إدارة الموظفين (مالك/مدير فقط — يتطلب Authorization Bearer لجلسة Supabase الحقيقية) ─── */
 export function listStaff(restaurantId: string, accessToken?: string) {
   return safeFetch<{ staff: StaffMember[] } | StaffMember[]>(
     `/api/staff?restaurant_id=${encodeURIComponent(restaurantId)}`,
@@ -126,15 +105,6 @@ export function updateStaff(id: string, patch: Partial<{
   });
 }
 
-/** يصدر staff_token موقَّع لهوية "المالك" بعد تحقق خادمي فعلي من الجلسة (يسدّ ثغرة C1/C2). */
-export function getOwnerSession(restaurantId: string, accessToken: string) {
-  return safeFetch<{ staff_token: string }>('/api/staff/owner-session', {
-    method: 'POST',
-    body: JSON.stringify({ restaurant_id: restaurantId }),
-    headers: authHeaders({ accessToken }),
-  });
-}
-
 export type MyStaffContext = {
   staff_id: string;
   restaurant_id: string;
@@ -146,9 +116,9 @@ export type MyStaffContext = {
 };
 
 /**
- * يتحقق هل الجلسة الحالية (Supabase Auth) تخص موظفاً دخل مباشرة بكود+كلمة
- * مرور من /login (حساب Auth مستقل تماماً)، بدل جلسة المالك المشتركة.
- * 404 يعني: هذه جلسة المالك نفسه، وليست موظفاً.
+ * يرجع دور/حدود الجلسة الحالية (مالك أو manager/cashier/driver — كلها
+ * حسابات Supabase Auth حقيقية ومستقلة الآن). فشل الطلب يعني هذه الجلسة
+ * بلا دور معروف على هذا المطعم (مثلاً حساب معطَّل).
  */
 export function getMyStaffContext(accessToken: string) {
   return safeFetch<MyStaffContext>('/api/staff/my-context', {
@@ -156,7 +126,7 @@ export function getMyStaffContext(accessToken: string) {
   });
 }
 
-/* ─── الورديات (تتطلب x-staff-token) ─── */
+/* ─── الورديات (تتطلب Authorization: Bearer لجلسة Supabase) ─── */
 export function openShift(payload: { opening_cash: number }, staffToken: string) {
   return safeFetch<{ id: string; opened_at: string; opening_cash: number; status: 'open' }>('/api/shifts/open', {
     method: 'POST',
@@ -193,7 +163,7 @@ export function listShifts(restaurantId: string, staffToken: string) {
   });
 }
 
-/* ─── عمليات الطلب الحساسة (تتطلب x-staff-token — الهوية تُستخرَج منه حصراً) ─── */
+/* ─── عمليات الطلب الحساسة (تتطلب Authorization: Bearer — الهوية تُستخرَج من الـ JWT الموثَّق حصراً) ─── */
 export function voidOrder(orderId: string, reason: string, staffToken: string) {
   return safeFetch<{ ok: true }>(`/api/orders/${orderId}/void`, {
     method: 'POST',
@@ -265,7 +235,7 @@ export function listInventoryForStaff(restaurantId: string, staffToken?: string)
   });
 }
 
-/** تسجيل هدر/تلف مخزون من واجهة الكاشير — الهوية عبر x-staff-token. */
+/** تسجيل هدر/تلف مخزون من واجهة الكاشير — الهوية عبر Authorization: Bearer. */
 export function registerWaste(payload: { item_id: string; quantity: number; reason: string }, staffToken: string) {
   return safeFetch<{ ok: true }>('/api/inventory/waste', {
     method: 'POST',
