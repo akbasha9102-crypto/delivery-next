@@ -557,7 +557,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                             </div>
 
                             {isAvailable ? (
-                              <div className={`relative flex items-center ${isBestSellers ? 'h-6 justify-center' : 'h-8 sm:h-12 justify-end sm:justify-start'}`}>
+                              <div className={`relative flex items-center ${isBestSellers ? 'h-7 justify-center' : 'h-8 sm:h-12 justify-end sm:justify-start'}`}>
                                 <AnimatePresence mode="wait">
                                   {count > 0 ? (
                                     <motion.div
@@ -599,7 +599,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                       whileHover={{ scale: 1.05 }}
                                       whileTap={{ scale: 0.95 }}
                                       onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-                                      className={`rounded-full font-black shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap ${isBestSellers ? 'h-6 px-2 text-[9px]' : 'h-10 sm:h-12 px-5 sm:px-7 text-xs sm:text-sm'}`}
+                                      className={`rounded-full font-black shadow-lg shadow-black/10 uppercase tracking-wider whitespace-nowrap ${isBestSellers ? 'h-7 px-3 text-xs' : 'h-10 sm:h-12 px-5 sm:px-7 text-xs sm:text-sm'}`}
                                       style={{ backgroundColor: dark ? '#ffffff' : catColor, color: dark ? '#000000' : catTextColor }}>
                                       إضافة
                                     </motion.button>
