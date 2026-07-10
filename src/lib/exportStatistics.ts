@@ -15,6 +15,7 @@ export type StatsExportData = {
     createdAt: string;
     orderTypeLabel: string;
     customerOrTable: string;
+    itemsText: string;
     status: string;
     total: number;
   }[];
@@ -241,9 +242,9 @@ export async function exportStatisticsToExcel(data: StatsExportData) {
   if (data.ordersSummary.length) {
     const detail = wb.addWorksheet('تفاصيل الطلبات', { views: [{ rightToLeft: true }] });
     addStyledTable(detail, 1,
-      ['رقم الطلب', 'التاريخ والوقت', 'نوع الطلب', 'اسم العميل / الطاولة', 'الحالة', 'المبلغ (د.ع)'],
-      data.ordersSummary.map(o => [o.orderId, o.createdAt, o.orderTypeLabel, o.customerOrTable, o.status, o.total]),
-      [5]);
+      ['رقم الطلب', 'التاريخ والوقت', 'نوع الطلب', 'اسم العميل / الطاولة', 'الأصناف المطلوبة', 'الحالة', 'المبلغ (د.ع)'],
+      data.ordersSummary.map(o => [o.orderId, o.createdAt, o.orderTypeLabel, o.customerOrTable, o.itemsText, o.status, o.total]),
+      [6]);
     autoFitColumns(detail);
   }
 

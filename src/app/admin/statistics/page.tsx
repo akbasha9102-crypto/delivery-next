@@ -267,6 +267,7 @@ export default function StatisticsPage() {
       createdAt: new Date(o.created_at).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' }),
       orderTypeLabel: orderTypeLabel(o.order_type),
       customerOrTable: o.table_number ? `طاولة ${o.table_number}` : o.client_name,
+      itemsText: o.items.map(it => `${it.item_name}×${it.quantity}`).join('، ') || '-',
       status: 'مكتمل',
       total: o.total_amount,
     })),
