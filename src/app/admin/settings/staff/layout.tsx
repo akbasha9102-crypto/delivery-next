@@ -1,4 +1,4 @@
-import { OwnerOnly } from '@/components/OwnerOnly';
+import { OwnerOnly } from '@/components/guards/OwnerOnly';
 
 // إدارة الموظفين تبقى owner-only حتى بعد فتح /admin/settings العامة
 // للكاشير — راجع src/app/admin/dashboard/layout.tsx للتفصيل الأمني الكامل.

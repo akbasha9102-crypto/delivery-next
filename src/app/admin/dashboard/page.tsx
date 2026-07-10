@@ -1,14 +1,14 @@
 'use client';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
-import { AdminBottomNav } from '@/components/BottomNav';
-import { OwnerOnly } from '@/components/OwnerOnly';
+import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import { ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check, Bell, Plus, Minus, Ticket } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { LowStockAlert } from '@/components/LowStockAlert';
+import { LowStockAlert } from '@/components/shared/LowStockAlert';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 type OrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };

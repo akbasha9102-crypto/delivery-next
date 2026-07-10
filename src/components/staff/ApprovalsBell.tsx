@@ -1,10 +1,10 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { Bell, Check, X, Clock, ChevronLeft } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
-import { listApprovals, resolveApproval, type ApprovalRequest } from '@/lib/staffApi';
+import { listApprovals, resolveApproval, type ApprovalRequest } from '@/lib/api/staffApi';
 
 async function getAccessToken(): Promise<string | undefined> {
   const { data: { session } } = await supabase.auth.getSession();

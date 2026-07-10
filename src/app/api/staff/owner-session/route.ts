@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyOwnerRequest, signStaffToken } from '@/lib/staff-auth';
+import { verifyOwnerRequest, signStaffToken } from '@/lib/auth/staff-auth';
 
 // POST /api/staff/owner-session — { restaurant_id } + Authorization: Bearer <supabase access_token>
 // يصدر staff_token موقَّع لهوية "المالك" بعد التحقق الفعلي من أن الجلسة

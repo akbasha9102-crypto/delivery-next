@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
-import { AdminBottomNav } from '@/components/BottomNav';
+import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, FolderPlus, UtensilsCrossed } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { HexColorPicker } from 'react-colorful';

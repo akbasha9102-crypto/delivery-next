@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { AdminBottomNav } from '@/components/BottomNav';
+import { supabase } from '@/lib/supabase/client';
+import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { Plus, Trash2, CheckCircle, Circle, Copy, Check, KeyRound, X, RefreshCw, Loader2 } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 

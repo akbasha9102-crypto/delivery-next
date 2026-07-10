@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { resolveStaffIdentity } from '@/lib/staff-auth';
-import { logStaffAction } from '@/lib/staff-actions-log';
-import { notifyOwnerPush } from '@/lib/notify-owner-push';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
+import { logStaffAction } from '@/lib/utils/staff-actions-log';
+import { notifyOwnerPush } from '@/lib/api/notify-owner-push';
 
 // POST /api/orders/:id/refund — { reason } + ترويسة x-staff-token
 // الهوية تُستخرَج حصراً من توكن موقَّع (راجع resolveStaffIdentity) — لا يُثَق

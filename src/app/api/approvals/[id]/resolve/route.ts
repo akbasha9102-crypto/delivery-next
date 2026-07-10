@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { verifyOwnerRequest } from '@/lib/staff-auth';
-import { logStaffAction } from '@/lib/staff-actions-log';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { verifyOwnerRequest } from '@/lib/auth/staff-auth';
+import { logStaffAction } from '@/lib/utils/staff-actions-log';
 
 // POST /api/approvals/:id/resolve — { action: 'approve'|'reject', resolved_by }
 // مالك فقط (جلسة Supabase). عند approve: ينفّذ العملية المعلّقة فعلياً

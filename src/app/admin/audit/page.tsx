@@ -2,10 +2,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, History } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { OwnerOnly } from '@/components/OwnerOnly';
-import type { StaffActionLog } from '@/lib/staffApi';
+import { OwnerOnly } from '@/components/guards/OwnerOnly';
+import type { StaffActionLog } from '@/lib/api/staffApi';
 
 const ACTION_LABEL: Record<string, string> = {
   order_void: 'إلغاء طلب',

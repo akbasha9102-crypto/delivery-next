@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { AdminBottomNav } from '@/components/BottomNav';
-import { OwnerOnly } from '@/components/OwnerOnly';
+import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import { ChevronRight, ChevronDown, Car, Phone } from 'lucide-react';
 
 type DriverRow = { id: string; name: string; phone: string; status: string };

@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { AdminBottomNav } from '@/components/BottomNav';
-import { OwnerOnly } from '@/components/OwnerOnly';
+import { supabase } from '@/lib/supabase/client';
+import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { MessageSquare, AlertCircle, ChevronRight, ChevronDown, ChevronUp, MapPin, Car } from 'lucide-react';

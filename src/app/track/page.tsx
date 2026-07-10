@@ -1,11 +1,11 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
-import { ClientBottomNav } from '@/components/BottomNav';
+import { supabase } from '@/lib/supabase/client';
+import { ClientBottomNav } from '@/components/layout/BottomNav';
 import { MessageSquare, X, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
-import { CustomerGuard } from '@/components/CustomerGuard';
+import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
 
 function isInternalOrder(orderType?: string | null) {

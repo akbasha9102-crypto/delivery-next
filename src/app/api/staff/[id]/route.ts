@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { verifyOwnerRequest, type StaffRole } from '@/lib/staff-auth';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { verifyOwnerRequest, type StaffRole } from '@/lib/auth/staff-auth';
 
 const STAFF_SELECT_NO_PIN =
   'id, restaurant_id, display_name, role, is_active, auth_user_id, code, max_discount_pct, max_void_amount, failed_pin_attempts, locked_until, created_at, updated_at';

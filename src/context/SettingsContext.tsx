@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
 
 export type DaySchedule  = { enabled: boolean; open: string; close: string };

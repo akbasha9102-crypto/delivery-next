@@ -2,14 +2,14 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
-import { supabase } from '@/lib/supabase';
-import { ClientBottomNav } from '@/components/BottomNav';
-import { CustomerGuard } from '@/components/CustomerGuard';
+import { supabase } from '@/lib/supabase/client';
+import { ClientBottomNav } from '@/components/layout/BottomNav';
+import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChevronLeft, Plus, Minus, Check, LogOut, Ticket } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
-import InAppBrowserBanner, { isInAppBrowser } from '@/components/InAppBrowserBanner';
+import InAppBrowserBanner, { isInAppBrowser } from '@/components/layout/InAppBrowserBanner';
 import type { Session } from '@supabase/supabase-js';
 
 

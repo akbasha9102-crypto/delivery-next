@@ -1,12 +1,12 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { ClientBottomNav } from '@/components/BottomNav';
+import { ClientBottomNav } from '@/components/layout/BottomNav';
 import { User, Pencil, Check, Phone, LogOut, MapPin, Plus, Trash2, X, LocateFixed, CheckCircle2, Loader2, ChevronRight, Moon, Sun } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
-import { CustomerGuard } from '@/components/CustomerGuard';
+import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import type { Session } from '@supabase/supabase-js';
 
 const KEYS = {

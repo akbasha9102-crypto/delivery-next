@@ -1,13 +1,13 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { AdminBottomNav } from '@/components/BottomNav';
-import { OwnerOnly } from '@/components/OwnerOnly';
+import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown, Flame, Car, LayoutGrid, ClipboardList, Download, FileSpreadsheet, FileText } from 'lucide-react';
-import { exportStatisticsToExcel, exportStatisticsToWord, type StatsExportData } from '@/lib/exportStatistics';
+import { exportStatisticsToExcel, exportStatisticsToWord, type StatsExportData } from '@/lib/export/exportStatistics';
 
 type OrderItem = { id: string; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; order_type?: string | null; table_number?: number | string | null; delivery_fee?: number | null; discount_amount?: number | null; coupon_code?: string | null; items: OrderItem[] };

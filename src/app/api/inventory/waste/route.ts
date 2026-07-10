@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { resolveStaffIdentity } from '@/lib/staff-auth';
-import { logStaffAction } from '@/lib/staff-actions-log';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
+import { logStaffAction } from '@/lib/utils/staff-actions-log';
 
 // POST /api/inventory/waste — { item_id, quantity, reason } + ترويسة x-staff-token
 // الهوية تُستخرَج حصراً من توكن موقَّع (راجع resolveStaffIdentity)، لا من

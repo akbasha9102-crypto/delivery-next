@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { Bell, BellOff, LogOut, MessageCircle, MapPin, ChevronLeft, Loader2, CheckCircle2, Clock, TrendingUp, X, Check, Package } from 'lucide-react';
 
 type Order = {

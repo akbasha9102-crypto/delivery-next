@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { verifyPin, signStaffToken } from '@/lib/staff-auth';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { verifyPin, signStaffToken } from '@/lib/auth/staff-auth';
 
 // عدد المحاولات الخاطئة المتتالية قبل القفل المؤقت (Soft Lock)، ومدة القفل.
 // ملاحظة أمن (بعد مراجعة أمنية): تقليل مدة القفل من 15 إلى 3 دقائق لتخفيف

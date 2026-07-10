@@ -15,7 +15,7 @@ run_agent() {
   echo "──────────────────────────────────────────"
   echo "▶ تشغيل العميل ${num}..."
   echo "──────────────────────────────────────────"
-  npx tsx --env-file=.env.local "tests/${file}"
+  npx tsx --env-file=.env.local "scripts/${file}"
   echo ""
 }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { resolveStaffIdentity } from '@/lib/staff-auth';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
 
 // POST /api/staff/:id/push-subscribe — تسجيل اشتراك Push لجهاز موظف
 // (owner/manager عادة) لاستلام تنبيهات الموافقة الفورية وفروقات الكاش.

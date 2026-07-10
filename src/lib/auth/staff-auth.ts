@@ -7,7 +7,7 @@
 // الدور والحدود دائماً من قاعدة البيانات عبر getStaffContext() أدناه.
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 import { NextRequest } from 'next/server';
-import { supabaseAdmin } from './supabase-admin';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export type StaffRole = 'owner' | 'manager' | 'cashier';
 
