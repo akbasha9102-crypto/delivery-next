@@ -341,7 +341,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
         {/* اسم المطعم */}
         <div className="flex flex-col flex-1 min-w-0">
-          <h1 className="max-w-full text-lg font-black tracking-tight leading-tight text-black dark:text-white truncate">{brandName}</h1>
+          <h1 className="max-w-full text-lg font-black leading-snug overflow-x-hidden overflow-y-visible whitespace-nowrap text-ellipsis text-black dark:text-white [font-family:var(--font-brand-name)]">{brandName}</h1>
           <div className="w-8 h-1 rounded-full mt-1 opacity-20" style={{ backgroundColor: brandColor }}/>
         </div>
 
