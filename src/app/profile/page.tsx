@@ -452,7 +452,7 @@ export default function ProfilePage() {
               <motion.span
                 layout
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                className="w-5 h-5 rounded-full bg-white shadow flex-shrink-0"
+                className={`w-5 h-5 rounded-full bg-white shadow-md flex-shrink-0 ${getTextColor(dark ? brandColor : '#e5e7eb') === '#000000' ? 'ring-2 ring-black/40' : ''}`}
                 style={{ marginRight: dark ? 0 : 'auto', marginLeft: dark ? 'auto' : 0 }}
               />
             </div>
