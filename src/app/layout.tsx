@@ -1,14 +1,14 @@
 import type { Metadata, Viewport } from 'next';
-import { Cairo } from 'next/font/google';
+import { Tajawal } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { CartProvider } from '@/context/CartContext';
 import { SettingsProvider } from '@/context/SettingsContext';
 import { RestaurantProvider } from '@/context/RestaurantContext';
 
-const cairoBrand = Cairo({
+const brandFont = Tajawal({
   subsets: ['arabic', 'latin'],
-  weight: '900',
+  weight: '500',
   display: 'swap',
   variable: '--font-brand-name',
 });
@@ -33,7 +33,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ar" dir="rtl" className={`h-full ${cairoBrand.variable}`}>
+    <html lang="ar" dir="rtl" className={`h-full ${brandFont.variable}`}>
       <head>
         <meta name="theme-color" content="#f97316" />
         <link rel="apple-touch-icon" href="/favicon.ico" />
