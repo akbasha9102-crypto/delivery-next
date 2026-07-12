@@ -349,10 +349,10 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
         <button
           type="button"
           onClick={() => setShowOrderTypeModal(true)}
-          className="flex items-center gap-1.5 pl-2.5 pr-3.5 h-11 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0"
+          className="flex items-center gap-1 pl-2 pr-3 h-11 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-sm flex-shrink-0"
           aria-label="نوع الطلب: توصيل أو استلام"
         >
-          <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{orderType === 'pickup' ? 'استلام الطلب' : 'توصيل الطلب'}</span>
+          <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{orderType === 'pickup' ? 'استلام' : 'توصيل'}</span>
           <ChevronDown size={17} className="text-gray-400" />
         </button>
 
