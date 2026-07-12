@@ -585,11 +585,11 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                           <div className={`mt-auto flex ${isBestSellers ? 'flex-col items-stretch gap-1' : 'flex-col sm:flex-row-reverse sm:items-center sm:justify-between gap-2 sm:gap-4'}`}>
                             <div className="text-right flex-shrink-0">
                               {discPct > 0 && (
-                                <div className="flex items-center gap-1 justify-end mb-0.5">
-                                  <span className={`text-gray-400 dark:text-slate-500 line-through font-bold ${isBestSellers ? 'text-[8px]' : 'text-[10px] sm:text-xs'}`}>
+                                <div className={`flex items-center gap-1 justify-end mb-0.5 ${isBestSellers ? 'flex-wrap' : ''}`}>
+                                  <span className={`text-gray-400 dark:text-slate-500 line-through font-bold ${isBestSellers ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm'}`}>
                                     {item.price.toLocaleString()}
                                   </span>
-                                  <span className={`font-black bg-red-500 text-white rounded-full ${isBestSellers ? 'text-[7px] px-1' : 'text-[9px] sm:text-[10px] px-1.5 py-0.5'}`}>
+                                  <span className={`font-black bg-red-500 text-white rounded-full ${isBestSellers ? 'text-[9px] px-1 py-0.5 sm:text-[10px]' : 'text-[10px] sm:text-xs px-1.5 py-0.5'}`}>
                                     -{discPct}%
                                   </span>
                                 </div>
