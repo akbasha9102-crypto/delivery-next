@@ -573,7 +573,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
                         {/* Details */}
                         <div className={`flex flex-col flex-1 ${isBestSellers ? 'p-2' : 'p-3 sm:p-6'}`}>
-                          <p className={`font-black text-gray-900 dark:text-slate-100 text-right leading-tight ${isBestSellers ? 'text-[11px] sm:text-xs mb-1 line-clamp-1' : 'text-sm sm:text-xl mb-1 sm:mb-2'}`}>
+                          <p className={`font-black text-gray-900 dark:text-slate-100 text-right leading-tight ${isBestSellers ? 'text-xs sm:text-sm mb-1 line-clamp-1' : 'text-sm sm:text-xl mb-1 sm:mb-2'}`}>
                             {item.name}
                           </p>
                           {item.description && !isBestSellers && (
@@ -594,7 +594,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                   </span>
                                 </div>
                               )}
-                              <p className={`font-black text-black dark:text-white ${isBestSellers ? 'text-xs' : 'text-base sm:text-2xl'}`}>
+                              <p className={`font-black text-black dark:text-white ${isBestSellers ? 'text-sm sm:text-base whitespace-nowrap' : 'text-base sm:text-2xl'}`}>
                                 {discPrice.toLocaleString()}
                               </p>
                               {!isBestSellers && <p className="text-[8px] sm:text-[10px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>}
