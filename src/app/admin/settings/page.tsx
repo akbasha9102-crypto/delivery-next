@@ -1,13 +1,14 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Users, Ticket, Flame, Percent, Search, Check } from 'lucide-react';
+import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, ChevronDown, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Users, Ticket, Flame, Percent, Search, Check } from 'lucide-react';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useStaff } from '@/context/StaffContext';
+import { applyDiscountPct } from '@/lib/utils/pricing';
 
 /* ─── جدولة الدوام ─── */
 const DAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -111,7 +112,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
 }
 
 /* ─── نافذة عامة نصف الشاشة (تُستخدم لرسوم التوصيل / الحد الأدنى / الكوبون) ─── */
-function BottomSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function BottomSheet({ title, onClose, children, maxHeight = '65vh' }: { title: string; onClose: () => void; children: React.ReactNode; maxHeight?: string }) {
   const [animateIn, setAnimateIn] = useState(false);
 
   useEffect(() => {
@@ -138,7 +139,8 @@ function BottomSheet({ title, onClose, children }: { title: string; onClose: () 
     <div className="fixed inset-0 z-50 flex items-end" onClick={close}>
       <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`} />
       <div
-        className={`relative w-full bg-white dark:bg-slate-900 rounded-t-3xl transition-transform duration-300 ease-out flex flex-col max-h-[65vh] ${animateIn ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`relative w-full bg-white dark:bg-slate-900 rounded-t-3xl transition-transform duration-300 ease-out flex flex-col ${animateIn ? 'translate-y-0' : 'translate-y-full'}`}
+        style={{ maxHeight }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex-shrink-0 px-5 pt-4 pb-4 border-b border-gray-100 dark:border-slate-800">
@@ -389,16 +391,19 @@ function ChangePasswordSheet({ onClose, username }: { onClose: () => void; usern
 
 /* ─── نافذة خصومات الأقسام والوجبات ─── */
 type DiscCategory = { id: string; name: string; discount_pct: number };
-type DiscItem = { id: string; name: string; category_id: string | null; discount_pct: number };
+type DiscItem = { id: string; name: string; category_id: string | null; discount_pct: number; price: number };
 
-function DiscountRow({ name, subtitle, value, onChange, onSave, saving, saved }: {
+// معرّف وهمي لتجميع الوجبات التي لا تتبع أي قسم
+const NO_CATEGORY_ID = '__none__';
+
+function DiscountRow({ name, value, onChange, onSave, saving, saved, previewPrice }: {
   name: string;
-  subtitle?: string;
   value: string;
   onChange: (v: string) => void;
   onSave: () => void;
   saving: boolean;
   saved: boolean;
+  previewPrice?: number;
 }) {
   const pct = parseFloat(value);
   const active = !isNaN(pct) && pct > 0;
@@ -409,7 +414,11 @@ function DiscountRow({ name, subtitle, value, onChange, onSave, saving, saved }:
           {active && <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] flex-shrink-0" />}
           <p className="font-bold text-sm text-gray-800 dark:text-slate-200 truncate">{name}</p>
         </div>
-        {subtitle && <p className="text-[10px] text-gray-400 dark:text-slate-500 truncate">{subtitle}</p>}
+        {active && previewPrice !== undefined && (
+          <p className="text-[10px] text-gray-400 dark:text-slate-500 truncate">
+            قبل: {previewPrice.toLocaleString()} — بعد: {applyDiscountPct(previewPrice, pct).toLocaleString()}
+          </p>
+        )}
       </div>
       <input type="number" min="0" max="100" step="0.5" inputMode="decimal" value={value}
         onChange={e => onChange(e.target.value)}
@@ -424,7 +433,6 @@ function DiscountRow({ name, subtitle, value, onChange, onSave, saving, saved }:
 }
 
 function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restaurantId: string | null }) {
-  const [animateIn, setAnimateIn] = useState(false);
   const [loading,    setLoading]    = useState(true);
   const [categories, setCategories] = useState<DiscCategory[]>([]);
   const [items,      setItems]      = useState<DiscItem[]>([]);
@@ -435,24 +443,7 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
   const [itemSaving, setItemSaving] = useState<Record<string, boolean>>({});
   const [itemSaved,  setItemSaved]  = useState<Record<string, boolean>>({});
   const [itemSearch, setItemSearch] = useState('');
-
-  useEffect(() => {
-    requestAnimationFrame(() => setAnimateIn(true));
-    const scrollY = window.scrollY;
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.left = '';
-      document.body.style.right = '';
-      document.body.style.overflow = '';
-      window.scrollTo(0, scrollY);
-    };
-  }, []);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!restaurantId) { setLoading(false); return; }
@@ -460,7 +451,7 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
     (async () => {
       const [{ data: cats }, { data: itms }] = await Promise.all([
         supabase.from('categories').select('id, name, discount_pct').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true, nullsFirst: false }),
-        supabase.from('items').select('id, name, category_id, discount_pct').eq('restaurant_id', restaurantId).order('name'),
+        supabase.from('items').select('id, name, category_id, discount_pct, price').eq('restaurant_id', restaurantId).order('name'),
       ]);
       const catList = (cats ?? []) as DiscCategory[];
       const itemList = (itms ?? []) as DiscItem[];
@@ -472,10 +463,46 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
     })();
   }, [restaurantId]);
 
-  const close = () => { setAnimateIn(false); setTimeout(onClose, 300); };
+  // مجموعة "بدون قسم" مبنية على وجبات ليس لها category_id — تُضاف كمجموعة أخيرة فقط إن وُجدت
+  const groups = useMemo(() => {
+    const list: { id: string; name: string; category: DiscCategory | null; allItems: DiscItem[] }[] = categories.map(c => ({
+      id: c.id,
+      name: c.name,
+      category: c,
+      allItems: items.filter(i => i.category_id === c.id),
+    }));
+    const noneItems = items.filter(i => i.category_id === null);
+    if (noneItems.length > 0) {
+      list.push({ id: NO_CATEGORY_ID, name: 'بدون قسم', category: null, allItems: noneItems });
+    }
+    return list;
+  }, [categories, items]);
 
-  const catNameById: Record<string, string> = {};
-  categories.forEach(c => { catNameById[c.id] = c.name; });
+  const query = itemSearch.trim().toLowerCase();
+
+  // تصفية البحث: تطابق اسم القسم أو اسم أي وجبة فيه — مع توسيع تلقائي للمجموعات المطابقة
+  const visibleGroups = useMemo(() => {
+    if (!query) return groups.map(g => ({ ...g, displayItems: g.allItems }));
+    return groups
+      .map(g => {
+        const nameMatch = g.name.toLowerCase().includes(query);
+        const displayItems = nameMatch ? g.allItems : g.allItems.filter(i => i.name.toLowerCase().includes(query));
+        return { ...g, displayItems, matched: nameMatch || displayItems.length > 0 };
+      })
+      .filter(g => g.matched);
+  }, [groups, query]);
+
+  const isGroupOpen = (id: string) => (query ? true : openGroups[id] !== false);
+  const toggleGroup = (id: string) => setOpenGroups(prev => ({ ...prev, [id]: !isGroupOpen(id) }));
+
+  // سعر تمثيلي للقسم لعرض المعاينة: متوسط أسعار الوجبات التي لا تملك خصماً خاصاً بها (فهي فعلياً من سيتأثر بخصم القسم)،
+  // وإن لم توجد فمتوسط كل وجبات القسم، وإن لم توجد وجبات إطلاقاً فلا معاينة
+  const categoryPreviewPrice = (catItems: DiscItem[]): number | undefined => {
+    if (catItems.length === 0) return undefined;
+    const affected = catItems.filter(i => (i.discount_pct ?? 0) <= 0);
+    const pool = affected.length > 0 ? affected : catItems;
+    return Math.round(pool.reduce((s, i) => s + i.price, 0) / pool.length);
+  };
 
   const saveCategoryDiscount = async (id: string) => {
     const pct = parseFloat(catInputs[id]);
@@ -501,78 +528,79 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
     setTimeout(() => setItemSaved(prev => ({ ...prev, [id]: false })), 2000);
   };
 
-  const filteredItems = itemSearch ? items.filter(i => i.name.includes(itemSearch)) : items;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end" onClick={close}>
-      <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`} />
-      <div
-        className={`relative w-full bg-white dark:bg-slate-900 rounded-t-3xl transition-transform duration-300 ease-out flex flex-col max-h-[92vh] ${animateIn ? 'translate-y-0' : 'translate-y-full'}`}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex-shrink-0 px-5 pt-4 pb-4 border-b border-gray-100 dark:border-slate-800">
-          <div className="w-10 h-1 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <div className="w-9" />
-            <p className="font-bold text-gray-900 dark:text-slate-100">خصومات الأقسام والوجبات</p>
-            <button onClick={close} className="p-1.5 rounded-xl text-gray-400 active:scale-90 transition-all">
-              <X size={20} />
-            </button>
+    <BottomSheet title="خصومات الأقسام والوجبات" onClose={onClose} maxHeight="90vh">
+      {loading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 className="animate-spin text-gray-400" size={26} />
+        </div>
+      ) : (
+        <>
+          <div className="relative">
+            <Search size={15} className="absolute top-1/2 -translate-y-1/2 right-3.5 text-gray-400 dark:text-slate-500" />
+            <input value={itemSearch} onChange={e => setItemSearch(e.target.value)}
+              placeholder="ابحث عن قسم أو وجبة..." dir="rtl"
+              className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl py-2.5 pr-9 pl-3 text-right text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]" />
           </div>
-        </div>
 
-        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-6" dir="rtl">
-          {loading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="animate-spin text-gray-400" size={26} />
-            </div>
+          {visibleGroups.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-4">
+              {query ? 'لا توجد نتائج' : 'لا توجد أقسام'}
+            </p>
           ) : (
-            <>
-              <div>
-                <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-2 px-1">الأقسام</p>
-                {categories.length === 0 ? (
-                  <p className="text-xs text-gray-400 text-center py-4">لا توجد أقسام</p>
-                ) : (
-                  <div className="space-y-2">
-                    {categories.map(c => (
-                      <DiscountRow key={c.id} name={c.name}
-                        value={catInputs[c.id] ?? '0'}
-                        onChange={v => setCatInputs(prev => ({ ...prev, [c.id]: v }))}
-                        onSave={() => saveCategoryDiscount(c.id)}
-                        saving={!!catSaving[c.id]} saved={!!catSaved[c.id]} />
-                    ))}
-                  </div>
-                )}
-              </div>
+            <div className="space-y-3">
+              {visibleGroups.map(g => {
+                const open = isGroupOpen(g.id);
+                return (
+                  <div key={g.id} className="rounded-xl bg-gray-50/60 dark:bg-slate-800/30 overflow-hidden">
+                    {g.category ? (
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => toggleGroup(g.id)}
+                          className="p-2 text-gray-400 dark:text-slate-500 flex-shrink-0"
+                          aria-label={open ? 'طي القسم' : 'توسيع القسم'}>
+                          <ChevronDown size={16} className={`transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <DiscountRow name={g.name}
+                            value={catInputs[g.id] ?? '0'}
+                            onChange={v => setCatInputs(prev => ({ ...prev, [g.id]: v }))}
+                            onSave={() => saveCategoryDiscount(g.id)}
+                            saving={!!catSaving[g.id]} saved={!!catSaved[g.id]}
+                            previewPrice={categoryPreviewPrice(g.allItems)} />
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => toggleGroup(g.id)}
+                        className="w-full flex items-center gap-1.5 px-2 py-2">
+                        <ChevronDown size={16} className={`text-gray-400 dark:text-slate-500 flex-shrink-0 transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
+                        <p className="text-xs font-bold text-gray-400 dark:text-slate-500 flex-1 text-right">{g.name}</p>
+                      </button>
+                    )}
 
-              <div>
-                <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-2 px-1">الوجبات</p>
-                <div className="relative mb-3">
-                  <Search size={15} className="absolute top-1/2 -translate-y-1/2 right-3.5 text-gray-400 dark:text-slate-500" />
-                  <input value={itemSearch} onChange={e => setItemSearch(e.target.value)}
-                    placeholder="ابحث عن وجبة..." dir="rtl"
-                    className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl py-2.5 pr-9 pl-3 text-right text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]" />
-                </div>
-                {filteredItems.length === 0 ? (
-                  <p className="text-xs text-gray-400 text-center py-4">لا توجد نتائج</p>
-                ) : (
-                  <div className="space-y-2">
-                    {filteredItems.map(i => (
-                      <DiscountRow key={i.id} name={i.name}
-                        subtitle={i.category_id ? catNameById[i.category_id] : undefined}
-                        value={itemInputs[i.id] ?? '0'}
-                        onChange={v => setItemInputs(prev => ({ ...prev, [i.id]: v }))}
-                        onSave={() => saveItemDiscount(i.id)}
-                        saving={!!itemSaving[i.id]} saved={!!itemSaved[i.id]} />
-                    ))}
+                    {open && (
+                      g.displayItems.length === 0 ? (
+                        <p className="text-[10px] text-gray-400 text-center py-2">لا توجد وجبات</p>
+                      ) : (
+                        <div className="space-y-2 pr-5 pl-1 pb-2 pt-1">
+                          {g.displayItems.map(i => (
+                            <DiscountRow key={i.id} name={i.name}
+                              value={itemInputs[i.id] ?? '0'}
+                              onChange={v => setItemInputs(prev => ({ ...prev, [i.id]: v }))}
+                              onSave={() => saveItemDiscount(i.id)}
+                              saving={!!itemSaving[i.id]} saved={!!itemSaved[i.id]}
+                              previewPrice={i.price} />
+                          ))}
+                        </div>
+                      )
+                    )}
                   </div>
-                )}
-              </div>
-            </>
+                );
+              })}
+            </div>
           )}
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 

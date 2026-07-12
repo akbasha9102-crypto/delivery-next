@@ -11,6 +11,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionTemplate } from 'framer-motion';
+import { applyDiscountPct, getEffectivePct as getEffectivePctShared } from '@/lib/utils/pricing';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; discount_pct?: number };
 type Extra    = { id: string; name: string; price: number };
@@ -22,14 +23,12 @@ type Item     = {
 
 // نسبة الخصم الفعّالة: خصم العنصر نفسه له الأولوية على خصم القسم — لا يُجمعان أبداً
 function getEffectivePct(item: Item, categories: Category[]): number {
-  if (item.discount_pct && item.discount_pct > 0) return item.discount_pct;
   const cat = categories.find(c => c.id === item.category_id);
-  return cat?.discount_pct || 0;
+  return getEffectivePctShared(item.discount_pct, cat?.discount_pct);
 }
 
 function getDiscountedPrice(item: Item, categories: Category[]): number {
-  const pct = getEffectivePct(item, categories);
-  return pct > 0 ? Math.round(item.price * (1 - pct / 100)) : item.price;
+  return applyDiscountPct(item.price, getEffectivePct(item, categories));
 }
 
 function formatOpenTime(time: string | null): string {
