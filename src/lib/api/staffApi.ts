@@ -187,12 +187,21 @@ export function discountOrder(orderId: string, discountPct: number, staffToken: 
   });
 }
 
+/** كوبون رجعي: يطبّق كوبون الخصم الحالي للمطعم على طلب موجود مسبقاً (POS فقط حالياً). */
+export function applyCoupon(orderId: string, couponCode: string, staffToken: string) {
+  return safeFetch<{ ok: true }>(`/api/orders/${orderId}/apply-coupon`, {
+    method: 'POST',
+    body: JSON.stringify({ coupon_code: couponCode }),
+    headers: authHeaders({ staffToken }),
+  });
+}
+
 /* ─── الموافقات (مالك فقط — Authorization Bearer) ─── */
 export type ApprovalRequest = {
   id: string;
   restaurant_id: string;
   requested_by: string;
-  request_type: 'void_order' | 'refund' | 'discount_override' | 'price_override';
+  request_type: 'void_order' | 'refund' | 'discount_override' | 'price_override' | 'coupon_override';
   order_id: string | null;
   amount: number | null;
   reason: string | null;

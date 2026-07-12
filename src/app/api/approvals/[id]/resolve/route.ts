@@ -81,7 +81,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (approval.order_id) {
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .select('id, status, total_amount')
+      .select('id, restaurant_id, status, total_amount, pre_discount_total, coupon_code')
       .eq('id', approval.order_id)
       .maybeSingle();
 
@@ -127,6 +127,48 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         before_data: { total_amount: originalTotal },
         after_data: { total_amount: newTotal, discount_pct: pct, via_approval: approvalId },
       });
+    } else if (approval.request_type === 'coupon_override') {
+      // كوبون رجعي: نعيد جلب كود/نسبة الكوبون الحيّة من الإعدادات وقت الموافقة (لا نثق
+      // بـ approval.amount كمصدر حقيقة نهائي — قد يتغيّر الكوبون بالإعدادات بين وقت الطلب
+      // ووقت الموافقة)، ونحسب من pre_discount_total (السعر الأصلي الحقيقي) وليس total_amount
+      // الحالي — بخلاف فرع discount_override أعلاه الذي يحسب من total_amount مباشرة.
+      if (!order.coupon_code) {
+        const { data: settings } = await supabaseAdmin
+          .from('restaurant_settings')
+          .select('coupon_code, coupon_discount_pct, coupon_enabled, coupon_allow_retroactive')
+          .eq('restaurant_id', order.restaurant_id)
+          .maybeSingle();
+
+        const pct = Number(settings?.coupon_discount_pct) || 0;
+        const configuredCode = (settings?.coupon_code || '').trim().toUpperCase();
+
+        if (settings?.coupon_enabled && settings?.coupon_allow_retroactive && configuredCode && pct > 0) {
+          const originalTotal = Number(order.pre_discount_total ?? order.total_amount) || 0;
+          const currentTotal = Number(order.total_amount) || 0;
+          const discountAmount = Math.round(originalTotal * (pct / 100) * 100) / 100;
+          const newTotal = Math.round((originalTotal - discountAmount) * 100) / 100;
+
+          await supabaseAdmin.from('orders').update({
+            total_amount: newTotal,
+            pre_discount_total: originalTotal,
+            coupon_code: configuredCode,
+            discount_amount: discountAmount,
+          }).eq('id', order.id);
+
+          await logStaffAction({
+            restaurant_id: approval.restaurant_id,
+            performed_by_auth_id: approval.requested_by_user_id,
+            performed_by_label: requesterLabel,
+            action_type: 'coupon_applied',
+            entity_type: 'order',
+            entity_id: order.id,
+            before_data: { total_amount: currentTotal },
+            after_data: { total_amount: newTotal, coupon_code: configuredCode, discount_pct: pct, via_approval: approvalId },
+          });
+        }
+        // إن لم يعد الكوبون مفعّلاً/مطابقاً وقت الموافقة، لا تُطبَّق أي تغييرات على الطلب —
+        // الموافقة تُسجَّل approved أدناه بأي حال، دون تنفيذ صامت لعملية لم تعد صالحة.
+      }
     }
     // 'price_override' محجوز لنقطة مستقبلية — لا يوجد endpoint حالي ينشئه، لذا لا تنفيذ إضافي هنا
   }

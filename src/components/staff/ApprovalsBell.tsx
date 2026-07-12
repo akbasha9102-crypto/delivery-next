@@ -16,6 +16,7 @@ const TYPE_LABEL: Record<ApprovalRequest['request_type'], string> = {
   refund: 'استرجاع مبلغ',
   discount_override: 'تجاوز حد الخصم',
   price_override: 'تعديل سعر',
+  coupon_override: 'تطبيق كوبون رجعي',
 };
 
 /**

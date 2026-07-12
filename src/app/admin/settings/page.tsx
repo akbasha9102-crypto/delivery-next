@@ -579,7 +579,7 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
 /* ─── الصفحة الرئيسية ─── */
 export default function SettingsPage() {
   const router = useRouter();
-  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled, show_best_sellers } = useSettings();
+  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled, coupon_allow_retroactive, show_best_sellers } = useSettings();
   const { restaurantId } = useRestaurant();
   const { dark, toggleDark } = useDarkMode();
   const { isCashier, activeStaff, switchUser } = useStaff();
@@ -607,6 +607,7 @@ export default function SettingsPage() {
   const [couponCodeInput,  setCouponCodeInput]  = useState('');
   const [couponPctInput,   setCouponPctInput]   = useState('0');
   const [couponEnabledLocal, setCouponEnabledLocal] = useState(false);
+  const [couponAllowRetroactiveLocal, setCouponAllowRetroactiveLocal] = useState(false);
   const [couponSaving,     setCouponSaving]     = useState(false);
   const [couponSaved,      setCouponSaved]      = useState(false);
   const [bestSellersLocal, setBestSellersLocal] = useState(true);
@@ -627,6 +628,7 @@ export default function SettingsPage() {
   useEffect(() => { setCouponCodeInput(coupon_code ?? ''); }, [coupon_code]);
   useEffect(() => { setCouponPctInput(String(coupon_discount_pct ?? 0)); }, [coupon_discount_pct]);
   useEffect(() => { setCouponEnabledLocal(!!coupon_enabled); }, [coupon_enabled]);
+  useEffect(() => { setCouponAllowRetroactiveLocal(!!coupon_allow_retroactive); }, [coupon_allow_retroactive]);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(id);
@@ -712,6 +714,7 @@ export default function SettingsPage() {
       coupon_code: code || null,
       coupon_discount_pct: pct,
       coupon_enabled: couponEnabledLocal && !!code && pct > 0,
+      coupon_allow_retroactive: couponAllowRetroactiveLocal,
     }).eq('id', settingsId);
     if (!error) {
       await refreshSettings();
@@ -1089,6 +1092,15 @@ export default function SettingsPage() {
               style={{ backgroundColor: couponEnabledLocal ? '#22c55e' : '#d1d5db' }}>
               <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
                 style={{ right: couponEnabledLocal ? '2px' : '22px' }} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500 dark:text-slate-400 flex-1">السماح بتطبيق الكوبون على طلب موجود مسبقاً (رجعياً)</p>
+            <button type="button" onClick={() => setCouponAllowRetroactiveLocal(v => !v)} dir="ltr"
+              className="w-11 h-6 rounded-full transition-all relative flex-shrink-0 mr-3"
+              style={{ backgroundColor: couponAllowRetroactiveLocal ? '#22c55e' : '#d1d5db' }}>
+              <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                style={{ right: couponAllowRetroactiveLocal ? '2px' : '22px' }} />
             </button>
           </div>
           <input type="text" value={couponCodeInput} onChange={e => setCouponCodeInput(e.target.value)}

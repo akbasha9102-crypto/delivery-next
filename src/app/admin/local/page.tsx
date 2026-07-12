@@ -7,12 +7,13 @@ import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { LowStockAlert } from '@/components/shared/LowStockAlert';
 import {
   ShoppingCart, Plus, Minus, X, Check, Wallet, LogOut, Clock,
-  Percent, Ban, RotateCcw, ChevronLeft,
+  Percent, Ban, RotateCcw, ChevronLeft, Ticket,
 } from 'lucide-react';
 import {
-  openShift, closeShift, listShifts, voidOrder, refundOrder, discountOrder, errorMessage,
+  openShift, closeShift, listShifts, voidOrder, refundOrder, discountOrder, applyCoupon, errorMessage,
   type Shift,
 } from '@/lib/api/staffApi';
+import { useSettings } from '@/context/SettingsContext';
 
 type MenuCategory = { id: string; name: string };
 type MenuItem = { id: string; category_id: string; name: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
@@ -311,13 +312,14 @@ function QuickOrderSheet({ restaurantId, onClose, onCreated }: { restaurantId: s
 }
 
 /* ─────────────────────────── مودال إجراء حساس (خصم/إلغاء/استرجاع) ─────────────────────────── */
-function OrderActionSheet({ order, staffToken, maxDiscountPct, maxVoidAmount, onClose, onDone }: {
-  order: LocalOrder; staffToken: string; maxDiscountPct: number; maxVoidAmount: number;
+function OrderActionSheet({ order, staffToken, maxDiscountPct, maxVoidAmount, canCoupon, onClose, onDone }: {
+  order: LocalOrder; staffToken: string; maxDiscountPct: number; maxVoidAmount: number; canCoupon: boolean;
   onClose: () => void; onDone: (msg: string, pending: boolean) => void;
 }) {
-  const [mode, setMode] = useState<'menu' | 'discount' | 'void' | 'refund'>('menu');
+  const [mode, setMode] = useState<'menu' | 'discount' | 'void' | 'refund' | 'coupon'>('menu');
   const [discountPct, setDiscountPct] = useState('');
   const [reason, setReason] = useState('');
+  const [couponCode, setCouponCode] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -331,6 +333,13 @@ function OrderActionSheet({ order, staffToken, maxDiscountPct, maxVoidAmount, on
       if ('pending' in res && res.pending) { onDone('تم إرسال طلب الخصم — بانتظار موافقة المالك', true); return; }
       if (!res.ok) { setError(errorMessage(res, 'تعذّر تنفيذ الخصم')); return; }
       onDone('✓ تم تطبيق الخصم', false);
+    } else if (mode === 'coupon') {
+      if (!couponCode.trim()) { setError('كود الكوبون إلزامي'); setSaving(false); return; }
+      const res = await applyCoupon(order.id, couponCode.trim(), staffToken);
+      setSaving(false);
+      if ('pending' in res && res.pending) { onDone('تم إرسال طلب الكوبون — بانتظار موافقة المالك', true); return; }
+      if (!res.ok) { setError(errorMessage(res, 'تعذّر تطبيق الكوبون')); return; }
+      onDone('✓ تم تطبيق الكوبون', false);
     } else if (mode === 'void') {
       if (!reason.trim()) { setError('السبب إلزامي'); setSaving(false); return; }
       const res = await voidOrder(order.id, reason.trim(), staffToken);
@@ -370,6 +379,12 @@ function OrderActionSheet({ order, staffToken, maxDiscountPct, maxVoidAmount, on
                 <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-500"><RotateCcw size={18} /></div>
                 <div className="flex-1"><p className="font-bold text-sm text-gray-900 dark:text-slate-100">استرجاع مبلغ</p><p className="text-xs text-gray-400">يتطلب موافقة المالك دائماً</p></div>
               </button>
+              {canCoupon && (
+                <button onClick={() => setMode('coupon')} className="w-full flex items-center gap-3 bg-gray-50 dark:bg-slate-700 rounded-2xl p-4 text-right active:scale-[0.98] transition-all">
+                  <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-green-500"><Ticket size={18} /></div>
+                  <div className="flex-1"><p className="font-bold text-sm text-gray-900 dark:text-slate-100">تطبيق كوبون</p><p className="text-xs text-gray-400">تطبيق كوبون الخصم على طلب مكتمل</p></div>
+                </button>
+              )}
             </div>
           )}
 
@@ -381,6 +396,18 @@ function OrderActionSheet({ order, staffToken, maxDiscountPct, maxVoidAmount, on
               {error && <p className="text-red-500 text-xs font-bold mb-3">{error}</p>}
               <button onClick={run} disabled={saving || !discountPct} className="w-full py-3.5 rounded-2xl bg-[#f97316] disabled:opacity-40 text-white font-bold active:scale-95 transition-all">
                 {saving ? 'جاري التنفيذ...' : 'تأكيد الخصم'}
+              </button>
+            </div>
+          )}
+
+          {mode === 'coupon' && (
+            <div>
+              <p className="text-xs text-gray-400 mb-1">كود الكوبون</p>
+              <input type="text" value={couponCode} onChange={e => setCouponCode(e.target.value)} placeholder="مثال: SAVE10" dir="rtl"
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
+              {error && <p className="text-red-500 text-xs font-bold mb-3">{error}</p>}
+              <button onClick={run} disabled={saving || !couponCode.trim()} className="w-full py-3.5 rounded-2xl bg-green-500 disabled:opacity-40 text-white font-bold active:scale-95 transition-all">
+                {saving ? 'جاري التنفيذ...' : 'تأكيد الكوبون'}
               </button>
             </div>
           )}
@@ -407,6 +434,7 @@ function OrderActionSheet({ order, staffToken, maxDiscountPct, maxVoidAmount, on
 export default function LocalCashierPage() {
   const { restaurantId } = useRestaurant();
   const { activeStaff } = useStaff();
+  const { coupon_enabled, coupon_allow_retroactive } = useSettings();
   const staffId = activeStaff?.staffId ?? null;
   const staffToken = activeStaff?.staffToken ?? null;
 
@@ -577,6 +605,7 @@ export default function LocalCashierPage() {
           staffToken={staffToken}
           maxDiscountPct={activeStaff.maxDiscountPct}
           maxVoidAmount={activeStaff.maxVoidAmount}
+          canCoupon={!!coupon_enabled && !!coupon_allow_retroactive}
           onClose={() => setActionOrder(null)}
           onDone={(msg, pending) => { setActionOrder(null); showToast(msg, !pending); fetchOrders(); }}
         />

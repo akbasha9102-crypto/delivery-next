@@ -11,6 +11,7 @@ const ACTION_LABEL: Record<string, string> = {
   order_void: 'إلغاء طلب',
   order_refund: 'استرجاع مبلغ',
   discount_applied: 'تطبيق خصم',
+  coupon_applied: 'تطبيق كوبون',
   price_edit: 'تعديل سعر',
   item_deleted: 'حذف مادة',
   category_deleted: 'حذف قسم',
