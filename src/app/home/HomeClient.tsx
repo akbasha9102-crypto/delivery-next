@@ -12,12 +12,25 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionTemplate } from 'framer-motion';
 
-type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string };
+type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; discount_pct?: number };
 type Extra    = { id: string; name: string; price: number };
 type Item     = {
   id: string; name: string; price: number; description: string;
   image_url: string | null; category_id: string; is_available: boolean; item_status?: string; extras_json?: string;
+  discount_pct?: number;
 };
+
+// نسبة الخصم الفعّالة: خصم العنصر نفسه له الأولوية على خصم القسم — لا يُجمعان أبداً
+function getEffectivePct(item: Item, categories: Category[]): number {
+  if (item.discount_pct && item.discount_pct > 0) return item.discount_pct;
+  const cat = categories.find(c => c.id === item.category_id);
+  return cat?.discount_pct || 0;
+}
+
+function getDiscountedPrice(item: Item, categories: Category[]): number {
+  const pct = getEffectivePct(item, categories);
+  return pct > 0 ? Math.round(item.price * (1 - pct / 100)) : item.price;
+}
 
 function formatOpenTime(time: string | null): string {
   if (!time) return '';
@@ -300,7 +313,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
     const extras = getExtras(selectedItem);
     const extrasSum = extras.filter(e => selectedModalExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
     const quantity = cartItems.find(i => i.id === selectedItem.id)?.quantity || 0;
-    const dp = quantity * (selectedItem.price + extrasSum);
+    const dp = quantity * (getDiscountedPrice(selectedItem, categories) + extrasSum);
     if (dp > prevModalPrice.current) {
       setModalPriceFlash(true);
       const t = setTimeout(() => setModalPriceFlash(false), 700);
@@ -308,11 +321,11 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
       return () => clearTimeout(t);
     }
     prevModalPrice.current = dp;
-  }, [selectedModalExtras, selectedItem, cartItems]);
+  }, [selectedModalExtras, selectedItem, cartItems, categories]);
 
   const handleAdd = (item: Item, selectedExtrasNames?: string[], extrasPrice = 0) => {
     if (getStatus(item) !== 'available') return;
-    addItem({ id: item.id, name: item.name, price: item.price + extrasPrice, image_url: item.image_url, extras_json: item.extras_json, selected_extras_names: selectedExtrasNames });
+    addItem({ id: item.id, name: item.name, price: getDiscountedPrice(item, categories) + extrasPrice, image_url: item.image_url, extras_json: item.extras_json, selected_extras_names: selectedExtrasNames });
   };
 
   const qty = (id: string) => cartItems.find(i => i.id === id)?.quantity || 0;
@@ -517,6 +530,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                     const count  = qty(item.id);
                     const status = getStatus(item);
                     const isAvailable = !is_closed && status === 'available';
+                    const discPct   = getEffectivePct(item, categories);
+                    const discPrice = getDiscountedPrice(item, categories);
                     return (
                       <motion.div
                         key={item.id}
@@ -570,8 +585,18 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
                           <div className={`mt-auto flex ${isBestSellers ? 'flex-col items-stretch gap-1' : 'flex-col sm:flex-row-reverse sm:items-center sm:justify-between gap-2 sm:gap-4'}`}>
                             <div className="text-right flex-shrink-0">
+                              {discPct > 0 && (
+                                <div className="flex items-center gap-1 justify-end mb-0.5">
+                                  <span className={`text-gray-400 dark:text-slate-500 line-through font-bold ${isBestSellers ? 'text-[8px]' : 'text-[10px] sm:text-xs'}`}>
+                                    {item.price.toLocaleString()}
+                                  </span>
+                                  <span className={`font-black bg-red-500 text-white rounded-full ${isBestSellers ? 'text-[7px] px-1' : 'text-[9px] sm:text-[10px] px-1.5 py-0.5'}`}>
+                                    -{discPct}%
+                                  </span>
+                                </div>
+                              )}
                               <p className={`font-black text-black dark:text-white ${isBestSellers ? 'text-xs' : 'text-base sm:text-2xl'}`}>
-                                {item.price.toLocaleString()}
+                                {discPrice.toLocaleString()}
                               </p>
                               {!isBestSellers && <p className="text-[8px] sm:text-[10px] font-black opacity-30 -mt-1 uppercase tracking-tighter">د . ع</p>}
                             </div>
@@ -589,7 +614,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                       style={{ backgroundColor: catColor }}>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
-                                        onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: item.price, image_url: item.image_url }); }}
+                                        onClick={(e) => { e.stopPropagation(); addItem({ id: item.id, name: item.name, price: discPrice, image_url: item.image_url }); }}
                                         className={`rounded-full flex items-center justify-center ${isBestSellers ? 'w-5 h-5' : 'w-7 h-7 sm:w-10 sm:h-10'}`}
                                         style={{ backgroundColor: dark ? '#ffffff' : catTextColor, color: dark ? '#000000' : catColor }}>
                                         <Plus size={isBestSellers ? 10 : 14} strokeWidth={3}/>
@@ -913,12 +938,20 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                       {(() => {
                         const modalExtras = getExtras(selectedItem);
                         const extrasSum = modalExtras.filter(e => selectedModalExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
-                        const displayPrice = selectedItem.price + extrasSum;
+                        const modalDiscPct = getEffectivePct(selectedItem, categories);
+                        const modalDiscPrice = getDiscountedPrice(selectedItem, categories);
+                        const displayPrice = modalDiscPrice + extrasSum;
                         return (
                           <>
                             <div className="flex justify-between items-center flex-row-reverse mb-4 sm:mb-6">
                               <h3 className="text-xl sm:text-3xl font-black text-right">{selectedItem.name}</h3>
                               <div className="text-left">
+                                {modalDiscPct > 0 && (
+                                  <div className="flex items-center gap-1.5 justify-end mb-1">
+                                    <span className="text-xs sm:text-sm text-gray-400 dark:text-slate-500 line-through font-bold">{selectedItem.price.toLocaleString()}</span>
+                                    <span className="text-[10px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full">-{modalDiscPct}%</span>
+                                  </div>
+                                )}
                                 <p className="text-xl sm:text-2xl font-black dark:text-white">{displayPrice.toLocaleString()} <span className="text-[10px] opacity-40">د.ع</span></p>
                               </div>
                             </div>
@@ -971,7 +1004,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                           {(() => {
                             const extras = getExtras(selectedItem);
                             const extrasSum = extras.filter(e => selectedModalExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
-                            return (qty(selectedItem.id) * (selectedItem.price + extrasSum)).toLocaleString();
+                            return (qty(selectedItem.id) * (getDiscountedPrice(selectedItem, categories) + extrasSum)).toLocaleString();
                           })()} <span className="text-[10px] opacity-40">د.ع</span>
                         </motion.p>
                       </div>
@@ -991,7 +1024,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                               >
                                 <motion.button
                                   whileTap={{ scale: 0.8 }}
-                                  onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const sel = extras.filter(ex => selectedModalExtras.has(ex.id)); const selectedNames = sel.map(ex => ex.name); const extrasPrice = sel.reduce((s, ex) => s + ex.price, 0); addItem({ id: selectedItem.id, name: selectedItem.name, price: selectedItem.price + extrasPrice, image_url: selectedItem.image_url, extras_json: selectedItem.extras_json, selected_extras_names: selectedNames.length > 0 ? selectedNames : undefined }); }}
+                                  onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const sel = extras.filter(ex => selectedModalExtras.has(ex.id)); const selectedNames = sel.map(ex => ex.name); const extrasPrice = sel.reduce((s, ex) => s + ex.price, 0); addItem({ id: selectedItem.id, name: selectedItem.name, price: getDiscountedPrice(selectedItem, categories) + extrasPrice, image_url: selectedItem.image_url, extras_json: selectedItem.extras_json, selected_extras_names: selectedNames.length > 0 ? selectedNames : undefined }); }}
                                   className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center"
                                 >
                                   <Plus size={16} strokeWidth={3}/>
