@@ -162,6 +162,13 @@ function BottomSheet({ title, onClose, children, maxHeight = '65vh' }: { title: 
 }
 
 /* ─── نافذة معلومات المطعم ─── */
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div dir="rtl">
+    <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5 px-1">{label}</p>
+    {children}
+  </div>
+);
+
 function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
   onClose: () => void;
   settingsId: string;
@@ -213,13 +220,6 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
-
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div dir="rtl">
-      <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5 px-1">{label}</p>
-      {children}
-    </div>
-  );
 
   const inputCls = "w-full px-4 py-3.5 bg-gray-50 dark:bg-slate-800 rounded-2xl text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 text-sm";
 
