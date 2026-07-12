@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Users, Ticket, Flame } from 'lucide-react';
+import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Users, Ticket, Flame, Percent, Search, Check } from 'lucide-react';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -387,10 +387,200 @@ function ChangePasswordSheet({ onClose, username }: { onClose: () => void; usern
   );
 }
 
+/* ─── نافذة خصومات الأقسام والوجبات ─── */
+type DiscCategory = { id: string; name: string; discount_pct: number };
+type DiscItem = { id: string; name: string; category_id: string | null; discount_pct: number };
+
+function DiscountRow({ name, subtitle, value, onChange, onSave, saving, saved }: {
+  name: string;
+  subtitle?: string;
+  value: string;
+  onChange: (v: string) => void;
+  onSave: () => void;
+  saving: boolean;
+  saved: boolean;
+}) {
+  const pct = parseFloat(value);
+  const active = !isNaN(pct) && pct > 0;
+  return (
+    <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 rounded-xl px-3 py-2.5">
+      <div className="flex-1 text-right min-w-0">
+        <div className="flex items-center justify-end gap-1.5">
+          {active && <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] flex-shrink-0" />}
+          <p className="font-bold text-sm text-gray-800 dark:text-slate-200 truncate">{name}</p>
+        </div>
+        {subtitle && <p className="text-[10px] text-gray-400 dark:text-slate-500 truncate">{subtitle}</p>}
+      </div>
+      <input type="number" min="0" max="100" step="0.5" inputMode="decimal" value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-16 flex-shrink-0 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-center text-sm text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
+      <span className="text-[10px] text-gray-400 flex-shrink-0">%</span>
+      <button onClick={onSave} disabled={saving}
+        className="w-8 h-8 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center active:scale-90 transition-all disabled:opacity-50 flex-shrink-0">
+        {saving ? <Loader2 size={13} className="animate-spin" /> : saved ? <Check size={13} /> : <Save size={13} />}
+      </button>
+    </div>
+  );
+}
+
+function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restaurantId: string | null }) {
+  const [animateIn, setAnimateIn] = useState(false);
+  const [loading,    setLoading]    = useState(true);
+  const [categories, setCategories] = useState<DiscCategory[]>([]);
+  const [items,      setItems]      = useState<DiscItem[]>([]);
+  const [catInputs,  setCatInputs]  = useState<Record<string, string>>({});
+  const [itemInputs, setItemInputs] = useState<Record<string, string>>({});
+  const [catSaving,  setCatSaving]  = useState<Record<string, boolean>>({});
+  const [catSaved,   setCatSaved]   = useState<Record<string, boolean>>({});
+  const [itemSaving, setItemSaving] = useState<Record<string, boolean>>({});
+  const [itemSaved,  setItemSaved]  = useState<Record<string, boolean>>({});
+  const [itemSearch, setItemSearch] = useState('');
+
+  useEffect(() => {
+    requestAnimationFrame(() => setAnimateIn(true));
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!restaurantId) { setLoading(false); return; }
+    setLoading(true);
+    (async () => {
+      const [{ data: cats }, { data: itms }] = await Promise.all([
+        supabase.from('categories').select('id, name, discount_pct').eq('restaurant_id', restaurantId).order('sort_order', { ascending: true, nullsFirst: false }),
+        supabase.from('items').select('id, name, category_id, discount_pct').eq('restaurant_id', restaurantId).order('name'),
+      ]);
+      const catList = (cats ?? []) as DiscCategory[];
+      const itemList = (itms ?? []) as DiscItem[];
+      setCategories(catList);
+      setItems(itemList);
+      setCatInputs(Object.fromEntries(catList.map(c => [c.id, String(c.discount_pct ?? 0)])));
+      setItemInputs(Object.fromEntries(itemList.map(i => [i.id, String(i.discount_pct ?? 0)])));
+      setLoading(false);
+    })();
+  }, [restaurantId]);
+
+  const close = () => { setAnimateIn(false); setTimeout(onClose, 300); };
+
+  const catNameById: Record<string, string> = {};
+  categories.forEach(c => { catNameById[c.id] = c.name; });
+
+  const saveCategoryDiscount = async (id: string) => {
+    const pct = parseFloat(catInputs[id]);
+    if (isNaN(pct) || pct < 0 || pct > 100) { alert('النسبة يجب أن تكون رقم بين 0 و 100'); return; }
+    setCatSaving(prev => ({ ...prev, [id]: true }));
+    const { error } = await supabase.from('categories').update({ discount_pct: pct }).eq('id', id);
+    setCatSaving(prev => ({ ...prev, [id]: false }));
+    if (error) { alert('فشل الحفظ: ' + error.message); return; }
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, discount_pct: pct } : c));
+    setCatSaved(prev => ({ ...prev, [id]: true }));
+    setTimeout(() => setCatSaved(prev => ({ ...prev, [id]: false })), 2000);
+  };
+
+  const saveItemDiscount = async (id: string) => {
+    const pct = parseFloat(itemInputs[id]);
+    if (isNaN(pct) || pct < 0 || pct > 100) { alert('النسبة يجب أن تكون رقم بين 0 و 100'); return; }
+    setItemSaving(prev => ({ ...prev, [id]: true }));
+    const { error } = await supabase.from('items').update({ discount_pct: pct }).eq('id', id);
+    setItemSaving(prev => ({ ...prev, [id]: false }));
+    if (error) { alert('فشل الحفظ: ' + error.message); return; }
+    setItems(prev => prev.map(i => i.id === id ? { ...i, discount_pct: pct } : i));
+    setItemSaved(prev => ({ ...prev, [id]: true }));
+    setTimeout(() => setItemSaved(prev => ({ ...prev, [id]: false })), 2000);
+  };
+
+  const filteredItems = itemSearch ? items.filter(i => i.name.includes(itemSearch)) : items;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end" onClick={close}>
+      <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`} />
+      <div
+        className={`relative w-full bg-white dark:bg-slate-900 rounded-t-3xl transition-transform duration-300 ease-out flex flex-col max-h-[92vh] ${animateIn ? 'translate-y-0' : 'translate-y-full'}`}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex-shrink-0 px-5 pt-4 pb-4 border-b border-gray-100 dark:border-slate-800">
+          <div className="w-10 h-1 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4" />
+          <div className="flex items-center justify-between">
+            <div className="w-9" />
+            <p className="font-bold text-gray-900 dark:text-slate-100">خصومات الأقسام والوجبات</p>
+            <button onClick={close} className="p-1.5 rounded-xl text-gray-400 active:scale-90 transition-all">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-6" dir="rtl">
+          {loading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="animate-spin text-gray-400" size={26} />
+            </div>
+          ) : (
+            <>
+              <div>
+                <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-2 px-1">الأقسام</p>
+                {categories.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-4">لا توجد أقسام</p>
+                ) : (
+                  <div className="space-y-2">
+                    {categories.map(c => (
+                      <DiscountRow key={c.id} name={c.name}
+                        value={catInputs[c.id] ?? '0'}
+                        onChange={v => setCatInputs(prev => ({ ...prev, [c.id]: v }))}
+                        onSave={() => saveCategoryDiscount(c.id)}
+                        saving={!!catSaving[c.id]} saved={!!catSaved[c.id]} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-2 px-1">الوجبات</p>
+                <div className="relative mb-3">
+                  <Search size={15} className="absolute top-1/2 -translate-y-1/2 right-3.5 text-gray-400 dark:text-slate-500" />
+                  <input value={itemSearch} onChange={e => setItemSearch(e.target.value)}
+                    placeholder="ابحث عن وجبة..." dir="rtl"
+                    className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl py-2.5 pr-9 pl-3 text-right text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]" />
+                </div>
+                {filteredItems.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-4">لا توجد نتائج</p>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredItems.map(i => (
+                      <DiscountRow key={i.id} name={i.name}
+                        subtitle={i.category_id ? catNameById[i.category_id] : undefined}
+                        value={itemInputs[i.id] ?? '0'}
+                        onChange={v => setItemInputs(prev => ({ ...prev, [i.id]: v }))}
+                        onSave={() => saveItemDiscount(i.id)}
+                        saving={!!itemSaving[i.id]} saved={!!itemSaved[i.id]} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── الصفحة الرئيسية ─── */
 export default function SettingsPage() {
   const router = useRouter();
   const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled, show_best_sellers } = useSettings();
+  const { restaurantId } = useRestaurant();
   const { dark, toggleDark } = useDarkMode();
   const { isCashier, activeStaff, switchUser } = useStaff();
   const [confirmSwitch, setConfirmSwitch] = useState(false);
@@ -404,6 +594,7 @@ export default function SettingsPage() {
   const [showDeliveryFee,  setShowDeliveryFee]  = useState(false);
   const [showMinOrder,     setShowMinOrder]     = useState(false);
   const [showCoupon,       setShowCoupon]       = useState(false);
+  const [showDiscounts,    setShowDiscounts]    = useState(false);
   const [username,         setUsername]         = useState('');
   const [tick,             setTick]             = useState(0);
   const [toggleError,      setToggleError]      = useState<string | null>(null);
@@ -707,6 +898,23 @@ export default function SettingsPage() {
           </button>
         )}
 
+        {/* خصومات الأقسام والوجبات — مخفية عن الكاشير: تحكم مالي بالأسعار يضبطه المالك فقط */}
+        {!isCashier && (
+          <button onClick={() => setShowDiscounts(true)}
+            className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600 flex-shrink-0" />
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">خصومات الأقسام والوجبات</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">حدد خصم لقسم كامل أو لوجبة معينة</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <Percent size={18} className="text-gray-600 dark:text-slate-400" />
+              </div>
+            </div>
+          </button>
+        )}
+
         {/* ─ الأكثر مبيعاً — قسم ثابت يظهر دائماً أولاً في منيو الزبون، بأفضل 3 وجبات مبيعاً ─ */}
         <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
           <div className="flex items-center gap-3">
@@ -816,7 +1024,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {!showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && <AdminBottomNav />}
+      {!showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && !showDiscounts && <AdminBottomNav />}
 
       {/* نافذة تغيير كلمة المرور */}
       {showChangePass && (
@@ -898,6 +1106,14 @@ export default function SettingsPage() {
             {couponSaved ? '✓ تم' : 'حفظ'}
           </button>
         </BottomSheet>
+      )}
+
+      {/* نافذة خصومات الأقسام والوجبات */}
+      {showDiscounts && (
+        <DiscountsSheet
+          onClose={() => setShowDiscounts(false)}
+          restaurantId={restaurantId}
+        />
       )}
 
       {/* موديل جدولة الدوام */}

@@ -7,9 +7,9 @@ import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, Slide
 import { useRestaurant } from '@/context/RestaurantContext';
 import { HexColorPicker } from 'react-colorful';
 
-type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null; discount_pct?: number };
+type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
-type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string; discount_pct?: number };
+type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
 type InventoryItem = { id: string; name: string; unit: string; current_stock: number };
 type Recipe = { id: string; menu_item_id: string; inventory_item_id: string; quantity_required: number };
 
@@ -24,13 +24,6 @@ function getItemStatus(item: Item) {
 }
 
 const DEFAULT_IMAGE = 'https://via.placeholder.com/300x200.png?text=Food';
-
-const parseDiscountPct = (v: string): number | null => {
-  if (!v.trim()) return 0;
-  const n = parseFloat(v.replace(',', '.'));
-  if (isNaN(n) || n < 0 || n > 100) return null;
-  return n;
-};
 
 const getTextColor = (hex: string): string => {
   const h = (hex || '#000000').replace('#', '');
@@ -54,12 +47,9 @@ export default function MenuPage() {
   const [activeTab, setActiveTab] = useState<'add' | 'list'>('list');
   const [newCat, setNewCat] = useState('');
   const [newCatColor, setNewCatColor] = useState('#e67e22');
-  const [newCatDiscount, setNewCatDiscount] = useState('');
   const [form, setForm] = useState({ category_id: '', name: '', description: '', price: '', image_url: '' });
-  const [newItemDiscount, setNewItemDiscount] = useState('');
   const [editItem, setEditItem] = useState<Item | null>(null);
   const [editForm, setEditForm] = useState({ category_id: '', name: '', description: '', price: '', image_url: '' });
-  const [editDiscount, setEditDiscount] = useState('');
   const [extras, setExtras] = useState<Extra[]>([]);
   const [extraName, setExtraName] = useState('');
   const [extraPrice, setExtraPrice] = useState('');
@@ -73,7 +63,6 @@ export default function MenuPage() {
   const [editCatSheet, setEditCatSheet] = useState<{ catId: string } | null>(null);
   const [editCatAnimateIn, setEditCatAnimateIn] = useState(false);
   const [editCatName, setEditCatName] = useState('');
-  const [editCatDiscount, setEditCatDiscount] = useState('');
   const [editCatColors, setEditCatColors] = useState<{ color: string; card_color: string; color_dark: string; card_color_dark: string } | null>(null);
   const [activeColorPicker, setActiveColorPicker] = useState<'color' | 'card_color' | 'color_dark' | 'card_color_dark' | null>(null);
   const [colorPickerPos, setColorPickerPos] = useState({ top: 0, left: 0 });
@@ -144,16 +133,13 @@ export default function MenuPage() {
 
   const addCategory = async () => {
     if (!newCat.trim()) return;
-    const discount_pct = parseDiscountPct(newCatDiscount);
-    if (discount_pct === null) return alert('نسبة خصم غير صالحة (0-100)');
     setSaving(true);
     const { error } = await supabase.from('categories').insert([{
       name: newCat.trim(),
       color: newCatColor,
-      discount_pct,
       restaurant_id: restaurantId,
     }]);
-    error ? showToast('تعذّر إضافة القسم', false) : (setNewCat(''), setNewCatDiscount(''), setShowAddCatSheet(false), fetchMenu(), showToast('✓ تم إضافة القسم'));
+    error ? showToast('تعذّر إضافة القسم', false) : (setNewCat(''), setShowAddCatSheet(false), fetchMenu(), showToast('✓ تم إضافة القسم'));
     setSaving(false);
   };
 
@@ -196,15 +182,12 @@ export default function MenuPage() {
     if (!form.category_id || !form.name.trim() || !form.price.trim()) return alert('الرجاء ملء الحقول المطلوبة');
     const price = parseFloat(form.price.replace(',', '.'));
     if (isNaN(price) || price <= 0) return alert('سعر غير صالح');
-    const discount_pct = parseDiscountPct(newItemDiscount);
-    if (discount_pct === null) return alert('نسبة خصم غير صالحة (0-100)');
     setSaving(true);
     const { data, error } = await supabase.from('items').insert([{
       ...form,
       name: form.name.trim(),
       description: form.description.trim(),
       price,
-      discount_pct,
       image_url: form.image_url.trim() || DEFAULT_IMAGE,
       is_available: true,
       restaurant_id: restaurantId,
@@ -218,7 +201,6 @@ export default function MenuPage() {
       if (recErr) showToast('تم إضافة الطبق لكن تعذّر ربط بعض المكونات', false);
     }
     setForm({ category_id: '', name: '', description: '', price: '', image_url: '' });
-    setNewItemDiscount('');
     setNewItemExtras([]);
     setNewItemRecipes([]);
     setShowAddItemSheet(false);
@@ -237,7 +219,6 @@ export default function MenuPage() {
   const openEdit = (item: Item) => {
     setEditItem(item);
     setEditForm({ category_id: item.category_id, name: item.name, description: item.description || '', price: String(item.price), image_url: item.image_url || '' });
-    setEditDiscount(String(item.discount_pct ?? 0));
     try { setExtras(JSON.parse(item.extras_json || '[]')); } catch { setExtras([]); }
     setExtraName(''); setExtraPrice('');
     setRecipes([]);
@@ -302,10 +283,8 @@ export default function MenuPage() {
     if (!editItem || !editForm.name.trim() || !editForm.price.trim()) return;
     const price = parseFloat(editForm.price.replace(',', '.'));
     if (isNaN(price) || price <= 0) return alert('سعر غير صالح');
-    const discount_pct = parseDiscountPct(editDiscount);
-    if (discount_pct === null) return alert('نسبة خصم غير صالحة (0-100)');
     setSaving(true);
-    const { error } = await supabase.from('items').update({ ...editForm, name: editForm.name.trim(), description: editForm.description.trim(), price, discount_pct, image_url: editForm.image_url.trim() || DEFAULT_IMAGE }).eq('id', editItem.id);
+    const { error } = await supabase.from('items').update({ ...editForm, name: editForm.name.trim(), description: editForm.description.trim(), price, image_url: editForm.image_url.trim() || DEFAULT_IMAGE }).eq('id', editItem.id);
     error ? showToast('تعذّر الحفظ', false) : (fetchMenu(), setEditItem(null), showToast('✓ تم الحفظ'));
     setSaving(false);
   };
@@ -413,7 +392,6 @@ export default function MenuPage() {
 
   const openCatEdit = (cat: Category) => {
     setEditCatName(cat.name);
-    setEditCatDiscount(String(cat.discount_pct ?? 0));
     setEditCatColors({
       color: cat.color || '#e67e22',
       card_color: cat.card_color || '#ffffff',
@@ -439,19 +417,6 @@ export default function MenuPage() {
     showToast('✓ تم حفظ القسم');
   };
 
-  const saveCatDiscount = async () => {
-    if (!editCatSheet) return;
-    const discount_pct = parseDiscountPct(editCatDiscount);
-    if (discount_pct === null) return alert('نسبة خصم غير صالحة (0-100)');
-    const id = editCatSheet.catId;
-    setSaving(true);
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, discount_pct } : c));
-    const { error } = await supabase.from('categories').update({ discount_pct }).eq('id', id);
-    setSaving(false);
-    if (error) { showToast('تعذّر حفظ الخصم', false); return; }
-    showToast('✓ تم حفظ الخصم');
-  };
-
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
   return (
@@ -475,8 +440,6 @@ export default function MenuPage() {
                 <input type="color" value={newCatColor} onChange={e => setNewCatColor(e.target.value)}
                   className="w-9 h-9 rounded-xl cursor-pointer border border-gray-200 dark:border-slate-600" />
               </div>
-              <p className="text-gray-400 dark:text-slate-500 text-xs text-right mb-1">خصم القسم % (اختياري)</p>
-              <input type="number" value={newCatDiscount} onChange={e => setNewCatDiscount(e.target.value)} placeholder="0" dir="rtl" className={input} />
             </div>
           </div>
         </div>
@@ -511,8 +474,6 @@ export default function MenuPage() {
               ].map(({ key, placeholder, type }) => (
                 <input key={key} type={type || 'text'} value={(form as any)[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder} dir="rtl" className={input} />
               ))}
-              <p className="text-gray-400 dark:text-slate-500 text-xs text-right mb-1">خصم الوجبة % (اختياري)</p>
-              <input type="number" value={newItemDiscount} onChange={e => setNewItemDiscount(e.target.value)} placeholder="0" dir="rtl" className={input} />
 
               <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
                 <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧂 الإضافات</h4>
@@ -613,10 +574,6 @@ export default function MenuPage() {
                   <input type={type || 'text'} value={(editForm as any)[key]} onChange={e => setEditForm(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder} dir="rtl" className={input} />
                 </div>
               ))}
-              <div>
-                <p className="text-gray-400 dark:text-slate-500 text-xs text-right mb-1">خصم الوجبة % (اختياري)</p>
-                <input type="number" value={editDiscount} onChange={e => setEditDiscount(e.target.value)} placeholder="0" dir="rtl" className={input} />
-              </div>
 
               <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
                 <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧂 الإضافات</h4>
@@ -800,11 +757,8 @@ export default function MenuPage() {
                     <div key={cat.id} className="flex-shrink-0 flex items-center gap-1">
                       <button
                         onClick={() => setSelectedCat(active ? null : cat.id)}
-                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                        className={`px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                         {cat.name} ({count})
-                        {!!cat.discount_pct && cat.discount_pct > 0 && (
-                          <span className="bg-rose-50 dark:bg-rose-900/20 text-rose-500 border border-rose-200 dark:border-rose-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">-{cat.discount_pct}%</span>
-                        )}
                       </button>
                       <button
                         onClick={() => deleteCategory(cat)}
@@ -853,9 +807,6 @@ export default function MenuPage() {
                   <div className="flex items-center justify-end gap-2 mb-3">
                     <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">{cat.name}</h3>
                     <span className="bg-orange-100 dark:bg-orange-900/20 text-[#f97316] text-xs font-bold px-2.5 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">{catItems.length}</span>
-                    {!!cat.discount_pct && cat.discount_pct > 0 && (
-                      <span className="bg-rose-50 dark:bg-rose-900/20 text-rose-500 text-xs font-bold px-2.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">-{cat.discount_pct}%</span>
-                    )}
                     <button
                       onClick={() => openCatEdit(cat)}
                       className="w-7 h-7 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-400 dark:text-slate-500 active:scale-90 transition-all">
@@ -883,12 +834,7 @@ export default function MenuPage() {
                               <div className="text-right flex-1">
                                 <p className="font-bold text-base text-gray-900 dark:text-slate-100">{item.name}</p>
                                 {item.description && <p className="text-xs text-gray-400 dark:text-slate-500 mt-1 line-clamp-2">{item.description}</p>}
-                                <div className="flex items-center gap-2 mt-2">
-                                  <p className="font-bold text-sm text-[#f97316]">{item.price.toLocaleString()} د.ع</p>
-                                  {!!item.discount_pct && item.discount_pct > 0 && (
-                                    <span className="bg-rose-50 dark:bg-rose-900/20 text-rose-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">-{item.discount_pct}%</span>
-                                  )}
-                                </div>
+                                <p className="font-bold text-sm mt-2 text-[#f97316]">{item.price.toLocaleString()} د.ع</p>
                               </div>
                             </div>
 
@@ -962,24 +908,6 @@ export default function MenuPage() {
                   value={editCatName}
                   onChange={e => setEditCatName(e.target.value)}
                   placeholder="اسم القسم"
-                  dir="rtl"
-                  className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]"
-                />
-              </div>
-
-              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1.5">خصم القسم % (اختياري)</p>
-              <div className="flex gap-2 mb-5">
-                <button
-                  onClick={saveCatDiscount}
-                  disabled={saving}
-                  className="px-4 py-3 bg-[#f97316] disabled:opacity-40 text-white font-bold rounded-xl active:scale-95 transition-all text-sm flex-shrink-0">
-                  {saving ? '...' : 'حفظ الخصم'}
-                </button>
-                <input
-                  type="number"
-                  value={editCatDiscount}
-                  onChange={e => setEditCatDiscount(e.target.value)}
-                  placeholder="0"
                   dir="rtl"
                   className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]"
                 />
