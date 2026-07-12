@@ -573,7 +573,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
                         {/* Details */}
                         <div className={`flex flex-col flex-1 ${isBestSellers ? 'p-2' : 'p-3 sm:p-6'}`}>
-                          <p className={`font-black text-gray-900 dark:text-slate-100 text-right leading-tight ${isBestSellers ? 'text-xs sm:text-sm mb-1 line-clamp-1' : 'text-sm sm:text-xl mb-1 sm:mb-2'}`}>
+                          <p className={`font-black text-gray-900 dark:text-slate-100 text-right leading-tight ${isBestSellers ? 'text-sm sm:text-base mb-1 line-clamp-1' : 'text-sm sm:text-xl mb-1 sm:mb-2'}`}>
                             {item.name}
                           </p>
                           {item.description && !isBestSellers && (
