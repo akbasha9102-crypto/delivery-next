@@ -1141,13 +1141,22 @@ const proceedFromReview = () => {
                 const itemTotal = (item.price + extraCost) * item.quantity;
                 return (
                   <div key={item.id} className="bg-gray-50 dark:bg-slate-700 rounded-2xl p-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-black text-sm" style={{ color: '#ef4444' }}>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="font-black text-sm flex-shrink-0" style={{ color: '#ef4444' }}>
                         {itemTotal.toLocaleString()} د.ع
                       </span>
-                      <span className="font-black text-gray-900 dark:text-white text-sm text-right">
-                        {item.name} <span className="text-gray-400 font-bold">×{item.quantity}</span>
-                      </span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {item.image_url
+                          ? <img src={item.image_url} alt={item.name} className="w-8 h-8 rounded-lg object-cover flex-shrink-0"/>
+                          : <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-slate-600 flex items-center justify-center flex-shrink-0">
+                              <ShoppingBag size={14} className="text-gray-400 dark:text-slate-500"/>
+                            </div>
+                        }
+                        <span className="font-black text-gray-900 dark:text-white text-sm text-right truncate min-w-0">
+                          {item.name}
+                        </span>
+                        <span className="text-gray-400 font-bold text-sm flex-shrink-0">×{item.quantity}</span>
+                      </div>
                     </div>
                     {selectedExtrasArr.length > 0 && (
                       <p className="text-xs text-gray-400 dark:text-slate-500 text-right mt-0.5">
