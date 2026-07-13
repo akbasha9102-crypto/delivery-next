@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { User, Route, UtensilsCrossed, ClipboardList, BarChart2, Car, Menu, Archive, ShoppingBag, Package } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
-import { useStaff } from '@/context/StaffContext';
 
 const adminTabs = [
   { href: '/admin/dashboard',   icon: ClipboardList,   label: 'الطلبات' },
@@ -13,19 +12,6 @@ const adminTabs = [
   { href: '/admin/drivers',     icon: Car,             label: 'السائقين' },
   { href: '/admin/inventory',   icon: Package,         label: 'المخزون' },
   { href: '/admin/settings',    icon: Menu,            label: 'الإعدادات' },
-];
-
-// شريط الكاشير — نفس شريط المالك تقريباً (الطلبات/المنيو/السائقين/المخزون/الإعدادات)
-// حسب طلب صاحب المطعم، باستثناءين فقط: "الطلبات" تفتح شاشة POS المبسّطة
-// (/admin/local) بدل الداشبورد الكامل، و"المخزون" تفتح شاشة تسجيل الهدر
-// الآمنة (بدون تكلفة/مورّد) بدل صفحة المخزون الكاملة. الإحصائيات وإدارة
-// الموظفين وسجل التدقيق لا تظهر إطلاقاً للكاشير (ليست بهذه القائمة أصلاً).
-const cashierTabs = [
-  { href: '/admin/local',           icon: ClipboardList, label: 'الطلبات' },
-  { href: '/admin/menu',            icon: UtensilsCrossed, label: 'المنيو' },
-  { href: '/admin/drivers',         icon: Car,           label: 'السائقين' },
-  { href: '/admin/inventory/waste', icon: Package,       label: 'المخزون' },
-  { href: '/admin/settings',        icon: Menu,          label: 'الإعدادات' },
 ];
 
 export function ClientBottomNav() {
@@ -82,12 +68,9 @@ export function ClientBottomNav() {
 export function AdminBottomNav() {
   const path = usePathname();
   const { newCount } = useNewOrders();
-  const { isCashier } = useStaff();
 
-  // ملاحظة: لا يتغيّر شيء بتاتاً بالنسبة للمالك/المدير — نفس adminTabs الحالية بالضبط.
-  // فقط عندما يكون الدور النشط "كاشير" نستبدل الشريط بالكامل بنسخة مبسّطة، وليس إخفاء CSS —
-  // العناصر غير المسموحة لا توجد إطلاقاً بالـ render.
-  const tabs = isCashier ? cashierTabs : adminTabs;
+  // الكاشير له نفس صلاحيات وواجهة المالك بالكامل — نفس شريط adminTabs للجميع.
+  const tabs = adminTabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex z-50 md:top-0 md:bottom-0 md:left-auto md:w-[70px] md:flex-col md:border-t-0 md:border-l">

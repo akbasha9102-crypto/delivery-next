@@ -815,27 +815,25 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* ─ حساب الدخول — مخفي عن الكاشير: هذا حساب المالك الأساسي بالموقع ─ */}
-        {!isCashier && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4" dir="rtl">
-            <p className="font-bold text-gray-900 dark:text-slate-100 text-sm mb-3">حساب الدخول</p>
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
-              <p className="font-mono font-bold text-gray-800 dark:text-slate-200 text-sm" dir="ltr">{username}</p>
-              <p className="text-[10px] text-gray-400">اسم المستخدم</p>
-            </div>
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
-              <p className="font-mono text-gray-400 tracking-widest text-sm">••••••••</p>
-              <p className="text-[10px] text-gray-400">كلمة المرور</p>
-            </div>
-            <button
-              onClick={() => setShowChangePass(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
-            >
-              <KeyRound size={15} />
-              تغيير كلمة المرور
-            </button>
+        {/* ─ حساب الدخول ─ */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4" dir="rtl">
+          <p className="font-bold text-gray-900 dark:text-slate-100 text-sm mb-3">حساب الدخول</p>
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
+            <p className="font-mono font-bold text-gray-800 dark:text-slate-200 text-sm" dir="ltr">{username}</p>
+            <p className="text-[10px] text-gray-400">اسم المستخدم</p>
           </div>
-        )}
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
+            <p className="font-mono text-gray-400 tracking-widest text-sm">••••••••</p>
+            <p className="text-[10px] text-gray-400">كلمة المرور</p>
+          </div>
+          <button
+            onClick={() => setShowChangePass(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
+          >
+            <KeyRound size={15} />
+            تغيير كلمة المرور
+          </button>
+        </div>
 
         {/* ─ حالة المطعم ─ */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3">
@@ -867,83 +865,74 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* رسوم التوصيل — مخفية عن الكاشير: مبلغ مالي حسّاس يضبطه المالك فقط */}
-        {!isCashier && (
-          <button onClick={() => setShowDeliveryFee(true)}
-            className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <p className="text-xs font-bold text-gray-400 dark:text-slate-500">{(delivery_fee ?? 0).toLocaleString()} د.ع</p>
-              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+        {/* رسوم التوصيل */}
+        <button onClick={() => setShowDeliveryFee(true)}
+          className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <p className="text-xs font-bold text-gray-400 dark:text-slate-500">{(delivery_fee ?? 0).toLocaleString()} د.ع</p>
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">رسوم التوصيل</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">تُضاف تلقائياً عند اختيار &quot;توصيل&quot;</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">رسوم التوصيل</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">تُضاف تلقائياً عند اختيار &quot;توصيل&quot;</p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                <Truck size={18} className="text-gray-600 dark:text-slate-400" />
-              </div>
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <Truck size={18} className="text-gray-600 dark:text-slate-400" />
             </div>
-          </button>
-        )}
+          </div>
+        </button>
 
-        {/* الحد الأدنى للطلب — مخفي عن الكاشير: قيد مالي يضبطه المالك فقط */}
-        {!isCashier && (
-          <button onClick={() => setShowMinOrder(true)}
-            className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <p className="text-xs font-bold text-gray-400 dark:text-slate-500">{(min_order_amount ?? 0).toLocaleString()} د.ع</p>
-              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+        {/* الحد الأدنى للطلب */}
+        <button onClick={() => setShowMinOrder(true)}
+          className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <p className="text-xs font-bold text-gray-400 dark:text-slate-500">{(min_order_amount ?? 0).toLocaleString()} د.ع</p>
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحد الأدنى للطلب</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">أقل قيمة مسموحة لطلب &quot;توصيل&quot;</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحد الأدنى للطلب</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">أقل قيمة مسموحة لطلب &quot;توصيل&quot;</p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                <Wallet size={18} className="text-gray-600 dark:text-slate-400" />
-              </div>
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <Wallet size={18} className="text-gray-600 dark:text-slate-400" />
             </div>
-          </button>
-        )}
+          </div>
+        </button>
 
-        {/* كوبون الخصم — مخفي عن الكاشير: يضبطه المالك فقط. كوبون واحد لكل مطعم،
-            خصم نسبة مئوية، يدخله الزبون بصفحة السلة عند إتمام الطلب. */}
-        {!isCashier && (
-          <button onClick={() => setShowCoupon(true)}
-            className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <p className="text-xs font-bold text-gray-400 dark:text-slate-500">{couponEnabledLocal ? 'مفعّل' : 'غير مفعّل'}</p>
-              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+        {/* كوبون الخصم — كوبون واحد لكل مطعم، خصم نسبة مئوية، يدخله الزبون بصفحة السلة عند إتمام الطلب. */}
+        <button onClick={() => setShowCoupon(true)}
+          className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <p className="text-xs font-bold text-gray-400 dark:text-slate-500">{couponEnabledLocal ? 'مفعّل' : 'غير مفعّل'}</p>
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">كوبون الخصم</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">كود خصم يدخله الزبون بالسلة</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">كوبون الخصم</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">كود خصم يدخله الزبون بالسلة</p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                <Ticket size={18} className="text-gray-600 dark:text-slate-400" />
-              </div>
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <Ticket size={18} className="text-gray-600 dark:text-slate-400" />
             </div>
-          </button>
-        )}
+          </div>
+        </button>
 
-        {/* خصومات الأقسام والوجبات — مخفية عن الكاشير: تحكم مالي بالأسعار يضبطه المالك فقط */}
-        {!isCashier && (
-          <button onClick={() => setShowDiscounts(true)}
-            className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
-            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600 flex-shrink-0" />
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">خصومات الأقسام والوجبات</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">حدد خصم لقسم كامل أو لوجبة معينة</p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                <Percent size={18} className="text-gray-600 dark:text-slate-400" />
-              </div>
+        {/* خصومات الأقسام والوجبات */}
+        <button onClick={() => setShowDiscounts(true)}
+          className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
+          <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600 flex-shrink-0" />
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">خصومات الأقسام والوجبات</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">حدد خصم لقسم كامل أو لوجبة معينة</p>
             </div>
-          </button>
-        )}
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <Percent size={18} className="text-gray-600 dark:text-slate-400" />
+            </div>
+          </div>
+        </button>
 
         {/* ─ الأكثر مبيعاً — قسم ثابت يظهر دائماً أولاً في منيو الزبون، بأفضل 3 وجبات مبيعاً ─ */}
         <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
@@ -978,10 +967,9 @@ export default function SettingsPage() {
               </div>
             </button>
           )}
-          <button onClick={() => !isCashier && router.push('/admin/archive')}
-            disabled={isCashier}
-            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed col-span-2' : 'active:scale-95'}`}>
-            {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
+          <button onClick={() => router.push('/admin/archive')}
+            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all active:scale-95 ${isCashier ? 'col-span-2' : ''}`}>
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأرشيف</span>
               <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">

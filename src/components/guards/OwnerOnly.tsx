@@ -14,7 +14,7 @@ export function OwnerOnly({ children }: { children: React.ReactNode }) {
   const { ready, isCashier } = useStaff();
 
   useEffect(() => {
-    if (ready && isCashier) router.replace('/admin/local');
+    if (ready && isCashier) router.replace('/admin/dashboard');
   }, [ready, isCashier, router]);
 
   if (!ready || isCashier) {

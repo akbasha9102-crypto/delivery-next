@@ -3,9 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
-import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { useStaff } from '@/context/StaffContext';
 import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus } from 'lucide-react';
 
 type InventoryItem = {
@@ -131,20 +129,13 @@ export default function InventoryPage() {
     setCategoriesList((data || []).map((c: { name: string }) => c.name));
   }, [restaurantId]);
 
-  // إصلاح ثغرة أمنية: هذه الصفحة (owner-only) لا يمكن لفها بـ layout.tsx
-  // على مستوى /admin/inventory لأن /admin/inventory/waste (شاشة الكاشير
-  // المبسّطة) مسار فرعي منها وسيُغلَق خطأً. لذلك الحارس هنا داخل الصفحة
-  // نفسها، لكن على مستوى شرط الجلب (fetch) وليس فقط العرض — لا نستدعي
-  // fetchItems/fetchMovements (اللذين يجيبان cost_per_unit/supplier مباشرة
-  // عبر Supabase client) إطلاقاً قبل التأكد من أن الدور النشط ليس كاشيراً.
-  const { ready: staffReady, isCashier } = useStaff();
+  // الكاشير له نفس صلاحيات المالك بالكامل بهذه الصفحة الآن — لا شرط دور هنا.
   useEffect(() => {
-    if (!staffReady || isCashier) return;
     setLoading(true);
     fetchItems();
     fetchMovements();
     fetchCategoriesList();
-  }, [staffReady, isCashier, fetchItems, fetchMovements, fetchCategoriesList]);
+  }, [fetchItems, fetchMovements, fetchCategoriesList]);
 
   // قفل تمرير الصفحة خلف أي نافذة منبثقة حتى لا تتحرك الخلفية بدل النافذة
   useEffect(() => {
@@ -305,7 +296,6 @@ export default function InventoryPage() {
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
   return (
-    <OwnerOnly>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* Header */}
@@ -704,6 +694,5 @@ export default function InventoryPage() {
 
       <AdminBottomNav />
     </div>
-    </OwnerOnly>
   );
 }

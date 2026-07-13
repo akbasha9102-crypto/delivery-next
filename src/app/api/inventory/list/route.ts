@@ -15,7 +15,9 @@ async function handle(restaurantId: string, req: NextRequest) {
 
   let showCost = false;
   const identityRes = await resolveStaffIdentity(req, restaurantId);
-  if (identityRes.ok && identityRes.identity.is_privileged) {
+  // تكافؤ الكاشير مع المالك: الكاشير يُعامَل كمستخدم "privileged" لغرض هذا
+  // الإخفاء تحديداً فقط — لا يُغيّر شيئاً آخر بمنطق الهوية العام.
+  if (identityRes.ok && (identityRes.identity.is_privileged || identityRes.identity.role === 'cashier')) {
     showCost = true;
   }
 
