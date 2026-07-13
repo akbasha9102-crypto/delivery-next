@@ -922,8 +922,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 const modalTextColor = getTextColor(modalColor);
                 const modalImages = getImages(selectedItem);
                 const currentImageUrl = modalImages[modalImageIndex] || modalImages[0] || 'https://placehold.co/600x400/f5f5f5/ccc?text=';
-                const goNextImage = () => setModalImageIndex(i => (i + 1) % modalImages.length);
-                const goPrevImage = () => setModalImageIndex(i => (i - 1 + modalImages.length) % modalImages.length);
+                const goNextImage = () => setModalImageIndex(i => Math.min(i + 1, modalImages.length - 1));
+                const goPrevImage = () => setModalImageIndex(i => Math.max(i - 1, 0));
                 return (
                 <div className="flex flex-col bg-white dark:bg-slate-900 rounded-[2.5rem] sm:rounded-[3.5rem] overflow-hidden">
                    <div className="relative h-64 sm:h-72 w-full overflow-hidden">
@@ -946,18 +946,18 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                         className="absolute top-4 left-4 w-10 h-10 bg-white/20 backdrop-blur-xl rounded-xl flex items-center justify-center text-white">
                         <X size={22} strokeWidth={2.5} />
                       </button>
-                      {modalImages.length > 1 && (
+                      {modalImages.length > 1 && modalImageIndex > 0 && (
                         <button
                           onClick={(e) => { e.stopPropagation(); goPrevImage(); }}
-                          className="absolute top-1/2 -translate-y-1/2 left-4 w-10 h-10 bg-white/20 backdrop-blur-xl rounded-xl flex items-center justify-center text-white active:scale-90 transition-all"
+                          className="absolute top-1/2 -translate-y-1/2 left-4 w-10 h-10 bg-white/80 backdrop-blur-xl rounded-xl flex items-center justify-center text-gray-800 active:scale-90 transition-all"
                           aria-label="الصورة السابقة">
                           <ChevronLeft size={22} strokeWidth={2.5} />
                         </button>
                       )}
-                      {modalImages.length > 1 && (
+                      {modalImages.length > 1 && modalImageIndex < modalImages.length - 1 && (
                         <button
                           onClick={(e) => { e.stopPropagation(); goNextImage(); }}
-                          className="absolute top-1/2 -translate-y-1/2 right-4 w-10 h-10 bg-white/20 backdrop-blur-xl rounded-xl flex items-center justify-center text-white active:scale-90 transition-all"
+                          className="absolute top-1/2 -translate-y-1/2 right-4 w-10 h-10 bg-white/80 backdrop-blur-xl rounded-xl flex items-center justify-center text-gray-800 active:scale-90 transition-all"
                           aria-label="الصورة التالية">
                           <ChevronRight size={22} strokeWidth={2.5} />
                         </button>
