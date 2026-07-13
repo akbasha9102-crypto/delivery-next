@@ -1,10 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
+import { unstable_cache } from 'next/cache';
 import { notFound } from 'next/navigation';
 import HomeClient from '@/app/home/HomeClient';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { supabase as anonClient } from '@/lib/supabase/client';
 
-// بلا ISR — نتيجة قديمة (404) اتخزنت مرة وبقت محفوظة عبر عمليات نشر
-// جديدة بـ Vercel، وظلت تُعرض حتى بعد ما صارت البيانات والمفاتيح صحيحة.
-export const dynamic = 'force-dynamic';
+// ISR برقم صريح بدل force-dynamic (بطيء دائماً) أو الافتراضي المحذوف (revalidate=false
+// = كاش بلا نهاية عبر عمليات نشر Vercel، وهو السبب الأرجح لمشكلة الـ404 القديمة الملتصقة —
+// راجع: عملاء Supabase هنا يستخدمون fetch العام الذي يعترضه Next تلقائياً بالكاش).
+// رقم صريح ⇒ شفاء ذاتي تلقائي خلال 30 ثانية كحد أقصى مهما حدث، بدل تعليق أبدي.
+export const revalidate = 30;
 
 function daysAgoISO(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -12,22 +16,49 @@ function daysAgoISO(days: number): string {
 
 type Props = { params: Promise<{ slug: string }> };
 
+// "الأكثر مبيعاً" مفصول بكاش مستقل بمهلة أطول (10 دقائق): هو الجزء الثقيل حسابياً
+// (استعلامان متتاليان + تجميع بالذاكرة)، ولا يحتاج دقة أعلى من دقائق قليلة.
+// فصله عن revalidate=30 الخاص بالصفحة يعني أن إعادة الحساب الثقيلة تحدث مرة كل
+// 10 دقائق لكل مطعم فقط، لا كل 30 ثانية ولا كل تنقل.
+const getBestSellerItemIds = unstable_cache(
+  async (restaurantId: string): Promise<string[]> => {
+    const since = daysAgoISO(60);
+    const { data: recentOrders } = await supabaseAdmin
+      .from('orders')
+      .select('id')
+      .eq('restaurant_id', restaurantId)
+      .eq('status', 'completed')
+      .gte('created_at', since)
+      .limit(1000);
+
+    const orderIds = (recentOrders || []).map((o) => o.id as string);
+    if (orderIds.length === 0) return [];
+
+    const { data: orderItems } = await supabaseAdmin
+      .from('order_items')
+      .select('item_id, quantity')
+      .in('order_id', orderIds)
+      .not('item_id', 'is', null);
+
+    const qtyByItem = new Map<string, number>();
+    (orderItems || []).forEach((row) => {
+      const id = row.item_id as string | null;
+      if (!id) return;
+      qtyByItem.set(id, (qtyByItem.get(id) || 0) + (row.quantity as number));
+    });
+
+    return [...qtyByItem.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([id]) => id);
+  },
+  ['best-seller-item-ids'],
+  { revalidate: 600 }
+);
+
 export default async function MenuPage({ params }: Props) {
   const { slug } = await params;
 
-  // نستخدم service role للبحث عن المطعم (RLS مفعّل على جدول restaurants)
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-
-  const anonClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  // البحث عن المطعم بالـ slug
   const { data: restaurant, error: restaurantError } = await supabaseAdmin
     .from('restaurants')
     .select('id, name, slug')
@@ -39,10 +70,8 @@ export default async function MenuPage({ params }: Props) {
     // وليس صفحة 404 مضلِّلة تخفي المشكلة الحقيقية
     throw new Error(`Failed to fetch restaurant "${slug}": ${restaurantError.message}`);
   }
-
   if (!restaurant) notFound();
 
-  // جلب فئات وأصناف هذا المطعم فقط
   const [{ data: categories }, { data: items }, { data: settings }] = await Promise.all([
     anonClient
       .from('categories')
@@ -62,40 +91,9 @@ export default async function MenuPage({ params }: Props) {
   ]);
 
   const showBestSellers = settings?.show_best_sellers ?? true;
-
-  // أفضل 3 وجبات مبيعاً (حسب الكمية) من آخر 60 يوم من الطلبات المكتملة لهذا المطعم فقط
-  let bestSellerItemIds: string[] = [];
-  if (showBestSellers) {
-    const since = daysAgoISO(60);
-    const { data: recentOrders } = await supabaseAdmin
-      .from('orders')
-      .select('id')
-      .eq('restaurant_id', restaurant.id)
-      .eq('status', 'completed')
-      .gte('created_at', since)
-      .limit(1000);
-
-    const orderIds = (recentOrders || []).map((o) => o.id as string);
-    if (orderIds.length > 0) {
-      const { data: orderItems } = await supabaseAdmin
-        .from('order_items')
-        .select('item_id, quantity')
-        .in('order_id', orderIds)
-        .not('item_id', 'is', null);
-
-      const qtyByItem = new Map<string, number>();
-      (orderItems || []).forEach((row) => {
-        const id = row.item_id as string | null;
-        if (!id) return;
-        qtyByItem.set(id, (qtyByItem.get(id) || 0) + (row.quantity as number));
-      });
-
-      bestSellerItemIds = [...qtyByItem.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([id]) => id);
-    }
-  }
+  const bestSellerItemIds = showBestSellers
+    ? await getBestSellerItemIds(restaurant.id)
+    : [];
 
   return (
     <HomeClient
