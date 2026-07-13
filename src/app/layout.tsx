@@ -8,7 +8,7 @@ import { RestaurantProvider } from '@/context/RestaurantContext';
 
 const brandFont = Tajawal({
   subsets: ['arabic', 'latin'],
-  weight: '500',
+  weight: ['500', '800'],
   display: 'swap',
   variable: '--font-brand-name',
 });
