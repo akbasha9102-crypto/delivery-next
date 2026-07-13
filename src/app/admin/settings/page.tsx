@@ -111,7 +111,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
   );
 }
 
-/* ─── نافذة عامة نصف الشاشة (تُستخدم لرسوم التوصيل / الحد الأدنى / الكوبون) ─── */
+/* ─── نافذة عامة متمركزة بمنتصف الشاشة (تُستخدم لرسوم التوصيل / الحد الأدنى / الكوبون / خصومات الأقسام والوجبات) ─── */
 function BottomSheet({ title, onClose, children, maxHeight = '65vh' }: { title: string; onClose: () => void; children: React.ReactNode; maxHeight?: string }) {
   const [animateIn, setAnimateIn] = useState(false);
 
@@ -136,15 +136,14 @@ function BottomSheet({ title, onClose, children, maxHeight = '65vh' }: { title: 
   const close = () => { setAnimateIn(false); setTimeout(onClose, 300); };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end" onClick={close}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={close}>
       <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`} />
       <div
-        className={`relative w-full bg-white dark:bg-slate-900 rounded-t-3xl transition-transform duration-300 ease-out flex flex-col ${animateIn ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl transition-all duration-300 ease-out flex flex-col ${animateIn ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
         style={{ maxHeight }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex-shrink-0 px-5 pt-4 pb-4 border-b border-gray-100 dark:border-slate-800">
-          <div className="w-10 h-1 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4" />
+        <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <div className="w-9" />
             <p className="font-bold text-gray-900 dark:text-slate-100">{title}</p>
