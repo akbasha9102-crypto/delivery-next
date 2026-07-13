@@ -459,7 +459,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <span className="font-bold text-gray-900 dark:text-slate-100 block text-sm">المظهر</span>
-                <span className="text-xs text-gray-400 dark:text-slate-500">{dark ? 'الوضع الليلي مفعّل' : 'الوضع الفاتح مفعّل'}</span>
+                <span className="text-xs text-gray-500 dark:text-slate-500">{dark ? 'الوضع الليلي مفعّل' : 'الوضع الفاتح مفعّل'}</span>
               </div>
               <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: dark ? '#fbbf2420' : '#64748b15' }}>
                 {dark ? <Sun size={19} style={{ color: '#fbbf24' }}/> : <Moon size={19} style={{ color: '#64748b' }}/>}
@@ -467,7 +467,7 @@ export default function ProfilePage() {
             </div>
           </button>
 
-          <div className="h-px bg-gray-50 dark:bg-slate-700 mx-5" />
+          <div className="h-px bg-gray-300 dark:bg-slate-700 mx-5" />
 
           <button
             onClick={() => setShowAddressPanel(true)}
@@ -477,7 +477,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <span className="font-bold text-gray-900 dark:text-slate-100 block text-sm">العناوين</span>
-                <span className="text-xs text-gray-400 dark:text-slate-500">
+                <span className="text-xs text-gray-500 dark:text-slate-500">
                   {savedLocations.length > 0 ? `${savedLocations.length} عنوان محفوظ` : 'أضف عنوانك الأول'}
                 </span>
               </div>
