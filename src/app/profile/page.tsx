@@ -387,7 +387,7 @@ export default function ProfilePage() {
 
   return (
     <CustomerGuard>
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 pb-32 md:pr-[70px]">
+    <div data-theme-fade className="min-h-screen bg-gray-50 dark:bg-slate-950 pb-32 md:pr-[70px]">
 
       {/* ══ HERO ══ */}
       <div className="relative overflow-hidden">
@@ -610,6 +610,7 @@ export default function ProfilePage() {
     <AnimatePresence>
     {showAddressPanel && (
       <motion.div
+        data-theme-fade
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-end justify-center"
         style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
@@ -752,6 +753,7 @@ export default function ProfilePage() {
     <AnimatePresence>
     {showAddMap && (
       <motion.div
+        data-theme-fade
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-[60] flex flex-col justify-end"
         style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
