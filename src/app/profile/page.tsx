@@ -107,10 +107,10 @@ function HeroField({
 
   return (
     <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 justify-center active:scale-95 transition-all mx-auto px-3 py-2 -my-2 rounded-xl">
+      <Pencil size={big ? 14 : 12} className="flex-shrink-0" style={{ color: textColor, opacity: 0.7 }} />
       <span className={big ? 'text-xl font-black' : 'text-sm font-semibold'} style={{ color: textColor, opacity: big ? 1 : 0.8 }}>
         {value || placeholder}
       </span>
-      <Pencil size={big ? 14 : 12} className="flex-shrink-0" style={{ color: textColor, opacity: 0.7 }} />
     </button>
   );
 }
