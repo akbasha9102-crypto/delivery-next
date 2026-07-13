@@ -1188,12 +1188,17 @@ const proceedFromReview = () => {
               {/* Total */}
               <div className="rounded-xl px-4 py-3 flex items-center justify-between"
                 style={{ background: 'linear-gradient(135deg,#ef444412,#ef444406)', border: '1.5px solid #ef444435' }}>
-                <motion.span
-                  className="font-black text-xl"
-                  animate={cartPriceFlash ? { color: ['#dc2626', '#dc2626', '#ef4444'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
-                  transition={{ duration: 0.7, ease: 'easeOut' }}
-                  style={{ color: '#ef4444' }}
-                >{grandTotal.toLocaleString()} د.ع</motion.span>
+                <div className="flex items-center gap-2">
+                  {discountAmount > 0 && (
+                    <span className="text-gray-900 dark:text-white text-sm line-through">{(grandTotal + discountAmount).toLocaleString()}</span>
+                  )}
+                  <motion.span
+                    className="font-black text-xl"
+                    animate={cartPriceFlash ? { color: ['#dc2626', '#dc2626', '#ef4444'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
+                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                    style={{ color: '#ef4444' }}
+                  >{grandTotal.toLocaleString()} د.ع</motion.span>
+                </div>
                 <span className="font-black text-gray-900 dark:text-white text-sm">المجموع</span>
               </div>
             </div>
@@ -1409,7 +1414,12 @@ const proceedFromReview = () => {
               {/* الأصناف المطلوبة */}
               <div className="rounded-xl overflow-hidden border border-gray-100 dark:border-slate-700">
                 <div className="flex items-center justify-between px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800">
-                  <span className="font-black text-sm" style={{ color: '#ef4444' }}>{grandTotal.toLocaleString()} د.ع</span>
+                  <div className="flex items-center gap-2">
+                    {discountAmount > 0 && (
+                      <span className="text-gray-900 dark:text-slate-100 text-xs line-through">{(grandTotal + discountAmount).toLocaleString()}</span>
+                    )}
+                    <span className="font-black text-sm" style={{ color: '#ef4444' }}>{grandTotal.toLocaleString()} د.ع</span>
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <ShoppingBag size={13} className="text-gray-400 dark:text-slate-500"/>
                     <p className="text-xs font-bold text-gray-500 dark:text-slate-400">طلبك :</p>
