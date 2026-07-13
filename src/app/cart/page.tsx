@@ -115,7 +115,8 @@ export default function CartPage() {
 
   const rawColor   = primary_color || '#e67e22';
   const isTooDark  = rawColor === '#000000' || rawColor.toLowerCase() === '#121212';
-  const brandColor = (dark && isTooDark) ? '#ffffff' : rawColor;
+  const isTooLight = rawColor.toLowerCase() === '#ffffff' || rawColor.toLowerCase() === '#fff';
+  const brandColor = (dark && isTooDark) ? '#ffffff' : (!dark && isTooLight) ? '#000000' : rawColor;
 
   const textOnBrand = (() => {
     const hex = brandColor.replace('#', '');
@@ -805,10 +806,14 @@ const proceedFromReview = () => {
                   key={opt.key}
                   type="button"
                   onClick={() => setOrderType(opt.key)}
-                  className="flex items-center justify-center py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 border-2"
+                  className={`flex items-center justify-center py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 border-2 ${
+                    orderType === opt.key
+                      ? ''
+                      : 'bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'
+                  }`}
                   style={orderType === opt.key
                     ? { backgroundColor: brandColor, borderColor: brandColor, color: textOnBrand }
-                    : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}
+                    : undefined}
                 >
                   {opt.label}
                 </button>
@@ -925,7 +930,7 @@ const proceedFromReview = () => {
               {discountAmount > 0 && (
                 <span className="text-gray-400 text-sm line-through">{(grandTotal + discountAmount).toLocaleString()}</span>
               )}
-              <span className="font-bold text-xl" style={{ color: brandColor }}>{grandTotal.toLocaleString()} د.ع</span>
+              <span className="font-bold text-xl" style={{ color: '#ef4444' }}>{grandTotal.toLocaleString()} د.ع</span>
             </div>
             <span className="font-bold text-gray-900 dark:text-slate-100">الإجمالي</span>
           </div>
