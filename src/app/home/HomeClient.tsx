@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useCart } from '@/context/CartContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { ClientBottomNav } from '@/components/layout/BottomNav';
-import { Plus, Minus, ShoppingBag, ShoppingCart, Trash2, MapPin, MessageCircle, ChevronDown, Check, X } from 'lucide-react';
+import { Plus, Minus, ShoppingBag, ShoppingCart, Trash2, MapPin, MessageCircle, ChevronDown, ChevronRight, Check, X } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/guards/CustomerGuard';
@@ -18,7 +18,7 @@ type Extra    = { id: string; name: string; price: number };
 type Item     = {
   id: string; name: string; price: number; description: string;
   image_url: string | null; category_id: string; is_available: boolean; item_status?: string; extras_json?: string;
-  discount_pct?: number;
+  discount_pct?: number; images_json?: string;
 };
 
 // نسبة الخصم الفعّالة: خصم العنصر نفسه له الأولوية على خصم القسم — لا يُجمعان أبداً
@@ -149,6 +149,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
   const [selectedItem,        setSelectedItem]        = useState<Item | null>(null);
   const [selectedModalExtras, setSelectedModalExtras] = useState<Set<string>>(new Set());
+  const [modalImageIndex,     setModalImageIndex]     = useState(0);
 
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const pillsRef    = useRef<HTMLDivElement>(null);
@@ -243,7 +244,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
   useEffect(() => { setShowCartPanel(cartItems.length > 0); }, [cartItems.length]);
   useEffect(() => { /* cart panel appears without scrolling */ }, [showCartPanel]);
-  useEffect(() => { setSelectedModalExtras(new Set()); }, [selectedItem]);
+  useEffect(() => { setSelectedModalExtras(new Set()); setModalImageIndex(0); }, [selectedItem]);
 
   useEffect(() => {
     if (!showClosedToast) return;
@@ -305,6 +306,14 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
   const getExtras = (item: Item): Extra[] => {
     try { return JSON.parse(item.extras_json || '[]'); } catch { return []; }
+  };
+
+  const getImages = (item: Item): string[] => {
+    let arr: string[] = [];
+    try { arr = JSON.parse(item.images_json || '[]'); } catch { arr = []; }
+    const cleaned = arr.filter((u): u is string => typeof u === 'string' && u.trim() !== '');
+    if (cleaned.length > 0) return cleaned.slice(0, 3);
+    return item.image_url ? [item.image_url] : [];
   };
 
   useEffect(() => {
@@ -911,6 +920,9 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 const modalCat = categories.find(c => c.id === selectedItem.category_id);
                 const modalColor = (dark && modalCat?.color_dark) ? modalCat.color_dark : (modalCat?.color || brandColor);
                 const modalTextColor = getTextColor(modalColor);
+                const modalImages = getImages(selectedItem);
+                const currentImageUrl = modalImages[modalImageIndex] || modalImages[0] || 'https://placehold.co/600x400/f5f5f5/ccc?text=';
+                const goNextImage = () => setModalImageIndex(i => (i + 1) % modalImages.length);
                 return (
                 <div className="flex flex-col bg-white dark:bg-slate-900 rounded-[2.5rem] sm:rounded-[3.5rem] overflow-hidden">
                    <div className="relative h-64 sm:h-72 w-full overflow-hidden">
@@ -920,7 +932,8 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                         className="absolute inset-0"
                       >
                         <Image
-                          src={selectedItem.image_url || 'https://placehold.co/600x400/f5f5f5/ccc?text='}
+                          key={modalImageIndex}
+                          src={currentImageUrl}
                           alt={selectedItem.name}
                           fill
                           className="object-cover"
@@ -932,6 +945,14 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                         className="absolute top-4 left-4 w-10 h-10 bg-white/20 backdrop-blur-xl rounded-xl flex items-center justify-center text-white">
                         <ChevronDown size={22} strokeWidth={2.5} />
                       </button>
+                      {modalImages.length > 1 && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); goNextImage(); }}
+                          className="absolute top-1/2 -translate-y-1/2 right-4 w-10 h-10 bg-white/20 backdrop-blur-xl rounded-xl flex items-center justify-center text-white active:scale-90 transition-all"
+                          aria-label="الصورة التالية">
+                          <ChevronRight size={22} strokeWidth={2.5} />
+                        </button>
+                      )}
                    </div>
                    <div className="p-6 sm:p-10 relative pb-24 sm:pb-28">
                       {(() => {

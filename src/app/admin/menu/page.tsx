@@ -9,7 +9,7 @@ import { HexColorPicker } from 'react-colorful';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
-type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
+type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string; images_json?: string };
 type InventoryItem = { id: string; name: string; unit: string; current_stock: number };
 type Recipe = { id: string; menu_item_id: string; inventory_item_id: string; quantity_required: number };
 
@@ -23,7 +23,16 @@ function getItemStatus(item: Item) {
   return item.item_status || (item.is_available ? 'available' : 'hidden');
 }
 
+function getItemImages(item: Item): string[] {
+  let arr: string[] = [];
+  try { arr = JSON.parse(item.images_json || '[]'); } catch { arr = []; }
+  const cleaned = arr.filter((u): u is string => typeof u === 'string' && u.trim() !== '');
+  if (cleaned.length > 0) return cleaned.slice(0, MAX_ITEM_IMAGES);
+  return item.image_url ? [item.image_url] : [];
+}
+
 const DEFAULT_IMAGE = 'https://via.placeholder.com/300x200.png?text=Food';
+const MAX_ITEM_IMAGES = 3;
 
 const getTextColor = (hex: string): string => {
   const h = (hex || '#000000').replace('#', '');
@@ -47,9 +56,13 @@ export default function MenuPage() {
   const [activeTab, setActiveTab] = useState<'add' | 'list'>('list');
   const [newCat, setNewCat] = useState('');
   const [newCatColor, setNewCatColor] = useState('#e67e22');
-  const [form, setForm] = useState({ category_id: '', name: '', description: '', price: '', image_url: '' });
+  const [form, setForm] = useState({ category_id: '', name: '', description: '', price: '' });
   const [editItem, setEditItem] = useState<Item | null>(null);
-  const [editForm, setEditForm] = useState({ category_id: '', name: '', description: '', price: '', image_url: '' });
+  const [editForm, setEditForm] = useState({ category_id: '', name: '', description: '', price: '' });
+  const [newItemImages, setNewItemImages] = useState<string[]>([]);
+  const [newImageUrl, setNewImageUrl] = useState('');
+  const [editImages, setEditImages] = useState<string[]>([]);
+  const [editImageUrl, setEditImageUrl] = useState('');
   const [extras, setExtras] = useState<Extra[]>([]);
   const [extraName, setExtraName] = useState('');
   const [extraPrice, setExtraPrice] = useState('');
@@ -183,12 +196,15 @@ export default function MenuPage() {
     const price = parseFloat(form.price.replace(',', '.'));
     if (isNaN(price) || price <= 0) return alert('سعر غير صالح');
     setSaving(true);
+    const images = newItemImages.map(u => u.trim()).filter(Boolean).slice(0, MAX_ITEM_IMAGES);
+    const primaryImage = images[0] || DEFAULT_IMAGE;
     const { data, error } = await supabase.from('items').insert([{
       ...form,
       name: form.name.trim(),
       description: form.description.trim(),
       price,
-      image_url: form.image_url.trim() || DEFAULT_IMAGE,
+      image_url: primaryImage,
+      images_json: JSON.stringify(images.length ? images : [primaryImage]),
       is_available: true,
       restaurant_id: restaurantId,
       extras_json: JSON.stringify(newItemExtras),
@@ -200,14 +216,32 @@ export default function MenuPage() {
       );
       if (recErr) showToast('تم إضافة الطبق لكن تعذّر ربط بعض المكونات', false);
     }
-    setForm({ category_id: '', name: '', description: '', price: '', image_url: '' });
+    setForm({ category_id: '', name: '', description: '', price: '' });
     setNewItemExtras([]);
     setNewItemRecipes([]);
+    setNewItemImages([]);
+    setNewImageUrl('');
     setShowAddItemSheet(false);
     fetchMenu();
     showToast('✓ تم إضافة الطبق');
     setSaving(false);
   };
+
+  const addNewItemImage = () => {
+    const url = newImageUrl.trim();
+    if (!url || newItemImages.length >= MAX_ITEM_IMAGES) return;
+    setNewItemImages(prev => [...prev, url]);
+    setNewImageUrl('');
+  };
+  const removeNewItemImage = (idx: number) => setNewItemImages(prev => prev.filter((_, i) => i !== idx));
+
+  const addEditImage = () => {
+    const url = editImageUrl.trim();
+    if (!url || editImages.length >= MAX_ITEM_IMAGES) return;
+    setEditImages(prev => [...prev, url]);
+    setEditImageUrl('');
+  };
+  const removeEditImage = (idx: number) => setEditImages(prev => prev.filter((_, i) => i !== idx));
 
   const addNewItemRecipe = () => {
     if (!newRecipeInvId) return;
@@ -218,7 +252,9 @@ export default function MenuPage() {
 
   const openEdit = (item: Item) => {
     setEditItem(item);
-    setEditForm({ category_id: item.category_id, name: item.name, description: item.description || '', price: String(item.price), image_url: item.image_url || '' });
+    setEditForm({ category_id: item.category_id, name: item.name, description: item.description || '', price: String(item.price) });
+    setEditImages(getItemImages(item));
+    setEditImageUrl('');
     try { setExtras(JSON.parse(item.extras_json || '[]')); } catch { setExtras([]); }
     setExtraName(''); setExtraPrice('');
     setRecipes([]);
@@ -284,7 +320,9 @@ export default function MenuPage() {
     const price = parseFloat(editForm.price.replace(',', '.'));
     if (isNaN(price) || price <= 0) return alert('سعر غير صالح');
     setSaving(true);
-    const { error } = await supabase.from('items').update({ ...editForm, name: editForm.name.trim(), description: editForm.description.trim(), price, image_url: editForm.image_url.trim() || DEFAULT_IMAGE }).eq('id', editItem.id);
+    const images = editImages.map(u => u.trim()).filter(Boolean).slice(0, MAX_ITEM_IMAGES);
+    const primaryImage = images[0] || DEFAULT_IMAGE;
+    const { error } = await supabase.from('items').update({ ...editForm, name: editForm.name.trim(), description: editForm.description.trim(), price, image_url: primaryImage, images_json: JSON.stringify(images.length ? images : [primaryImage]) }).eq('id', editItem.id);
     error ? showToast('تعذّر الحفظ', false) : (fetchMenu(), setEditItem(null), showToast('✓ تم الحفظ'));
     setSaving(false);
   };
@@ -470,10 +508,28 @@ export default function MenuPage() {
                 { key: 'name', placeholder: 'اسم الطبق *' },
                 { key: 'description', placeholder: 'وصف الطبق' },
                 { key: 'price', placeholder: 'السعر * (د.ع)', type: 'number' },
-                { key: 'image_url', placeholder: 'رابط الصورة (اختياري)' },
               ].map(({ key, placeholder, type }) => (
                 <input key={key} type={type || 'text'} value={(form as any)[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder} dir="rtl" className={input} />
               ))}
+
+              <div className="mb-2">
+                <p className="text-gray-400 dark:text-slate-500 text-xs text-right mb-2">صور الطبق (حتى {MAX_ITEM_IMAGES})</p>
+                {newItemImages.map((url, idx) => (
+                  <div key={idx} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
+                    <button onClick={() => removeNewItemImage(idx)} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
+                    <p dir="ltr" className="text-right flex-1 mr-3 text-xs text-gray-600 dark:text-slate-300 truncate">{idx === 0 ? '⭐ ' : ''}{url}</p>
+                  </div>
+                ))}
+                {newItemImages.length < MAX_ITEM_IMAGES && (
+                  <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
+                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة رابط صورة</p>
+                    <div className="flex gap-2">
+                      <input value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)} placeholder="رابط الصورة" dir="rtl" className={`${input} flex-1 mb-0`} />
+                      <button onClick={addNewItemImage} disabled={!newImageUrl.trim()} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
                 <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧂 الإضافات</h4>
@@ -567,13 +623,31 @@ export default function MenuPage() {
                 { label: 'اسم الطبق', key: 'name', placeholder: 'اسم الطبق' },
                 { label: 'الوصف', key: 'description', placeholder: 'وصف الطبق' },
                 { label: 'السعر (د.ع)', key: 'price', placeholder: 'السعر', type: 'number' },
-                { label: 'رابط الصورة', key: 'image_url', placeholder: 'رابط الصورة' },
               ].map(({ label, key, placeholder, type }) => (
                 <div key={key}>
                   <p className="text-gray-400 dark:text-slate-500 text-xs text-right mb-1">{label}</p>
                   <input type={type || 'text'} value={(editForm as any)[key]} onChange={e => setEditForm(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder} dir="rtl" className={input} />
                 </div>
               ))}
+
+              <div className="mb-2">
+                <p className="text-gray-400 dark:text-slate-500 text-xs text-right mb-2">صور الطبق (حتى {MAX_ITEM_IMAGES})</p>
+                {editImages.map((url, idx) => (
+                  <div key={idx} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
+                    <button onClick={() => removeEditImage(idx)} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
+                    <p dir="ltr" className="text-right flex-1 mr-3 text-xs text-gray-600 dark:text-slate-300 truncate">{idx === 0 ? '⭐ ' : ''}{url}</p>
+                  </div>
+                ))}
+                {editImages.length < MAX_ITEM_IMAGES && (
+                  <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
+                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة رابط صورة</p>
+                    <div className="flex gap-2">
+                      <input value={editImageUrl} onChange={e => setEditImageUrl(e.target.value)} placeholder="رابط الصورة" dir="rtl" className={`${input} flex-1 mb-0`} />
+                      <button onClick={addEditImage} disabled={!editImageUrl.trim()} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
                 <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧂 الإضافات</h4>
