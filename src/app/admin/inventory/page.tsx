@@ -470,14 +470,14 @@ export default function InventoryPage() {
         <button onClick={() => setTab('items')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'items' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
           المواد ({items.length})
         </button>
+        <button onClick={() => setTab('categories')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'categories' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
+          الفئات
+        </button>
         <button onClick={() => setTab('movements')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'movements' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
           الحركات
         </button>
         <button onClick={() => setTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'add' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
           إضافة
-        </button>
-        <button onClick={() => setTab('categories')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'categories' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
-          الفئات
         </button>
       </div>
 
@@ -984,8 +984,8 @@ export default function InventoryPage() {
 
       {/* ═══ موديل ترتيب الفئات ═══ */}
       {showCatReorder && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowCatReorder(false)}>
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowCatReorder(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
               <button onClick={saveCatReorder} disabled={catReorderSaving} className="bg-[#f97316] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {catReorderSaving ? '...' : 'حفظ'}
