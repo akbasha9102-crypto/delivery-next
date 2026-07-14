@@ -61,6 +61,9 @@ const hexToRgba = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const selectedCategoryStyle = (color: string | null | undefined): React.CSSProperties | undefined =>
+  color ? { backgroundColor: color, borderColor: color } : undefined;
+
 const MOVEMENT_LABELS: Record<MovementType, { label: string; color: string; icon: typeof TrendingUp; sign: string }> = {
   IN:          { label: 'استلام',        color: 'text-green-600 dark:text-green-400',  icon: TrendingUp,   sign: '+' },
   RETURN:      { label: 'إرجاع للمورد',  color: 'text-blue-600 dark:text-blue-400',    icon: RotateCcw,    sign: '-' },
@@ -90,8 +93,6 @@ export default function InventoryPage() {
   const [catFilter, setCatFilter] = useState<string | null>(null);
   const [showLowOnly, setShowLowOnly] = useState(false);
   const [movCatFilter, setMovCatFilter] = useState<string | null>(null);
-  const [showCustomCat, setShowCustomCat] = useState(false);
-  const [customCat, setCustomCat] = useState('');
 
   // فورم إضافة فئة جديدة مستقلة
   const [showCatForm, setShowCatForm] = useState(false);
@@ -196,15 +197,11 @@ export default function InventoryPage() {
   const openAdd = () => {
     setEditItem(null);
     setForm(emptyForm);
-    setShowCustomCat(false);
-    setCustomCat('');
     setShowForm(true);
   };
 
   const openEdit = (item: InventoryItem) => {
     setEditItem(item);
-    setShowCustomCat(false);
-    setCustomCat('');
     setForm({
       name: item.name,
       category: item.category,
@@ -575,12 +572,24 @@ export default function InventoryPage() {
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!catFilter ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
               الكل
             </button>
-            {categories.map(c => (
-              <button key={c} onClick={() => setCatFilter(catFilter === c ? null : c)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${catFilter === c ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
-                {c}
-              </button>
-            ))}
+            {categories.map(c => {
+              const dbCat = categoryRows.find(cr => cr.name === c);
+              const selected = catFilter === c;
+              const colorStyle = selected ? selectedCategoryStyle(dbCat?.color) : undefined;
+              return (
+                <button key={c} onClick={() => setCatFilter(catFilter === c ? null : c)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
+                    colorStyle
+                      ? 'text-black'
+                      : selected
+                        ? 'bg-[#f97316] border-[#f97316] text-white'
+                        : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
+                  }`}
+                  style={colorStyle}>
+                  {c}
+                </button>
+              );
+            })}
           </div>
 
           {loading ? (
@@ -743,49 +752,23 @@ export default function InventoryPage() {
               <div className="flex gap-1.5 flex-wrap mb-2 justify-end">
                 {formCategories.map(c => {
                   const dbCat = categoryRows.find(cr => cr.name === c);
-                  const hasColor = !!dbCat?.color;
+                  const selected = form.category === c;
+                  const colorStyle = selected ? selectedCategoryStyle(dbCat?.color) : undefined;
                   return (
-                    <span key={c} className={`flex items-center rounded-full text-xs font-bold border transition-all ${
-                      hasColor
-                        ? 'text-black'
-                        : form.category === c
-                          ? 'bg-[#f97316] border-[#f97316] text-white'
-                          : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
-                    }`}
-                      style={hasColor ? { backgroundColor: hexToRgba(dbCat!.color as string, form.category === c ? 1 : 0.55), borderColor: dbCat!.color as string } : undefined}>
-                      <button onClick={() => setForm(p => ({ ...p, category: c }))}
-                        className="px-3 py-1.5 active:scale-95 transition-all">
-                        {c}
-                      </button>
-                      {dbCat && (
-                        <button onClick={() => deleteCategory(dbCat)} title="حذف الفئة"
-                          className="pl-1 pr-2.5 py-1.5 active:scale-90 transition-all">
-                          <Trash2 size={11} />
-                        </button>
-                      )}
-                    </span>
+                    <button key={c} onClick={() => setForm(p => ({ ...p, category: c }))}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${
+                        colorStyle
+                          ? 'text-black'
+                          : selected
+                            ? 'bg-[#f97316] border-[#f97316] text-white'
+                            : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
+                      }`}
+                      style={colorStyle}>
+                      {c}
+                    </button>
                   );
                 })}
-                <button onClick={() => setShowCustomCat(v => !v)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${showCustomCat ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
-                  + قسم جديد
-                </button>
               </div>
-              {showCustomCat && (
-                <div className="flex gap-1.5 mb-3">
-                  <input value={customCat} onChange={e => setCustomCat(e.target.value)} placeholder="اسم القسم الجديد" dir="rtl"
-                    className="flex-1 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]" />
-                  <button onClick={() => {
-                    const name = customCat.trim();
-                    if (!name) return;
-                    setForm(p => ({ ...p, category: name }));
-                    setCustomCat('');
-                    setShowCustomCat(false);
-                  }} className="bg-[#f97316] text-white font-bold px-4 py-2.5 rounded-xl active:scale-95 transition-all text-sm">
-                    تم
-                  </button>
-                </div>
-              )}
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">وحدة القياس</p>
               <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
