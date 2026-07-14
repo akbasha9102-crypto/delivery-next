@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus } from 'lucide-react';
+import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus, Plus } from 'lucide-react';
 
 type InventoryItem = {
   id: string;
@@ -13,7 +13,7 @@ type InventoryItem = {
   unit: string;
   current_stock: number;
   min_alert_stock: number;
-  reorder_quantity: number;
+  reorder_quantity: number | null;
   cost_per_unit: number;
   supplier: string | null;
   barcode: string | null;
@@ -52,6 +52,14 @@ const CATEGORY_COLORS = [
   { label: 'بني',     hex: '#a16207' },
   { label: 'رمادي',   hex: '#64748b' },
 ];
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 const MOVEMENT_LABELS: Record<MovementType, { label: string; color: string; icon: typeof TrendingUp; sign: string }> = {
   IN:          { label: 'استلام',        color: 'text-green-600 dark:text-green-400',  icon: TrendingUp,   sign: '+' },
@@ -105,6 +113,14 @@ export default function InventoryPage() {
   const [movNotes, setMovNotes] = useState('');
   const [movSaving, setMovSaving] = useState(false);
 
+  // فورم تسجيل شراء
+  const [showPurchaseForm, setShowPurchaseForm] = useState(false);
+  const [purchaseItemId, setPurchaseItemId] = useState('');
+  const [purchaseQty, setPurchaseQty] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [purchaseNotes, setPurchaseNotes] = useState('');
+  const [purchaseSaving, setPurchaseSaving] = useState(false);
+
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 3000);
@@ -155,7 +171,7 @@ export default function InventoryPage() {
 
   // قفل تمرير الصفحة خلف أي نافذة منبثقة حتى لا تتحرك الخلفية بدل النافذة
   useEffect(() => {
-    const isModalOpen = showForm || !!movementTarget || showCatForm;
+    const isModalOpen = showForm || !!movementTarget || showCatForm || showPurchaseForm;
     if (isModalOpen) {
       const scrollY = window.scrollY;
       document.body.style.position = 'fixed';
@@ -168,7 +184,7 @@ export default function InventoryPage() {
         window.scrollTo(0, scrollY);
       };
     }
-  }, [showForm, movementTarget, showCatForm]);
+  }, [showForm, movementTarget, showCatForm, showPurchaseForm]);
 
   const openAdd = () => {
     setEditItem(null);
@@ -188,7 +204,7 @@ export default function InventoryPage() {
       unit: item.unit,
       current_stock: String(item.current_stock),
       min_alert_stock: String(item.min_alert_stock),
-      reorder_quantity: String(item.reorder_quantity),
+      reorder_quantity: item.reorder_quantity == null ? '' : String(item.reorder_quantity),
       cost_per_unit: String(item.cost_per_unit),
       supplier: item.supplier || '',
       barcode: item.barcode || '',
@@ -207,7 +223,7 @@ export default function InventoryPage() {
       unit: form.unit,
       current_stock: parseFloat(form.current_stock) || 0,
       min_alert_stock: parseFloat(form.min_alert_stock) || 0,
-      reorder_quantity: parseFloat(form.reorder_quantity) || 0,
+      reorder_quantity: form.reorder_quantity.trim() === '' ? null : (parseFloat(form.reorder_quantity) || 0),
       cost_per_unit: parseFloat(form.cost_per_unit) || 0,
       supplier: form.supplier.trim() || null,
       barcode: form.barcode.trim() || null,
@@ -310,6 +326,43 @@ export default function InventoryPage() {
     setMovSaving(false);
   };
 
+  const openPurchase = () => {
+    setPurchaseItemId('');
+    setPurchaseQty('');
+    setPurchasePrice('');
+    setPurchaseNotes('');
+    setShowPurchaseForm(true);
+  };
+
+  const selectPurchaseItem = (id: string) => {
+    setPurchaseItemId(id);
+    const it = items.find(i => i.id === id);
+    setPurchasePrice(it && it.cost_per_unit > 0 ? String(it.cost_per_unit) : '');
+  };
+
+  const recordPurchase = async () => {
+    if (!purchaseItemId) { showToast('اختر مادة أولاً', false); return; }
+    const qty = parseFloat(purchaseQty);
+    const price = parseFloat(purchasePrice);
+    if (isNaN(qty) || qty <= 0) { showToast('أدخل كمية صحيحة أكبر من صفر', false); return; }
+    if (isNaN(price) || price < 0) { showToast('أدخل سعراً صحيحاً', false); return; }
+    setPurchaseSaving(true);
+    const { error } = await supabase.rpc('record_inventory_purchase', {
+      p_item_id: purchaseItemId,
+      p_quantity: qty,
+      p_price: price,
+      p_notes: purchaseNotes.trim() || null,
+    });
+    if (error) showToast('تعذّر تسجيل عملية الشراء', false);
+    else {
+      showToast('✓ تم تسجيل الشراء وتحديث السعر');
+      setShowPurchaseForm(false);
+      fetchItems();
+      fetchMovements();
+    }
+    setPurchaseSaving(false);
+  };
+
   const categories = [...new Set(items.map(i => i.category))].sort();
   const lowStockCount = items.filter(i => i.current_stock <= i.min_alert_stock).length;
 
@@ -325,6 +378,8 @@ export default function InventoryPage() {
 
   const activeCategoryNames = categoryRows.filter(c => c.is_active).map(c => c.name);
   const formCategories = [...new Set([...CATEGORIES, ...categories, ...activeCategoryNames, ...(form.category ? [form.category] : [])])];
+
+  const selectedPurchaseItem = items.find(i => i.id === purchaseItemId);
 
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
@@ -489,6 +544,13 @@ export default function InventoryPage() {
         </div>
       )}
 
+      {tab === 'items' && (
+        <button onClick={openPurchase}
+          className="fixed bottom-24 left-4 md:bottom-6 md:left-6 z-40 w-14 h-14 rounded-full bg-[#f97316] text-white shadow-lg flex items-center justify-center active:scale-90 transition-all">
+          <Plus size={26} />
+        </button>
+      )}
+
       {tab === 'movements' && (
         <div className="px-4 pb-4">
           {movements.length > 0 && movementCategories.length > 0 && (
@@ -570,9 +632,16 @@ export default function InventoryPage() {
               <div className="flex gap-1.5 flex-wrap mb-2 justify-end">
                 {formCategories.map(c => {
                   const dbCat = categoryRows.find(cr => cr.name === c);
+                  const hasColor = !!dbCat?.color;
                   return (
-                    <span key={c} className={`flex items-center rounded-full text-xs font-bold border transition-all ${form.category === c ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}
-                      style={dbCat?.color ? (form.category === c ? { backgroundColor: dbCat.color, borderColor: dbCat.color } : { borderColor: dbCat.color, color: dbCat.color }) : undefined}>
+                    <span key={c} className={`flex items-center rounded-full text-xs font-bold border transition-all ${
+                      hasColor
+                        ? 'text-white'
+                        : form.category === c
+                          ? 'bg-[#f97316] border-[#f97316] text-white'
+                          : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
+                    }`}
+                      style={hasColor ? { backgroundColor: hexToRgba(dbCat!.color as string, form.category === c ? 1 : 0.55), borderColor: dbCat!.color as string } : undefined}>
                       <button onClick={() => setForm(p => ({ ...p, category: c }))}
                         className="px-3 py-1.5 active:scale-95 transition-all">
                         {c}
@@ -629,7 +698,7 @@ export default function InventoryPage() {
                     className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">كمية إعادة الطلب</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">كمية إعادة الطلب (اختياري)</p>
                   <input type="number" value={form.reorder_quantity} onChange={e => setForm(p => ({ ...p, reorder_quantity: e.target.value }))} placeholder="0" dir="rtl"
                     className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
                 </div>
@@ -685,6 +754,48 @@ export default function InventoryPage() {
               <button onClick={submitMovement} disabled={movSaving || !movQty}
                 className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
                 {movSaving ? 'جاري الحفظ...' : 'تسجيل الحركة'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ موديل تسجيل شراء ═══ */}
+      {showPurchaseForm && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowPurchaseForm(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[96dvh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4 flex-shrink-0" />
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-2">
+              <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-4">🛒 تسجيل عملية شراء</p>
+
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">المادة</p>
+              <select value={purchaseItemId} onChange={e => selectPurchaseItem(e.target.value)} dir="rtl"
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-3">
+                <option value="">اختر مادة...</option>
+                {[...items].sort((a, b) => a.name.localeCompare(b.name, 'ar')).map(it => (
+                  <option key={it.id} value={it.id}>{it.name} ({it.unit})</option>
+                ))}
+              </select>
+
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">
+                الكمية المشتراة {selectedPurchaseItem ? `(${selectedPurchaseItem.unit})` : ''}
+              </p>
+              <input type="number" value={purchaseQty} onChange={e => setPurchaseQty(e.target.value)} placeholder="0" dir="rtl"
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
+
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">
+                سعر الشراء (د.ع) {selectedPurchaseItem ? `— لكل ${selectedPurchaseItem.unit}` : ''}
+              </p>
+              <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} placeholder="0" dir="rtl"
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
+
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">ملاحظة (اختياري)</p>
+              <input value={purchaseNotes} onChange={e => setPurchaseNotes(e.target.value)} placeholder="مثال: فاتورة المورد رقم..." dir="rtl"
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-4" />
+
+              <button onClick={recordPurchase} disabled={purchaseSaving || !purchaseItemId || !purchaseQty || !purchasePrice}
+                className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
+                {purchaseSaving ? 'جاري الحفظ...' : 'تسجيل الشراء'}
               </button>
             </div>
           </div>
