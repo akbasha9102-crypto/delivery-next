@@ -307,16 +307,6 @@ export default function InventoryPage() {
     setCatSaving(false);
   };
 
-  const toggleCategoryActive = async (cat: CategoryRow) => {
-    const next = !cat.is_active;
-    setCategoryRows(prev => prev.map(c => c.id === cat.id ? { ...c, is_active: next } : c));
-    const { error } = await supabase.from('inventory_categories').update({ is_active: next }).eq('id', cat.id);
-    if (error) {
-      setCategoryRows(prev => prev.map(c => c.id === cat.id ? { ...c, is_active: cat.is_active } : c));
-      showToast('تعذّر تحديث حالة الفئة', false);
-    }
-  };
-
   const deleteCategory = async (cat: { id: string; name: string }) => {
     if (!confirm(`هل أنت متأكد من حذف فئة "${cat.name}"؟`)) return;
     setCatSaving(true);
