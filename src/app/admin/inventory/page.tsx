@@ -21,6 +21,8 @@ type InventoryItem = {
   is_active: boolean;
 };
 
+type CategoryRow = { id: string; name: string; notes: string | null; color: string | null; is_active: boolean };
+
 type MovementType = 'IN' | 'OUT_ORDER' | 'WASTE' | 'ADJUSTMENT' | 'RETURN';
 
 type StockMovement = {
@@ -37,6 +39,19 @@ type StockMovement = {
 
 const UNITS = ['قطعة', 'غرام', 'كيلو', 'لتر', 'علبة', 'كيس', 'صندوق'];
 const CATEGORIES = ['عام', 'مشروبات', 'لحوم', 'خبز', 'خضار', 'توابل', 'زيوت', 'تغليف'];
+
+const CATEGORY_COLORS = [
+  { label: 'أحمر',    hex: '#ef4444' },
+  { label: 'أخضر',    hex: '#22c55e' },
+  { label: 'أزرق',    hex: '#3b82f6' },
+  { label: 'أصفر',    hex: '#eab308' },
+  { label: 'بنفسجي',  hex: '#a855f7' },
+  { label: 'وردي',    hex: '#ec4899' },
+  { label: 'تركواز',  hex: '#14b8a6' },
+  { label: 'نيلي',    hex: '#6366f1' },
+  { label: 'بني',     hex: '#a16207' },
+  { label: 'رمادي',   hex: '#64748b' },
+];
 
 const MOVEMENT_LABELS: Record<MovementType, { label: string; color: string; icon: typeof TrendingUp; sign: string }> = {
   IN:          { label: 'استلام',        color: 'text-green-600 dark:text-green-400',  icon: TrendingUp,   sign: '+' },
@@ -59,8 +74,7 @@ export default function InventoryPage() {
   const [tab, setTab] = useState<'items' | 'movements' | 'add'>('items');
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
-  const [categoriesList, setCategoriesList] = useState<string[]>([]);
-  const [categoryRows, setCategoryRows] = useState<{ id: string; name: string }[]>([]);
+  const [categoryRows, setCategoryRows] = useState<CategoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -74,6 +88,9 @@ export default function InventoryPage() {
   // فورم إضافة فئة جديدة مستقلة
   const [showCatForm, setShowCatForm] = useState(false);
   const [newCatName, setNewCatName] = useState('');
+  const [newCatNotes, setNewCatNotes] = useState('');
+  const [newCatColor, setNewCatColor] = useState<string>(CATEGORY_COLORS[0].hex);
+  const [newCatActive, setNewCatActive] = useState(true);
   const [catSaving, setCatSaving] = useState(false);
 
   // فورم إضافة/تعديل مادة
@@ -122,11 +139,10 @@ export default function InventoryPage() {
     if (!restaurantId) return;
     const { data } = await supabase
       .from('inventory_categories')
-      .select('id, name')
+      .select('id, name, notes, color, is_active')
       .eq('restaurant_id', restaurantId)
       .order('name');
     setCategoryRows(data || []);
-    setCategoriesList((data || []).map((c: { name: string }) => c.name));
   }, [restaurantId]);
 
   // الكاشير له نفس صلاحيات المالك بالكامل بهذه الصفحة الآن — لا شرط دور هنا.
@@ -227,15 +243,31 @@ export default function InventoryPage() {
     const name = newCatName.trim();
     if (!name || !restaurantId) return;
     setCatSaving(true);
-    const { error } = await supabase.from('inventory_categories').insert([{ restaurant_id: restaurantId, name }]);
+    const { error } = await supabase.from('inventory_categories').insert([{
+      restaurant_id: restaurantId,
+      name,
+      notes: newCatNotes.trim() || null,
+      color: newCatColor,
+      is_active: newCatActive,
+    }]);
     if (error) showToast(error.code === '23505' ? 'هذه الفئة موجودة مسبقاً' : 'تعذّرت إضافة الفئة', false);
     else {
       showToast('✓ تمت إضافة الفئة');
-      setNewCatName('');
+      setNewCatName(''); setNewCatNotes(''); setNewCatColor(CATEGORY_COLORS[0].hex); setNewCatActive(true);
       setShowCatForm(false);
       fetchCategoriesList();
     }
     setCatSaving(false);
+  };
+
+  const toggleCategoryActive = async (cat: CategoryRow) => {
+    const next = !cat.is_active;
+    setCategoryRows(prev => prev.map(c => c.id === cat.id ? { ...c, is_active: next } : c));
+    const { error } = await supabase.from('inventory_categories').update({ is_active: next }).eq('id', cat.id);
+    if (error) {
+      setCategoryRows(prev => prev.map(c => c.id === cat.id ? { ...c, is_active: cat.is_active } : c));
+      showToast('تعذّر تحديث حالة الفئة', false);
+    }
   };
 
   const deleteCategory = async (cat: { id: string; name: string }) => {
@@ -291,7 +323,8 @@ export default function InventoryPage() {
   const movementCategories = [...new Set(movements.map(m => m.inventory_items?.category).filter((c): c is string => !!c))].sort();
   const filteredMovements = movements.filter(m => !movCatFilter || m.inventory_items?.category === movCatFilter);
 
-  const formCategories = [...new Set([...CATEGORIES, ...categories, ...categoriesList, ...(form.category ? [form.category] : [])])];
+  const activeCategoryNames = categoryRows.filter(c => c.is_active).map(c => c.name);
+  const formCategories = [...new Set([...CATEGORIES, ...categories, ...activeCategoryNames, ...(form.category ? [form.category] : [])])];
 
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
@@ -343,7 +376,7 @@ export default function InventoryPage() {
             </div>
           </button>
 
-          <button onClick={() => { setNewCatName(''); setShowCatForm(true); }}
+          <button onClick={() => { setNewCatName(''); setNewCatNotes(''); setNewCatColor(CATEGORY_COLORS[0].hex); setNewCatActive(true); setShowCatForm(true); }}
             className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
             <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
               <FolderPlus size={26} className="text-[#f97316]" />
@@ -663,9 +696,32 @@ export default function InventoryPage() {
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-6">
               <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-4">فئة جديدة</p>
-              <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="اسم الفئة" dir="rtl"
+
+              <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="مثال: لحوم، خضار، مشروبات..." dir="rtl"
                 autoFocus
-                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-4" />
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
+
+              <textarea value={newCatNotes} onChange={e => setNewCatNotes(e.target.value)} placeholder="ملاحظات عن الفئة (اختياري)" dir="rtl" rows={2}
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3 resize-none" />
+
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">لون الفئة</p>
+              <div className="flex items-center gap-2 flex-wrap justify-end mb-4">
+                {CATEGORY_COLORS.map(c => (
+                  <button key={c.hex} type="button" onClick={() => setNewCatColor(c.hex)} title={c.label}
+                    className={`w-8 h-8 rounded-full border-2 transition-all active:scale-90 ${newCatColor === c.hex ? 'border-gray-900 dark:border-white scale-110 shadow-md' : 'border-transparent'}`}
+                    style={{ backgroundColor: c.hex }} />
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-4">
+                <button type="button" onClick={() => setNewCatActive(v => !v)} dir="ltr"
+                  className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
+                  style={{ backgroundColor: newCatActive ? '#22c55e' : '#d1d5db' }}>
+                  <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ right: newCatActive ? '2px' : '22px' }} />
+                </button>
+                <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{newCatActive ? 'الفئة مفعّلة' : 'الفئة معطّلة'}</span>
+              </div>
+
               <button onClick={saveNewCategory} disabled={catSaving || !newCatName.trim()}
                 className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
                 {catSaving ? 'جاري الحفظ...' : 'إضافة الفئة'}
@@ -678,10 +734,19 @@ export default function InventoryPage() {
                     {categoryRows.map(cat => (
                       <div key={cat.id} className="flex items-center justify-between gap-3 bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3">
                         <button onClick={() => deleteCategory(cat)} disabled={catSaving}
-                          className="text-red-500 dark:text-red-400 active:scale-90 transition-all disabled:opacity-40">
+                          className="text-red-500 dark:text-red-400 active:scale-90 transition-all disabled:opacity-40 flex-shrink-0">
                           <Trash2 size={16} />
                         </button>
-                        <span className="flex-1 text-right text-gray-900 dark:text-slate-100 text-sm">{cat.name}</span>
+                        <button type="button" onClick={() => toggleCategoryActive(cat)} dir="ltr"
+                          className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
+                          style={{ backgroundColor: cat.is_active ? '#22c55e' : '#d1d5db' }}>
+                          <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ right: cat.is_active ? '2px' : '22px' }} />
+                        </button>
+                        <span className={`flex-1 text-right text-sm ${cat.is_active ? 'text-gray-900 dark:text-slate-100' : 'text-gray-400 dark:text-slate-500 line-through'}`}>
+                          {cat.name}
+                        </span>
+                        <span className="w-4 h-4 rounded-full flex-shrink-0 border border-black/10 dark:border-white/10"
+                          style={{ backgroundColor: cat.color || '#94a3b8' }} title={cat.notes || undefined} />
                       </div>
                     ))}
                   </div>
