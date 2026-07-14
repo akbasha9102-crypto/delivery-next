@@ -37,7 +37,7 @@ type StockMovement = {
   inventory_items?: { name: string; unit: string; category: string } | null;
 };
 
-const UNITS = ['قطعة', 'غرام', 'كيلو', 'لتر', 'علبة', 'كيس', 'صندوق'];
+const UNITS = ['عدد', 'غرام', 'كيلو', 'لتر', 'علبة', 'كيس', 'صندوق'];
 const CATEGORIES = ['عام', 'مشروبات', 'لحوم', 'خبز', 'خضار', 'توابل', 'زيوت', 'تغليف'];
 
 const CATEGORY_COLORS = [
@@ -62,7 +62,7 @@ const MOVEMENT_LABELS: Record<MovementType, { label: string; color: string; icon
 };
 
 const emptyForm = {
-  name: '', category: 'عام', unit: 'قطعة',
+  name: '', category: 'عام', unit: 'عدد',
   current_stock: '', min_alert_stock: '', reorder_quantity: '',
   cost_per_unit: '', supplier: '', barcode: '', notes: '',
 };
@@ -633,7 +633,7 @@ export default function InventoryPage() {
                     className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">التكلفة / وحدة (د.ع)</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">سعر الشراء (د.ع)</p>
                   <input type="number" value={form.cost_per_unit} onChange={e => setForm(p => ({ ...p, cost_per_unit: e.target.value }))} placeholder="0" dir="rtl"
                     className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
                 </div>
