@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus, Plus } from 'lucide-react';
+import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus, Plus, ArrowUp, ArrowDown } from 'lucide-react';
 
 type InventoryItem = {
   id: string;
@@ -21,7 +21,7 @@ type InventoryItem = {
   is_active: boolean;
 };
 
-type CategoryRow = { id: string; name: string; notes: string | null; color: string | null; is_active: boolean };
+type CategoryRow = { id: string; name: string; notes: string | null; color: string | null; is_active: boolean; sort_order: number | null; supplier: string | null };
 
 type MovementType = 'IN' | 'OUT_ORDER' | 'WASTE' | 'ADJUSTMENT' | 'RETURN';
 
@@ -79,7 +79,7 @@ export default function InventoryPage() {
   const { dark } = useDarkMode();
   const { restaurantId } = useRestaurant();
 
-  const [tab, setTab] = useState<'items' | 'movements' | 'add'>('items');
+  const [tab, setTab] = useState<'items' | 'movements' | 'add' | 'categories'>('items');
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [categoryRows, setCategoryRows] = useState<CategoryRow[]>([]);
@@ -100,6 +100,11 @@ export default function InventoryPage() {
   const [newCatColor, setNewCatColor] = useState<string>(CATEGORY_COLORS[0].hex);
   const [newCatActive, setNewCatActive] = useState(true);
   const [catSaving, setCatSaving] = useState(false);
+  const [editingCat, setEditingCat] = useState<CategoryRow | null>(null);
+  const [newCatSupplier, setNewCatSupplier] = useState('');
+  const [showCatReorder, setShowCatReorder] = useState(false);
+  const [reorderCatRows, setReorderCatRows] = useState<CategoryRow[]>([]);
+  const [catReorderSaving, setCatReorderSaving] = useState(false);
 
   // فورم إضافة/تعديل مادة
   const [editItem, setEditItem] = useState<InventoryItem | null>(null);
@@ -156,8 +161,9 @@ export default function InventoryPage() {
     if (!restaurantId) return;
     const { data } = await supabase
       .from('inventory_categories')
-      .select('id, name, notes, color, is_active')
+      .select('id, name, notes, color, is_active, sort_order, supplier')
       .eq('restaurant_id', restaurantId)
+      .order('sort_order', { ascending: true, nullsFirst: false })
       .order('name');
     setCategoryRows(data || []);
   }, [restaurantId]);
@@ -172,7 +178,7 @@ export default function InventoryPage() {
 
   // قفل تمرير الصفحة خلف أي نافذة منبثقة حتى لا تتحرك الخلفية بدل النافذة
   useEffect(() => {
-    const isModalOpen = showForm || !!movementTarget || showCatForm || showPurchaseForm;
+    const isModalOpen = showForm || !!movementTarget || showCatForm || showPurchaseForm || showCatReorder;
     if (isModalOpen) {
       const scrollY = window.scrollY;
       document.body.style.position = 'fixed';
@@ -185,7 +191,7 @@ export default function InventoryPage() {
         window.scrollTo(0, scrollY);
       };
     }
-  }, [showForm, movementTarget, showCatForm, showPurchaseForm]);
+  }, [showForm, movementTarget, showCatForm, showPurchaseForm, showCatReorder]);
 
   const openAdd = () => {
     setEditItem(null);
@@ -256,22 +262,46 @@ export default function InventoryPage() {
     setSaving(false);
   };
 
-  const saveNewCategory = async () => {
+  const openAddCategory = () => {
+    setEditingCat(null);
+    setNewCatName('');
+    setNewCatNotes('');
+    setNewCatColor(CATEGORY_COLORS[0].hex);
+    setNewCatSupplier('');
+    setNewCatActive(true);
+    setShowCatForm(true);
+  };
+
+  const openEditCategory = (cat: CategoryRow) => {
+    setEditingCat(cat);
+    setNewCatName(cat.name);
+    setNewCatNotes(cat.notes || '');
+    setNewCatColor(cat.color || CATEGORY_COLORS[0].hex);
+    setNewCatSupplier(cat.supplier || '');
+    setNewCatActive(cat.is_active);
+    setShowCatForm(true);
+  };
+
+  const saveCategory = async () => {
     const name = newCatName.trim();
     if (!name || !restaurantId) return;
     setCatSaving(true);
-    const { error } = await supabase.from('inventory_categories').insert([{
-      restaurant_id: restaurantId,
+    const payload = {
       name,
       notes: newCatNotes.trim() || null,
       color: newCatColor,
+      supplier: newCatSupplier.trim() || null,
       is_active: newCatActive,
-    }]);
-    if (error) showToast(error.code === '23505' ? 'هذه الفئة موجودة مسبقاً' : 'تعذّرت إضافة الفئة', false);
-    else {
-      showToast('✓ تمت إضافة الفئة');
-      setNewCatName(''); setNewCatNotes(''); setNewCatColor(CATEGORY_COLORS[0].hex); setNewCatActive(true);
+    };
+    const { error } = editingCat
+      ? await supabase.from('inventory_categories').update(payload).eq('id', editingCat.id)
+      : await supabase.from('inventory_categories').insert([{ ...payload, restaurant_id: restaurantId }]);
+    if (error) {
+      showToast(error.code === '23505' ? 'هذه الفئة موجودة مسبقاً' : (editingCat ? 'تعذّر حفظ التعديلات' : 'تعذّرت إضافة الفئة'), false);
+    } else {
+      showToast(editingCat ? '✓ تم حفظ التعديلات' : '✓ تمت إضافة الفئة');
       setShowCatForm(false);
+      setEditingCat(null);
       fetchCategoriesList();
     }
     setCatSaving(false);
@@ -294,6 +324,34 @@ export default function InventoryPage() {
     if (error) showToast('تعذّر حذف الفئة', false);
     else { showToast('✓ تم حذف الفئة'); fetchCategoriesList(); }
     setCatSaving(false);
+  };
+
+  const openCatReorder = () => {
+    setReorderCatRows([...categoryRows]);
+    setShowCatReorder(true);
+  };
+
+  const moveCatRow = (idx: number, dir: -1 | 1) => {
+    const next = idx + dir;
+    if (next < 0 || next >= reorderCatRows.length) return;
+    setReorderCatRows(prev => {
+      const arr = [...prev];
+      [arr[idx], arr[next]] = [arr[next], arr[idx]];
+      return arr;
+    });
+  };
+
+  const saveCatReorder = async () => {
+    setCatReorderSaving(true);
+    await Promise.all(
+      reorderCatRows.map((cat, i) =>
+        supabase.from('inventory_categories').update({ sort_order: i }).eq('id', cat.id)
+      )
+    );
+    await fetchCategoriesList();
+    setShowCatReorder(false);
+    setCatReorderSaving(false);
+    showToast('✓ تم حفظ الترتيب');
   };
 
   const deleteItem = async (item: InventoryItem) => {
@@ -371,7 +429,10 @@ export default function InventoryPage() {
     setPurchaseSaving(false);
   };
 
-  const categories = [...new Set(items.map(i => i.category))].sort();
+  const itemCategoryNames = [...new Set(items.map(i => i.category))];
+  const registeredOrdered = categoryRows.map(c => c.name).filter(n => itemCategoryNames.includes(n));
+  const unregisteredNames = itemCategoryNames.filter(n => !categoryRows.some(c => c.name === n)).sort();
+  const categories = [...registeredOrdered, ...unregisteredNames];
   const lowStockCount = items.filter(i => i.current_stock <= i.min_alert_stock).length;
 
   const filtered = items.filter(i => {
@@ -425,6 +486,9 @@ export default function InventoryPage() {
         <button onClick={() => setTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'add' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
           إضافة
         </button>
+        <button onClick={() => setTab('categories')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'categories' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
+          الفئات
+        </button>
       </div>
 
       {tab === 'add' && (
@@ -440,7 +504,7 @@ export default function InventoryPage() {
             </div>
           </button>
 
-          <button onClick={() => { setNewCatName(''); setNewCatNotes(''); setNewCatColor(CATEGORY_COLORS[0].hex); setNewCatActive(true); setShowCatForm(true); }}
+          <button onClick={openAddCategory}
             className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
             <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
               <FolderPlus size={26} className="text-[#f97316]" />
@@ -450,6 +514,54 @@ export default function InventoryPage() {
               <p className="text-xs text-gray-400 dark:text-slate-500">إضافة فئة جديدة تظهر عند إضافة مادة</p>
             </div>
           </button>
+        </div>
+      )}
+
+      {tab === 'categories' && (
+        <div className="px-4 pb-4">
+          <div className="flex items-center justify-between mb-3">
+            <button onClick={openCatReorder}
+              className="flex items-center p-1.5 rounded-xl bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400 active:scale-95 transition-all">
+              <div className="relative w-4 h-4 rounded-full border border-gray-500 dark:border-slate-400 flex items-center justify-center">
+                <ArrowUp size={8} className="absolute top-0.5 text-gray-500 dark:text-slate-400" />
+                <ArrowDown size={8} className="absolute bottom-0.5 text-gray-500 dark:text-slate-400" />
+              </div>
+            </button>
+            <p className="font-bold text-gray-900 dark:text-slate-100">الفئات ({categoryRows.length})</p>
+          </div>
+
+          {categoryRows.length === 0 ? (
+            <div className="text-center mt-20">
+              <p className="text-4xl mb-3">🗂️</p>
+              <p className="text-gray-400 dark:text-slate-500">لا توجد فئات بعد — أضف فئة من تبويب إضافة</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {categoryRows.map(cat => (
+                <div key={cat.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 flex items-center gap-3">
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    <button onClick={() => openEditCategory(cat)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-500 active:scale-90 transition-all">
+                      <Pencil size={13} />
+                    </button>
+                    <button onClick={() => deleteCategory(cat)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-400 active:scale-90 transition-all">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                  <div className="flex-1 text-right min-w-0">
+                    <div className="flex items-center gap-2 justify-end">
+                      <p className={`font-bold ${cat.is_active ? 'text-gray-900 dark:text-slate-100' : 'text-gray-400 dark:text-slate-500 line-through'}`}>{cat.name}</p>
+                      <span className="w-3 h-3 rounded-full flex-shrink-0 border border-black/10 dark:border-white/10" style={{ backgroundColor: cat.color || '#94a3b8' }} />
+                    </div>
+                    {(cat.supplier || cat.notes) && (
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5 truncate">
+                        {[cat.supplier ? `المورد: ${cat.supplier}` : null, cat.notes].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -837,10 +949,10 @@ export default function InventoryPage() {
 
       {/* ═══ موديل إضافة/حذف فئة ═══ */}
       {showCatForm && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowCatForm(false)}>
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => { setShowCatForm(false); setEditingCat(null); }}>
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-6">
-              <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-4">فئة جديدة</p>
+              <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-4">{editingCat ? 'تعديل الفئة' : 'فئة جديدة'}</p>
 
               <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="مثال: لحوم، خضار، مشروبات..." dir="rtl"
                 autoFocus
@@ -848,6 +960,10 @@ export default function InventoryPage() {
 
               <textarea value={newCatNotes} onChange={e => setNewCatNotes(e.target.value)} placeholder="ملاحظات عن الفئة (اختياري)" dir="rtl" rows={2}
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3 resize-none" />
+
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">المورد</p>
+              <input value={newCatSupplier} onChange={e => setNewCatSupplier(e.target.value)} placeholder="اسم المورد (اختياري)" dir="rtl"
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">لون الفئة</p>
               <div className="flex items-center gap-2 flex-wrap justify-end mb-4">
@@ -867,36 +983,46 @@ export default function InventoryPage() {
                 <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{newCatActive ? 'الفئة مفعّلة' : 'الفئة معطّلة'}</span>
               </div>
 
-              <button onClick={saveNewCategory} disabled={catSaving || !newCatName.trim()}
+              <button onClick={saveCategory} disabled={catSaving || !newCatName.trim()}
                 className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
-                {catSaving ? 'جاري الحفظ...' : 'إضافة الفئة'}
+                {catSaving ? 'جاري الحفظ...' : editingCat ? 'حفظ التعديلات' : 'إضافة الفئة'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {categoryRows.length > 0 && (
-                <div>
-                  <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-sm mb-3">الفئات الحالية</p>
-                  <div className="space-y-2">
-                    {categoryRows.map(cat => (
-                      <div key={cat.id} className="flex items-center justify-between gap-3 bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3">
-                        <button onClick={() => deleteCategory(cat)} disabled={catSaving}
-                          className="text-red-500 dark:text-red-400 active:scale-90 transition-all disabled:opacity-40 flex-shrink-0">
-                          <Trash2 size={16} />
-                        </button>
-                        <button type="button" onClick={() => toggleCategoryActive(cat)} dir="ltr"
-                          className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
-                          style={{ backgroundColor: cat.is_active ? '#22c55e' : '#d1d5db' }}>
-                          <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ right: cat.is_active ? '2px' : '22px' }} />
-                        </button>
-                        <span className={`flex-1 text-right text-sm ${cat.is_active ? 'text-gray-900 dark:text-slate-100' : 'text-gray-400 dark:text-slate-500 line-through'}`}>
-                          {cat.name}
-                        </span>
-                        <span className="w-4 h-4 rounded-full flex-shrink-0 border border-black/10 dark:border-white/10"
-                          style={{ backgroundColor: cat.color || '#94a3b8' }} title={cat.notes || undefined} />
-                      </div>
-                    ))}
+      {/* ═══ موديل ترتيب الفئات ═══ */}
+      {showCatReorder && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowCatReorder(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
+              <button onClick={saveCatReorder} disabled={catReorderSaving} className="bg-[#f97316] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+                {catReorderSaving ? '...' : 'حفظ'}
+              </button>
+              <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">ترتيب الفئات</h3>
+              <button onClick={() => setShowCatReorder(false)} className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 font-bold px-4 py-2 rounded-xl active:scale-95 transition-all">إلغاء</button>
+            </div>
+            <div className="overflow-y-auto p-5 space-y-2">
+              {reorderCatRows.map((cat, i) => (
+                <div key={cat.id} className="flex items-center justify-between bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 border border-gray-200 dark:border-slate-600">
+                  <div className="flex gap-1.5">
+                    <button onClick={() => moveCatRow(i, -1)} disabled={i === 0}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 text-gray-500 dark:text-slate-300 disabled:opacity-25 active:scale-90 transition-all">
+                      <ArrowUp size={14} />
+                    </button>
+                    <button onClick={() => moveCatRow(i, 1)} disabled={i === reorderCatRows.length - 1}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 text-gray-500 dark:text-slate-300 disabled:opacity-25 active:scale-90 transition-all">
+                      <ArrowDown size={14} />
+                    </button>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900 dark:text-slate-100">{cat.name}</span>
+                    {cat.color && <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />}
+                  </div>
+                  <span className="text-xs text-gray-400 dark:text-slate-500 w-5 text-center">{i + 1}</span>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         </div>
