@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
@@ -18,6 +19,8 @@ type InventoryItem = {
   supplier: string | null;
   barcode: string | null;
   notes: string | null;
+  package_quantity: number | null;
+  package_unit: string | null;
   is_active: boolean;
 };
 
@@ -37,6 +40,8 @@ type StockMovement = {
 
 const UNITS = ['قطعة', 'غرام', 'كيلو', 'لتر', 'علبة', 'كيس', 'صندوق'];
 const CATEGORIES = ['عام', 'مشروبات', 'لحوم', 'خبز', 'خضار', 'توابل', 'زيوت', 'تغليف'];
+const BOX_SUB_UNITS = ['قطعة', 'علبة', 'لتر'];
+const BAG_SUB_UNITS = ['كيلو', 'غرام'];
 
 const MOVEMENT_LABELS: Record<MovementType, { label: string; color: string; icon: typeof TrendingUp; sign: string }> = {
   IN:          { label: 'استلام',        color: 'text-green-600 dark:text-green-400',  icon: TrendingUp,   sign: '+' },
@@ -50,6 +55,7 @@ const emptyForm = {
   name: '', category: 'عام', unit: 'قطعة',
   current_stock: '', min_alert_stock: '', reorder_quantity: '',
   cost_per_unit: '', supplier: '', barcode: '', notes: '',
+  package_quantity: '', package_unit: '',
 };
 
 export default function InventoryPage() {
@@ -177,6 +183,8 @@ export default function InventoryPage() {
       supplier: item.supplier || '',
       barcode: item.barcode || '',
       notes: item.notes || '',
+      package_quantity: item.package_quantity != null ? String(item.package_quantity) : '',
+      package_unit: item.package_unit || '',
     });
     setShowForm(true);
   };
@@ -184,6 +192,13 @@ export default function InventoryPage() {
   const saveItem = async () => {
     if (!form.name.trim()) return;
     if (!restaurantId) { showToast('تعذّر تحديد المطعم، أعد تحميل الصفحة', false); return; }
+    const isBoxUnit = form.unit === 'صندوق';
+    const isBagUnit = form.unit === 'كيس';
+    const packageQtyNum = parseFloat(form.package_quantity);
+    if ((isBoxUnit || isBagUnit) && form.package_quantity.trim() && packageQtyNum < 0) {
+      showToast('لا يمكن أن تكون قيمة التعبئة سالبة', false);
+      return;
+    }
     setSaving(true);
     const payload = {
       name: form.name.trim(),
@@ -196,6 +211,8 @@ export default function InventoryPage() {
       supplier: form.supplier.trim() || null,
       barcode: form.barcode.trim() || null,
       notes: form.notes.trim() || null,
+      package_quantity: (isBoxUnit || isBagUnit) && !isNaN(packageQtyNum) ? Math.max(0, packageQtyNum) : null,
+      package_unit: (isBoxUnit || isBagUnit) ? (form.package_unit || (isBoxUnit ? BOX_SUB_UNITS[0] : BAG_SUB_UNITS[0])) : null,
     };
 
     if (editItem) {
@@ -576,12 +593,49 @@ export default function InventoryPage() {
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">وحدة القياس</p>
               <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
                 {UNITS.map(u => (
-                  <button key={u} onClick={() => setForm(p => ({ ...p, unit: u }))}
+                  <button key={u} onClick={() => setForm(p => {
+                    const isBox = u === 'صندوق';
+                    const isBag = u === 'كيس';
+                    if (!isBox && !isBag) return { ...p, unit: u, package_quantity: '', package_unit: '' };
+                    const subUnits = isBox ? BOX_SUB_UNITS : BAG_SUB_UNITS;
+                    return { ...p, unit: u, package_unit: subUnits.includes(p.package_unit) ? p.package_unit : subUnits[0] };
+                  })}
                     className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${form.unit === u ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                     {u}
                   </button>
                 ))}
               </div>
+
+              <AnimatePresence initial={false}>
+                {(form.unit === 'صندوق' || form.unit === 'كيس') && (
+                  <motion.div
+                    key="package-details"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    className="overflow-hidden"
+                  >
+                    <div className="bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-xl p-3 mb-3">
+                      <p className="text-xs text-gray-500 dark:text-slate-400 text-right mb-2 font-bold">
+                        {form.unit === 'صندوق' ? 'يحتوي الصندوق الواحد على:' : 'وزن الكيس الواحد يعادل:'}
+                      </p>
+                      <div className="flex gap-2">
+                        <select value={form.package_unit} onChange={e => setForm(p => ({ ...p, package_unit: e.target.value }))} dir="rtl"
+                          className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-right text-sm text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]">
+                          {(form.unit === 'صندوق' ? BOX_SUB_UNITS : BAG_SUB_UNITS).map(su => (
+                            <option key={su} value={su}>{su}</option>
+                          ))}
+                        </select>
+                        <input type="number" min="0" step="any" value={form.package_quantity}
+                          onChange={e => setForm(p => ({ ...p, package_quantity: e.target.value }))}
+                          placeholder={form.unit === 'صندوق' ? 'العدد' : 'الوزن'} dir="rtl"
+                          className="flex-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
