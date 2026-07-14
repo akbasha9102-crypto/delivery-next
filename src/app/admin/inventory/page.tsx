@@ -571,7 +571,8 @@ export default function InventoryPage() {
                 {formCategories.map(c => {
                   const dbCat = categoryRows.find(cr => cr.name === c);
                   return (
-                    <span key={c} className={`flex items-center rounded-full text-xs font-bold border transition-all ${form.category === c ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                    <span key={c} className={`flex items-center rounded-full text-xs font-bold border transition-all ${form.category === c ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}
+                      style={dbCat?.color ? (form.category === c ? { backgroundColor: dbCat.color, borderColor: dbCat.color } : { borderColor: dbCat.color, color: dbCat.color }) : undefined}>
                       <button onClick={() => setForm(p => ({ ...p, category: c }))}
                         className="px-3 py-1.5 active:scale-95 transition-all">
                         {c}
