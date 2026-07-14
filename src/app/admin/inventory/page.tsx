@@ -120,6 +120,7 @@ export default function InventoryPage() {
   const [purchasePrice, setPurchasePrice] = useState('');
   const [purchaseNotes, setPurchaseNotes] = useState('');
   const [purchaseSaving, setPurchaseSaving] = useState(false);
+  const [purchaseCatFilter, setPurchaseCatFilter] = useState<string | null>(null);
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -331,6 +332,7 @@ export default function InventoryPage() {
     setPurchaseQty('');
     setPurchasePrice('');
     setPurchaseNotes('');
+    setPurchaseCatFilter(null);
     setShowPurchaseForm(true);
   };
 
@@ -338,6 +340,12 @@ export default function InventoryPage() {
     setPurchaseItemId(id);
     const it = items.find(i => i.id === id);
     setPurchasePrice(it && it.cost_per_unit > 0 ? String(it.cost_per_unit) : '');
+  };
+
+  const selectPurchaseCatFilter = (cat: string | null) => {
+    setPurchaseCatFilter(cat);
+    setPurchaseItemId('');
+    setPurchasePrice('');
   };
 
   const recordPurchase = async () => {
@@ -380,6 +388,7 @@ export default function InventoryPage() {
   const formCategories = [...new Set([...CATEGORIES, ...categories, ...activeCategoryNames, ...(form.category ? [form.category] : [])])];
 
   const selectedPurchaseItem = items.find(i => i.id === purchaseItemId);
+  const purchaseFilteredItems = items.filter(i => !purchaseCatFilter || i.category === purchaseCatFilter);
 
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
@@ -614,8 +623,8 @@ export default function InventoryPage() {
 
       {/* ═══ موديل إضافة/تعديل مادة ═══ */}
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowForm(false)}>
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[96dvh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[96dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
               <button onClick={saveItem} disabled={saving || !form.name.trim()} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
                 {saving ? '...' : editItem ? 'حفظ' : 'إضافة'}
@@ -636,7 +645,7 @@ export default function InventoryPage() {
                   return (
                     <span key={c} className={`flex items-center rounded-full text-xs font-bold border transition-all ${
                       hasColor
-                        ? 'text-white'
+                        ? 'text-black'
                         : form.category === c
                           ? 'bg-[#f97316] border-[#f97316] text-white'
                           : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
@@ -762,17 +771,41 @@ export default function InventoryPage() {
 
       {/* ═══ موديل تسجيل شراء ═══ */}
       {showPurchaseForm && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowPurchaseForm(false)}>
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[96dvh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4 flex-shrink-0" />
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-2">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowPurchaseForm(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-6 pb-2">
               <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-4">🛒 تسجيل عملية شراء</p>
+
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">فلترة حسب الفئة</p>
+              <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
+                <button onClick={() => selectPurchaseCatFilter(null)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!purchaseCatFilter ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                  الكل
+                </button>
+                {categories.map(c => {
+                  const dbCat = categoryRows.find(cr => cr.name === c);
+                  const hasColor = !!dbCat?.color;
+                  return (
+                    <button key={c} onClick={() => selectPurchaseCatFilter(purchaseCatFilter === c ? null : c)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
+                        hasColor
+                          ? 'text-black'
+                          : purchaseCatFilter === c
+                            ? 'bg-[#f97316] border-[#f97316] text-white'
+                            : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
+                      }`}
+                      style={hasColor ? { backgroundColor: hexToRgba(dbCat!.color as string, purchaseCatFilter === c ? 1 : 0.55), borderColor: dbCat!.color as string } : undefined}>
+                      {c}
+                    </button>
+                  );
+                })}
+              </div>
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">المادة</p>
               <select value={purchaseItemId} onChange={e => selectPurchaseItem(e.target.value)} dir="rtl"
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-3">
                 <option value="">اختر مادة...</option>
-                {[...items].sort((a, b) => a.name.localeCompare(b.name, 'ar')).map(it => (
+                {[...purchaseFilteredItems].sort((a, b) => a.name.localeCompare(b.name, 'ar')).map(it => (
                   <option key={it.id} value={it.id}>{it.name} ({it.unit})</option>
                 ))}
               </select>
