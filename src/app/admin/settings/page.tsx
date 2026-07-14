@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, ChevronDown, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Users, Ticket, Flame, Percent, Search, Check } from 'lucide-react';
+import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, ChevronDown, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Ticket, Flame, Percent, Search, Check } from 'lucide-react';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -609,8 +609,7 @@ export default function SettingsPage() {
   const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled, coupon_allow_retroactive, show_best_sellers } = useSettings();
   const { restaurantId } = useRestaurant();
   const { dark, toggleDark } = useDarkMode();
-  const { isCashier, activeStaff, switchUser } = useStaff();
-  const [confirmSwitch, setConfirmSwitch] = useState(false);
+  const { isCashier } = useStaff();
 
   const [scheduleLocal,    setScheduleLocal]    = useState<WeekSchedule | null>(null);
   const [showClosedModal,  setShowClosedModal]  = useState(false);
@@ -1005,21 +1004,6 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* ─ تبديل المستخدم — كل جلسة (مالك أو موظف) حساب Supabase Auth حقيقي
-            ومستقل الآن، فـ"التبديل" يعني دائماً تسجيل خروج حقيقي فعلي. ─ */}
-        {!!activeStaff && (
-          <button onClick={() => setConfirmSwitch(true)}
-            className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">تبديل المستخدم ({activeStaff?.displayName})</span>
-              <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
-                <Users size={16} className="text-purple-500" />
-              </div>
-            </div>
-          </button>
-        )}
-
         {/* ─ تسجيل الخروج ─ */}
         <button onClick={logout}
           className="w-full py-4 rounded-2xl bg-red-500 text-white font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
@@ -1028,19 +1012,6 @@ export default function SettingsPage() {
         </button>
 
       </div>
-
-      {confirmSwitch && (
-        <div className="fixed inset-0 z-[90] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmSwitch(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 w-full max-w-xs text-center" onClick={e => e.stopPropagation()} dir="rtl">
-            <p className="font-bold text-gray-900 dark:text-slate-100 mb-1">تبديل المستخدم؟</p>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mb-4">سيتم تسجيل خروجك من هوية «{activeStaff?.displayName}» الحالية</p>
-            <div className="flex gap-2">
-              <button onClick={() => { setConfirmSwitch(false); switchUser(); }} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-bold text-sm active:scale-95 transition-all">تبديل</button>
-              <button onClick={() => setConfirmSwitch(false)} className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all">إلغاء</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {!showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && !showDiscounts && <AdminBottomNav />}
 
