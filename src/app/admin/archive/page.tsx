@@ -60,12 +60,12 @@ function localDate(d = new Date()) {
 export default function ArchivePage() {
   const router = useRouter();
   useDarkMode();
-  const { restaurantId } = useRestaurant();
+  const { restaurantId, restaurantName } = useRestaurant();
   const [feedbacks, setFeedbacks]     = useState<Feedback[]>([]);
   const [rejected,  setRejected]      = useState<RejectedOrder[]>([]);
   const [driverGroups, setDriverGroups] = useState<DriverGroup[]>([]);
   const [loading,   setLoading]       = useState(true);
-  const [filterType, setFilterType]   = useState<'all' | 'feedback' | 'complaint'>('all');
+  const [filterType, setFilterType]   = useState<'feedback' | 'complaint' | null>(null);
   const [section,   setSection]       = useState<'feedback' | 'rejected' | 'drivers'>('feedback');
   const [expandedDriver, setExpandedDriver] = useState<string | null>(null);
   const [expandedTrip,   setExpandedTrip]   = useState<string | null>(null);
@@ -143,7 +143,7 @@ export default function ArchivePage() {
 
   const q = searchTerm.trim();
   const filtered = feedbacks.filter(f =>
-    (filterType === 'all' || f.type === filterType) &&
+    (filterType === null || f.type === filterType) &&
     (!q || f.client_name.includes(q) || f.client_phone.includes(q) || f.message.includes(q))
   );
   const visibleRejected = !q ? rejected : rejected.filter(o =>
@@ -219,14 +219,14 @@ export default function ArchivePage() {
           className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'feedback' ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
           💬 ملاحظة/شكوى{feedbacks.length > 0 ? ` (${feedbacks.length})` : ''}
         </button>
-        <button onClick={() => setSection('rejected')}
-          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'rejected' ? 'bg-red-500 border-red-500 text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
-          ✕ مرفوضة{rejected.length > 0 ? ` (${rejected.length})` : ''}
-        </button>
         <button onClick={() => setSection('drivers')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'drivers' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
           <span aria-hidden="true">🏍️</span>
           <span>السائقين{totalDriverTrips > 0 ? ` (${totalDriverTrips})` : ''}</span>
+        </button>
+        <button onClick={() => setSection('rejected')}
+          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'rejected' ? 'bg-red-500 border-red-500 text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+          ✕ مرفوضة{rejected.length > 0 ? ` (${rejected.length})` : ''}
         </button>
       </div>
 
@@ -246,10 +246,10 @@ export default function ArchivePage() {
             </div>
           )}
           <div className="flex gap-2 px-3 pb-3 overflow-x-auto">
-            {(['all', 'feedback', 'complaint'] as const).map(t => {
-              const labels = { all: 'الكل', feedback: '💡 ملاحظات', complaint: '⚠️ شكاوى' };
+            {(['feedback', 'complaint'] as const).map(t => {
+              const labels = { feedback: '💡 ملاحظات', complaint: '⚠️ شكاوى' };
               return (
-                <button key={t} onClick={() => setFilterType(t)}
+                <button key={t} onClick={() => setFilterType(filterType === t ? null : t)}
                   className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-all active:scale-95 ${filterType === t ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
                   {labels[t]}
                 </button>
@@ -426,13 +426,17 @@ export default function ArchivePage() {
                                 {/* معلومات الزبون */}
                                 <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl px-3 py-2.5 space-y-1.5">
                                   <div className="flex justify-between items-center">
+                                    <p className="text-xs text-gray-400 dark:text-slate-500">{restaurantName || 'المطعم'}</p>
+                                    <p className="text-xs font-bold text-gray-600 dark:text-slate-300">من</p>
+                                  </div>
+                                  <div className="flex justify-between items-center">
                                     <p className="text-xs text-gray-400 dark:text-slate-500" dir="ltr">{trip.client_phone}</p>
                                     <p className="text-xs font-bold text-gray-600 dark:text-slate-300">رقم الزبون</p>
                                   </div>
                                   {trip.delivery_address && (
                                     <div className="flex justify-between items-start gap-2">
                                       <p className="text-xs text-gray-500 dark:text-slate-400 text-right flex-1">{trip.delivery_address}</p>
-                                      <p className="text-xs font-bold text-gray-600 dark:text-slate-300 flex-shrink-0">العنوان</p>
+                                      <p className="text-xs font-bold text-gray-600 dark:text-slate-300 flex-shrink-0">إلى</p>
                                     </div>
                                   )}
                                   {trip.client_lat && trip.client_lng && (
