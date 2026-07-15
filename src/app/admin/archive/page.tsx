@@ -217,7 +217,7 @@ export default function ArchivePage() {
       <div className="flex gap-2 px-3 pt-3 pb-2">
         <button onClick={() => setSection('feedback')}
           className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'feedback' ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
-          💬 ملاحظات{feedbacks.length > 0 ? ` (${feedbacks.length})` : ''}
+          💬 ملاحظة/شكوى{feedbacks.length > 0 ? ` (${feedbacks.length})` : ''}
         </button>
         <button onClick={() => setSection('rejected')}
           className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'rejected' ? 'bg-red-500 border-red-500 text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
@@ -247,7 +247,7 @@ export default function ArchivePage() {
           )}
           <div className="flex gap-2 px-3 pb-3 overflow-x-auto">
             {(['all', 'feedback', 'complaint'] as const).map(t => {
-              const labels = { all: 'الكل', feedback: '💡 ملاحظات عامة', complaint: '⚠️ شكاوى' };
+              const labels = { all: 'الكل', feedback: '💡 ملاحظات', complaint: '⚠️ شكاوى' };
               return (
                 <button key={t} onClick={() => setFilterType(t)}
                   className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-all active:scale-95 ${filterType === t ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
