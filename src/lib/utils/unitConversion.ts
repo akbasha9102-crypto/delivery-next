@@ -28,3 +28,12 @@ export function convertToInventoryUnit(qty: number, recipeUnit: string | null | 
   if (!from || !to || from.dim !== to.dim) return qty; // غير قابل للتحويل — نفترض تطابق الوحدتين كالسابق
   return (qty * from.toBase) / to.toBase;
 }
+
+/** ينسّق كمية مُستهلَكة للعرض فقط: إن كانت الوحدة "كيلو" والكمية بين 0 و1، يحوّلها لغرام مقرَّبة لعدد صحيح. لا يُستخدم للحفظ أو الحساب — البيانات تبقى بوحدتها الأصلية دائماً. */
+export function formatConsumedQuantity(qty: number, unit: string): { value: string; unit: string } {
+  if (unit === 'كيلو' && qty > 0 && qty < 1) {
+    const grams = (qty * UNIT_INFO['كيلو'].toBase) / UNIT_INFO['غرام'].toBase;
+    return { value: Math.round(grams).toLocaleString(), unit: 'غرام' };
+  }
+  return { value: qty.toLocaleString(undefined, { maximumFractionDigits: 3 }), unit };
+}

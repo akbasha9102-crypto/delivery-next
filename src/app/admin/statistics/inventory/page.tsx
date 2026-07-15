@@ -7,6 +7,7 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import { ChevronRight, ChevronDown, Package } from 'lucide-react';
+import { formatConsumedQuantity } from '@/lib/utils/unitConversion';
 
 type StockMovementRow = {
   id: string;
@@ -142,6 +143,7 @@ export default function InventoryStatisticsPage() {
     border:  dark ? '#334155' : '#e2e8f0',
     text:    dark ? '#f1f5f9' : '#0f172a',
     sub:     dark ? '#94a3b8' : '#64748b',
+    detailText: dark ? '#cbd5e1' : '#64748b',
     muted:   dark ? '#334155' : '#f1f5f9',
   };
 
@@ -221,14 +223,15 @@ export default function InventoryStatisticsPage() {
           {visibleStats.map(ing => {
             const isOpen = expanded === ing.id;
             const orderEntries = [...ing.byOrder.entries()].sort((a, b) => b[1].qty - a[1].qty);
+            const totalDisplay = formatConsumedQuantity(ing.total, ing.unit);
             return (
               <div key={ing.id} className="rounded-2xl border overflow-hidden" style={{ backgroundColor: s.surface, borderColor: s.border }}>
                 <button onClick={() => setExpanded(isOpen ? null : ing.id)}
                   className="w-full flex items-center justify-between p-4 active:scale-[0.99] transition-all">
                   <ChevronDown size={16} style={{ color: s.sub, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     <span className="font-black text-base" style={{ color: '#f97316' }}>
-                      {ing.total.toLocaleString(undefined, { maximumFractionDigits: 3 })} {ing.unit}
+                      {totalDisplay.value} {totalDisplay.unit}
                     </span>
                     <div className="flex flex-col items-end">
                       <span className="font-bold text-sm" style={{ color: s.text }}>{ing.name}</span>
@@ -242,19 +245,22 @@ export default function InventoryStatisticsPage() {
 
                 {isOpen && (
                   <div className="border-t px-4 py-3 space-y-2" style={{ borderColor: s.border, backgroundColor: s.muted }}>
-                    {orderEntries.map(([orderId, info]) => (
+                    {orderEntries.map(([orderId, info]) => {
+                      const qtyDisplay = formatConsumedQuantity(info.qty, ing.unit);
+                      return (
                       <div key={orderId} className="flex items-center justify-between text-xs">
                         <span className="font-bold" style={{ color: '#f97316' }}>
-                          {info.qty.toLocaleString(undefined, { maximumFractionDigits: 3 })} {ing.unit}
+                          {qtyDisplay.value} {qtyDisplay.unit}
                         </span>
                         <div className="flex items-center gap-2 text-right min-w-0">
-                          <span style={{ color: s.sub }}>
+                          <span style={{ color: s.detailText }}>
                             {new Date(info.time).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
                           </span>
                           <span className="truncate" style={{ color: s.text }}>{orderNames.get(orderId) || 'طلب محذوف'}</span>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
