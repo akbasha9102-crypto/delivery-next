@@ -24,6 +24,7 @@ type DriverStat = {
   revenue: number;
   rejectedCount: number;
   avgDeliveryMins: number | null;
+  hasCompletedNoDeliveryData: boolean;
   orders: DriverOrder[];
 };
 
@@ -87,7 +88,7 @@ export default function DriverStatisticsPage() {
 
     // نضمن ظهور كل سائق مسجَّل حتى لو ما عنده أي طلب بالفترة المختارة
     drivers.forEach(d => {
-      map.set(d.id, { id: d.id, name: d.name, phone: d.phone, status: d.status, completedCount: 0, revenue: 0, rejectedCount: 0, avgDeliveryMins: null, orders: [] });
+      map.set(d.id, { id: d.id, name: d.name, phone: d.phone, status: d.status, completedCount: 0, revenue: 0, rejectedCount: 0, avgDeliveryMins: null, hasCompletedNoDeliveryData: false, orders: [] });
     });
 
     const durations = new Map<string, number[]>();
@@ -95,7 +96,7 @@ export default function DriverStatisticsPage() {
     orders.forEach(o => {
       if (!o.driver_id) return;
       const key = o.driver_id;
-      const e = map.get(key) || { id: key, name: o.driver_name || 'سائق محذوف', phone: o.driver_phone || '', status: null, completedCount: 0, revenue: 0, rejectedCount: 0, avgDeliveryMins: null, orders: [] };
+      const e = map.get(key) || { id: key, name: o.driver_name || 'سائق محذوف', phone: o.driver_phone || '', status: null, completedCount: 0, revenue: 0, rejectedCount: 0, avgDeliveryMins: null, hasCompletedNoDeliveryData: false, orders: [] };
       if (o.status === 'completed') {
         e.completedCount += 1;
         e.revenue += o.total_amount;
@@ -113,6 +114,10 @@ export default function DriverStatisticsPage() {
     durations.forEach((arr, key) => {
       const e = map.get(key);
       if (e) e.avgDeliveryMins = arr.reduce((s, v) => s + v, 0) / arr.length;
+    });
+
+    map.forEach(e => {
+      if (e.completedCount > 0 && e.avgDeliveryMins === null) e.hasCompletedNoDeliveryData = true;
     });
 
     return [...map.values()].sort((a, b) => b.completedCount - a.completedCount);
@@ -209,8 +214,14 @@ export default function DriverStatisticsPage() {
                       <p className="text-[10px] mt-0.5" style={{ color: s.sub }}>د.ع مبيعات وصّلها</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-black text-base" style={{ color: '#f97316' }}>{d.avgDeliveryMins !== null ? Math.round(d.avgDeliveryMins) : '—'}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: s.sub }}>{d.avgDeliveryMins !== null ? 'دقيقة متوسط التوصيل' : 'لا تتوفر بيانات'}</p>
+                      <p className="font-black text-base" style={{ color: d.avgDeliveryMins !== null ? '#f97316' : s.sub }}>{d.avgDeliveryMins !== null ? Math.round(d.avgDeliveryMins) : '—'}</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: s.sub }}>
+                        {d.avgDeliveryMins !== null
+                          ? 'دقيقة متوسط التوصيل'
+                          : d.completedCount === 0
+                          ? 'لا يوجد رحلات مكتملة'
+                          : 'رحلات قبل تفعيل تتبّع الوقت'}
+                      </p>
                     </div>
                     <div className="text-center">
                       <p className="font-black text-base" style={{ color: d.rejectedCount > 0 ? '#ef4444' : s.sub }}>{d.rejectedCount}</p>
