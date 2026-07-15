@@ -6,29 +6,13 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
-import { Search, X, ChevronLeft, ChevronRight, Package, ChevronDown, Flame, Car, LayoutGrid, ClipboardList, Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Flame, Car, LayoutGrid, ClipboardList, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { exportStatisticsToExcel, exportStatisticsToWord, type StatsExportData } from '@/lib/export/exportStatistics';
+import { SalesChart } from '@/components/shared/SalesChart';
 
-type OrderItem = { id: string; item_name: string; quantity: number; price: number };
+type OrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; created_at: string; order_type?: string | null; table_number?: number | string | null; delivery_fee?: number | null; discount_amount?: number | null; coupon_code?: string | null; items: OrderItem[] };
 type Category = { id: string; name: string };
-
-type StockMovementRow = {
-  id: string;
-  inventory_item_id: string;
-  quantity_changed: number;
-  reference_id: string | null;
-  created_at: string;
-  inventory_items: { name: string; unit: string } | null;
-};
-
-type IngredientAgg = {
-  id: string;
-  name: string;
-  unit: string;
-  total: number;
-  byOrder: Map<string, { qty: number; time: string }>;
-};
 
 function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -60,14 +44,11 @@ export default function StatisticsPage() {
   const [toDate,     setToDate]     = useState(today);
   const [dayView,    setDayView]    = useState(today);
 
-  const [invMovements, setInvMovements] = useState<StockMovementRow[]>([]);
-  const [invOrderNames, setInvOrderNames] = useState<Map<string, string>>(new Map());
-  const [invLoading,  setInvLoading]  = useState(true);
-  const [expandedIng, setExpandedIng] = useState<string | null>(null);
-  const [invSectionOpen, setInvSectionOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'orders'>('overview');
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [costMap, setCostMap] = useState<Map<string, number>>(new Map());
+  const [showAllTopItems, setShowAllTopItems] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!restaurantId) { setLoading(false); return; }
@@ -108,54 +89,18 @@ export default function StatisticsPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const fetchInventoryStats = useCallback(async () => {
-    if (!restaurantId) { setInvLoading(false); return; }
-    setInvLoading(true);
-    const start = new Date(fromDate + 'T00:00:00').toISOString();
-    const end   = new Date(toDate   + 'T23:59:59').toISOString();
-
+  const fetchCostMap = useCallback(async () => {
+    if (!restaurantId) return;
     const { data } = await supabase
-      .from('stock_movements')
-      .select('id, inventory_item_id, quantity_changed, reference_id, created_at, inventory_items(name, unit)')
-      .eq('restaurant_id', restaurantId)
-      .eq('movement_type', 'OUT_ORDER')
-      .gte('created_at', start).lte('created_at', end)
-      .order('created_at', { ascending: false })
-      .limit(2000);
+      .from('menu_item_cost')
+      .select('menu_item_id, total_cost_per_serving')
+      .eq('restaurant_id', restaurantId);
+    const map = new Map<string, number>();
+    (data || []).forEach(r => map.set(r.menu_item_id, r.total_cost_per_serving || 0));
+    setCostMap(map);
+  }, [restaurantId]);
 
-    const rows = (data || []) as unknown as StockMovementRow[];
-    setInvMovements(rows);
-
-    const orderIds = [...new Set(rows.map(r => r.reference_id).filter(Boolean))] as string[];
-    if (orderIds.length) {
-      const { data: ords } = await supabase.from('orders').select('id, client_name').in('id', orderIds);
-      const map = new Map<string, string>();
-      (ords || []).forEach(o => map.set(o.id, o.client_name));
-      setInvOrderNames(map);
-    } else {
-      setInvOrderNames(new Map());
-    }
-    setInvLoading(false);
-  }, [restaurantId, fromDate, toDate]);
-
-  useEffect(() => { fetchInventoryStats(); }, [fetchInventoryStats]);
-
-  const ingredientStats = useMemo(() => {
-    const map = new Map<string, IngredientAgg>();
-    invMovements.forEach(r => {
-      const invItem = r.inventory_items;
-      if (!invItem) return;
-      const qty = Math.abs(r.quantity_changed);
-      const e = map.get(r.inventory_item_id) || { id: r.inventory_item_id, name: invItem.name, unit: invItem.unit, total: 0, byOrder: new Map<string, { qty: number; time: string }>() };
-      e.total += qty;
-      if (r.reference_id) {
-        const prev = e.byOrder.get(r.reference_id);
-        e.byOrder.set(r.reference_id, { qty: (prev?.qty || 0) + qty, time: prev?.time || r.created_at });
-      }
-      map.set(r.inventory_item_id, e);
-    });
-    return [...map.values()].sort((a, b) => b.total - a.total);
-  }, [invMovements]);
+  useEffect(() => { fetchCostMap(); }, [fetchCostMap]);
 
   const handleQuick = (r: 'today' | 'week' | 'month') => {
     const { from, to } = quickRange(r);
@@ -200,6 +145,37 @@ export default function StatisticsPage() {
   const localRevenue    = localOrders.reduce((s, o) => s + o.total_amount, 0);
   const internalRevenue = internalOrders.reduce((s, o) => s + o.total_amount, 0);
   const deliveryRevenue = deliveryOrders.reduce((s, o) => s + o.total_amount, 0);
+
+  const totalCost = useMemo(() => {
+    let cost = 0;
+    filtered.forEach(o => o.items.forEach(it => {
+      const unitCost = it.item_id ? costMap.get(it.item_id) : undefined;
+      if (unitCost != null) cost += unitCost * it.quantity;
+    }));
+    return cost;
+  }, [filtered, costMap]);
+  const netProfit = totalRevenue - totalCost;
+  const hasAnyRecipeData = costMap.size > 0;
+
+  const chartData = useMemo(() => {
+    const byDay = new Map<string, number>();
+    filtered.forEach(o => {
+      const day = localDate(new Date(o.created_at));
+      byDay.set(day, (byDay.get(day) || 0) + o.total_amount);
+    });
+    const result: { date: string; label: string; revenue: number }[] = [];
+    const start = new Date(fromDate + 'T00:00:00');
+    const end   = new Date(toDate + 'T00:00:00');
+    for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = localDate(d);
+      result.push({
+        date: dateStr,
+        label: d.toLocaleDateString('ar-IQ', { day: 'numeric', month: 'short' }),
+        revenue: byDay.get(dateStr) || 0,
+      });
+    }
+    return result;
+  }, [filtered, fromDate, toDate]);
 
   const catBreakdown = useMemo(() => {
     const map = new Map<string, { name: string; revenue: number; count: number }>();
@@ -252,16 +228,6 @@ export default function StatisticsPage() {
     ].filter(r => r.count > 0),
     byCategory: catBreakdown,
     topItems: topItemsStats,
-    inventory: ingredientStats.map(i => ({ name: i.name, unit: i.unit, total: i.total })),
-    inventoryDetail: ingredientStats.flatMap(i =>
-      [...i.byOrder.entries()].map(([orderId, info]) => ({
-        itemName: i.name,
-        unit: i.unit,
-        orderClient: invOrderNames.get(orderId) || 'طلب محذوف',
-        qty: info.qty,
-        time: new Date(info.time).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' }),
-      }))
-    ),
     ordersSummary: filtered.map(o => ({
       orderId: o.id,
       createdAt: new Date(o.created_at).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' }),
@@ -292,7 +258,7 @@ export default function StatisticsPage() {
       if (o.items.length === 0) return [{ ...base, itemName: '', qty: 0, unitPrice: 0, lineTotal: 0 }];
       return o.items.map(it => ({ ...base, itemName: it.item_name, qty: it.quantity, unitPrice: it.price, lineTotal: it.price * it.quantity }));
     }),
-  }), [fromDate, toDate, exportRangeLabel, filtered, totalRevenue, avgOrder, localOrders, deliveryOrders, internalOrders, localRevenue, deliveryRevenue, internalRevenue, catBreakdown, topItemsStats, ingredientStats, invOrderNames]);
+  }), [fromDate, toDate, exportRangeLabel, filtered, totalRevenue, avgOrder, localOrders, deliveryOrders, internalOrders, localRevenue, deliveryRevenue, internalRevenue, catBreakdown, topItemsStats]);
 
   const handleExport = async (kind: 'excel' | 'word') => {
     setExportOpen(false);
@@ -444,19 +410,50 @@ export default function StatisticsPage() {
         <div className="flex justify-center mt-20"><div className="w-10 h-10 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
       ) : activeTab === 'overview' ? (<>
 
-        {/* Summary */}
-        <div className="grid grid-cols-3 gap-2 px-4 pb-3">
+        {/* Financial summary — صافي الأرباح / إجمالي المبيعات / التكلفة */}
+        <div className="grid grid-cols-3 gap-2 px-4 pt-3 pb-2">
           {[
-            { val: filtered.length,            label: 'طلب مكتمل', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)',  border: 'rgba(59,130,246,0.2)',  big: true },
-            { val: totalRevenue.toLocaleString(), label: 'د.ع إيراد', color: '#22c55e', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.2)' },
-            { val: avgOrder.toLocaleString(),   label: 'د.ع متوسط',  color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)' },
+            {
+              key: 'profit', label: 'صافي الأرباح',
+              color: netProfit >= 0 ? '#22c55e' : '#ef4444',
+              bg: netProfit >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+              border: netProfit >= 0 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
+              val: hasAnyRecipeData ? netProfit.toLocaleString() : '—',
+            },
+            {
+              key: 'revenue', label: 'إجمالي المبيعات',
+              color: '#22c55e', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)',
+              val: totalRevenue.toLocaleString(),
+            },
+            {
+              key: 'cost', label: hasAnyRecipeData ? 'التكلفة (تقديرية)' : 'إجمالي التكاليف',
+              color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)',
+              val: hasAnyRecipeData ? totalCost.toLocaleString() : '—',
+            },
           ].map(c => (
-            <div key={c.label} className="rounded-2xl p-3 text-center border" style={{ backgroundColor: c.bg, borderColor: c.border }}>
-              <p className="font-bold leading-tight" style={{ color: c.color, fontSize: c.big ? 24 : 15 }}>{c.val}</p>
-              <p className="text-xs mt-1 opacity-75" style={{ color: c.color }}>{c.label}</p>
+            <div key={c.key} className="rounded-2xl p-3 text-center border" style={{ backgroundColor: c.bg, borderColor: c.border }}>
+              <p className="font-bold leading-tight" style={{ color: (c.key !== 'revenue' && !hasAnyRecipeData) ? s.sub : c.color, fontSize: 22 }}>{c.val}</p>
+              <p className="text-xs mt-1 opacity-75" style={{ color: (c.key !== 'revenue' && !hasAnyRecipeData) ? s.sub : c.color }}>{c.label}</p>
+              {c.key !== 'revenue' && !hasAnyRecipeData && (
+                <p className="text-[10px] mt-1 leading-tight" style={{ color: s.sub }}>لم يتم تسجيل وصفات المواد بعد</p>
+              )}
             </div>
           ))}
         </div>
+
+        {/* Demoted: order count + average order value */}
+        <div className="grid grid-cols-2 gap-2 px-4 pb-3">
+          <div className="rounded-2xl p-3 text-center border" style={{ backgroundColor: 'rgba(59,130,246,0.08)', borderColor: 'rgba(59,130,246,0.2)' }}>
+            <p className="font-bold leading-tight" style={{ color: '#3b82f6', fontSize: 15 }}>{filtered.length}</p>
+            <p className="text-xs mt-1 opacity-75" style={{ color: '#3b82f6' }}>طلب مكتمل</p>
+          </div>
+          <div className="rounded-2xl p-3 text-center border" style={{ backgroundColor: 'rgba(249,115,22,0.08)', borderColor: 'rgba(249,115,22,0.2)' }}>
+            <p className="font-bold leading-tight" style={{ color: '#f97316', fontSize: 15 }}>{avgOrder.toLocaleString()}</p>
+            <p className="text-xs mt-1 opacity-75" style={{ color: '#f97316' }}>د.ع متوسط</p>
+          </div>
+        </div>
+
+        <SalesChart data={chartData} dark={dark} />
 
         {/* Local vs Delivery vs Internal revenue breakdown */}
         {(localOrders.length > 0 || deliveryOrders.length > 0 || internalOrders.length > 0) && (
@@ -549,7 +546,7 @@ export default function StatisticsPage() {
               <Flame size={18} style={{ color: '#f97316' }} />
             </div>
             <div className="space-y-3">
-              {topItemsStats.slice(0, 10).map((it, idx) => {
+              {topItemsStats.slice(0, showAllTopItems ? topItemsStats.length : 5).map((it, idx) => {
                 const maxQty = topItemsStats[0].qty;
                 const pct = maxQty > 0 ? (it.qty / maxQty) * 100 : 0;
                 return (
@@ -572,70 +569,15 @@ export default function StatisticsPage() {
                 );
               })}
             </div>
+            {topItemsStats.length > 5 && (
+              <button onClick={() => setShowAllTopItems(v => !v)}
+                className="w-full mt-3 text-center py-1.5 rounded-lg text-xs font-bold active:scale-95 transition-all"
+                style={{ backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316' }}>
+                {showAllTopItems ? 'إظهار أقل' : 'عرض الكل'}
+              </button>
+            )}
           </div>
         )}
-
-        {/* إحصائيات المخزون */}
-        <div className="mx-4 mb-3 rounded-2xl border overflow-hidden" style={{ backgroundColor: s.surface, borderColor: s.border }}>
-          <button onClick={() => setInvSectionOpen(o => !o)}
-            className="w-full flex items-center gap-2 p-4 justify-end active:scale-[0.99] transition-all">
-            {!invSectionOpen && ingredientStats.length > 0 && (
-              <span className="text-xs" style={{ color: s.sub }}>{ingredientStats.length} مادة</span>
-            )}
-            <h3 className="font-bold text-right" style={{ color: s.text }}>إحصائيات المخزون</h3>
-            <Package size={18} style={{ color: '#f97316' }} />
-            <ChevronDown size={16} style={{ color: s.sub, transform: invSectionOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-          </button>
-
-          {invSectionOpen && (
-          <div className="px-4 pb-4">
-          {invLoading ? (
-            <div className="flex justify-center py-6"><div className="w-7 h-7 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
-          ) : ingredientStats.length === 0 ? (
-            <p className="text-center text-sm py-4" style={{ color: s.sub }}>لا يوجد استهلاك مخزون في هذه الفترة</p>
-          ) : (
-            <div className="space-y-2">
-              {ingredientStats.map(ing => {
-                const isOpen = expandedIng === ing.id;
-                const orderEntries = [...ing.byOrder.entries()].sort((a, b) => b[1].qty - a[1].qty);
-                return (
-                  <div key={ing.id} className="rounded-xl border overflow-hidden" style={{ borderColor: s.border }}>
-                    <button onClick={() => setExpandedIng(isOpen ? null : ing.id)}
-                      className="w-full flex items-center justify-between p-3 active:scale-[0.99] transition-all">
-                      <span className="font-bold text-sm" style={{ color: '#f97316' }}>
-                        {ing.total.toLocaleString(undefined, { maximumFractionDigits: 3 })} {ing.unit}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs" style={{ color: s.sub }}>{ing.byOrder.size} طلب</span>
-                        <span className="font-bold text-sm" style={{ color: s.text }}>{ing.name}</span>
-                        <ChevronDown size={16} style={{ color: s.sub, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                      </div>
-                    </button>
-                    {isOpen && (
-                      <div className="border-t px-3 py-2 space-y-1.5" style={{ borderColor: s.border, backgroundColor: s.muted }}>
-                        {orderEntries.map(([orderId, info]) => (
-                          <div key={orderId} className="flex items-center justify-between text-xs">
-                            <span className="font-bold" style={{ color: '#f97316' }}>
-                              {info.qty.toLocaleString(undefined, { maximumFractionDigits: 3 })} {ing.unit}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <span style={{ color: s.sub }}>
-                                {new Date(info.time).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
-                              </span>
-                              <span style={{ color: s.text }}>{invOrderNames.get(orderId) || 'طلب محذوف'}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          </div>
-          )}
-        </div>
 
       </>) : (<>
 

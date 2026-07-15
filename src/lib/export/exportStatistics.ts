@@ -8,8 +8,6 @@ export type StatsExportData = {
   byOrderType: { name: string; count: number; revenue: number }[];
   byCategory: { name: string; count: number; revenue: number }[];
   topItems: { name: string; qty: number; revenue: number }[];
-  inventory: { name: string; unit: string; total: number }[];
-  inventoryDetail: { itemName: string; unit: string; orderClient: string; qty: number; time: string }[];
   ordersSummary: {
     orderId: string;
     createdAt: string;
@@ -258,22 +256,6 @@ export async function exportStatisticsToExcel(data: StatsExportData) {
     autoFitColumns(items);
   }
 
-  // ===== Sheet 4: المخزون =====
-  if (data.inventory.length) {
-    const inv = wb.addWorksheet('المخزون', { views: [{ rightToLeft: true }] });
-    addStyledTable(inv, 1, ['المادة', 'الوحدة', 'الكمية المستهلكة'],
-      data.inventory.map(r => [r.name, r.unit, r.total]));
-    autoFitColumns(inv);
-  }
-
-  // ===== Sheet 5: تفصيل استهلاك المخزون =====
-  if (data.inventoryDetail.length) {
-    const invDetail = wb.addWorksheet('تفصيل استهلاك المخزون', { views: [{ rightToLeft: true }] });
-    addStyledTable(invDetail, 1, ['المادة', 'الطلب', 'الكمية', 'التاريخ'],
-      data.inventoryDetail.map(r => [r.itemName, r.orderClient, r.qty, r.time]));
-    autoFitColumns(invDetail);
-  }
-
   const buffer = await wb.xlsx.writeBuffer();
   downloadBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
     `إحصائيات_${periodLabel(data)}.xlsx`);
@@ -311,11 +293,6 @@ export function exportStatisticsToWord(data: StatsExportData) {
   if (data.topItems.length) {
     sections.push(`<h2>الأصناف الأكثر مبيعاً</h2>` + table(['الصنف', 'الكمية المباعة', 'الإيراد (د.ع)'],
       data.topItems.map(r => [r.name, r.qty, Math.round(r.revenue)])));
-  }
-
-  if (data.inventory.length) {
-    sections.push(`<h2>استهلاك المخزون</h2>` + table(['المادة', 'الوحدة', 'الكمية المستهلكة'],
-      data.inventory.map(r => [r.name, r.unit, r.total])));
   }
 
   if (data.orderItems.length) {
