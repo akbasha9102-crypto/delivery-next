@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase/client';
 
 // ملاحظة مهمة: لا تستورد من '@/lib/auth/staff-auth' هنا — تلك الوحدة تستخدم
@@ -68,8 +69,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 stagger-0">
-        <h1 className="text-3xl font-bold text-[#4f46e5] mb-0.5 text-center">Dasha</h1>
-        <p className="text-xl font-bold text-[#4f46e5] text-center mb-6">داشا</p>
+        <div className="flex justify-center mb-6">
+          <Image src="/logo.png" alt="Dasha" width={96} height={96} priority className="h-20 w-20 object-contain" />
+        </div>
 
         <div className="flex bg-gray-100 dark:bg-slate-700 rounded-xl p-1 mb-6">
           <button
