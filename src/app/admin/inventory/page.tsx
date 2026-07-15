@@ -485,6 +485,17 @@ export default function InventoryPage() {
 
       {tab === 'add' && (
         <div className="px-4 space-y-3 pb-4">
+          <button onClick={openPurchase}
+            className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+            <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+              <ShoppingCart size={26} className="text-[#f97316]" />
+            </div>
+            <div className="text-right flex-1">
+              <p className="font-bold text-gray-900 dark:text-slate-100">تسجيل عملية شراء</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500">تسجيل شراء مادة وتحديث السعر</p>
+            </div>
+          </button>
+
           <button onClick={openAdd}
             className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
             <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
@@ -670,13 +681,6 @@ export default function InventoryPage() {
             </div>
           )}
         </div>
-      )}
-
-      {tab === 'items' && (
-        <button onClick={openPurchase}
-          className="fixed bottom-24 left-4 md:bottom-6 md:left-6 z-40 w-14 h-14 rounded-full bg-[#f97316] text-white shadow-lg flex items-center justify-center active:scale-90 transition-all">
-          <ShoppingCart size={26} />
-        </button>
       )}
 
       {tab === 'movements' && (
