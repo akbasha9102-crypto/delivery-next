@@ -940,7 +940,6 @@ export default function InventoryPage() {
               <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-4">{editingCat ? 'تعديل الفئة' : 'فئة جديدة'}</p>
 
               <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="مثال: لحوم، خضار، مشروبات..." dir="rtl"
-                autoFocus
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
 
               <textarea value={newCatNotes} onChange={e => setNewCatNotes(e.target.value)} placeholder="ملاحظات عن الفئة (اختياري)" dir="rtl" rows={2}
@@ -959,14 +958,16 @@ export default function InventoryPage() {
                 ))}
               </div>
 
-              <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-4">
-                <button type="button" onClick={() => setNewCatActive(v => !v)} dir="ltr"
-                  className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
-                  style={{ backgroundColor: newCatActive ? '#22c55e' : '#d1d5db' }}>
-                  <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ right: newCatActive ? '2px' : '22px' }} />
-                </button>
-                <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{newCatActive ? 'الفئة مفعّلة' : 'الفئة معطّلة'}</span>
-              </div>
+              {editingCat && (
+                <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-4">
+                  <button type="button" onClick={() => setNewCatActive(v => !v)} dir="ltr"
+                    className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
+                    style={{ backgroundColor: newCatActive ? '#22c55e' : '#d1d5db' }}>
+                    <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ right: newCatActive ? '2px' : '22px' }} />
+                  </button>
+                  <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{newCatActive ? 'الفئة مفعّلة' : 'الفئة معطّلة'}</span>
+                </div>
+              )}
 
               <button onClick={saveCategory} disabled={catSaving || !newCatName.trim()}
                 className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
