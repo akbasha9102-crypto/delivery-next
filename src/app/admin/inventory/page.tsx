@@ -177,9 +177,10 @@ export default function InventoryPage() {
     fetchCategoriesList();
   }, [fetchItems, fetchMovements, fetchCategoriesList]);
 
-  // قفل تمرير الصفحة خلف أي نافذة منبثقة حتى لا تتحرك الخلفية بدل النافذة
+  // نافذة منبثقة مفتوحة؟ تُستخدم لقفل تمرير الخلفية وإخفاء الشريط السفلي تحتها
+  const isModalOpen = showForm || !!movementTarget || showCatForm || showPurchaseForm || showCatReorder;
+
   useEffect(() => {
-    const isModalOpen = showForm || !!movementTarget || showCatForm || showPurchaseForm || showCatReorder;
     if (isModalOpen) {
       const scrollY = window.scrollY;
       document.body.style.position = 'fixed';
@@ -192,7 +193,7 @@ export default function InventoryPage() {
         window.scrollTo(0, scrollY);
       };
     }
-  }, [showForm, movementTarget, showCatForm, showPurchaseForm, showCatReorder]);
+  }, [isModalOpen]);
 
   const openAdd = () => {
     setEditItem(null);
@@ -390,6 +391,7 @@ export default function InventoryPage() {
     setPurchaseItemId(id);
     const it = items.find(i => i.id === id);
     setPurchasePrice(it && it.cost_per_unit > 0 ? String(it.cost_per_unit) : '');
+    setPurchaseQty(it && it.reorder_quantity ? String(it.reorder_quantity) : '');
   };
 
   const selectPurchaseCatFilter = (cat: string | null) => {
@@ -909,12 +911,14 @@ export default function InventoryPage() {
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">
                 الكمية المشتراة {selectedPurchaseItem ? `(${selectedPurchaseItem.unit})` : ''}
+                {selectedPurchaseItem?.reorder_quantity ? <span className="text-[#f97316]"> — مقترحة حسب كمية إعادة الطلب</span> : ''}
               </p>
               <input type="number" value={purchaseQty} onChange={e => setPurchaseQty(e.target.value)} placeholder="0" dir="rtl"
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">
                 سعر الشراء (د.ع) {selectedPurchaseItem ? `— لكل ${selectedPurchaseItem.unit}` : ''}
+                {selectedPurchaseItem && selectedPurchaseItem.cost_per_unit > 0 ? <span className="text-[#f97316]"> — مقترح حسب آخر سعر</span> : ''}
               </p>
               <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} placeholder="0" dir="rtl"
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
@@ -1014,7 +1018,7 @@ export default function InventoryPage() {
         </div>
       )}
 
-      <AdminBottomNav />
+      {!isModalOpen && <AdminBottomNav />}
     </div>
   );
 }
