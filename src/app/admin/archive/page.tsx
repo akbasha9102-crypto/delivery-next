@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { MessageSquare, AlertCircle, ChevronRight, ChevronDown, ChevronUp, MapPin, Car } from 'lucide-react';
+import { MessageSquare, AlertCircle, ChevronRight, ChevronDown, ChevronUp, MapPin, Car, Search, Calendar, X } from 'lucide-react';
 
 type Feedback = {
   id: string;
@@ -69,6 +69,9 @@ export default function ArchivePage() {
   const [section,   setSection]       = useState<'feedback' | 'rejected' | 'drivers'>('feedback');
   const [expandedDriver, setExpandedDriver] = useState<string | null>(null);
   const [expandedTrip,   setExpandedTrip]   = useState<string | null>(null);
+  const [searchTerm, setSearchTerm]         = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate]     = useState('');
 
   const fetchAll = useCallback(async () => {
     if (!restaurantId) {
@@ -138,7 +141,26 @@ export default function ArchivePage() {
     return () => { supabase.removeChannel(ch); };
   }, [fetchAll]);
 
-  const filtered   = filterType === 'all' ? feedbacks : feedbacks.filter(f => f.type === filterType);
+  const q = searchTerm.trim();
+  const filtered = feedbacks.filter(f =>
+    (filterType === 'all' || f.type === filterType) &&
+    (!q || f.client_name.includes(q) || f.client_phone.includes(q) || f.message.includes(q))
+  );
+  const visibleRejected = !q ? rejected : rejected.filter(o =>
+    o.client_name.includes(q) || o.client_phone.includes(q) || (o.delivery_address ?? '').includes(q)
+  );
+  const visibleDriverGroups = !q ? driverGroups : driverGroups
+    .map(g => ({
+      ...g,
+      trips: g.trips.filter(t =>
+        g.driver_name.includes(q) ||
+        (g.driver_phone ?? '').includes(q) ||
+        t.client_name.includes(q) ||
+        t.client_phone.includes(q) ||
+        (t.delivery_address ?? '').includes(q)
+      ),
+    }))
+    .filter(g => g.trips.length > 0);
   const complaints = feedbacks.filter(f => f.type === 'complaint').length;
   const notes      = feedbacks.filter(f => f.type === 'feedback').length;
   const totalDriverTrips = driverGroups.reduce((s, g) => s + g.trips.length, 0);
@@ -154,6 +176,43 @@ export default function ArchivePage() {
         <div className="w-9" />
       </header>
 
+      {/* شريط البحث + زر التاريخ */}
+      <div className="flex items-center gap-2 px-3 pt-3">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 dark:text-slate-500 pointer-events-none" />
+          <input
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="ابحث بالاسم أو رقم الهاتف..."
+            dir="rtl"
+            className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-2xl py-2.5 pr-10 pl-9 text-sm text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]"
+          />
+          {searchTerm && (
+            <button onClick={() => setSearchTerm('')} className="absolute top-1/2 -translate-y-1/2 left-3 text-gray-400 hover:text-gray-600">
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        <button
+          onClick={() => setShowDatePicker(v => !v)}
+          className={`w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-2xl border transition-all active:scale-95 ${showDatePicker || selectedDate ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}
+          aria-label="فلترة حسب التاريخ"
+        >
+          <Calendar size={18} />
+        </button>
+      </div>
+
+      {showDatePicker && (
+        <div className="px-3 pt-2">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            className="w-full rounded-xl px-3 py-2 text-sm text-center border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 outline-none"
+          />
+        </div>
+      )}
+
       {/* التابات الرئيسية */}
       <div className="flex gap-2 px-3 pt-3 pb-2">
         <button onClick={() => setSection('feedback')}
@@ -165,8 +224,9 @@ export default function ArchivePage() {
           ✕ مرفوضة{rejected.length > 0 ? ` (${rejected.length})` : ''}
         </button>
         <button onClick={() => setSection('drivers')}
-          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'drivers' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
-          🏍️ السائقين{totalDriverTrips > 0 ? ` (${totalDriverTrips})` : ''}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'drivers' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+          <span aria-hidden="true">🏍️</span>
+          <span>السائقين{totalDriverTrips > 0 ? ` (${totalDriverTrips})` : ''}</span>
         </button>
       </div>
 
@@ -187,7 +247,7 @@ export default function ArchivePage() {
           )}
           <div className="flex gap-2 px-3 pb-3 overflow-x-auto">
             {(['all', 'feedback', 'complaint'] as const).map(t => {
-              const labels = { all: 'الكل', feedback: '💡 ملاحظات', complaint: '⚠️ شكاوى' };
+              const labels = { all: 'الكل', feedback: '💡 ملاحظات عامة', complaint: '⚠️ شكاوى' };
               return (
                 <button key={t} onClick={() => setFilterType(t)}
                   className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-all active:scale-95 ${filterType === t ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
@@ -200,7 +260,7 @@ export default function ArchivePage() {
             {loading ? (
               <div className="flex justify-center mt-20"><div className="w-10 h-10 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
             ) : filtered.length === 0 ? (
-              <div className="text-center mt-24"><p className="text-5xl mb-3">📭</p><p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد ملاحظات بعد</p></div>
+              <div className="text-center mt-24"><p className="text-5xl mb-3">📭</p><p className="text-gray-400 dark:text-slate-500 font-medium">{q ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد ملاحظات بعد'}</p></div>
             ) : (
               <div className="space-y-3 max-w-lg mx-auto">
                 {filtered.map(fb => (
@@ -241,9 +301,11 @@ export default function ArchivePage() {
             <div className="flex justify-center mt-20"><div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" /></div>
           ) : rejected.length === 0 ? (
             <div className="text-center mt-24"><p className="text-5xl mb-3">✅</p><p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد طلبات مرفوضة اليوم</p></div>
+          ) : visibleRejected.length === 0 ? (
+            <div className="text-center mt-24"><p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد نتائج مطابقة للبحث</p></div>
           ) : (
             <div className="space-y-3 max-w-lg mx-auto">
-              {rejected.map(order => (
+              {visibleRejected.map(order => (
                 <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
                   <div className="h-1.5 bg-red-400" />
                   <div className="p-4 flex justify-between items-start">
@@ -295,8 +357,11 @@ export default function ArchivePage() {
               </div>
 
               {/* قائمة السائقين */}
+              {visibleDriverGroups.length === 0 ? (
+                <div className="text-center mt-10"><p className="text-gray-400 dark:text-slate-500 font-medium text-sm">لا توجد نتائج مطابقة للبحث</p></div>
+              ) : (
               <div className="space-y-3 max-w-lg mx-auto">
-                {driverGroups.map(group => (
+                {visibleDriverGroups.map(group => (
                   <div key={group.driver_id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden">
                     {/* هيدر السائق */}
                     <button
@@ -411,6 +476,7 @@ export default function ArchivePage() {
                   </div>
                 ))}
               </div>
+              )}
             </>
           )}
         </div>
