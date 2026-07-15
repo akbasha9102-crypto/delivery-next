@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { supabase } from '@/lib/supabase/client';
+import SahlLogo from '@/components/shared/SahlLogo';
 
 // ملاحظة مهمة: لا تستورد من '@/lib/auth/staff-auth' هنا — تلك الوحدة تستخدم
 // Node crypto وعميل supabaseAdmin (Service Role) وهي مخصّصة للخادم فقط.
@@ -70,7 +70,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 stagger-0">
         <div className="flex justify-center mb-6">
-          <Image src="/logo.png" alt="Dasha" width={96} height={96} priority className="h-20 w-20 object-contain" />
+          <SahlLogo />
         </div>
 
         <div className="flex bg-gray-100 dark:bg-slate-700 rounded-xl p-1 mb-6">
