@@ -90,6 +90,19 @@ export async function POST(req: NextRequest) {
     is_suspended: false,
   });
 
+  // زرع فئات المخزون الافتراضية للمطعم الجديد (نفس الفئات المزروعة
+  // للمطاعم الموجودة بـ migration 20260715090000_inventory_categories_system_seed)
+  await supabaseAdmin.from('inventory_categories').insert([
+    { restaurant_id: restaurant.id, name: 'عام',      color: '#64748b', is_active: true, is_system: true, sort_order: 0 },
+    { restaurant_id: restaurant.id, name: 'مشروبات',  color: '#3b82f6', is_active: true, is_system: true, sort_order: 1 },
+    { restaurant_id: restaurant.id, name: 'لحوم',     color: '#ef4444', is_active: true, is_system: true, sort_order: 2 },
+    { restaurant_id: restaurant.id, name: 'خبز',      color: '#a16207', is_active: true, is_system: true, sort_order: 3 },
+    { restaurant_id: restaurant.id, name: 'خضار',     color: '#22c55e', is_active: true, is_system: true, sort_order: 4 },
+    { restaurant_id: restaurant.id, name: 'توابل',    color: '#eab308', is_active: true, is_system: true, sort_order: 5 },
+    { restaurant_id: restaurant.id, name: 'زيوت',     color: '#a855f7', is_active: true, is_system: true, sort_order: 6 },
+    { restaurant_id: restaurant.id, name: 'تغليف',    color: '#14b8a6', is_active: true, is_system: true, sort_order: 7 },
+  ]);
+
   return NextResponse.json({
     ok: true,
     restaurant: { id: restaurant.id, name: restaurant.name, slug: restaurant.slug },

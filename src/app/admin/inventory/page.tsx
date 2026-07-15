@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus, Plus, ArrowUp, ArrowDown } from 'lucide-react';
+import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus, ShoppingCart, ArrowUp, ArrowDown } from 'lucide-react';
 
 type InventoryItem = {
   id: string;
@@ -21,7 +21,7 @@ type InventoryItem = {
   is_active: boolean;
 };
 
-type CategoryRow = { id: string; name: string; notes: string | null; color: string | null; is_active: boolean; sort_order: number | null; supplier: string | null };
+type CategoryRow = { id: string; name: string; notes: string | null; color: string | null; is_active: boolean; sort_order: number | null; supplier: string | null; is_system: boolean };
 
 type MovementType = 'IN' | 'OUT_ORDER' | 'WASTE' | 'ADJUSTMENT' | 'RETURN';
 
@@ -162,7 +162,7 @@ export default function InventoryPage() {
     if (!restaurantId) return;
     const { data } = await supabase
       .from('inventory_categories')
-      .select('id, name, notes, color, is_active, sort_order, supplier')
+      .select('id, name, notes, color, is_active, sort_order, supplier, is_system')
       .eq('restaurant_id', restaurantId)
       .order('sort_order', { ascending: true, nullsFirst: false })
       .order('name');
@@ -304,8 +304,13 @@ export default function InventoryPage() {
     setCatSaving(false);
   };
 
-  const deleteCategory = async (cat: { id: string; name: string }) => {
-    if (!confirm(`هل أنت متأكد من حذف فئة "${cat.name}"؟`)) return;
+  const deleteCategory = async (cat: CategoryRow) => {
+    const itemsUsingCat = items.filter(i => i.category === cat.name).length;
+    const parts = [`هل أنت متأكد من حذف فئة "${cat.name}"؟`];
+    if (cat.is_system) parts.push('هذه فئة افتراضية من فئات النظام.');
+    if (itemsUsingCat > 0) parts.push(`تستخدمها حالياً ${itemsUsingCat} مادة — لن تُحذف أو تُعدَّل أي مادة، فقط ستفقد اللون والترتيب المخصصين للفئة.`);
+    else parts.push('لا توجد مواد تستخدم هذه الفئة حالياً.');
+    if (!confirm(parts.join('\n'))) return;
     setCatSaving(true);
     const { error } = await supabase.from('inventory_categories').delete().eq('id', cat.id);
     if (error) showToast('تعذّر حذف الفئة', false);
@@ -537,6 +542,9 @@ export default function InventoryPage() {
                   <div className="flex-1 text-right min-w-0">
                     <div className="flex items-center gap-2 justify-end">
                       <p className={`font-bold ${cat.is_active ? 'text-gray-900 dark:text-slate-100' : 'text-gray-400 dark:text-slate-500 line-through'}`}>{cat.name}</p>
+                      {cat.is_system && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 flex-shrink-0">افتراضية</span>
+                      )}
                       <span className="w-3 h-3 rounded-full flex-shrink-0 border border-black/10 dark:border-white/10" style={{ backgroundColor: cat.color || '#94a3b8' }} />
                     </div>
                     {(cat.supplier || cat.notes) && (
@@ -597,7 +605,7 @@ export default function InventoryPage() {
           ) : filtered.length === 0 ? (
             <div className="text-center mt-20">
               <p className="text-4xl mb-3">📦</p>
-              <p className="text-gray-400 dark:text-slate-500">{items.length === 0 ? 'لا توجد مواد بعد — اضغط + للإضافة' : 'لا توجد نتائج'}</p>
+              <p className="text-gray-400 dark:text-slate-500">{items.length === 0 ? 'لا توجد مواد بعد — أضف مادة من تبويب «إضافة»' : 'لا توجد نتائج'}</p>
             </div>
           ) : (
             <div className="space-y-2 pb-4">
@@ -667,7 +675,7 @@ export default function InventoryPage() {
       {tab === 'items' && (
         <button onClick={openPurchase}
           className="fixed bottom-24 left-4 md:bottom-6 md:left-6 z-40 w-14 h-14 rounded-full bg-[#f97316] text-white shadow-lg flex items-center justify-center active:scale-90 transition-all">
-          <Plus size={26} />
+          <ShoppingCart size={26} />
         </button>
       )}
 
