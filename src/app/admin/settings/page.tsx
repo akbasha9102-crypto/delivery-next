@@ -801,7 +801,7 @@ export default function SettingsPage() {
         <div className="w-full flex items-center justify-between px-4 py-4 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              {dark ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-gray-600" />}
+              {dark ? <Moon size={18} className="text-gray-600 dark:text-slate-400" /> : <Sun size={18} className="text-yellow-400" />}
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">المظهر</p>
@@ -819,11 +819,11 @@ export default function SettingsPage() {
           <p className="font-bold text-gray-900 dark:text-slate-100 text-sm mb-3">حساب الدخول</p>
           <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
             <p className="font-mono font-bold text-gray-800 dark:text-slate-200 text-sm" dir="ltr">{username}</p>
-            <p className="text-[10px] text-gray-400">اسم المستخدم</p>
+            <p className="text-xs font-bold text-gray-400 dark:text-slate-500">اسم المستخدم</p>
           </div>
           <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
             <p className="font-mono text-gray-400 tracking-widest text-sm">••••••••</p>
-            <p className="text-[10px] text-gray-400">كلمة المرور</p>
+            <p className="text-xs font-bold text-gray-400 dark:text-slate-500">كلمة المرور</p>
           </div>
           <button
             onClick={() => setShowChangePass(true)}
