@@ -125,6 +125,7 @@ export default function DriverStatisticsPage() {
     text:    dark ? '#f1f5f9' : '#0f172a',
     sub:     dark ? '#94a3b8' : '#64748b',
     muted:   dark ? '#334155' : '#f1f5f9',
+    divider: dark ? '#475569' : '#e2e8f0',
   };
 
   return (
@@ -184,11 +185,11 @@ export default function DriverStatisticsPage() {
                   <div className="flex items-center justify-between mb-3">
                     <ChevronDown size={16} style={{ color: s.sub, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                     <div className="flex items-center gap-2">
-                      <div className="flex flex-col items-end">
+                      <div className="flex items-center gap-1.5">
                         <span className="font-bold text-sm" style={{ color: s.text }}>{d.name}</span>
                         {d.phone && (
-                          <span className="flex items-center gap-1 text-xs mt-0.5" style={{ color: s.sub }}>
-                            <Phone size={10} /> {d.phone}
+                          <span className="flex items-center gap-0.5 text-[11px]" dir="ltr" style={{ color: s.sub }}>
+                            <Phone size={9} /> {d.phone}
                           </span>
                         )}
                       </div>
@@ -209,7 +210,7 @@ export default function DriverStatisticsPage() {
                     </div>
                     <div className="text-center">
                       <p className="font-black text-base" style={{ color: '#f97316' }}>{d.avgDeliveryMins !== null ? Math.round(d.avgDeliveryMins) : '—'}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: s.sub }}>{d.avgDeliveryMins !== null ? 'دقيقة متوسط التوصيل' : 'ما فيه بيانات وقت بعد'}</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: s.sub }}>{d.avgDeliveryMins !== null ? 'دقيقة متوسط التوصيل' : 'لا تتوفر بيانات'}</p>
                     </div>
                     <div className="text-center">
                       <p className="font-black text-base" style={{ color: d.rejectedCount > 0 ? '#ef4444' : s.sub }}>{d.rejectedCount}</p>
@@ -219,11 +220,13 @@ export default function DriverStatisticsPage() {
                 </button>
 
                 {isOpen && (
-                  <div className="border-t px-4 py-3 space-y-2" style={{ borderColor: s.border, backgroundColor: s.muted }}>
+                  <div className="border-t px-4" style={{ borderColor: s.border, backgroundColor: s.muted }}>
                     {d.orders.length === 0 ? (
-                      <p className="text-xs text-center py-2" style={{ color: s.sub }}>لا توجد طلبات موصَّلة بهذه الفترة</p>
-                    ) : d.orders.map(o => (
-                      <div key={o.id} className="flex items-center justify-between text-xs">
+                      <p className="text-xs text-center py-4" style={{ color: s.sub }}>لا توجد طلبات موصَّلة بهذه الفترة</p>
+                    ) : d.orders.map((o, oidx) => (
+                      <div key={o.id}
+                        className="flex items-center justify-between text-xs py-3"
+                        style={oidx > 0 ? { borderTop: `1px solid ${s.divider}` } : undefined}>
                         <span className="font-bold" style={{ color: '#22c55e' }}>{o.total_amount.toLocaleString()} د.ع</span>
                         <div className="flex items-center gap-2 text-right min-w-0">
                           <span style={{ color: s.sub }}>
