@@ -22,10 +22,11 @@ export default function DriverLoginPage() {
     if (!phone.trim() || !password.trim()) { setError('أدخل رقم الهاتف وكلمة المرور'); return; }
     setLoading(true);
 
+    const fullPhone = `+964${phone.trim().replace(/^0/, '')}`;
     const res = await fetch('/api/driver/resolve-login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: phone.trim() }),
+      body: JSON.stringify({ phone: fullPhone }),
     });
     const resolved = await res.json().catch(() => ({}));
 
@@ -54,15 +55,20 @@ export default function DriverLoginPage() {
         </div>
 
         <div className="bg-slate-800 rounded-2xl p-5 space-y-3 border border-slate-700">
-          <input
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-            placeholder="رقم الهاتف"
-            dir="ltr"
-            type="tel"
-            inputMode="tel"
-            className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg"
-          />
+          <div className="flex items-center bg-slate-700 border border-slate-600 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+            <span className="px-3 text-slate-400 font-bold text-sm border-r border-slate-600 h-full flex items-center py-3 select-none">
+              +964
+            </span>
+            <input
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="07XXXXXXXX"
+              dir="ltr"
+              type="tel"
+              inputMode="tel"
+              className="flex-1 bg-transparent px-3 py-3 text-white placeholder-slate-400 outline-none text-center text-lg"
+            />
+          </div>
           <input
             value={password}
             onChange={e => setPassword(e.target.value)}

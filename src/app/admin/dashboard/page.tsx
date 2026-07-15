@@ -1436,11 +1436,18 @@ export default function DashboardPage() {
                     )}
                   </AnimatePresence>
 
-                  {/* زر جاهز للتسليم — دائماً ظاهر */}
-                  <button onClick={() => handleAction(order)}
-                    className={`w-full py-2 text-white font-bold text-sm active:opacity-80 ${isInternalOrder(order) ? 'bg-green-600' : 'bg-orange-500'}`}>
-                    {isInternalOrder(order) ? 'الطلب جاهز ✓' : 'جاهز للتسليم ✓'}
-                  </button>
+                  {/* أزرار الإجراءات — دائماً ظاهرة */}
+                  <div className="flex">
+                    <button onClick={() => rejectOrder(order.id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-white font-bold text-sm active:opacity-80 bg-red-500">
+                      <X size={15} strokeWidth={2.5} />
+                      إلغاء الطلب
+                    </button>
+                    <button onClick={() => handleAction(order)}
+                      className={`flex-[2] py-2 text-white font-bold text-sm active:opacity-80 ${isInternalOrder(order) ? 'bg-green-600' : 'bg-orange-500'}`}>
+                      {isInternalOrder(order) ? 'الطلب جاهز ✓' : 'جاهز للتسليم ✓'}
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -1626,6 +1633,13 @@ export default function DashboardPage() {
                       </motion.div>
                     )}
                   </AnimatePresence>
+
+                  {/* زر إلغاء الطلب — دائماً ظاهر، لا يوجد إجراء "تالي" يدوي بهذا التاب */}
+                  <button onClick={() => rejectOrder(order.id)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 text-white font-bold text-sm active:opacity-80 bg-red-500">
+                    <X size={15} strokeWidth={2.5} />
+                    إلغاء الطلب
+                  </button>
                 </div>
               );
             })}
