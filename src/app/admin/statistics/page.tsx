@@ -438,6 +438,9 @@ export default function StatisticsPage() {
           ].map(c => (
             <div key={c.key} className="rounded-2xl p-3 text-center border" style={{ backgroundColor: c.bg, borderColor: c.border }}>
               <p className="font-bold leading-tight" style={{ color: (c.key !== 'revenue' && !hasAnyRecipeData) ? s.sub : c.color, fontSize: 22 }}>{c.val}</p>
+              {c.val !== '—' && (
+                <p className="text-[11px] opacity-60" style={{ color: (c.key !== 'revenue' && !hasAnyRecipeData) ? s.sub : c.color }}>د.ع</p>
+              )}
               <p className="text-xs mt-1 opacity-75" style={{ color: (c.key !== 'revenue' && !hasAnyRecipeData) ? s.sub : c.color }}>{c.label}</p>
               {c.key !== 'revenue' && !hasAnyRecipeData && (
                 <p className="text-[10px] mt-1 leading-tight" style={{ color: s.sub }}>لم يتم تسجيل وصفات المواد بعد</p>
@@ -446,15 +449,16 @@ export default function StatisticsPage() {
           ))}
         </div>
 
-        {/* Demoted: order count + average order value */}
+        {/* Secondary metrics: order count + average order value — same size/weight as the cards above for visual consistency */}
         <div className="grid grid-cols-2 gap-2 px-4 pb-3">
           <div className="rounded-2xl p-3 text-center border" style={{ backgroundColor: 'rgba(59,130,246,0.08)', borderColor: 'rgba(59,130,246,0.2)' }}>
-            <p className="font-bold leading-tight" style={{ color: '#3b82f6', fontSize: 15 }}>{filtered.length}</p>
+            <p className="font-bold leading-tight" style={{ color: '#3b82f6', fontSize: 22 }}>{filtered.length}</p>
             <p className="text-xs mt-1 opacity-75" style={{ color: '#3b82f6' }}>طلب مكتمل</p>
           </div>
           <div className="rounded-2xl p-3 text-center border" style={{ backgroundColor: 'rgba(249,115,22,0.08)', borderColor: 'rgba(249,115,22,0.2)' }}>
-            <p className="font-bold leading-tight" style={{ color: '#f97316', fontSize: 15 }}>{avgOrder.toLocaleString()}</p>
-            <p className="text-xs mt-1 opacity-75" style={{ color: '#f97316' }}>د.ع متوسط</p>
+            <p className="font-bold leading-tight" style={{ color: '#f97316', fontSize: 22 }}>{avgOrder.toLocaleString()}</p>
+            <p className="text-[11px] opacity-60" style={{ color: '#f97316' }}>د.ع</p>
+            <p className="text-xs mt-1 opacity-75" style={{ color: '#f97316' }}>متوسط قيمة الطلب</p>
           </div>
         </div>
 
