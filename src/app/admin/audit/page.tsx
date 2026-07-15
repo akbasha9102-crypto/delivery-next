@@ -6,21 +6,11 @@ import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import type { StaffActionLog } from '@/lib/api/staffApi';
-
-const ACTION_LABEL: Record<string, string> = {
-  order_void: 'إلغاء طلب',
-  order_refund: 'استرجاع مبلغ',
-  discount_applied: 'تطبيق خصم',
-  coupon_applied: 'تطبيق كوبون',
-  price_edit: 'تعديل سعر',
-  item_deleted: 'حذف مادة',
-  category_deleted: 'حذف قسم',
-  settings_changed: 'تغيير إعدادات',
-  inventory_adjust: 'تعديل مخزون',
-  waste_registered: 'تسجيل هدر',
-  shift_open: 'فتح وردية',
-  shift_close: 'إغلاق وردية',
-};
+import {
+  translateAuditAction,
+  translateAuditField,
+  AUDIT_FIELD_IGNORE,
+} from '@/lib/constants/audit-translations';
 
 type JsonRecord = Record<string, unknown>;
 const asRecord = (v: unknown): JsonRecord | null => (v && typeof v === 'object' ? v as JsonRecord : null);
@@ -35,9 +25,11 @@ function describeChange(l: StaffActionLog): string | null {
     return `${before.name ?? ''}`;
   }
   if (l.action_type === 'settings_changed' && before && after) {
-    const changedKeys = Object.keys(after).filter(k => JSON.stringify(after[k]) !== JSON.stringify(before[k]));
+    const changedKeys = Object.keys(after)
+      .filter(k => !AUDIT_FIELD_IGNORE.has(k))
+      .filter(k => JSON.stringify(after[k]) !== JSON.stringify(before[k]));
     if (changedKeys.length === 0) return null;
-    return `تغيّر: ${changedKeys.join('، ')}`;
+    return `تغيّر: ${changedKeys.map(translateAuditField).join('، ')}`;
   }
   return null;
 }
@@ -109,7 +101,7 @@ export default function AuditLogPage() {
             {types.map(t => (
               <button key={t} onClick={() => setTypeFilter(typeFilter === t ? null : t)}
                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${typeFilter === t ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
-                {ACTION_LABEL[t] ?? t}
+                {translateAuditAction(t)}
               </button>
             ))}
           </div>
@@ -135,7 +127,7 @@ export default function AuditLogPage() {
                 <div key={l.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-gray-400">{new Date(l.created_at).toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                    <span className="font-bold text-sm text-gray-900 dark:text-slate-100">{ACTION_LABEL[l.action_type] ?? l.action_type}</span>
+                    <span className="font-bold text-sm text-gray-900 dark:text-slate-100">{translateAuditAction(l.action_type)}</span>
                   </div>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-xs font-bold" style={{ color: '#2563eb' }}>{actorLabel(l)}</span>
