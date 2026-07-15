@@ -6,7 +6,7 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
-import { Search, X, ChevronLeft, ChevronRight, Flame, Car, LayoutGrid, ClipboardList, Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Flame, Car, Package, LayoutGrid, ClipboardList, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { exportStatisticsToExcel, exportStatisticsToWord, type StatsExportData } from '@/lib/export/exportStatistics';
 import { SalesChart } from '@/components/shared/SalesChart';
 
@@ -323,18 +323,23 @@ export default function StatisticsPage() {
         </div>
       </header>
 
-      {/* رابط إحصائيات السائقين */}
-      <div className="px-4 pt-4">
+      {/* روابط إحصائيات السائقين والمخزون */}
+      <div className="grid grid-cols-2 gap-2 px-4 pt-4">
         <button onClick={() => router.push('/admin/statistics/drivers')}
-          className="w-full flex items-center justify-between px-4 py-4 rounded-2xl border transition-all active:scale-95"
+          className="flex flex-col items-center gap-1.5 px-2 py-3 rounded-2xl border transition-all active:scale-95"
           style={{ backgroundColor: s.surface, borderColor: s.border }}>
-          <ChevronLeft size={16} style={{ color: s.sub }} />
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-sm" style={{ color: s.text }}>إحصائيات السائقين</span>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(59,130,246,0.1)' }}>
-              <Car size={16} style={{ color: '#3b82f6' }} />
-            </div>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(59,130,246,0.1)' }}>
+            <Car size={16} style={{ color: '#3b82f6' }} />
           </div>
+          <span className="font-bold text-xs" style={{ color: s.text }}>إحصائيات السائقين</span>
+        </button>
+        <button onClick={() => router.push('/admin/statistics/inventory')}
+          className="flex flex-col items-center gap-1.5 px-2 py-3 rounded-2xl border transition-all active:scale-95"
+          style={{ backgroundColor: s.surface, borderColor: s.border }}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>
+            <Package size={16} style={{ color: '#f97316' }} />
+          </div>
+          <span className="font-bold text-xs" style={{ color: s.text }}>إحصائيات المخزون</span>
         </button>
       </div>
 
