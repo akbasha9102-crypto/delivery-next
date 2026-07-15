@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus, ShoppingCart, ArrowUp, ArrowDown } from 'lucide-react';
+import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus, ShoppingCart, ArrowUp, ArrowDown, GitBranch, ChevronRight, Plus } from 'lucide-react';
 
 type InventoryItem = {
   id: string;
@@ -22,6 +22,9 @@ type InventoryItem = {
 };
 
 type CategoryRow = { id: string; name: string; notes: string | null; color: string | null; is_active: boolean; sort_order: number | null; supplier: string | null; is_system: boolean };
+
+type MenuItemLite = { id: string; name: string };
+type RecipeLink = { id: string; menu_item_id: string; quantity_required: number; unit: string | null };
 
 type MovementType = 'IN' | 'OUT_ORDER' | 'WASTE' | 'ADJUSTMENT' | 'RETURN';
 
@@ -128,6 +131,17 @@ export default function InventoryPage() {
   const [purchaseSaving, setPurchaseSaving] = useState(false);
   const [purchaseCatFilter, setPurchaseCatFilter] = useState<string | null>(null);
 
+  // شجرة المكونات: كم وجبة تكفيها الوحدة الواحدة من المادة (بدل تقدير الغرامات يدوياً)
+  const [menuItems, setMenuItems] = useState<MenuItemLite[]>([]);
+  const [showRecipeTree, setShowRecipeTree] = useState(false);
+  const [treeSearch, setTreeSearch] = useState('');
+  const [treeMaterial, setTreeMaterial] = useState<InventoryItem | null>(null);
+  const [treeLinks, setTreeLinks] = useState<RecipeLink[]>([]);
+  const [treeLoading, setTreeLoading] = useState(false);
+  const [treeDishId, setTreeDishId] = useState('');
+  const [treeYield, setTreeYield] = useState('');
+  const [treeSaving, setTreeSaving] = useState(false);
+
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 3000);
@@ -169,16 +183,27 @@ export default function InventoryPage() {
     setCategoryRows(data || []);
   }, [restaurantId]);
 
+  const fetchMenuItemsList = useCallback(async () => {
+    if (!restaurantId) return;
+    const { data } = await supabase
+      .from('items')
+      .select('id, name')
+      .eq('restaurant_id', restaurantId)
+      .order('name');
+    setMenuItems(data || []);
+  }, [restaurantId]);
+
   // الكاشير له نفس صلاحيات المالك بالكامل بهذه الصفحة الآن — لا شرط دور هنا.
   useEffect(() => {
     setLoading(true);
     fetchItems();
     fetchMovements();
     fetchCategoriesList();
-  }, [fetchItems, fetchMovements, fetchCategoriesList]);
+    fetchMenuItemsList();
+  }, [fetchItems, fetchMovements, fetchCategoriesList, fetchMenuItemsList]);
 
   // نافذة منبثقة مفتوحة؟ تُستخدم لقفل تمرير الخلفية وإخفاء الشريط السفلي تحتها
-  const isModalOpen = showForm || !!movementTarget || showCatForm || showPurchaseForm || showCatReorder;
+  const isModalOpen = showForm || !!movementTarget || showCatForm || showPurchaseForm || showCatReorder || showRecipeTree;
 
   useEffect(() => {
     if (isModalOpen) {
@@ -423,6 +448,53 @@ export default function InventoryPage() {
     setPurchaseSaving(false);
   };
 
+  const openRecipeTree = () => {
+    setTreeSearch('');
+    setTreeMaterial(null);
+    setTreeLinks([]);
+    setShowRecipeTree(true);
+  };
+
+  const openTreeMaterial = async (mat: InventoryItem) => {
+    setTreeMaterial(mat);
+    setTreeDishId('');
+    setTreeYield('');
+    setTreeLoading(true);
+    const { data } = await supabase
+      .from('menu_recipes')
+      .select('id, menu_item_id, quantity_required, unit')
+      .eq('inventory_item_id', mat.id);
+    setTreeLinks(data || []);
+    setTreeLoading(false);
+  };
+
+  const addTreeLink = async () => {
+    if (!treeMaterial || !treeDishId) return;
+    const servings = parseFloat(treeYield.replace(',', '.'));
+    if (isNaN(servings) || servings <= 0) { showToast('أدخل عدد وجبات صحيح أكبر من صفر', false); return; }
+    setTreeSaving(true);
+    const qty = Math.round((1 / servings) * 1000) / 1000; // نفس دقة العمود NUMERIC(12,3)
+    const { data, error } = await supabase
+      .from('menu_recipes')
+      .insert([{ menu_item_id: treeDishId, inventory_item_id: treeMaterial.id, quantity_required: qty, unit: treeMaterial.unit }])
+      .select('id, menu_item_id, quantity_required, unit')
+      .single();
+    if (error) showToast(error.code === '23505' ? 'هذه الوجبة مرتبطة بهذه المادة مسبقاً' : 'تعذّر إضافة الربط', false);
+    else {
+      setTreeLinks(prev => [...prev, data]);
+      setTreeDishId('');
+      setTreeYield('');
+      showToast('✓ تم الربط');
+    }
+    setTreeSaving(false);
+  };
+
+  const removeTreeLink = async (id: string) => {
+    const { error } = await supabase.from('menu_recipes').delete().eq('id', id);
+    if (error) { showToast('تعذّر حذف الربط', false); return; }
+    setTreeLinks(prev => prev.filter(l => l.id !== id));
+  };
+
   const itemCategoryNames = [...new Set(items.map(i => i.category))];
   const registeredOrdered = categoryRows.map(c => c.name).filter(n => itemCategoryNames.includes(n));
   const unregisteredNames = itemCategoryNames.filter(n => !categoryRows.some(c => c.name === n)).sort();
@@ -444,6 +516,10 @@ export default function InventoryPage() {
 
   const selectedPurchaseItem = items.find(i => i.id === purchaseItemId);
   const purchaseFilteredItems = items.filter(i => !purchaseCatFilter || i.category === purchaseCatFilter);
+
+  const treeFilteredItems = items.filter(i => !treeSearch || i.name.includes(treeSearch));
+  const treeAvailableDishes = menuItems.filter(m => !treeLinks.some(l => l.menu_item_id === m.id));
+  const dishName = (id: string) => menuItems.find(m => m.id === id)?.name || '—';
 
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
@@ -517,6 +593,17 @@ export default function InventoryPage() {
             <div className="text-right flex-1">
               <p className="font-bold text-gray-900 dark:text-slate-100">فئة جديدة</p>
               <p className="text-xs text-gray-400 dark:text-slate-500">إضافة فئة جديدة تظهر عند إضافة مادة</p>
+            </div>
+          </button>
+
+          <button onClick={openRecipeTree}
+            className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
+            <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+              <GitBranch size={26} className="text-[#f97316]" />
+            </div>
+            <div className="text-right flex-1">
+              <p className="font-bold text-gray-900 dark:text-slate-100">شجرة المكونات</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500">اربط المادة بالوجبات حسب عدد الوجبات التي تكفيها، بدون تقدير الغرامات يدوياً</p>
             </div>
           </button>
         </div>
@@ -1013,6 +1100,105 @@ export default function InventoryPage() {
                   <span className="text-xs text-gray-400 dark:text-slate-500 w-5 text-center">{i + 1}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ موديل شجرة المكونات ═══ */}
+      {showRecipeTree && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowRecipeTree(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
+              {treeMaterial ? (
+                <button onClick={() => setTreeMaterial(null)} className="flex items-center gap-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 font-bold px-3 py-2 rounded-xl text-sm active:scale-95 transition-all">
+                  <ChevronRight size={16} /> رجوع
+                </button>
+              ) : <span className="w-[74px]" />}
+              <h3 className="font-bold text-gray-900 dark:text-slate-100">🌳 شجرة المكونات</h3>
+              <button onClick={() => setShowRecipeTree(false)} className="bg-gray-100 dark:bg-slate-700 text-gray-500 px-3 py-2 rounded-xl text-sm font-bold active:scale-95 transition-all">إغلاق</button>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5">
+              {!treeMaterial ? (
+                <>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-3">اختر مادة لتحديد الوجبات المصنوعة منها، وكم وجبة تكفيها الوحدة الواحدة — بدل تقدير الغرامات يدوياً.</p>
+                  <div className="relative mb-3">
+                    <Search size={16} className="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400" />
+                    <input value={treeSearch} onChange={e => setTreeSearch(e.target.value)} placeholder="ابحث عن مادة..." dir="rtl"
+                      className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-2xl py-3 pr-10 pl-4 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]" />
+                  </div>
+                  {treeFilteredItems.length === 0 ? (
+                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right">لا توجد مواد مطابقة.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {treeFilteredItems.map(mat => (
+                        <button key={mat.id} onClick={() => openTreeMaterial(mat)}
+                          className="w-full flex items-center justify-between bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 border border-gray-200 dark:border-slate-600 active:scale-95 transition-all">
+                          <ChevronRight size={16} className="text-gray-400 rotate-180 flex-shrink-0" />
+                          <div className="text-right flex-1 mr-3">
+                            <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{mat.name}</p>
+                            <p className="text-xs text-gray-400 dark:text-slate-500">{mat.unit}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="font-bold text-[#f97316] text-right mb-1">{treeMaterial.name}</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-4">وحدة المخزون: {treeMaterial.unit}</p>
+
+                  {treeLoading ? (
+                    <div className="flex justify-center py-6"><div className="w-8 h-8 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
+                  ) : (
+                    <>
+                      {treeLinks.length === 0 && (
+                        <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">هذه المادة غير مرتبطة بأي وجبة بعد.</p>
+                      )}
+                      {treeLinks.map(l => {
+                        const servings = l.quantity_required > 0 ? Math.round(1 / l.quantity_required) : 0;
+                        return (
+                          <div key={l.id} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
+                            <button onClick={() => removeTreeLink(l.id)} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
+                            <div className="text-right flex-1 mr-3">
+                              <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{dishName(l.menu_item_id)}</p>
+                              <p className="text-xs text-gray-400 dark:text-slate-500">1 {l.unit || treeMaterial.unit} تكفي ≈ {servings} وجبة</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {treeAvailableDishes.length === 0 ? (
+                        <p className="text-xs text-gray-400 dark:text-slate-500 text-right mt-2">
+                          {menuItems.length === 0 ? 'أضف وجبات بالمنيو أولاً حتى تقدر تربطها.' : 'كل الوجبات مرتبطة بهذه المادة بالفعل.'}
+                        </p>
+                      ) : (
+                        <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600 mt-2">
+                          <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">ربط وجبة جديدة</p>
+                          <select value={treeDishId} onChange={e => setTreeDishId(e.target.value)} dir="rtl" className={`${input} mb-2`}>
+                            <option value="">اختر وجبة</option>
+                            {treeAvailableDishes.map(m => (
+                              <option key={m.id} value={m.id}>{m.name}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">
+                            1 {treeMaterial.unit} تكفي كم وجبة؟
+                          </p>
+                          <div className="flex gap-2">
+                            <input value={treeYield} onChange={e => setTreeYield(e.target.value)} placeholder="مثال: 4" type="number" min="1" className={`${input} flex-1 mb-0`} />
+                            <button onClick={addTreeLink} disabled={treeSaving || !treeDishId || !treeYield}
+                              className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all">
+                              {treeSaving ? '...' : <Plus size={18} />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
