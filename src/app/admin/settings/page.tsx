@@ -778,7 +778,7 @@ export default function SettingsPage() {
         <div className="w-9" />
       </header>
 
-      <div className="px-4 pt-4 space-y-3">
+      <div className="px-4 pt-4 space-y-4">
 
         {/* ـ معلومات المطعم ـ */}
         <button
