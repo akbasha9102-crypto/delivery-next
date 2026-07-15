@@ -8,6 +8,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { LowStockAlert } from '@/components/shared/LowStockAlert';
+import { convertToInventoryUnit } from '@/lib/utils/unitConversion';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 type OrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };
@@ -41,7 +42,7 @@ async function deductStockForOrder(restaurantId: string, orderId: string, client
   const itemIds = [...new Set(items.filter(i => i.item_id).map(i => i.item_id as string))];
   if (itemIds.length === 0) return;
 
-  const { data: recipes } = await supabase.from('menu_recipes').select('*').in('menu_item_id', itemIds);
+  const { data: recipes } = await supabase.from('menu_recipes').select('*, inventory_items(unit)').in('menu_item_id', itemIds);
   if (!recipes || recipes.length === 0) return;
 
   const movements = items.flatMap(oi => {
@@ -52,7 +53,7 @@ async function deductStockForOrder(restaurantId: string, orderId: string, client
         inventory_item_id: r.inventory_item_id,
         restaurant_id: restaurantId,
         movement_type: 'OUT_ORDER',
-        quantity_changed: r.quantity_required * oi.quantity,
+        quantity_changed: convertToInventoryUnit(r.quantity_required, r.unit, r.inventory_items?.unit) * oi.quantity,
         reference_id: orderId,
         reference_type: 'order',
         notes: `خصم تلقائي — طلب ${clientName}`,

@@ -6,12 +6,13 @@ import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, FolderPlus, UtensilsCrossed } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { HexColorPicker } from 'react-colorful';
+import { compatibleUnits } from '@/lib/utils/unitConversion';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
 type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string; images_json?: string };
 type InventoryItem = { id: string; name: string; unit: string; current_stock: number };
-type Recipe = { id: string; menu_item_id: string; inventory_item_id: string; quantity_required: number };
+type Recipe = { id: string; menu_item_id: string; inventory_item_id: string; quantity_required: number; unit: string | null };
 
 const ITEM_STATUSES = [
   { value: 'available',   label: 'متوفر',            color: 'bg-green-500 text-white border-green-500' },
@@ -86,9 +87,11 @@ export default function MenuPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [recipeInvId, setRecipeInvId] = useState('');
   const [recipeQty, setRecipeQty] = useState('');
-  const [newItemRecipes, setNewItemRecipes] = useState<{ tempId: string; inventory_item_id: string; quantity_required: number }[]>([]);
+  const [recipeUnit, setRecipeUnit] = useState('');
+  const [newItemRecipes, setNewItemRecipes] = useState<{ tempId: string; inventory_item_id: string; quantity_required: number; unit: string }[]>([]);
   const [newRecipeInvId, setNewRecipeInvId] = useState('');
   const [newRecipeQty, setNewRecipeQty] = useState('');
+  const [newRecipeUnit, setNewRecipeUnit] = useState('');
   const [showAddCatSheet, setShowAddCatSheet] = useState(false);
   const [showAddItemSheet, setShowAddItemSheet] = useState(false);
 
@@ -212,7 +215,7 @@ export default function MenuPage() {
     if (error) { showToast('تعذّر إضافة الطبق', false); setSaving(false); return; }
     if (newItemRecipes.length > 0) {
       const { error: recErr } = await supabase.from('menu_recipes').insert(
-        newItemRecipes.map(r => ({ menu_item_id: data.id, inventory_item_id: r.inventory_item_id, quantity_required: r.quantity_required }))
+        newItemRecipes.map(r => ({ menu_item_id: data.id, inventory_item_id: r.inventory_item_id, quantity_required: r.quantity_required, unit: r.unit }))
       );
       if (recErr) showToast('تم إضافة الطبق لكن تعذّر ربط بعض المكونات', false);
     }
@@ -246,8 +249,10 @@ export default function MenuPage() {
   const addNewItemRecipe = () => {
     if (!newRecipeInvId) return;
     const qty = parseFloat(newRecipeQty.replace(',', '.')) || 1;
-    setNewItemRecipes(prev => [...prev, { tempId: Date.now().toString(), inventory_item_id: newRecipeInvId, quantity_required: qty }]);
-    setNewRecipeInvId(''); setNewRecipeQty('');
+    const inv = inventoryItems.find(i => i.id === newRecipeInvId);
+    const unit = newRecipeUnit || inv?.unit || '';
+    setNewItemRecipes(prev => [...prev, { tempId: Date.now().toString(), inventory_item_id: newRecipeInvId, quantity_required: qty, unit }]);
+    setNewRecipeInvId(''); setNewRecipeQty(''); setNewRecipeUnit('');
   };
 
   const openEdit = (item: Item) => {
@@ -258,7 +263,7 @@ export default function MenuPage() {
     try { setExtras(JSON.parse(item.extras_json || '[]')); } catch { setExtras([]); }
     setExtraName(''); setExtraPrice('');
     setRecipes([]);
-    setRecipeInvId(''); setRecipeQty('');
+    setRecipeInvId(''); setRecipeQty(''); setRecipeUnit('');
     supabase.from('menu_recipes').select('*').eq('menu_item_id', item.id)
       .then(({ data }) => setRecipes(data || []));
   };
@@ -266,12 +271,14 @@ export default function MenuPage() {
   const addRecipe = async () => {
     if (!editItem || !recipeInvId) return;
     const qty = parseFloat(recipeQty.replace(',', '.')) || 1;
+    const inv = inventoryItems.find(i => i.id === recipeInvId);
+    const unit = recipeUnit || inv?.unit || '';
     const { data, error } = await supabase.from('menu_recipes')
-      .insert([{ menu_item_id: editItem.id, inventory_item_id: recipeInvId, quantity_required: qty }])
+      .insert([{ menu_item_id: editItem.id, inventory_item_id: recipeInvId, quantity_required: qty, unit }])
       .select().single();
     if (error) { showToast('تعذّر إضافة المكوّن', false); return; }
     setRecipes(prev => [...prev, data]);
-    setRecipeInvId(''); setRecipeQty('');
+    setRecipeInvId(''); setRecipeQty(''); setRecipeUnit('');
   };
 
   const removeRecipe = async (id: string) => {
@@ -569,7 +576,7 @@ export default function MenuPage() {
                       <button onClick={() => setNewItemRecipes(prev => prev.filter(x => x.tempId !== r.tempId))} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
                       <div className="text-right flex-1 mr-3">
                         <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{inv?.name || '—'}</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {inv?.unit || ''} لكل وجبة</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {r.unit || inv?.unit || ''} لكل وجبة</p>
                       </div>
                     </div>
                   );
@@ -579,8 +586,10 @@ export default function MenuPage() {
                 ) : (
                   <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
                     <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة مكوّن</p>
-                    <select value={newRecipeInvId} onChange={e => setNewRecipeInvId(e.target.value)} dir="rtl"
-                      className={`${input} mb-2`}>
+                    <select value={newRecipeInvId} onChange={e => {
+                      setNewRecipeInvId(e.target.value);
+                      setNewRecipeUnit(inventoryItems.find(i => i.id === e.target.value)?.unit || '');
+                    }} dir="rtl" className={`${input} mb-2`}>
                       <option value="">اختر مادة من المخزون</option>
                       {inventoryItems.map(i => (
                         <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
@@ -590,6 +599,22 @@ export default function MenuPage() {
                       <input value={newRecipeQty} onChange={e => setNewRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
                       <button onClick={addNewItemRecipe} disabled={!newRecipeInvId} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                     </div>
+                    {(() => {
+                      const inv = inventoryItems.find(i => i.id === newRecipeInvId);
+                      if (!inv) return null;
+                      const opts = compatibleUnits(inv.unit);
+                      if (opts.length <= 1) return null;
+                      return (
+                        <div className="flex gap-1.5 flex-wrap justify-end mt-2">
+                          {opts.map(u => (
+                            <button key={u} type="button" onClick={() => setNewRecipeUnit(u)}
+                              className={`px-3 py-1 rounded-full text-xs font-bold border active:scale-95 transition-all ${newRecipeUnit === u ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                              {u}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -682,7 +707,7 @@ export default function MenuPage() {
                       <button onClick={() => removeRecipe(r.id)} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
                       <div className="text-right flex-1 mr-3">
                         <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{inv?.name || '—'}</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {inv?.unit || ''} لكل وجبة</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {r.unit || inv?.unit || ''} لكل وجبة</p>
                       </div>
                     </div>
                   );
@@ -692,8 +717,10 @@ export default function MenuPage() {
                 ) : (
                   <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
                     <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة مكوّن</p>
-                    <select value={recipeInvId} onChange={e => setRecipeInvId(e.target.value)} dir="rtl"
-                      className={`${input} mb-2`}>
+                    <select value={recipeInvId} onChange={e => {
+                      setRecipeInvId(e.target.value);
+                      setRecipeUnit(inventoryItems.find(i => i.id === e.target.value)?.unit || '');
+                    }} dir="rtl" className={`${input} mb-2`}>
                       <option value="">اختر مادة من المخزون</option>
                       {inventoryItems.map(i => (
                         <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
@@ -703,6 +730,22 @@ export default function MenuPage() {
                       <input value={recipeQty} onChange={e => setRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
                       <button onClick={addRecipe} disabled={!recipeInvId} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                     </div>
+                    {(() => {
+                      const inv = inventoryItems.find(i => i.id === recipeInvId);
+                      if (!inv) return null;
+                      const opts = compatibleUnits(inv.unit);
+                      if (opts.length <= 1) return null;
+                      return (
+                        <div className="flex gap-1.5 flex-wrap justify-end mt-2">
+                          {opts.map(u => (
+                            <button key={u} type="button" onClick={() => setRecipeUnit(u)}
+                              className={`px-3 py-1 rounded-full text-xs font-bold border active:scale-95 transition-all ${recipeUnit === u ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                              {u}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
