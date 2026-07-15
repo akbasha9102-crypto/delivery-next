@@ -129,6 +129,7 @@ export default function DriverStatisticsPage() {
     border:  dark ? '#334155' : '#e2e8f0',
     text:    dark ? '#f1f5f9' : '#0f172a',
     sub:     dark ? '#94a3b8' : '#64748b',
+    faint:   dark ? '#64748b' : '#94a3b8',
     muted:   dark ? '#334155' : '#f1f5f9',
     divider: dark ? '#475569' : '#e2e8f0',
   };
@@ -215,12 +216,12 @@ export default function DriverStatisticsPage() {
                     </div>
                     <div className="text-center">
                       <p className="font-black text-base" style={{ color: d.avgDeliveryMins !== null ? '#f97316' : s.sub }}>{d.avgDeliveryMins !== null ? Math.round(d.avgDeliveryMins) : '—'}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: s.sub }}>
+                      <p className={`text-[10px] mt-0.5${d.avgDeliveryMins !== null ? '' : ' font-normal'}`} style={{ color: d.avgDeliveryMins !== null ? s.sub : s.faint }}>
                         {d.avgDeliveryMins !== null
                           ? 'دقيقة متوسط التوصيل'
                           : d.completedCount === 0
-                          ? 'لا يوجد رحلات مكتملة'
-                          : 'رحلات قبل تفعيل تتبّع الوقت'}
+                          ? 'لا رحلات مكتملة'
+                          : 'قبل التتبع'}
                       </p>
                     </div>
                     <div className="text-center">

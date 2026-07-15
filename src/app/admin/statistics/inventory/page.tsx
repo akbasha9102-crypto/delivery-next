@@ -14,16 +14,19 @@ type StockMovementRow = {
   quantity_changed: number;
   reference_id: string | null;
   created_at: string;
-  inventory_items: { name: string; unit: string } | null;
+  inventory_items: { name: string; unit: string; category: string } | null;
 };
 
 type IngredientAgg = {
   id: string;
   name: string;
   unit: string;
+  category: string;
   total: number;
   byOrder: Map<string, { qty: number; time: string }>;
 };
+
+type CategoryRow = { id: string; name: string; color: string | null; sort_order: number | null };
 
 function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -36,6 +39,9 @@ function quickRange(range: 'today' | 'week' | 'month') {
   if (range === 'month') start.setDate(start.getDate() - 29);
   return { from: localDate(start), to: localDate(end) };
 }
+
+const selectedCategoryStyle = (color: string | null | undefined): React.CSSProperties | undefined =>
+  color ? { backgroundColor: color, borderColor: color } : undefined;
 
 export default function InventoryStatisticsPage() {
   const router = useRouter();
@@ -50,6 +56,8 @@ export default function InventoryStatisticsPage() {
   const [fromDate,  setFromDate]    = useState(quickRange('week').from);
   const [toDate,    setToDate]      = useState(quickRange('week').to);
   const [expanded,  setExpanded]    = useState<string | null>(null);
+  const [categoryRows, setCategoryRows] = useState<CategoryRow[]>([]);
+  const [categoryTab, setCategoryTab] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!restaurantId) { setLoading(false); return; }
@@ -59,7 +67,7 @@ export default function InventoryStatisticsPage() {
 
     const { data } = await supabase
       .from('stock_movements')
-      .select('id, inventory_item_id, quantity_changed, reference_id, created_at, inventory_items(name, unit)')
+      .select('id, inventory_item_id, quantity_changed, reference_id, created_at, inventory_items(name, unit, category)')
       .eq('restaurant_id', restaurantId)
       .eq('movement_type', 'OUT_ORDER')
       .gte('created_at', start).lte('created_at', end)
@@ -83,6 +91,19 @@ export default function InventoryStatisticsPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const fetchCategories = useCallback(async () => {
+    if (!restaurantId) return;
+    const { data } = await supabase
+      .from('inventory_categories')
+      .select('id, name, color, sort_order')
+      .eq('restaurant_id', restaurantId)
+      .order('sort_order', { ascending: true, nullsFirst: false })
+      .order('name');
+    setCategoryRows(data || []);
+  }, [restaurantId]);
+
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
+
   const handleQuick = (r: 'today' | 'week' | 'month') => {
     const { from, to } = quickRange(r);
     setFromDate(from); setToDate(to); setRange(r);
@@ -94,7 +115,7 @@ export default function InventoryStatisticsPage() {
       const invItem = r.inventory_items;
       if (!invItem) return;
       const qty = Math.abs(r.quantity_changed);
-      const e = map.get(r.inventory_item_id) || { id: r.inventory_item_id, name: invItem.name, unit: invItem.unit, total: 0, byOrder: new Map<string, { qty: number; time: string }>() };
+      const e = map.get(r.inventory_item_id) || { id: r.inventory_item_id, name: invItem.name, unit: invItem.unit, category: invItem.category, total: 0, byOrder: new Map<string, { qty: number; time: string }>() };
       e.total += qty;
       if (r.reference_id) {
         const prev = e.byOrder.get(r.reference_id);
@@ -104,6 +125,16 @@ export default function InventoryStatisticsPage() {
     });
     return [...map.values()].sort((a, b) => b.total - a.total);
   }, [movements]);
+
+  const presentCategoryNames = [...new Set(ingredientStats.map(i => i.category).filter(Boolean))];
+  const registeredOrdered   = categoryRows.map(c => c.name).filter(n => presentCategoryNames.includes(n));
+  const unregisteredNames   = presentCategoryNames.filter(n => !categoryRows.some(c => c.name === n)).sort();
+  const categoryTabs        = [...registeredOrdered, ...unregisteredNames];
+
+  const activeCategoryTab = categoryTab && categoryTabs.includes(categoryTab) ? categoryTab : null;
+  const visibleStats = activeCategoryTab
+    ? ingredientStats.filter(i => i.category === activeCategoryTab)
+    : ingredientStats;
 
   const s = {
     bg:      dark ? '#0f172a' : '#f8fafc',
@@ -154,16 +185,40 @@ export default function InventoryStatisticsPage() {
         </div>
       )}
 
+      {categoryTabs.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-2 px-4 mb-1 scrollbar-none">
+          <button onClick={() => setCategoryTab(null)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!activeCategoryTab ? 'bg-[#f97316] border-[#f97316] text-white' : ''}`}
+            style={!activeCategoryTab ? undefined : { backgroundColor: s.surface, borderColor: s.border, color: s.sub }}>
+            الكل
+          </button>
+          {categoryTabs.map(c => {
+            const dbCat = categoryRows.find(cr => cr.name === c);
+            const selected = activeCategoryTab === c;
+            const colorStyle = selected ? selectedCategoryStyle(dbCat?.color) : undefined;
+            return (
+              <button key={c} onClick={() => setCategoryTab(selected ? null : c)}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
+                  colorStyle ? 'text-black' : selected ? 'bg-[#f97316] border-[#f97316] text-white' : ''
+                }`}
+                style={colorStyle || (selected ? undefined : { backgroundColor: s.surface, borderColor: s.border, color: s.sub })}>
+                {c}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center mt-20"><div className="w-10 h-10 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
-      ) : ingredientStats.length === 0 ? (
+      ) : visibleStats.length === 0 ? (
         <div className="text-center mt-16">
           <p className="text-4xl mb-3">📦</p>
           <p className="text-sm" style={{ color: s.sub }}>لا يوجد استهلاك مخزون في هذه الفترة</p>
         </div>
       ) : (
         <div className="px-4 space-y-2">
-          {ingredientStats.map(ing => {
+          {visibleStats.map(ing => {
             const isOpen = expanded === ing.id;
             const orderEntries = [...ing.byOrder.entries()].sort((a, b) => b[1].qty - a[1].qty);
             return (
