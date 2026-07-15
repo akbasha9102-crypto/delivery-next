@@ -1,11 +1,11 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
-import { MessageSquare, AlertCircle, ChevronRight, ChevronDown, ChevronUp, MapPin, Car, Search, Calendar, X } from 'lucide-react';
+import { MessageSquare, AlertCircle, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, MapPin, Car, Search, Calendar, X } from 'lucide-react';
 
 type Feedback = {
   id: string;
@@ -19,6 +19,8 @@ type Feedback = {
   delivery_address?: string | null;
 };
 
+type TripItem = { id: string; item_name: string; quantity: number; price: number };
+
 type RejectedOrder = {
   id: string;
   client_name: string;
@@ -26,9 +28,9 @@ type RejectedOrder = {
   total_amount: number;
   delivery_address: string | null;
   created_at: string;
+  client_note: string | null;
+  items: TripItem[];
 };
-
-type TripItem = { id: string; item_name: string; quantity: number; price: number };
 
 type DriverTrip = {
   id: string;
@@ -57,6 +59,69 @@ function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+function addDays(dateStr: string, delta: number) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  return localDate(d);
+}
+function dayLabel(dateStr: string) {
+  const today = localDate();
+  const yesterday = addDays(today, -1);
+  if (dateStr === today) return 'اليوم';
+  if (dateStr === yesterday) return 'أمس';
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('ar-IQ', { weekday: 'long', day: 'numeric', month: 'short' });
+}
+function periodLabel(dateStr: string) {
+  const today = localDate();
+  const yesterday = addDays(today, -1);
+  if (dateStr === today) return 'اليوم';
+  if (dateStr === yesterday) return 'أمس';
+  return `في ${dayLabel(dateStr)}`;
+}
+
+function RejectedOrderModal({ order, onClose }: { order: RejectedOrder; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="w-12 h-1.5 bg-gray-300 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-3" />
+        <div className="flex items-center justify-between px-5 pb-3 border-b border-gray-100 dark:border-slate-700">
+          <button onClick={onClose} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
+          <div className="text-right">
+            <p className="font-bold text-gray-900 dark:text-white text-lg">{order.client_name}</p>
+            {order.client_phone && <p className="text-xs text-gray-400 dark:text-slate-500" dir="ltr">{order.client_phone}</p>}
+          </div>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          <div className="text-center py-2 rounded-xl text-sm font-bold bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+            ✕ طلب مرفوض — {new Date(order.created_at).toLocaleString('ar-IQ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+          </div>
+          {order.items.length > 0 && (
+            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 space-y-2">
+              {order.items.map(item => (
+                <div key={item.id} className="flex justify-between items-center">
+                  <span className="text-[#f97316] font-bold text-sm">{(item.price * item.quantity).toLocaleString()} د.ع</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-700 dark:text-slate-300 text-sm">{item.item_name}</span>
+                    <span className="bg-white dark:bg-slate-600 text-gray-500 text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">{item.quantity}×</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-green-500 font-black text-2xl">{order.total_amount.toLocaleString()} <span className="text-sm text-gray-400 font-normal">د.ع</span></span>
+            {order.delivery_address && <p className="text-xs text-gray-400 text-right max-w-[55%]">📍 {order.delivery_address}</p>}
+          </div>
+          {order.client_note && (
+            <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2 text-right">📝 {order.client_note}</p>
+          )}
+        </div>
+        <div className="pb-6" />
+      </div>
+    </div>
+  );
+}
+
 export default function ArchivePage() {
   const router = useRouter();
   useDarkMode();
@@ -72,19 +137,23 @@ export default function ArchivePage() {
   const [searchTerm, setSearchTerm]         = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate]     = useState('');
+  const [selectedRejectedOrder, setSelectedRejectedOrder] = useState<RejectedOrder | null>(null);
+
+  const currentDate = selectedDate || localDate();
+  const last14Days = useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(localDate(), -i)), []);
 
   const fetchAll = useCallback(async () => {
     if (!restaurantId) {
       setFeedbacks([]); setRejected([]); setDriverGroups([]); setLoading(false);
       return;
     }
-    const today = localDate();
-    const start = new Date(today + 'T00:00:00').toISOString();
-    const end   = new Date(today + 'T23:59:59').toISOString();
+    const day   = selectedDate || localDate();
+    const start = new Date(day + 'T00:00:00').toISOString();
+    const end   = new Date(day + 'T23:59:59').toISOString();
 
     const [fbRes, rejRes, tripsRes] = await Promise.all([
-      supabase.from('order_feedback').select('*, orders(total_amount, delivery_address)').eq('restaurant_id', restaurantId).order('created_at', { ascending: false }).limit(200),
-      supabase.from('orders').select('id, client_name, client_phone, total_amount, delivery_address, created_at').eq('restaurant_id', restaurantId).eq('status', 'rejected').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
+      supabase.from('order_feedback').select('*, orders(total_amount, delivery_address)').eq('restaurant_id', restaurantId).gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }).limit(200),
+      supabase.from('orders').select('id, client_name, client_phone, total_amount, delivery_address, created_at, client_note').eq('restaurant_id', restaurantId).eq('status', 'rejected').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
       supabase.from('orders').select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, created_at, driver_name, driver_phone, driver_id').eq('restaurant_id', restaurantId).eq('status', 'completed').not('driver_id', 'is', null).gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
     ]);
 
@@ -94,7 +163,20 @@ export default function ArchivePage() {
       delivery_address: f.orders?.delivery_address,
     }));
     setFeedbacks(enriched);
-    setRejected((rejRes.data as RejectedOrder[]) || []);
+
+    // جلب عناصر كل طلب مرفوض — batch واحد بدلاً من N+1
+    const rawRejected = (rejRes.data || []) as Omit<RejectedOrder, 'items'>[];
+    const rejectedIds = rawRejected.map(o => o.id);
+    const allRejItems = rejectedIds.length
+      ? ((await supabase.from('order_items').select('id, item_name, quantity, price, order_id').in('order_id', rejectedIds)).data || []) as (TripItem & { order_id: string })[]
+      : [];
+    const itemsByRejOrder = new Map<string, TripItem[]>();
+    allRejItems.forEach(it => {
+      const arr = itemsByRejOrder.get(it.order_id) ?? [];
+      arr.push(it);
+      itemsByRejOrder.set(it.order_id, arr);
+    });
+    setRejected(rawRejected.map(o => ({ ...o, items: itemsByRejOrder.get(o.id) ?? [] })));
 
     // جلب عناصر كل رحلة — batch واحد بدلاً من N+1
     const rawTrips = (tripsRes.data || []) as Omit<DriverTrip, 'items'>[];
@@ -129,7 +211,7 @@ export default function ArchivePage() {
     });
     setDriverGroups(Array.from(map.values()));
     setLoading(false);
-  }, [restaurantId]);
+  }, [restaurantId, selectedDate]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -203,13 +285,30 @@ export default function ArchivePage() {
       </div>
 
       {showDatePicker && (
-        <div className="px-3 pt-2">
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={e => setSelectedDate(e.target.value)}
-            className="w-full rounded-xl px-3 py-2 text-sm text-center border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 outline-none"
-          />
+        <div className="px-3 pt-2 space-y-2">
+          <div className="flex items-center justify-between bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-2xl px-2 py-2">
+            <button onClick={() => setSelectedDate(addDays(currentDate, -1))} className="w-9 h-9 flex items-center justify-center rounded-xl active:bg-gray-100 dark:active:bg-slate-700" aria-label="اليوم السابق">
+              <ChevronLeft size={18} className="text-gray-500 dark:text-slate-400" />
+            </button>
+            <div className="text-center">
+              <p className="text-sm font-bold text-gray-900 dark:text-slate-100">{dayLabel(currentDate)}</p>
+              <p className="text-[11px] text-gray-400">{currentDate}</p>
+            </div>
+            <button onClick={() => setSelectedDate(addDays(currentDate, 1))} disabled={currentDate >= localDate()} className="w-9 h-9 flex items-center justify-center rounded-xl active:bg-gray-100 dark:active:bg-slate-700 disabled:opacity-30" aria-label="اليوم التالي">
+              <ChevronRight size={18} className="text-gray-500 dark:text-slate-400" />
+            </button>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {last14Days.map(d => (
+              <button key={d} onClick={() => setSelectedDate(d === localDate() ? '' : d)} className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${currentDate === d ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                {dayLabel(d)}
+              </button>
+            ))}
+          </div>
+          <details className="text-center">
+            <summary className="text-xs text-gray-400 cursor-pointer select-none">تاريخ أبعد 📅</summary>
+            <input type="date" value={currentDate} max={localDate()} onChange={e => setSelectedDate(e.target.value)} className="mt-2 w-full rounded-xl px-3 py-2 text-sm text-center border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 outline-none" />
+          </details>
         </div>
       )}
 
@@ -300,13 +399,13 @@ export default function ArchivePage() {
           {loading ? (
             <div className="flex justify-center mt-20"><div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" /></div>
           ) : rejected.length === 0 ? (
-            <div className="text-center mt-24"><p className="text-5xl mb-3">✅</p><p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد طلبات مرفوضة اليوم</p></div>
+            <div className="text-center mt-24"><p className="text-5xl mb-3">✅</p><p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد طلبات مرفوضة {periodLabel(currentDate)}</p></div>
           ) : visibleRejected.length === 0 ? (
             <div className="text-center mt-24"><p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد نتائج مطابقة للبحث</p></div>
           ) : (
             <div className="space-y-3 max-w-lg mx-auto">
               {visibleRejected.map(order => (
-                <div key={order.id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                <button key={order.id} onClick={() => setSelectedRejectedOrder(order)} className="w-full text-right active:scale-[0.98] transition-all bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
                   <div className="h-1.5 bg-red-400" />
                   <div className="p-4 flex justify-between items-start">
                     <div>
@@ -321,7 +420,7 @@ export default function ArchivePage() {
                       </p>
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -336,7 +435,7 @@ export default function ArchivePage() {
           ) : driverGroups.length === 0 ? (
             <div className="text-center mt-24">
               <p className="text-5xl mb-3">🏍️</p>
-              <p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد رحلات مكتملة اليوم</p>
+              <p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد رحلات مكتملة {periodLabel(currentDate)}</p>
             </div>
           ) : (
             <>
@@ -487,6 +586,10 @@ export default function ArchivePage() {
       )}
 
       <AdminBottomNav />
+
+      {selectedRejectedOrder && (
+        <RejectedOrderModal order={selectedRejectedOrder} onClose={() => setSelectedRejectedOrder(null)} />
+      )}
     </div>
   );
 }
