@@ -4,66 +4,44 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase/client';
 
-// ملاحظة مهمة: لا تستورد من '@/lib/auth/staff-auth' هنا — تلك الوحدة تستخدم
-// Node crypto وعميل supabaseAdmin (Service Role) وهي مخصّصة للخادم فقط.
-// استيرادها بمكوّن 'use client' يُدرجها بالكامل داخل حزمة المتصفح (bundle)،
-// وهذا سبّب فعلياً تعطّل صفحة الدخول عند العملاء (Node crypto/متغيرات بيئة
-// الخادم غير متوفرة بالمتصفح) — لذلك الدالة مكرَّرة هنا بسطر واحد بدل استيرادها.
-function staffCodeToEmail(code: string): string {
-  return `${code.trim().toLowerCase()}@cashier.dasha.app`;
-}
-
-type Mode = 'owner' | 'staff';
-
 export default function LoginPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>('owner');
 
-  // تبويب المالك
-  const [username, setUsername] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-
-  // تبويب الموظف (كاشير/مدير) — كود + كلمة مرور، حساب دخول مستقل تماماً عن المالك
-  const [code, setCode] = useState('');
-  const [staffPassword, setStaffPassword] = useState('');
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const signInOwner = async () => {
-    if (!username.trim() || !password.trim()) return;
+  const signIn = async () => {
+    if (!identifier.trim() || !password.trim()) return;
     setLoading(true);
     setError('');
-    // اسم المستخدم هو slug المطعم — الإيميل الداخلي مولود تلقائياً
-    const email = username.trim().toLowerCase() + '@dasha.app';
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
+
+    const local = identifier.trim().split('@')[0].trim().toLowerCase();
+
+    const res = await fetch('/api/auth/resolve-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: local }),
+    });
+    const resolved = await res.json().catch(() => ({}));
+
+    if (!res.ok || !resolved.email) {
+      setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+      setLoading(false);
+      return;
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: resolved.email,
+      password: password.trim(),
+    });
+    if (signInError) {
       setError('اسم المستخدم أو كلمة المرور غير صحيحة');
       setLoading(false);
       return;
     }
     router.replace('/admin/dashboard');
-  };
-
-  const signInStaff = async () => {
-    if (!code.trim() || !staffPassword.trim()) return;
-    setLoading(true);
-    setError('');
-    const { error } = await supabase.auth.signInWithPassword({
-      email: staffCodeToEmail(code),
-      password: staffPassword,
-    });
-    if (error) {
-      setError('الكود أو كلمة المرور غير صحيحة');
-      setLoading(false);
-      return;
-    }
-    router.replace('/admin/dashboard');
-  };
-
-  const switchMode = (next: Mode) => {
-    setMode(next);
-    setError('');
   };
 
   return (
@@ -73,20 +51,7 @@ export default function LoginPage() {
           <Image src="/logo.png" alt="Dasha" width={96} height={96} priority className="h-20 w-20 object-contain" />
         </div>
 
-        <div className="flex bg-gray-100 dark:bg-slate-700 rounded-xl p-1 mb-6">
-          <button
-            onClick={() => switchMode('owner')}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${mode === 'owner' ? 'bg-white dark:bg-slate-800 text-[#4f46e5] shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}
-          >
-            الدخول كمالك
-          </button>
-          <button
-            onClick={() => switchMode('staff')}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${mode === 'staff' ? 'bg-white dark:bg-slate-800 text-[#4f46e5] shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}
-          >
-            الدخول كموظف
-          </button>
-        </div>
+        <p className="text-gray-500 dark:text-slate-400 text-center mb-6 text-sm">تسجيل الدخول لإدارة الطلبات</p>
 
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 mb-4 text-red-600 dark:text-red-400 text-sm text-center">
@@ -94,75 +59,35 @@ export default function LoginPage() {
           </div>
         )}
 
-        {mode === 'owner' ? (
-          <>
-            <p className="text-gray-500 dark:text-slate-400 text-center mb-6 text-sm">تسجيل الدخول لإدارة الطلبات</p>
-            <div className="mb-4">
-              <label className="block text-gray-700 dark:text-slate-300 font-semibold mb-2 text-sm">اسم المستخدم</label>
-              <input
-                type="text"
-                value={username}
-                onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                placeholder="dari"
-                dir="ltr"
-                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-left text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#4f46e5] font-mono"
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block text-gray-700 dark:text-slate-300 font-semibold mb-2 text-sm">كلمة المرور</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && signInOwner()}
-                placeholder="••••••••"
-                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#4f46e5]"
-              />
-            </div>
-            <button
-              onClick={signInOwner}
-              disabled={loading}
-              className="w-full bg-[#4f46e5] hover:bg-[#4338ca] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl transition-all active:scale-95"
-            >
-              {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
-            </button>
-          </>
-        ) : (
-          <>
-            <p className="text-gray-500 dark:text-slate-400 text-center mb-6 text-sm">أدخل الكود وكلمة المرور اللي أعطاكهم صاحب المطعم</p>
-            <div className="mb-4">
-              <label className="block text-gray-700 dark:text-slate-300 font-semibold mb-2 text-sm">الكود</label>
-              <input
-                type="text"
-                value={code}
-                onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="482913"
-                dir="ltr"
-                inputMode="numeric"
-                maxLength={6}
-                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-center text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#4f46e5] font-mono text-lg tracking-widest"
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block text-gray-700 dark:text-slate-300 font-semibold mb-2 text-sm">كلمة المرور</label>
-              <input
-                type="password"
-                value={staffPassword}
-                onChange={e => setStaffPassword(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && signInStaff()}
-                placeholder="••••••••"
-                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#4f46e5]"
-              />
-            </div>
-            <button
-              onClick={signInStaff}
-              disabled={loading}
-              className="w-full bg-[#4f46e5] hover:bg-[#4338ca] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl transition-all active:scale-95"
-            >
-              {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
-            </button>
-          </>
-        )}
+        <div className="mb-4">
+          <label className="block text-gray-700 dark:text-slate-300 font-semibold mb-2 text-sm">البريد الإلكتروني أو اسم المستخدم</label>
+          <input
+            type="text"
+            value={identifier}
+            onChange={e => setIdentifier(e.target.value)}
+            placeholder="dari"
+            dir="ltr"
+            className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-left text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#4f46e5] font-mono"
+          />
+        </div>
+        <div className="mb-6">
+          <label className="block text-gray-700 dark:text-slate-300 font-semibold mb-2 text-sm">كلمة المرور</label>
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && signIn()}
+            placeholder="••••••••"
+            className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#4f46e5]"
+          />
+        </div>
+        <button
+          onClick={signIn}
+          disabled={loading}
+          className="w-full bg-[#4f46e5] hover:bg-[#4338ca] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl transition-all active:scale-95"
+        >
+          {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
+        </button>
       </div>
     </div>
   );

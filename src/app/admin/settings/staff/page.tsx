@@ -13,13 +13,15 @@ async function getAccessToken(): Promise<string | undefined> {
   return session?.access_token;
 }
 
-function generateCodePreview(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
+// نفس /^[a-z0-9_-]{3,20}$/ الموجودة بـ src/lib/auth/staff-auth.ts (STAFF_USERNAME_REGEX)
+// مكرَّرة هنا عمداً بدل الاستيراد — تلك الوحدة تستخدم supabaseAdmin (Service
+// Role)/Node crypto، واستيرادها بمكوّن 'use client' يُدرجها بالكامل داخل
+// حزمة المتصفح (نفس السبب الموثَّق بـ src/app/login/page.tsx).
+const USERNAME_REGEX = /^[a-z0-9_-]{3,20}$/;
 
 const ROLE_LABEL: Record<StaffRole, string> = { owner: 'مالك', manager: 'مدير', cashier: 'كاشير', driver: 'سائق' };
 
-const emptyForm = { display_name: '', role: 'cashier' as StaffRole, password: '', max_discount_pct: '0', max_void_amount: '0' };
+const emptyForm = { display_name: '', role: 'cashier' as StaffRole, username: '', password: '', max_discount_pct: '0', max_void_amount: '0' };
 
 export default function StaffManagementPage() {
   const router = useRouter();
@@ -29,13 +31,12 @@ export default function StaffManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
   const [form, setForm] = useState(emptyForm);
-  const [previewCode, setPreviewCode] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [resetTarget, setResetTarget] = useState<StaffMember | null>(null);
   const [resetPassword, setResetPassword] = useState('');
-  // بعد إنشاء موظف جديد بنجاح نعرض له الكود+كلمة المرور بشكل واضح (فرصة أخيرة
+  // بعد إنشاء موظف جديد بنجاح نعرض له اسم المستخدم+كلمة المرور بشكل واضح (فرصة أخيرة
   // للمالك ينسخهم قبل إغلاق النافذة — الموظف يحتاجهم بالضبط ليدخل بـ/login).
   const [createdCreds, setCreatedCreds] = useState<{ name: string; code: string; password: string } | null>(null);
   const [copied, setCopied] = useState<'code' | 'password' | null>(null);
@@ -47,13 +48,12 @@ export default function StaffManagementPage() {
   const openAdd = () => {
     setEditTarget(null);
     setForm(emptyForm);
-    setPreviewCode(generateCodePreview());
     setError(null);
     setShowForm(true);
   };
   const openEdit = (s: StaffMember) => {
     setEditTarget(s);
-    setForm({ display_name: s.display_name, role: s.role, password: '', max_discount_pct: String(s.max_discount_pct), max_void_amount: String(s.max_void_amount) });
+    setForm({ display_name: s.display_name, role: s.role, username: s.code ?? '', password: '', max_discount_pct: String(s.max_discount_pct), max_void_amount: String(s.max_void_amount) });
     setError(null);
     setShowForm(true);
   };
@@ -64,18 +64,29 @@ export default function StaffManagementPage() {
 
   const submit = async () => {
     if (!restaurantId || !form.display_name.trim()) return;
+
+    const username = form.username.trim().toLowerCase();
+    if (!USERNAME_REGEX.test(username)) {
+      setError('اسم المستخدم يجب أن يكون 3-20 حرفاً/رقماً إنجليزياً صغيراً، أو - أو _');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     const accessToken = await getAccessToken();
 
     if (editTarget) {
-      const res = await updateStaff(editTarget.id, {
+      const patch: Parameters<typeof updateStaff>[1] = {
         display_name: form.display_name.trim(),
         role: form.role,
         max_discount_pct: parseFloat(form.max_discount_pct) || 0,
         max_void_amount: parseFloat(form.max_void_amount) || 0,
-      }, accessToken);
+      };
+      if (username !== (editTarget.code ?? '').toLowerCase()) {
+        patch.code = username;
+      }
+      const res = await updateStaff(editTarget.id, patch, accessToken);
       setSaving(false);
       if (!res.ok) { setError('error' in res ? res.error : 'تعذّر الحفظ'); return; }
       showToast('✓ تم التحديث');
@@ -90,13 +101,13 @@ export default function StaffManagementPage() {
       display_name: form.display_name.trim(),
       role: form.role,
       password: form.password.trim(),
-      code: previewCode,
+      code: username,
       max_discount_pct: parseFloat(form.max_discount_pct) || 0,
       max_void_amount: parseFloat(form.max_void_amount) || 0,
     }, accessToken);
     setSaving(false);
     if (!res.ok) { setError('error' in res ? res.error : 'تعذّر الإضافة'); return; }
-    const finalCode = (res.data as StaffMember).code ?? previewCode;
+    const finalCode = (res.data as StaffMember).code ?? username;
     setShowForm(false);
     setCreatedCreds({ name: form.display_name.trim(), code: finalCode, password: form.password.trim() });
     refreshStaffList();
@@ -157,7 +168,7 @@ export default function StaffManagementPage() {
                   <div className="text-right flex-1 px-3">
                     <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">{s.display_name}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {ROLE_LABEL[s.role]}{s.code ? ` · كود: ${s.code}` : ''} · خصم حتى {s.max_discount_pct}% · إلغاء حتى {s.max_void_amount.toLocaleString()} د.ع
+                      {ROLE_LABEL[s.role]}{s.code ? ` · اسم المستخدم: ${s.code}` : ''} · خصم حتى {s.max_discount_pct}% · إلغاء حتى {s.max_void_amount.toLocaleString()} د.ع
                     </p>
                   </div>
                   <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0"><User size={16} className="text-blue-500" /></div>
@@ -199,11 +210,20 @@ export default function StaffManagementPage() {
                 ))}
               </div>
 
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">اسم المستخدم (يدخل به الموظف من صفحة تسجيل الدخول)</p>
+              <input
+                value={form.username}
+                onChange={e => setForm(p => ({ ...p, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20) }))}
+                placeholder="ahmad_cashier"
+                dir="ltr"
+                className={`${input} font-mono`}
+              />
+              {form.username.length > 0 && form.username.length < 3 && (
+                <p className="text-red-500 text-xs -mt-2 mb-3 text-right">3 أحرف على الأقل</p>
+              )}
+
               {!editTarget && (
                 <>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">الكود (يُنشأ تلقائياً — يدخل به الموظف من صفحة تسجيل الدخول)</p>
-                  <input value={previewCode} readOnly dir="ltr" className={`${input} font-mono text-lg tracking-widest text-center bg-gray-100 dark:bg-slate-600 cursor-not-allowed`} />
-
                   <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">كلمة المرور (تحددها أنت)</p>
                   <input value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="4 أحرف/أرقام على الأقل" dir="ltr" className={input} />
                 </>
@@ -234,14 +254,14 @@ export default function StaffManagementPage() {
           <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl p-5" onClick={e => e.stopPropagation()} dir="rtl">
             <p className="text-center text-4xl mb-2">✅</p>
             <p className="font-bold text-gray-900 dark:text-slate-100 text-center mb-1">تمت إضافة {createdCreds.name}</p>
-            <p className="text-xs text-gray-400 dark:text-slate-500 text-center mb-4">أعطِ الموظف هذين الرقمين ليدخل من صفحة تسجيل الدخول (تبويب &quot;الدخول كموظف&quot;)</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 text-center mb-4">أعطِ الموظف اسم المستخدم وكلمة المرور ليدخل من صفحة تسجيل الدخول</p>
 
             <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-2">
               <button onClick={() => copy(createdCreds.code, 'code')} className="text-gray-400 active:scale-90 transition-all">
                 {copied === 'code' ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
               </button>
               <p className="font-mono font-bold text-gray-900 dark:text-slate-100 text-lg tracking-widest" dir="ltr">{createdCreds.code}</p>
-              <p className="text-[10px] text-gray-400">الكود</p>
+              <p className="text-[10px] text-gray-400">اسم المستخدم</p>
             </div>
 
             <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-4">

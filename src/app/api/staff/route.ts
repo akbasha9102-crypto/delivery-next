@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { generateStaffCode, staffCodeToEmail, verifyOwnerRequest, type StaffRole } from '@/lib/auth/staff-auth';
+import { normalizeStaffUsername, isValidStaffUsername, staffCodeToEmail, verifyOwnerRequest, type StaffRole } from '@/lib/auth/staff-auth';
 
 const STAFF_SELECT =
   'id, restaurant_id, display_name, role, is_active, user_id, code, max_discount_pct, max_void_amount, created_at, updated_at';
@@ -26,9 +26,10 @@ export async function GET(req: NextRequest) {
 
 // POST /api/staff — إضافة موظف جديد (كاشير/مدير)، مالك فقط.
 // ينشئ حساب Supabase Auth حقيقي مستقل للموظف (نفس نمط حساب المطعم
-// slug@dasha.app) بإيميل صناعي code@cashier.dasha.app — الموظف يدخل
-// بصفحة /login (تبويب "موظف") بالكود + كلمة المرور مباشرة، دون حاجة
-// لجلسة المالك المشتركة أو شاشة PIN.
+// slug@dasha.app) بإيميل صناعي code@cashier.dasha.app — اسم المستخدم
+// (code) يختاره المالك نفسه عند الإنشاء (وليس مولَّداً تلقائياً)، والموظف
+// يدخل بصفحة /login الموحّدة باسم المستخدم هذا + كلمة المرور مباشرة، دون
+// حاجة لجلسة المالك المشتركة أو شاشة PIN.
 export async function POST(req: NextRequest) {
   let body: {
     restaurant_id?: string;
@@ -62,18 +63,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'كلمة المرور يجب أن تكون 4 أحرف/أرقام على الأقل' }, { status: 400 });
   }
 
-  // كود مقترَح من الواجهة (عرض فوري للمالك عند فتح النموذج) — نتحقق من عدم
-  // تكراره، وإلا نولّد كوداً جديداً. النتيجة النهائية تُرجَع دائماً بالاستجابة
-  // كي تعرض الواجهة الكود الحقيقي المُستخدَم فعلياً.
-  let code = body.code && /^\d{6}$/.test(body.code) ? body.code : generateStaffCode();
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const { data: clash } = await supabaseAdmin
-      .from('user_roles')
-      .select('id')
-      .ilike('code', code)
-      .maybeSingle();
-    if (!clash) break;
-    code = generateStaffCode();
+  if (!body.code?.trim()) {
+    return NextResponse.json({ error: 'اسم المستخدم مطلوب' }, { status: 400 });
+  }
+  const code = normalizeStaffUsername(body.code);
+  if (!isValidStaffUsername(code)) {
+    return NextResponse.json({ error: 'اسم المستخدم يجب أن يكون 3-20 حرفاً/رقماً إنجليزياً صغيراً، أو - أو _، وليس كلمة محجوزة' }, { status: 400 });
+  }
+
+  const { data: codeClash } = await supabaseAdmin.from('user_roles').select('id').ilike('code', code).maybeSingle();
+  if (codeClash) {
+    return NextResponse.json({ error: `اسم المستخدم "${code}" مستخدم بالفعل` }, { status: 409 });
+  }
+  const { data: slugClash } = await supabaseAdmin.from('restaurants').select('id').ilike('slug', code).maybeSingle();
+  if (slugClash) {
+    return NextResponse.json({ error: `اسم المستخدم "${code}" مستخدم بالفعل` }, { status: 409 });
   }
 
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({

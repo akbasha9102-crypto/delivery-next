@@ -30,9 +30,22 @@ export function staffCodeToEmail(code: string): string {
   return `${code.trim().toLowerCase()}@cashier.dasha.app`;
 }
 
-/** يولّد كوداً رقمياً من 6 أرقام لتسجيل دخول الكاشير (يُعرض للمالك، لا يحتاج تذكّر كلمات). */
-export function generateStaffCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+export const STAFF_USERNAME_REGEX = /^[a-z0-9_-]{3,20}$/;
+
+export const RESERVED_STAFF_USERNAMES = new Set([
+  'admin', 'api', 'owner', 'staff', 'login', 'logout', 'root', 'support',
+  'system', 'test', 'null', 'undefined', 'settings', 'dashboard', 'super',
+  'superadmin', 'cashier', 'manager', 'driver', 'auth', 'anonymous',
+]);
+
+/** ينظّف اسم المستخدم المُدخَل من المالك (فراغات + أحرف كبيرة) قبل التحقق/الحفظ. */
+export function normalizeStaffUsername(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
+/** يتحقق أن اسم المستخدم يطابق الصيغة المسموحة وليس كلمة محجوزة. */
+export function isValidStaffUsername(username: string): boolean {
+  return STAFF_USERNAME_REGEX.test(username) && !RESERVED_STAFF_USERNAMES.has(username);
 }
 
 /**

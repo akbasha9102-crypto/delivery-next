@@ -79,7 +79,7 @@ export function createStaff(payload: {
   display_name: string;
   role: StaffRole;
   password: string;
-  code?: string;
+  code: string;
   max_discount_pct: number;
   max_void_amount: number;
 }, accessToken?: string) {
@@ -95,6 +95,7 @@ export function updateStaff(id: string, patch: Partial<{
   role: StaffRole;
   is_active: boolean;
   password: string;
+  code: string;
   max_discount_pct: number;
   max_void_amount: number;
 }>, accessToken?: string) {

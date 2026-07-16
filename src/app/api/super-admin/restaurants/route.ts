@@ -57,6 +57,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `اسم المستخدم "${slug}" مستخدم بالفعل` }, { status: 409 });
   }
 
+  // نفس اسم المستخدم قد يكون مستخدَماً كـ code موظف بمطعم آخر (user_roles) —
+  // الإيميلان الداخليان مختلفان (dasha.app مقابل cashier.dasha.app) لكن
+  // slug/code يُعرَضان للمستخدم كاسم دخول واحد، فيجب منع التصادم البصري.
+  const { data: staffClash } = await supabaseAdmin.from('user_roles').select('id').ilike('code', slug).maybeSingle();
+  if (staffClash) {
+    return NextResponse.json({ error: `اسم المستخدم "${slug}" مستخدم بالفعل` }, { status: 409 });
+  }
+
   // إنشاء حساب Auth في Supabase
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
@@ -145,6 +153,11 @@ export async function PATCH(req: NextRequest) {
       .maybeSingle();
 
     if (existing) {
+      return NextResponse.json({ error: `اسم المستخدم "${newSlug}" مستخدم بالفعل` }, { status: 409 });
+    }
+
+    const { data: staffClash } = await supabaseAdmin.from('user_roles').select('id').ilike('code', newSlug).maybeSingle();
+    if (staffClash) {
       return NextResponse.json({ error: `اسم المستخدم "${newSlug}" مستخدم بالفعل` }, { status: 409 });
     }
 
