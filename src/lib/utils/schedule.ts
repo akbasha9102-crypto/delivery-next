@@ -2,6 +2,27 @@
 // لا تكتب لقاعدة البيانات إطلاقاً — دالة نقية بحتة بدون أي آثار جانبية.
 import type { WeekSchedule } from '@/context/SettingsContext';
 
+// أسماء أيام الأسبوع بالعربية — الفهرس يطابق Date.getDay() (0 = الأحد)
+export const DAY_NAMES_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+/** ينسّق وقت "HH:mm" لنص عربي مختصر مثل "9:00 ص" */
+export function formatOpenTime(time: string | null): string {
+  if (!time) return '';
+  const [h, m] = time.split(':').map(Number);
+  const period = h >= 12 ? 'م' : 'ص';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+/** ينسّق وقت "HH:mm" لنص عربي كامل مثل "9:00 صباحاً" */
+export function formatCloseTimeFull(time: string | null): string {
+  if (!time) return '';
+  const [h, m] = time.split(':').map(Number);
+  const period = h >= 12 ? 'مساءً' : 'صباحاً';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
 /**
  * يحسب حالة الفتح/الإغلاق الفعلية للمطعم الآن.
  * الإغلاق اليدوي (isManuallyClosed) له أولوية قصوى: لو المدير أغلق يدوياً يبقى مغلق
@@ -36,8 +57,9 @@ export function isRestaurantOpenNow(
  * (لا علاقة له بالإغلاق اليدوي — ذاك لا يتغيّر بمرور الوقت من تلقاء نفسه).
  * تُستخدم لجدولة setTimeout واحد دقيق بدل استطلاع دوري (polling) كل عدة ثوانٍ.
  *
- * يفحص اليوم الحالي وغداً فقط (يكفي لتغطية أي دوام، بما فيه الدوام العابر لمنتصف الليل،
- * لأن isRestaurantOpenNow يقيّم كل تاريخ تقويمي بجدول يومه الخاص فقط دون أي اعتماد على اليوم السابق).
+ * يفحص 7 أيام قدّام (يكفي لتغطية أي دوام، بما فيه الدوام العابر لمنتصف الليل،
+ * لأن isRestaurantOpenNow يقيّم كل تاريخ تقويمي بجدول يومه الخاص فقط دون أي اعتماد على اليوم السابق،
+ * وكذلك تغطية حالة تعطيل عدة أيام متتالية بالجدولة).
  *
  * يرجع null إذا كانت الجدولة يدوية بالكامل (auto=false) أو إذا لم توجد أي لحظة تحوّل مستقبلية
  * (حالة نادرة جداً، مثلاً كل الأيام معطّلة أو بلا ساعات).
@@ -50,8 +72,8 @@ export function getMsUntilNextScheduleTransition(
 
   const candidates: Date[] = [];
 
-  // نفحص تاريخ اليوم وتاريخ الغد (تقويمياً) — لكل منهما جدوله الخاص المستقل
-  for (let offset = 0; offset <= 1; offset++) {
+  // نفحص 7 أيام قدّام (تقويمياً) — لكل منها جدوله الخاص المستقل، ونرصد لحظتي الفتح والإغلاق كمرشحين
+  for (let offset = 0; offset <= 7; offset++) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
     const dayKey = String(d.getDay());
     const day = schedule.days?.[dayKey];
@@ -70,4 +92,28 @@ export function getMsUntilNextScheduleTransition(
 
   if (futureDiffsMs.length === 0) return null;
   return Math.min(...futureDiffsMs);
+}
+
+/**
+ * يحسب أقرب لحظة فتح قادمة حسب الجدولة التلقائية فقط (auto=true).
+ * يبحث بالوقت الحالي أولاً (إن كان اليوم مفعّلاً ولم يفتح بعد)، ثم بالأيام التالية حتى أسبوع كامل قدّام.
+ * يرجع null إذا كانت الجدولة يدوية بالكامل (auto=false) أو معطّلة لكامل الأسبوع.
+ */
+export function getNextOpenTime(
+  schedule: WeekSchedule | null | undefined,
+  now: Date = new Date()
+): Date | null {
+  if (!schedule?.auto) return null;
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  for (let offset = 0; offset <= 7; offset++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    const dayKey = String(d.getDay());
+    const day = schedule.days?.[dayKey];
+    if (!day?.enabled) continue;
+    const [oh = 0, om = 0] = (day.open || '00:00').split(':').map(Number);
+    const openMins = oh * 60 + om;
+    if (offset === 0 && openMins <= nowMins) continue;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), oh, om, 0, 0);
+  }
+  return null;
 }

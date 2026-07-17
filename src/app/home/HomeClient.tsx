@@ -12,7 +12,7 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionTemplate } from 'framer-motion';
 import { applyDiscountPct, getEffectivePct as getEffectivePctShared } from '@/lib/utils/pricing';
-import { isRestaurantOpenNow, getMsUntilNextScheduleTransition } from '@/lib/utils/schedule';
+import { isRestaurantOpenNow, getMsUntilNextScheduleTransition, getNextOpenTime, formatOpenTime, formatCloseTimeFull, DAY_NAMES_AR } from '@/lib/utils/schedule';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; discount_pct?: number };
 type Extra    = { id: string; name: string; price: number };
@@ -30,22 +30,6 @@ function getEffectivePct(item: Item, categories: Category[]): number {
 
 function getDiscountedPrice(item: Item, categories: Category[]): number {
   return applyDiscountPct(item.price, getEffectivePct(item, categories));
-}
-
-function formatOpenTime(time: string | null): string {
-  if (!time) return '';
-  const [h, m] = time.split(':').map(Number);
-  const period = h >= 12 ? 'م' : 'ص';
-  const hour12 = h % 12 || 12;
-  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
-}
-
-function formatCloseTimeFull(time: string | null): string {
-  if (!time) return '';
-  const [h, m] = time.split(':').map(Number);
-  const period = h >= 12 ? 'مساءً' : 'صباحاً';
-  const hour12 = h % 12 || 12;
-  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
 function getStatus(item: Item): 'available' | 'unavailable' | 'hidden' {
@@ -140,6 +124,27 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
     const diff = closeMinutes - nowMinutes;
     return diff > 0 && diff <= 60;
   })();
+
+  // نص فرعي يوضّح متى يفتح المطعم أثناء الإغلاق — يغطي كلاً من الإغلاق اليدوي (opens_at) والإغلاق حسب الجدولة (schedule)
+  const closedInfoText = useMemo(() => {
+    if (effectivelyOpen) return null;
+    if (is_closed) {
+      // إغلاق يدوي: نعتمد فقط على opens_at (لا نخمّن وقتاً إن لم يُحدَّد)
+      return opens_at ? `يفتح الساعة ${formatCloseTimeFull(opens_at)}` : null;
+    }
+    // إغلاق حسب الجدولة التلقائية: نحسب أقرب لحظة فتح قادمة
+    const nextOpen = getNextOpenTime(schedule, now);
+    if (!nextOpen) return null;
+    const timeStr = formatCloseTimeFull(
+      `${String(nextOpen.getHours()).padStart(2, '0')}:${String(nextOpen.getMinutes()).padStart(2, '0')}`
+    );
+    const isSameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    if (isSameDay(nextOpen, now)) return `يفتح الساعة ${timeStr}`;
+    if (isSameDay(nextOpen, tomorrow)) return `يفتح غداً الساعة ${timeStr}`;
+    return `يفتح يوم ${DAY_NAMES_AR[nextOpen.getDay()]} الساعة ${timeStr}`;
+  }, [effectivelyOpen, is_closed, opens_at, schedule, now]);
 
   const [categories,   setCategories]   = useState<Category[]>(initialCategories);
   const [items,        setItems]        = useState<Item[]>(initialItems);
@@ -437,7 +442,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 : 'bg-green-500 animate-pulse'
           }`} />
           {!effectivelyOpen ? (
-            <span>مغلق{opens_at ? ` • يفتح ${opens_at}` : ''}</span>
+            <span>مغلق{closedInfoText ? ` • ${closedInfoText}` : ''}</span>
           ) : isClosingSoon ? (
             <span>يغلق الساعة {formatCloseTimeFull(todayHours?.close ?? null)} • سارع بالطلب</span>
           ) : (
@@ -696,9 +701,9 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                             >
                               <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-3 rounded-2xl shadow-2xl text-center mx-3">
                                 <p className="text-gray-900 dark:text-white text-xs sm:text-sm font-black tracking-wide">🔒 مغلق</p>
-                                {opens_at && (
+                                {closedInfoText && (
                                   <p className="text-gray-500 dark:text-slate-400 text-[9px] sm:text-[11px] font-bold mt-1">
-                                    سيفتح {opens_at}
+                                    {closedInfoText}
                                   </p>
                                 )}
                               </div>
@@ -1175,9 +1180,12 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 dark:bg-slate-700 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-black whitespace-nowrap"
+            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 dark:bg-slate-700 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-black text-center"
           >
-            🔒 المطعم مغلق حالياً
+            <div className="whitespace-nowrap">🔒 المطعم مغلق حالياً</div>
+            {closedInfoText && (
+              <div className="whitespace-nowrap text-xs font-bold opacity-80 mt-0.5">{closedInfoText}</div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
