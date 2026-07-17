@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { BrandMark } from '@/components/shared/BrandMark';
 import { Plus, Trash2, CheckCircle, Circle, Copy, Check, KeyRound, X, RefreshCw, Loader2 } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 
@@ -132,14 +133,14 @@ export default function DriversPage() {
 
       {/* هيدر */}
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <div className="w-9" />
-        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">السائقين</h1>
         <button
           onClick={openAdd}
           className="w-9 h-9 rounded-xl bg-[#2563eb] text-white flex items-center justify-center active:scale-90 transition-all shadow-sm"
         >
           <Plus size={20} />
         </button>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">السائقين</h1>
+        <BrandMark />
       </header>
 
       {/* قائمة السائقين */}

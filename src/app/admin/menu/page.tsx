@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { BrandMark } from '@/components/shared/BrandMark';
 import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, FolderPlus, UtensilsCrossed } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { HexColorPicker } from 'react-colorful';
@@ -795,8 +796,10 @@ export default function MenuPage() {
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-center stagger-0">
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between stagger-0">
+        <div className="w-9" />
         <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">تعديل المنيو</h1>
+        <BrandMark />
       </header>
 
       {toast && (

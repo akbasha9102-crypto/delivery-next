@@ -49,7 +49,7 @@ export default function LoginPage() {
         <div className="flex justify-center mb-6">
           <span
             dir="rtl"
-            className="text-8xl leading-none whitespace-nowrap font-bold bg-gradient-to-bl from-blue-400 to-blue-950 bg-clip-text text-transparent [font-family:var(--font-logo)] logo-animate"
+            className="text-8xl leading-none whitespace-nowrap font-bold bg-gradient-to-bl from-blue-400 to-blue-950 bg-clip-text text-transparent [font-family:var(--font-logo)]"
           >
             سهل
           </span>
