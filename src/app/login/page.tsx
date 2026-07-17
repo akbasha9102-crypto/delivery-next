@@ -48,7 +48,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 stagger-0">
         <div className="flex justify-center mb-6">
-          <Image src="/logo.png" alt="Dasha" width={96} height={96} priority className="h-20 w-20 object-contain" />
+          <Image src="/logo.png" alt="Dasha" width={36} height={36} priority className="h-9 w-9 object-contain" />
         </div>
 
         <p className="text-gray-500 dark:text-slate-400 text-center mb-6 text-sm">تسجيل الدخول لإدارة الطلبات</p>
