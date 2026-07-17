@@ -12,7 +12,7 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionTemplate } from 'framer-motion';
 import { applyDiscountPct, getEffectivePct as getEffectivePctShared } from '@/lib/utils/pricing';
-import { isRestaurantOpenNow } from '@/lib/utils/schedule';
+import { isRestaurantOpenNow, getMsUntilNextScheduleTransition } from '@/lib/utils/schedule';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; discount_pct?: number };
 type Extra    = { id: string; name: string; price: number };
@@ -112,12 +112,15 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
   const textOnBrand = getTextColor(brandColor);
 
-  // وقت "حي" يتحدث دورياً حتى تُعاد حسابة حالة الفتح/الإغلاق تلقائياً بدون تحديث الصفحة
+  // وقت "حي" يتحدّث فقط عند لحظة تحوّل فعلية بحالة الفتح/الإغلاق حسب الجدولة (بدل استطلاع دوري كل 30 ثانية)
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 30000);
-    return () => clearInterval(id);
-  }, []);
+    const ms = getMsUntilNextScheduleTransition(schedule, new Date());
+    if (ms === null) return; // جدولة يدوية بالكامل (auto=false) — لا توجد لحظة تحوّل تُجدوَل لها
+    const id = setTimeout(() => setNow(new Date()), Math.max(ms, 1000) + 1000); // +1s هامش أمان لتفادي التقريب
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schedule, is_closed, now]);
 
   // الحالة الفعلية للمطعم الآن: إغلاق يدوي + الجدولة + الوقت الحالي — بدون أي كتابة لقاعدة البيانات
   const effectivelyOpen = isRestaurantOpenNow(schedule, is_closed, now);
@@ -543,7 +546,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
                 {/* ── Items Grid ── */}
                 <div className={isBestSellers ? 'grid grid-cols-3 gap-2 sm:gap-4 px-1 sm:px-2' : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-7 md:gap-10 px-1 sm:px-2'}>
-                  {catItems.map((item) => {
+                  {catItems.map((item, idx) => {
                     const count  = qty(item.id);
                     const status = getStatus(item);
                     const isAvailable = effectivelyOpen && status === 'available';
@@ -687,6 +690,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
                               exit={{ opacity: 0 }}
+                              transition={{ delay: Math.min(idx * 0.01, 0.3) }}
                               className="absolute inset-0 z-10 flex items-center justify-center"
                               style={{ backgroundColor: 'rgba(30,30,30,0.52)' }}
                             >
