@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
-import { BrandMark } from '@/components/shared/BrandMark';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus, ShoppingCart, ArrowUp, ArrowDown, GitBranch, ChevronRight, Plus } from 'lucide-react';
 
@@ -528,8 +527,7 @@ export default function InventoryPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <div className="w-9" />
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-center">
         <div className="flex items-center gap-2">
           <Package size={18} className="text-[#f97316]" />
           <p className="font-bold text-gray-900 dark:text-slate-100">المخزون</p>
@@ -539,7 +537,6 @@ export default function InventoryPage() {
             </span>
           )}
         </div>
-        <BrandMark />
       </header>
 
       {toast && (

@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase/client';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
 import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, ChevronDown, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Ticket, Flame, Percent, Search, Check } from 'lucide-react';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
-import { BrandMark } from '@/components/shared/BrandMark';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useStaff } from '@/context/StaffContext';
@@ -773,10 +772,8 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* هيدر */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <div className="w-9" />
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-center">
         <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">الإعدادات</h1>
-        <BrandMark />
       </header>
 
       <div className="px-4 pt-4 space-y-4">

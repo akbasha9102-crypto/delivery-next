@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
-import { BrandMark } from '@/components/shared/BrandMark';
 import { ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check, Bell, Plus, Minus, Ticket } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
@@ -997,13 +996,11 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
-        <div className="w-9" />
+      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-center">
         <div className="flex items-center gap-1.5">
           <ClipboardList size={18} className="text-[#f97316]" />
           <p className="font-bold text-red-500">الطلبات</p>
         </div>
-        <BrandMark />
       </header>
 
       <LowStockAlert />

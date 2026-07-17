@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
-import { BrandMark } from '@/components/shared/BrandMark';
 import { Plus, Trash2, CheckCircle, Circle, Copy, Check, KeyRound, X, RefreshCw, Loader2 } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 
@@ -140,7 +139,7 @@ export default function DriversPage() {
           <Plus size={20} />
         </button>
         <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">السائقين</h1>
-        <BrandMark />
+        <div className="w-9" />
       </header>
 
       {/* قائمة السائقين */}
