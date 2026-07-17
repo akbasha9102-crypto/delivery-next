@@ -28,10 +28,22 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const firstEnabledDay = Object.values(initSchedule?.days ?? {}).find(d => d.enabled);
+  const [globalOpen,  setGlobalOpen]  = useState(firstEnabledDay?.open  ?? '10:00');
+  const [globalClose, setGlobalClose] = useState(firstEnabledDay?.close ?? '23:00');
+
   useEffect(() => { setSched(initSchedule ?? DEFAULT_WEEK); }, [initSchedule]);
 
   const updateDay = (key: string, field: keyof DaySchedule, val: boolean | string) =>
     setSched(prev => ({ ...prev, days: { ...prev.days, [key]: { ...prev.days[key], [field]: val } } }));
+
+  const applyToAllDays = () =>
+    setSched(prev => ({
+      ...prev,
+      days: Object.fromEntries(
+        [0,1,2,3,4,5,6].map(d => [String(d), { enabled: true, open: globalOpen, close: globalClose }])
+      ),
+    }));
 
   const handleSave = async () => {
     if (!settingsId) { setSaveError('لم يتم تحميل إعدادات المطعم بعد'); return; }
@@ -69,6 +81,20 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
               <p className="font-bold text-sm text-gray-800 dark:text-slate-200">تطبيق تلقائي</p>
               <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">يفتح ويغلق المطعم حسب الجدول</p>
             </div>
+          </div>
+          <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl px-4 py-3 mb-5">
+            <p className="font-bold text-sm text-gray-800 dark:text-slate-200 mb-2">تطبيق على كل الأيام</p>
+            <div className="flex items-center gap-2 mb-3">
+              <input type="time" value={globalClose} onChange={e => setGlobalClose(e.target.value)}
+                className="flex-1 text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
+              <span className="text-gray-300 dark:text-slate-500 text-sm font-bold">—</span>
+              <input type="time" value={globalOpen} onChange={e => setGlobalOpen(e.target.value)}
+                className="flex-1 text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
+            </div>
+            <button onClick={applyToAllDays}
+              className="w-full py-2.5 rounded-xl bg-[#f97316] text-white font-bold text-sm active:scale-95 transition-all">
+              تطبيق على الكل
+            </button>
           </div>
           <div className="space-y-3 pb-4">
             {[0,1,2,3,4,5,6].map(d => {
