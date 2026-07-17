@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
+import { BrandMark } from '@/components/shared/BrandMark';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,12 +48,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 stagger-0">
         <div className="flex justify-center mb-6">
-          <span
-            dir="rtl"
-            className="text-8xl leading-none whitespace-nowrap font-bold bg-gradient-to-bl from-blue-400 to-blue-950 bg-clip-text text-transparent [font-family:var(--font-logo)]"
-          >
-            سهل
-          </span>
+          <BrandMark className="w-[248px] h-[147px]" priority />
         </div>
 
         <p className="text-gray-500 dark:text-slate-400 text-center mb-6 text-sm">تسجيل الدخول لإدارة الطلبات</p>
