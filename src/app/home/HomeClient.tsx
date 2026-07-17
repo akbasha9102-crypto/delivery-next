@@ -12,6 +12,7 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionTemplate } from 'framer-motion';
 import { applyDiscountPct, getEffectivePct as getEffectivePctShared } from '@/lib/utils/pricing';
+import { isRestaurantOpenNow } from '@/lib/utils/schedule';
 
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; discount_pct?: number };
 type Extra    = { id: string; name: string; price: number };
@@ -111,16 +112,25 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
   const textOnBrand = getTextColor(brandColor);
 
+  // وقت "حي" يتحدث دورياً حتى تُعاد حسابة حالة الفتح/الإغلاق تلقائياً بدون تحديث الصفحة
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  // الحالة الفعلية للمطعم الآن: إغلاق يدوي + الجدولة + الوقت الحالي — بدون أي كتابة لقاعدة البيانات
+  const effectivelyOpen = isRestaurantOpenNow(schedule, is_closed, now);
+
   const todayHours = (() => {
     if (!schedule?.days) return null;
-    const day = schedule.days[String(new Date().getDay())];
+    const day = schedule.days[String(now.getDay())];
     if (!day?.enabled) return null;
     return { open: day.open, close: day.close };
   })();
 
   const isClosingSoon = (() => {
-    if (!todayHours?.close || is_closed) return false;
-    const now = new Date();
+    if (!todayHours?.close || !effectivelyOpen) return false;
     const [closeH, closeM] = todayHours.close.split(':').map(Number);
     const closeMinutes = closeH * 60 + closeM;
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -410,20 +420,20 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
       {/* ══ شريط الحالة والوقت ══ */}
       {settingsLoaded && (
         <div className={`flex items-center justify-center gap-2 py-1.5 text-xs font-bold ${
-          is_closed
+          !effectivelyOpen
             ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
             : isClosingSoon
               ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400'
               : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-            is_closed
+            !effectivelyOpen
               ? 'bg-red-500'
               : isClosingSoon
                 ? 'bg-yellow-500 animate-pulse'
                 : 'bg-green-500 animate-pulse'
           }`} />
-          {is_closed ? (
+          {!effectivelyOpen ? (
             <span>مغلق{opens_at ? ` • يفتح ${opens_at}` : ''}</span>
           ) : isClosingSoon ? (
             <span>يغلق الساعة {formatCloseTimeFull(todayHours?.close ?? null)} • سارع بالطلب</span>
@@ -444,7 +454,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
           boxShadow: headerBoxShadow,
         }}
       >
-        <div ref={pillsRef} className={`flex gap-2.5 overflow-x-auto scrollbar-hide flex-row-reverse px-4 py-3 ${is_closed ? 'pointer-events-none opacity-50' : ''}`}>
+        <div ref={pillsRef} className={`flex gap-2.5 overflow-x-auto scrollbar-hide flex-row-reverse px-4 py-3 ${!effectivelyOpen ? 'pointer-events-none opacity-50' : ''}`}>
           {dataLoading && categories.length === 0 && (
             Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-9 w-20 bg-gray-200 dark:bg-slate-700 rounded-2xl animate-pulse flex-shrink-0"/>
@@ -536,18 +546,18 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                   {catItems.map((item) => {
                     const count  = qty(item.id);
                     const status = getStatus(item);
-                    const isAvailable = !is_closed && status === 'available';
+                    const isAvailable = effectivelyOpen && status === 'available';
                     const discPct   = getEffectivePct(item, categories);
                     const discPrice = getDiscountedPrice(item, categories);
                     return (
                       <motion.div
                         key={item.id}
-                        whileHover={is_closed ? {} : { y: -8 }}
+                        whileHover={!effectivelyOpen ? {} : { y: -8 }}
                         onClick={() => {
-                          if (is_closed) setShowClosedToast(true);
+                          if (!effectivelyOpen) setShowClosedToast(true);
                           else setSelectedItem(item);
                         }}
-                        className={`relative group overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${isBestSellers ? 'rounded-2xl' : 'rounded-[1.8rem] sm:rounded-[2.5rem]'} ${!catCardColor ? 'bg-white dark:bg-slate-900' : ''} ${!isAvailable && !is_closed ? 'opacity-60' : ''}`}
+                        className={`relative group overflow-hidden border border-gray-100/80 dark:border-slate-800/80 shadow-[0_8px_35px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer ${isBestSellers ? 'rounded-2xl' : 'rounded-[1.8rem] sm:rounded-[2.5rem]'} ${!catCardColor ? 'bg-white dark:bg-slate-900' : ''} ${!isAvailable && effectivelyOpen ? 'opacity-60' : ''}`}
                         style={catCardColor ? { backgroundColor: catCardColor } : undefined}>
 
                         {/* Image Wrapper */}
@@ -560,12 +570,12 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                               src={item.image_url || 'https://placehold.co/400x300/f5f5f5/ccc?text='}
                               alt={item.name}
                               width={400} height={300}
-                              className={`w-full object-cover transition-transform duration-700 group-hover:scale-110 ${isBestSellers ? 'h-16 sm:h-24' : 'h-32 sm:h-56'} ${!isAvailable && !is_closed ? 'grayscale' : ''}`}
+                              className={`w-full object-cover transition-transform duration-700 group-hover:scale-110 ${isBestSellers ? 'h-16 sm:h-24' : 'h-32 sm:h-56'} ${!isAvailable && effectivelyOpen ? 'grayscale' : ''}`}
                               unoptimized
                             />
                           </motion.div>
                           <AnimatePresence>
-                            {!is_closed && status !== 'available' && (
+                            {effectivelyOpen && status !== 'available' && (
                               <motion.div
                                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                                 className="absolute inset-0 flex items-center justify-center bg-black/20">
@@ -659,7 +669,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                 </AnimatePresence>
                               </div>
                             ) : (
-                              !is_closed && (
+                              effectivelyOpen && (
                                 <div className={`bg-gray-100 dark:bg-slate-700 rounded-xl text-center ${isBestSellers ? 'px-2 py-1' : 'px-3 py-1.5 sm:px-4 sm:py-2'}`}>
                                   <span className={`font-black text-gray-500 dark:text-slate-300 ${isBestSellers ? 'text-[9px]' : 'text-xs sm:text-sm'}`}>
                                     {status === 'unavailable' ? 'غير متوفر' : 'انتهى'}
@@ -672,7 +682,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
                         {/* ── تضليل المطعم المغلق ── */}
                         <AnimatePresence>
-                          {is_closed && (
+                          {!effectivelyOpen && (
                             <motion.div
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
@@ -1038,7 +1048,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                       </div>
                       )}
 
-                      {!is_closed && getStatus(selectedItem) === 'available' && (
+                      {effectivelyOpen && getStatus(selectedItem) === 'available' && (
                         <div className="absolute bottom-5 right-5">
                           <AnimatePresence mode="wait">
                             {qty(selectedItem.id) > 0 ? (

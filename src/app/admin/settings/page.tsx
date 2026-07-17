@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
@@ -9,6 +9,7 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useStaff } from '@/context/StaffContext';
 import { applyDiscountPct } from '@/lib/utils/pricing';
+import { isRestaurantOpenNow } from '@/lib/utils/schedule';
 
 /* ─── جدولة الدوام ─── */
 const DAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -671,8 +672,6 @@ export default function SettingsPage() {
       setUsername(email.replace('@dasha.app', ''));
     });
   }, []);
-  const isClosedRef = useRef(is_closed);
-  useEffect(() => { isClosedRef.current = is_closed; }, [is_closed]);
   useEffect(() => { setScheduleLocal(ctxSchedule); }, [ctxSchedule]);
   useEffect(() => { setDeliveryFeeInput(String(delivery_fee ?? 0)); }, [delivery_fee]);
   useEffect(() => { setMinOrderInput(String(min_order_amount ?? 0)); }, [min_order_amount]);
@@ -681,38 +680,20 @@ export default function SettingsPage() {
   useEffect(() => { setCouponPctInput(String(coupon_discount_pct ?? 0)); }, [coupon_discount_pct]);
   useEffect(() => { setCouponEnabledLocal(!!coupon_enabled); }, [coupon_enabled]);
   useEffect(() => { setCouponAllowRetroactiveLocal(!!coupon_allow_retroactive); }, [coupon_allow_retroactive]);
+  // "tick" يحدّث كل دقيقة حتى تتحدّث حالة "متوقع حسب الجدولة" أدناه بدون تفاعل من المستخدم
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    if (!scheduleLocal?.auto || !settingsId || !loaded) return;
-    const now    = new Date();
-    const dayKey = String(now.getDay());
-    const day    = scheduleLocal.days?.[dayKey];
-    let shouldBeOpen: boolean;
-    if (!day?.enabled) {
-      shouldBeOpen = false;
-    } else {
-      const nowMins = now.getHours() * 60 + now.getMinutes();
-      const [oh=0, om=0]   = (day.open  || '00:00').split(':').map(Number);
-      const [ch=23, cm=59] = (day.close || '23:59').split(':').map(Number);
-      const openMins  = oh*60+om;
-      const closeMins = ch*60+cm;
-      // دوام يعبر منتصف الليل (مثلاً 18:00 → 02:00): closeMins <= openMins
-      shouldBeOpen = closeMins > openMins
-        ? (nowMins >= openMins && nowMins < closeMins)
-        : (nowMins >= openMins || nowMins < closeMins);
-    }
-    if (shouldBeOpen && isClosedRef.current) {
-      supabase.from('restaurant_settings').update({ is_closed: false, opens_at: null }).eq('id', settingsId).then(() => refreshSettings());
-    } else if (!shouldBeOpen && !isClosedRef.current) {
-      const nextOpen = scheduleLocal.days?.[dayKey]?.open ?? null;
-      supabase.from('restaurant_settings').update({ is_closed: true, opens_at: nextOpen }).eq('id', settingsId).then(() => refreshSettings());
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick, scheduleLocal, settingsId, loaded]);
+  // حالة معلوماتية فقط: هل يُفترض أن يكون المطعم مفتوحاً الآن حسب الجدولة؟
+  // لا تكتب لقاعدة البيانات إطلاقاً — الحساب الفعلي المعروض للزبون يتم ديناميكياً بنفس الدالة المشتركة
+  // (isRestaurantOpenNow) بصفحة الزبون. الإغلاق/الفتح الفعلي يبقى قراراً يدوياً بحتاً عبر handleToggleClosed.
+  const scheduleExpectedOpen = useMemo(
+    () => isRestaurantOpenNow(scheduleLocal, is_closed),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scheduleLocal, is_closed, tick]
+  );
 
   const handleToggleClosed = async () => {
     if (is_closed) {
@@ -883,6 +864,11 @@ export default function SettingsPage() {
               </div>
             </button>
           </div>
+          {scheduleLocal?.auto && (
+            <p className="text-center text-[11px] font-bold text-gray-400 dark:text-slate-500">
+              حسب الجدولة الآن يُفترض أن يكون المطعم {scheduleExpectedOpen ? 'مفتوحاً 🟢' : 'مغلقاً 🔴'} — هذا يُطبَّق تلقائياً بصفحة الزبون فقط، والمفتاح أعلاه يبقى للإغلاق اليدوي
+            </p>
+          )}
           {toggleError && (
             <p className="text-red-500 text-xs text-center font-bold">{toggleError}</p>
           )}
