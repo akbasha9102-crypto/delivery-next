@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Tajawal } from 'next/font/google';
+import { Tajawal, Aref_Ruqaa } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { CartProvider } from '@/context/CartContext';
@@ -11,6 +11,13 @@ const brandFont = Tajawal({
   weight: ['500', '800'],
   display: 'swap',
   variable: '--font-brand-name',
+});
+
+const logoFont = Aref_Ruqaa({
+  subsets: ['arabic'],
+  weight: ['700'],
+  display: 'swap',
+  variable: '--font-logo',
 });
 
 export const metadata: Metadata = {
@@ -33,7 +40,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ar" dir="rtl" className={`h-full ${brandFont.variable}`}>
+    <html lang="ar" dir="rtl" className={`h-full ${brandFont.variable} ${logoFont.variable}`}>
       <head>
         <meta name="theme-color" content="#f97316" />
         <link rel="apple-touch-icon" href="/favicon.ico" />
