@@ -85,15 +85,37 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
+  // من نفّذ الإغلاق فعلياً (requester) يُسجَّل دائماً كفاعل الحدث — سابقاً
+  // كان يُسجَّل شبه دائماً NULL هنا لأي إغلاق يجريه مالك/مدير نيابة عن
+  // كاشير (requester.user_id !== shift.staff_user_id)، فيظهر "غير معروف"
+  // بسجل التدقيق رغم أن هوية المُغلِق الحقيقية معروفة تماماً. إن أغلق
+  // المالك/المدير نيابة عن كاشير آخر، نحفظ اسم صاحب الوردية الأصلي بـ
+  // after_data.on_behalf_of_label ليبقى واضحاً بمن اعتُمدت الوردية.
+  let onBehalfOfLabel: string | null = null;
+  if (requester.user_id !== shift.staff_user_id) {
+    const { data: shiftOwnerRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('display_name')
+      .eq('user_id', shift.staff_user_id)
+      .eq('restaurant_id', shift.restaurant_id)
+      .maybeSingle();
+    onBehalfOfLabel = shiftOwnerRole?.display_name ?? null;
+  }
+
   await logStaffAction({
     restaurant_id: shift.restaurant_id,
-    performed_by_auth_id: shift.staff_user_id,
-    performed_by_label: requester.user_id === shift.staff_user_id ? requester.display_name : null,
+    performed_by_auth_id: requester.user_id,
+    performed_by_label: requester.display_name,
     action_type: 'shift_close',
     entity_type: 'cashier_shift',
     entity_id: shift.id,
     before_data: { opening_cash: shift.opening_cash, status: 'open' },
-    after_data: { expected_closing_cash: expectedClosingCash, actual_closing_cash: actualClosingCash, variance },
+    after_data: {
+      expected_closing_cash: expectedClosingCash,
+      actual_closing_cash: actualClosingCash,
+      variance,
+      ...(onBehalfOfLabel ? { on_behalf_of_label: onBehalfOfLabel } : {}),
+    },
   });
 
   if (Math.abs(variance) > VARIANCE_ALERT_THRESHOLD) {

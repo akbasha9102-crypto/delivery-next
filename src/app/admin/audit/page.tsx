@@ -1,87 +1,102 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, History } from 'lucide-react';
+import { ChevronRight, History, SlidersHorizontal, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
+import { useStaff } from '@/context/StaffContext';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import type { StaffActionLog } from '@/lib/api/staffApi';
-import {
-  translateAuditAction,
-  translateAuditField,
-  AUDIT_FIELD_IGNORE,
-} from '@/lib/constants/audit-translations';
+import { translateAuditAction } from '@/lib/constants/audit-translations';
+import { describeAuditLog } from '@/lib/utils/audit-describe';
 
-type JsonRecord = Record<string, unknown>;
-const asRecord = (v: unknown): JsonRecord | null => (v && typeof v === 'object' ? v as JsonRecord : null);
-
-function describeChange(l: StaffActionLog): string | null {
-  const before = asRecord(l.before_data);
-  const after  = asRecord(l.after_data);
-  if (l.action_type === 'price_edit' && before && after) {
-    return `${before.name ?? ''}: ${Number(before.price).toLocaleString()} ⟵ ${Number(after.price).toLocaleString()} د.ع`;
-  }
-  if ((l.action_type === 'item_deleted' || l.action_type === 'category_deleted') && before) {
-    return `${before.name ?? ''}`;
-  }
-  if (l.action_type === 'settings_changed' && before && after) {
-    const changedKeys = Object.keys(after)
-      .filter(k => !AUDIT_FIELD_IGNORE.has(k))
-      .filter(k => JSON.stringify(after[k]) !== JSON.stringify(before[k]));
-    if (changedKeys.length === 0) return null;
-    return `تغيّر: ${changedKeys.map(translateAuditField).join('، ')}`;
-  }
-  return null;
-}
+const OWNER_FILTER_VALUE = 'owner';
 
 /**
- * سجل التدقيق — عرض فقط للمالك. لا توجد نقطة GET مخصّصة لـ staff_actions_log ضمن العقد
- * المتفق عليه، لذا نقرأ الجدول مباشرة عبر Supabase (نفس نمط قراءة inventory_items/stock_movements
- * الحالي في admin/inventory) بانتظار أن يوفّر فريق الـ Backend endpoint مخصصاً إن احتاج الأمر.
+ * سجل التدقيق — عرض فقط للمالك/المدير (راجع OwnerOnly). لا توجد نقطة GET مخصّصة
+ * لـ staff_actions_log ضمن العقد المتفق عليه، لذا نقرأ الجدول مباشرة عبر
+ * Supabase (نفس نمط قراءة inventory_items/stock_movements الحالي في admin/inventory).
  */
 export default function AuditLogPage() {
   const router = useRouter();
   const { restaurantId } = useRestaurant();
+  const { isOwner, staffList } = useStaff();
   const [logs, setLogs] = useState<StaffActionLog[]>([]);
-  const [staffNames, setStaffNames] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [errored, setErrored] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedActorId, setSelectedActorId] = useState<string>('');
+  const [filterDate, setFilterDate] = useState('');
+  // قيم الفلتر المُطبَّقة فعلياً بالاستعلام — منفصلة عن قيم لوحة "تخصيص" حتى
+  // لا يُعاد الجلب مع كل تغيير بالـ select/input قبل الضغط على "تطبيق".
+  const [appliedActorId, setAppliedActorId] = useState('');
+  const [appliedDate, setAppliedDate] = useState('');
+
+  const hasActiveFilter = Boolean(appliedActorId || appliedDate);
+
+  // معرّف المالك الحقيقي (auth.uid) — لازم لفلتر "المالك" (performed_by_auth_id
+  // يخزّن auth.uid لا restaurant_id). restaurants قابلة للقراءة العامة (RLS).
+  useEffect(() => {
+    if (!restaurantId) return;
+    supabase.from('restaurants').select('owner_id').eq('id', restaurantId).maybeSingle()
+      .then(({ data }) => setOwnerId((data?.owner_id as string) ?? null));
+  }, [restaurantId]);
 
   const fetchLogs = useCallback(async () => {
     if (!restaurantId) return;
     setLoading(true);
     let q = supabase.from('staff_actions_log').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false }).limit(200);
-    if (fromDate) q = q.gte('created_at', fromDate);
-    if (toDate) q = q.lte('created_at', toDate + 'T23:59:59');
+
+    if (appliedActorId) {
+      const actorUserId = appliedActorId === OWNER_FILTER_VALUE ? ownerId : appliedActorId;
+      if (actorUserId) q = q.eq('performed_by_auth_id', actorUserId);
+    }
+    if (appliedDate) {
+      q = q.gte('created_at', appliedDate + 'T00:00:00').lte('created_at', appliedDate + 'T23:59:59');
+    }
+
     const { data, error } = await q;
     if (error) setErrored(true);
     else { setLogs((data as StaffActionLog[]) || []); setErrored(false); }
     setLoading(false);
-  }, [restaurantId, fromDate, toDate]);
+  }, [restaurantId, appliedActorId, appliedDate, ownerId]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
-  useEffect(() => {
-    if (!restaurantId) return;
-    supabase.from('restaurant_staff').select('id, display_name').eq('restaurant_id', restaurantId).then(({ data }) => {
-      setStaffNames(new Map((data || []).map(s => [s.id as string, s.display_name as string])));
-    });
-  }, [restaurantId]);
-
-  const actorLabel = (l: StaffActionLog): string =>
-    l.performed_by_label || (l.staff_id ? staffNames.get(l.staff_id) : null) || 'غير معروف';
+  const actorLabel = (l: StaffActionLog): string => l.performed_by_label || 'غير معروف';
 
   const types = [...new Set(logs.map(l => l.action_type))];
   const filtered = typeFilter ? logs.filter(l => l.action_type === typeFilter) : logs;
+
+  const applyFilters = () => {
+    setAppliedActorId(selectedActorId);
+    setAppliedDate(filterDate);
+    setShowFilters(false);
+  };
+
+  const clearFilters = () => {
+    setSelectedActorId('');
+    setFilterDate('');
+    setAppliedActorId('');
+    setAppliedDate('');
+    setShowFilters(false);
+  };
 
   return (
     <OwnerOnly>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-10" dir="rtl">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <div className="w-9" />
+        {isOwner ? (
+          <button onClick={() => setShowFilters(true)} className="relative w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
+            <SlidersHorizontal size={16} />
+            {hasActiveFilter && <span className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full bg-[#2563eb]" />}
+          </button>
+        ) : (
+          <div className="w-9" />
+        )}
         <div className="flex items-center gap-2">
           <History size={18} className="text-[#2563eb]" />
           <p className="font-bold text-gray-900 dark:text-slate-100">سجل التدقيق</p>
@@ -90,11 +105,6 @@ export default function AuditLogPage() {
       </header>
 
       <div className="px-4 pt-4">
-        <div className="flex gap-2 mb-3">
-          <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="flex-1 rounded-xl px-3 py-2 text-sm text-center border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 outline-none" />
-          <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="flex-1 rounded-xl px-3 py-2 text-sm text-center border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 outline-none" />
-        </div>
-
         {types.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-none">
             <button onClick={() => setTypeFilter(null)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!typeFilter ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>الكل</button>
@@ -122,7 +132,7 @@ export default function AuditLogPage() {
         ) : (
           <div className="space-y-2">
             {filtered.map(l => {
-              const detail = describeChange(l);
+              const detail = describeAuditLog(l);
               return (
                 <div key={l.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
                   <div className="flex items-center justify-between mb-1">
@@ -130,8 +140,8 @@ export default function AuditLogPage() {
                     <span className="font-bold text-sm text-gray-900 dark:text-slate-100">{translateAuditAction(l.action_type)}</span>
                   </div>
                   <div className="flex items-center justify-between mt-1">
-                    <span className="text-xs font-bold" style={{ color: '#2563eb' }}>{actorLabel(l)}</span>
                     <span className="text-xs text-gray-400">بواسطة</span>
+                    <span className="text-xs font-bold" style={{ color: '#2563eb' }}>{actorLabel(l)}</span>
                   </div>
                   {detail && (
                     <p className="text-xs text-gray-500 dark:text-slate-400 text-right mt-1.5 border-t border-gray-50 dark:border-slate-700 pt-1.5">{detail}</p>
@@ -142,6 +152,43 @@ export default function AuditLogPage() {
           </div>
         )}
       </div>
+
+      {showFilters && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowFilters(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 pt-5 pb-2">
+              <button onClick={() => setShowFilters(false)} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all"><X size={16} /></button>
+              <p className="font-bold text-gray-900 dark:text-slate-100">تخصيص العرض</p>
+              <div className="w-9" />
+            </div>
+            <div className="px-5 pb-2">
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">الموظف</p>
+              <select value={selectedActorId} onChange={e => setSelectedActorId(e.target.value)} dir="rtl"
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb] mb-3">
+                <option value="">الكل</option>
+                <option value={OWNER_FILTER_VALUE}>المالك</option>
+                {staffList.map(s => (
+                  <option key={s.user_id} value={s.user_id}>{s.display_name}</option>
+                ))}
+              </select>
+
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">التاريخ</p>
+              <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-center text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb] mb-4" />
+
+              <div className="flex gap-2 mb-6">
+                <button onClick={clearFilters} className="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 font-bold py-3.5 rounded-2xl text-sm active:scale-95 transition-all">
+                  مسح الفلاتر
+                </button>
+                <button onClick={applyFilters} className="flex-1 bg-[#2563eb] text-white font-bold py-3.5 rounded-2xl text-sm active:scale-95 transition-all">
+                  تطبيق
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
     </OwnerOnly>
   );

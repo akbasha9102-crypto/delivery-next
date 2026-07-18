@@ -9,6 +9,7 @@ export type StaffRole = 'owner' | 'manager' | 'cashier' | 'driver';
 export type StaffMember = {
   id: string;
   restaurant_id: string;
+  user_id: string;
   display_name: string;
   role: StaffRole;
   is_active: boolean;
@@ -257,7 +258,6 @@ export function registerWaste(payload: { item_id: string; quantity: number; reas
 export type StaffActionLog = {
   id: string;
   restaurant_id: string;
-  staff_id: string | null;
   action_type: string;
   entity_type: string | null;
   entity_id: string | null;
