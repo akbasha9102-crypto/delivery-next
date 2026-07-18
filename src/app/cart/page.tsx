@@ -1084,9 +1084,17 @@ const proceedFromReview = () => {
             {/* Footer ثابت — المجموع الكلي + زر التالي */}
             <div className="flex-shrink-0 px-4 pb-5 pt-3 border-t border-gray-100 dark:border-slate-700">
               {minOrderShortfall > 0 && (
-                <p className={`text-xs font-bold text-center mb-2 ${minOrderShake ? 'shake' : ''}`} style={{ color: '#ef4444' }} dir="rtl">
-                  الحد الأدنى للطلب {min_order_amount.toLocaleString()} د.ع — أضف {minOrderShortfall.toLocaleString()} د.ع أخرى
-                </p>
+                <div className={`flex items-center justify-between gap-2 mb-2 ${minOrderShake ? 'shake' : ''}`} dir="rtl">
+                  <p className="text-xs font-bold flex-1" style={{ color: '#ef4444' }}>
+                    الحد الأدنى للطلب {min_order_amount.toLocaleString()} د.ع — أضف {minOrderShortfall.toLocaleString()} د.ع أخرى
+                  </p>
+                  <button onClick={() => { setShowOrderReview(false); router.back(); }}
+                    className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-[11px] font-black active:scale-95 transition-all"
+                    style={{ backgroundColor: '#ef4444' }}>
+                    <Plus size={12}/>
+                    إضافة
+                  </button>
+                </div>
               )}
               <button onClick={proceedFromReview}
                 className={`w-full rounded-xl px-4 py-3 flex items-center justify-between transition-all active:scale-95${minOrderShortfall > 0 ? ' opacity-60' : ''}`}
