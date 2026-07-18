@@ -700,13 +700,24 @@ export default function SettingsPage() {
   const effectivelyClosed = is_closed || closedBySchedule;
 
   const handleToggleClosed = async () => {
+    setToggleError(null);
+    if (closedBySchedule) {
+      // مغلق بسبب الجدولة فقط (لا إغلاق يدوي) — الفتح الفوري من هنا يوقف "التطبيق التلقائي"
+      // بالجدولة (auto: false) بدل التلاعب بـ is_closed، فتبقى أيام/أوقات الجدولة محفوظة كما هي
+      // ويمكن إعادة تفعيلها لاحقاً من نافذة الجدولة نفسها.
+      if (!scheduleLocal) return;
+      const nextSchedule: WeekSchedule = { ...scheduleLocal, auto: false };
+      const { error } = await supabase.from('restaurant_settings').update({ schedule: nextSchedule }).eq('id', settingsId);
+      if (error) { setToggleError('فشل فتح المطعم: ' + error.message); return; }
+      setScheduleLocal(nextSchedule);
+      await refreshSettings();
+      return;
+    }
     if (is_closed) {
-      setToggleError(null);
       const { error } = await supabase.from('restaurant_settings').update({ is_closed: false, opens_at: null }).eq('id', settingsId);
       if (error) { setToggleError('فشل فتح المطعم: ' + error.message); return; }
       await refreshSettings();
     } else {
-      setToggleError(null);
       setOpensAtInput('');
       setShowClosedModal(true);
     }
@@ -865,12 +876,15 @@ export default function SettingsPage() {
                 {is_closed && opens_at && (
                   <p className="text-xs text-gray-400 mt-0.5">سيفتح الساعة {opens_at}</p>
                 )}
+                {closedBySchedule && (
+                  <p className="text-xs text-gray-400 mt-0.5">اضغط للفتح الفوري (يوقف التطبيق التلقائي)</p>
+                )}
               </div>
             </button>
           </div>
           {scheduleLocal?.auto && (
             <p className="text-center text-[11px] font-bold text-gray-400 dark:text-slate-500">
-              حسب الجدولة الآن يُفترض أن يكون المطعم {scheduleExpectedOpen ? 'مفتوحاً 🟢' : 'مغلقاً 🔴'} — هذا يُطبَّق تلقائياً بصفحة الزبون فقط، والمفتاح أعلاه يبقى للإغلاق اليدوي
+              حسب الجدولة الآن يُفترض أن يكون المطعم {scheduleExpectedOpen ? 'مفتوحاً 🟢' : 'مغلقاً 🔴'} — هذا يُطبَّق تلقائياً بصفحة الزبون والمفتاح أعلاه. لو أغلق المطعم بسبب الجدولة، اضغط المفتاح لفتحه فوراً وإيقاف التطبيق التلقائي
             </p>
           )}
           {toggleError && (
