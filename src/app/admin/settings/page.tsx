@@ -425,7 +425,7 @@ type DiscItem = { id: string; name: string; category_id: string | null; discount
 // معرّف وهمي لتجميع الوجبات التي لا تتبع أي قسم
 const NO_CATEGORY_ID = '__none__';
 
-function DiscountRow({ name, value, onChange, onSave, saving, saved, previewPrice }: {
+function DiscountRow({ name, value, onChange, onSave, saving, saved, previewPrice, tone = 'item' }: {
   name: string;
   value: string;
   onChange: (v: string) => void;
@@ -433,11 +433,16 @@ function DiscountRow({ name, value, onChange, onSave, saving, saved, previewPric
   saving: boolean;
   saved: boolean;
   previewPrice?: number;
+  /** يميّز صرياً صف "القسم" عن صفوف "الوجبات" بداخله، حتى لا يبدوا بنفس اللون */
+  tone?: 'category' | 'item';
 }) {
   const pct = parseFloat(value);
   const active = !isNaN(pct) && pct > 0;
+  const toneClasses = tone === 'category'
+    ? 'bg-orange-50 dark:bg-orange-900/15 border border-orange-200/70 dark:border-orange-800/40'
+    : 'bg-indigo-50/70 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30';
   return (
-    <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 rounded-xl px-3 py-2.5">
+    <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${toneClasses}`}>
       <div className="flex-1 text-right min-w-0">
         <div className="flex items-center justify-end gap-1.5">
           {active && <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] flex-shrink-0" />}
@@ -454,8 +459,14 @@ function DiscountRow({ name, value, onChange, onSave, saving, saved, previewPric
         className="w-16 flex-shrink-0 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-center text-sm text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
       <span className="text-[10px] text-gray-400 flex-shrink-0">%</span>
       <button onClick={onSave} disabled={saving}
-        className="w-8 h-8 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center active:scale-90 transition-all disabled:opacity-50 flex-shrink-0">
-        {saving ? <Loader2 size={13} className="animate-spin" /> : saved ? <Check size={13} /> : <Save size={13} />}
+        className="h-8 px-3 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center gap-1 active:scale-90 transition-all disabled:opacity-50 flex-shrink-0">
+        {saving ? (
+          <Loader2 size={13} className="animate-spin" />
+        ) : saved ? (
+          <><Check size={13} /><span className="text-xs font-bold">تم</span></>
+        ) : (
+          <span className="text-xs font-bold">حفظ</span>
+        )}
       </button>
     </div>
   );
@@ -590,7 +601,7 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
                           <ChevronDown size={16} className={`transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
                         </button>
                         <div className="flex-1 min-w-0">
-                          <DiscountRow name={g.name}
+                          <DiscountRow name={g.name} tone="category"
                             value={catInputs[g.id] ?? '0'}
                             onChange={v => setCatInputs(prev => ({ ...prev, [g.id]: v }))}
                             onSave={() => saveCategoryDiscount(g.id)}
@@ -612,7 +623,7 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
                       ) : (
                         <div className="space-y-2 pr-5 pl-1 pb-2 pt-1">
                           {g.displayItems.map(i => (
-                            <DiscountRow key={i.id} name={i.name}
+                            <DiscountRow key={i.id} name={i.name} tone="item"
                               value={itemInputs[i.id] ?? '0'}
                               onChange={v => setItemInputs(prev => ({ ...prev, [i.id]: v }))}
                               onSave={() => saveItemDiscount(i.id)}
