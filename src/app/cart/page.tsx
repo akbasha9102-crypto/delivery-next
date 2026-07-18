@@ -8,6 +8,7 @@ import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { Trash2, MapPin, UserCircle, Pencil, LocateFixed, CheckCircle2, Loader2, RefreshCw, X, Phone, ShoppingBag, ChevronLeft, Plus, Minus, Check, LogOut, Ticket } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSettings } from '@/context/SettingsContext';
+import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import InAppBrowserBanner, { isInAppBrowser } from '@/components/layout/InAppBrowserBanner';
 import type { Session } from '@supabase/supabase-js';
@@ -110,8 +111,19 @@ function CouponBox({ value, onChange, onApply, msg, brandColor }: {
 export default function CartPage() {
   const { items, addItem, decrementItem, removeItem, clearCart, restoreCart, total, orderType, setOrderType } = useCart();
   const { primary_color, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled } = useSettings();
+  const { restaurantId, setRestaurant } = useRestaurant();
   const { dark } = useDarkMode();
   const router = useRouter();
+
+  // عند فتح /cart مباشرة (تحديث الصفحة) يبدأ RestaurantContext فارغاً (حالة React بالذاكرة
+  // فقط، لا تنجو من الـ refresh)، فيبقى min_order_amount عالقاً على القيمة الافتراضية 0 للأبد
+  // لأن SettingsContext لا يُعيد الجلب إلا عند تغيّر restaurantId — ما يُسقط فحص الحد الأدنى
+  // للطلب بصمت. نُعيد ربطه هنا من نفس المفتاح الذي تحفظه صفحة المنيو (HomeClient) بالضبط لهذا الغرض.
+  useEffect(() => {
+    if (restaurantId) return;
+    const savedId = localStorage.getItem('currentRestaurantId');
+    if (savedId) setRestaurant(savedId, null);
+  }, [restaurantId, setRestaurant]);
 
   const rawColor   = primary_color || '#e67e22';
   const isTooDark  = rawColor === '#000000' || rawColor.toLowerCase() === '#121212';
