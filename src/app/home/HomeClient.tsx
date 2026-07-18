@@ -543,9 +543,16 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                 ref={el => { sectionRefs.current[cat.id] = el; }}>
 
                 <div className="flex items-center gap-4 mb-6 flex-row-reverse px-2">
-                  <h2 className="text-xl font-black text-gray-900 dark:text-white whitespace-nowrap tracking-tight">
-                    {isBestSellers ? `🔥 ${cat.name}` : cat.name}
-                  </h2>
+                  <div className="flex items-center gap-2 flex-row-reverse">
+                    <h2 className="text-xl font-black text-gray-900 dark:text-white whitespace-nowrap tracking-tight">
+                      {isBestSellers ? `🔥 ${cat.name}` : cat.name}
+                    </h2>
+                    {!isBestSellers && (cat.discount_pct ?? 0) > 0 && (
+                      <span className="font-black bg-red-500 text-white rounded-full text-[10px] sm:text-xs px-1.5 py-0.5 flex-shrink-0">
+                        -{cat.discount_pct}%
+                      </span>
+                    )}
+                  </div>
                   <div className="flex-1 h-[2px] bg-gradient-to-l from-black/10 to-transparent dark:from-white/10"/>
                 </div>
 
