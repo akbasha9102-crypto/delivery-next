@@ -439,14 +439,17 @@ function DiscountRow({ name, value, onChange, onSave, saving, saved, previewPric
   const pct = parseFloat(value);
   const active = !isNaN(pct) && pct > 0;
   const toneClasses = tone === 'category'
-    ? 'bg-orange-50 dark:bg-orange-900/15 border border-orange-200/70 dark:border-orange-800/40'
+    ? 'bg-gray-100/70 dark:bg-slate-800/40 border border-gray-200/70 dark:border-slate-700/60'
     : 'bg-indigo-50/70 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30';
+  const nameClasses = tone === 'category'
+    ? 'font-semibold text-sm text-gray-500 dark:text-slate-400 truncate'
+    : 'font-bold text-sm text-gray-800 dark:text-slate-200 truncate';
   return (
     <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${toneClasses}`}>
       <div className="flex-1 text-right min-w-0">
         <div className="flex items-center justify-end gap-1.5">
           {active && <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] flex-shrink-0" />}
-          <p className="font-bold text-sm text-gray-800 dark:text-slate-200 truncate">{name}</p>
+          <p className={nameClasses}>{name}</p>
         </div>
         {active && previewPrice !== undefined && (
           <p className="text-[10px] text-gray-400 dark:text-slate-500 truncate">
@@ -484,6 +487,14 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
   const [itemSaved,  setItemSaved]  = useState<Record<string, boolean>>({});
   const [itemSearch, setItemSearch] = useState('');
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [pendingSave, setPendingSave] = useState<{
+    type: 'category' | 'item';
+    id: string;
+    name: string;
+    pct: number;
+    oldPct: number;
+    previewPrice?: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!restaurantId) { setLoading(false); return; }
@@ -544,31 +555,68 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
     return Math.round(pool.reduce((s, i) => s + i.price, 0) / pool.length);
   };
 
-  const saveCategoryDiscount = async (id: string) => {
+  // يفتح نافذة تأكيد الخصم بدلاً من الحفظ الفوري — التحقق من صحة الإدخال يبقى هنا قبل فتح النافذة
+  const requestCategoryDiscount = (id: string) => {
     const pct = parseFloat(catInputs[id]);
     if (isNaN(pct) || pct < 0 || pct > 100) { alert('النسبة يجب أن تكون رقم بين 0 و 100'); return; }
-    setCatSaving(prev => ({ ...prev, [id]: true }));
-    const { error } = await supabase.from('categories').update({ discount_pct: pct }).eq('id', id);
-    setCatSaving(prev => ({ ...prev, [id]: false }));
-    if (error) { alert('فشل الحفظ: ' + error.message); return; }
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, discount_pct: pct } : c));
-    setCatSaved(prev => ({ ...prev, [id]: true }));
-    setTimeout(() => setCatSaved(prev => ({ ...prev, [id]: false })), 2000);
+    const cat = categories.find(c => c.id === id);
+    const group = groups.find(g => g.id === id);
+    setPendingSave({
+      type: 'category', id, name: cat?.name ?? '', pct,
+      oldPct: cat?.discount_pct ?? 0,
+      previewPrice: group ? categoryPreviewPrice(group.allItems) : undefined,
+    });
   };
 
-  const saveItemDiscount = async (id: string) => {
+  const requestItemDiscount = (id: string) => {
     const pct = parseFloat(itemInputs[id]);
     if (isNaN(pct) || pct < 0 || pct > 100) { alert('النسبة يجب أن تكون رقم بين 0 و 100'); return; }
-    setItemSaving(prev => ({ ...prev, [id]: true }));
-    const { error } = await supabase.from('items').update({ discount_pct: pct }).eq('id', id);
-    setItemSaving(prev => ({ ...prev, [id]: false }));
-    if (error) { alert('فشل الحفظ: ' + error.message); return; }
-    setItems(prev => prev.map(i => i.id === id ? { ...i, discount_pct: pct } : i));
-    setItemSaved(prev => ({ ...prev, [id]: true }));
-    setTimeout(() => setItemSaved(prev => ({ ...prev, [id]: false })), 2000);
+    const item = items.find(i => i.id === id);
+    setPendingSave({
+      type: 'item', id, name: item?.name ?? '', pct,
+      oldPct: item?.discount_pct ?? 0,
+      previewPrice: item?.price,
+    });
   };
 
+  // يُنفَّذ فعلياً فقط بعد تأكيد المستخدم داخل نافذة التأكيد
+  const confirmSave = async () => {
+    if (!pendingSave) return;
+    const { type, id, pct } = pendingSave;
+    if (type === 'category') {
+      setCatSaving(prev => ({ ...prev, [id]: true }));
+      const { error } = await supabase.from('categories').update({ discount_pct: pct }).eq('id', id);
+      setCatSaving(prev => ({ ...prev, [id]: false }));
+      if (error) { alert('فشل الحفظ: ' + error.message); return; }
+      setCategories(prev => prev.map(c => c.id === id ? { ...c, discount_pct: pct } : c));
+      setCatSaved(prev => ({ ...prev, [id]: true }));
+      setTimeout(() => setCatSaved(prev => ({ ...prev, [id]: false })), 2000);
+    } else {
+      setItemSaving(prev => ({ ...prev, [id]: true }));
+      const { error } = await supabase.from('items').update({ discount_pct: pct }).eq('id', id);
+      setItemSaving(prev => ({ ...prev, [id]: false }));
+      if (error) { alert('فشل الحفظ: ' + error.message); return; }
+      setItems(prev => prev.map(i => i.id === id ? { ...i, discount_pct: pct } : i));
+      setItemSaved(prev => ({ ...prev, [id]: true }));
+      setTimeout(() => setItemSaved(prev => ({ ...prev, [id]: false })), 2000);
+    }
+    setPendingSave(null);
+  };
+
+  // إغلاق نافذة التأكيد بمفتاح Escape
+  useEffect(() => {
+    if (!pendingSave) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPendingSave(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pendingSave]);
+
+  const pendingSaving = pendingSave
+    ? (pendingSave.type === 'category' ? !!catSaving[pendingSave.id] : !!itemSaving[pendingSave.id])
+    : false;
+
   return (
+    <>
     <BottomSheet title="خصومات الأقسام والوجبات" onClose={onClose} maxHeight="90vh">
       {loading ? (
         <div className="flex items-center justify-center py-10">
@@ -604,7 +652,7 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
                           <DiscountRow name={g.name} tone="category"
                             value={catInputs[g.id] ?? '0'}
                             onChange={v => setCatInputs(prev => ({ ...prev, [g.id]: v }))}
-                            onSave={() => saveCategoryDiscount(g.id)}
+                            onSave={() => requestCategoryDiscount(g.id)}
                             saving={!!catSaving[g.id]} saved={!!catSaved[g.id]}
                             previewPrice={categoryPreviewPrice(g.allItems)} />
                         </div>
@@ -626,7 +674,7 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
                             <DiscountRow key={i.id} name={i.name} tone="item"
                               value={itemInputs[i.id] ?? '0'}
                               onChange={v => setItemInputs(prev => ({ ...prev, [i.id]: v }))}
-                              onSave={() => saveItemDiscount(i.id)}
+                              onSave={() => requestItemDiscount(i.id)}
                               saving={!!itemSaving[i.id]} saved={!!itemSaved[i.id]}
                               previewPrice={i.price} />
                           ))}
@@ -641,6 +689,52 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
         </>
       )}
     </BottomSheet>
+
+    {pendingSave && (
+      <div
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4"
+        onClick={() => { if (!pendingSaving) setPendingSave(null); }}
+      >
+        <div
+          dir="rtl"
+          className="relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 text-right"
+          onClick={e => e.stopPropagation()}
+        >
+          <h3 className="font-black text-gray-900 dark:text-slate-100 text-base leading-snug mb-1">
+            تأكيد {pendingSave.type === 'category' ? 'خصم القسم' : 'خصم الوجبة'}
+          </h3>
+          <p className="text-xs text-gray-400 dark:text-slate-500 mb-4 truncate">{pendingSave.name}</p>
+
+          <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 space-y-3 mb-5">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400 dark:text-slate-500 text-sm">النسبة</span>
+              <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">
+                {pendingSave.oldPct}% ← {pendingSave.pct}%
+              </span>
+            </div>
+            {pendingSave.previewPrice !== undefined && (
+              <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-600 pt-3">
+                <span className="text-gray-400 dark:text-slate-500 text-sm">السعر</span>
+                <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">
+                  {pendingSave.previewPrice.toLocaleString()} ← {applyDiscountPct(pendingSave.previewPrice, pendingSave.pct).toLocaleString()}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <button onClick={confirmSave} disabled={pendingSaving}
+            className="w-full py-3.5 rounded-xl mb-3 font-bold text-base bg-black dark:bg-white text-white dark:text-black active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
+            {pendingSaving ? <Loader2 size={16} className="animate-spin" /> : null}
+            {pendingSaving ? 'جاري الحفظ...' : 'تأكيد'}
+          </button>
+          <button onClick={() => setPendingSave(null)} disabled={pendingSaving}
+            className="w-full border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 font-semibold py-3 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+            إلغاء
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
