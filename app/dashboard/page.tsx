@@ -1,7 +1,11 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import type { Session } from '@/lib/session';
+import DeliveryMapModal from '@/components/DeliveryMapModal';
+import DriverBottomNav from '@/components/DriverBottomNav';
 import {
   Bell, BellOff, LogOut, MessageCircle, MapPin,
   ChevronLeft, Loader2, CheckCircle2, Clock, TrendingUp,
@@ -16,15 +20,6 @@ type Order = {
   total_amount: number;
   status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed';
   created_at: string;
-};
-
-type Session = {
-  id: string;
-  name: string;
-  phone: string;
-  restaurant_id: string | null;
-  restaurant_name: string | null;
-  restaurant_slug: string | null;
 };
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
@@ -264,7 +259,7 @@ export default function DriverDashboard() {
     DELIVERY_BASE ? `${DELIVERY_BASE}/delivery/${orderId}` : `/delivery/${orderId}`;
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white pb-10">
+    <div className="min-h-screen bg-slate-900 text-white pb-24">
 
       {/* هيدر */}
       <header className="sticky top-0 z-40 bg-slate-800/95 backdrop-blur border-b border-slate-700/60 px-4 py-3.5 flex items-center justify-between">
@@ -606,51 +601,7 @@ export default function DriverDashboard() {
         )}
 
         {/* Modal الخريطة */}
-        {mapAddress && (
-          <div
-            className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center"
-            onClick={() => setMapAddress(null)}
-          >
-            <div
-              className="bg-slate-800 w-full max-w-lg rounded-t-3xl p-5 space-y-4"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between" dir="rtl">
-                <p className="text-white font-black text-lg">📍 عنوان التوصيل</p>
-                <button onClick={() => setMapAddress(null)}
-                  className="p-2 rounded-xl bg-slate-700 active:scale-90 transition-all">
-                  <X size={18} className="text-slate-300" />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 bg-slate-700 rounded-2xl px-4 py-3" dir="rtl">
-                <MapPin size={16} className="text-blue-400 flex-shrink-0" />
-                <p className="text-white font-bold text-base">{mapAddress}</p>
-              </div>
-
-              <iframe
-                src={`https://maps.google.com/maps?q=${encodeURIComponent(mapAddress)}&output=embed&hl=ar`}
-                className="w-full h-56 rounded-2xl border-0"
-                loading="lazy"
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapAddress)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white font-black rounded-2xl text-sm active:scale-95 transition-all shadow-lg shadow-blue-900/40">
-                  🗺️ Google Maps
-                </a>
-                <a
-                  href={`https://waze.com/ul?q=${encodeURIComponent(mapAddress)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 py-3.5 bg-[#00B4FF] text-white font-black rounded-2xl text-sm active:scale-95 transition-all shadow-lg shadow-sky-900/40">
-                  🚗 Waze
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
+        {mapAddress && <DeliveryMapModal address={mapAddress} onClose={() => setMapAddress(null)} />}
 
         {/* لا يوجد طلبات */}
         {active.length === 0 && (isAvailable ? incoming.length === 0 : true) && (
@@ -674,9 +625,14 @@ export default function DriverDashboard() {
         {/* مكتملة اليوم */}
         {completed.length > 0 && (
           <div className="space-y-2.5 pt-2">
-            <div className="flex items-center gap-2 px-1">
-              <CheckCircle2 size={14} className="text-green-400" />
-              <p className="text-slate-400 text-xs font-bold">مكتملة اليوم ({completed.length})</p>
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-green-400" />
+                <p className="text-slate-400 text-xs font-bold">مكتملة اليوم ({completed.length})</p>
+              </div>
+              <Link href="/dashboard/archive" className="text-blue-400 text-xs font-bold flex items-center gap-0.5 active:scale-95 transition-all">
+                الأرشيف الكامل <ChevronLeft size={12} />
+              </Link>
             </div>
             {completed.map(order => (
               <div key={order.id} className="bg-slate-800/50 rounded-2xl border border-slate-700/40 px-4 py-3 flex items-center justify-between">
@@ -698,6 +654,8 @@ export default function DriverDashboard() {
         )}
 
       </div>
+
+      <DriverBottomNav />
     </div>
   );
 }
