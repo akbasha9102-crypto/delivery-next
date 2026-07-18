@@ -9,7 +9,10 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useStaff } from '@/context/StaffContext';
 import { applyDiscountPct } from '@/lib/utils/pricing';
-import { isRestaurantOpenNow } from '@/lib/utils/schedule';
+import { isRestaurantOpenNow, getNextOpenTime } from '@/lib/utils/schedule';
+
+/** ينسّق تاريخاً لصيغة "HH:mm" المطلوبة كقيمة لعنصر input[type=time] */
+const formatHHMM = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
 /* ─── جدولة الدوام ─── */
 const DAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -718,7 +721,10 @@ export default function SettingsPage() {
       if (error) { setToggleError('فشل فتح المطعم: ' + error.message); return; }
       await refreshSettings();
     } else {
-      setOpensAtInput('');
+      // نملأ الحقل بقيمة افتراضية معقولة (أقرب وقت فتح حسب الجدولة إن وُجد، وإلا الوقت الحالي)
+      // بدل تركه فارغاً — بعض المتصفحات لا تُظهر شيئاً بحقل input[type=time] الفارغ حتى يُضغط عليه
+      const next = getNextOpenTime(scheduleLocal);
+      setOpensAtInput(formatHHMM(next ?? new Date()));
       setShowClosedModal(true);
     }
   };
