@@ -694,6 +694,10 @@ export default function SettingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [scheduleLocal, is_closed, tick]
   );
+  // مغلق فعلياً بسبب الجدولة التلقائية (وليس إغلاقاً يدوياً)
+  const closedBySchedule = !is_closed && !!scheduleLocal?.auto && !scheduleExpectedOpen;
+  // الحالة الفعلية المعروضة بصرياً بالمفتاح: إغلاق يدوي أو إغلاق بسبب الجدولة
+  const effectivelyClosed = is_closed || closedBySchedule;
 
   const handleToggleClosed = async () => {
     if (is_closed) {
@@ -850,13 +854,13 @@ export default function SettingsPage() {
               {scheduleLocal?.auto && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-green-400" />}
             </button>
             <button onClick={handleToggleClosed}
-              className={`flex-1 rounded-xl px-4 py-3 border flex items-center justify-between transition-all active:scale-[0.98] ${is_closed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'}`}>
-              <div dir="ltr" className={`relative w-10 h-5 rounded-full transition-colors duration-300 flex-shrink-0 ${is_closed ? 'bg-red-500' : 'bg-green-400'}`}>
-                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${is_closed ? 'translate-x-0' : 'translate-x-5'}`} />
+              className={`flex-1 rounded-xl px-4 py-3 border flex items-center justify-between transition-all active:scale-[0.98] ${effectivelyClosed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'}`}>
+              <div dir="ltr" className={`relative w-10 h-5 rounded-full transition-colors duration-300 flex-shrink-0 ${effectivelyClosed ? 'bg-red-500' : 'bg-green-400'}`}>
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${effectivelyClosed ? 'translate-x-0' : 'translate-x-5'}`} />
               </div>
               <div className="text-right">
-                <p className={`font-bold text-sm ${is_closed ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                  {is_closed ? '🔒 المطعم مغلق' : '✅ المطعم مفتوح'}
+                <p className={`font-bold text-sm ${effectivelyClosed ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                  {is_closed ? '🔒 المطعم مغلق' : closedBySchedule ? '⏰ مغلق الآن (حسب الجدولة)' : '✅ المطعم مفتوح'}
                 </p>
                 {is_closed && opens_at && (
                   <p className="text-xs text-gray-400 mt-0.5">سيفتح الساعة {opens_at}</p>
