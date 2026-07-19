@@ -92,6 +92,19 @@ export function isPrivilegedRole(role: StaffRole): boolean {
 }
 
 /**
+ * فحص تعليق المطعم (إيقاف الاشتراك من super-admin) — مصدر الحقيقة
+ * الوحيد restaurant_settings.is_suspended، حيّ من القاعدة في كل طلب.
+ */
+async function isRestaurantSuspended(restaurantId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('restaurant_settings')
+    .select('is_suspended')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  return !!data?.is_suspended;
+}
+
+/**
  * تحقق جلسة Supabase الحقيقية لمالك المطعم (Authorization: Bearer <access_token>)
  * — نفس نمط src/app/api/admin/my-restaurant/route.ts الموجود فعلاً.
  * يُستخدم فقط للنقاط "مالك فقط" (إدارة الموظفين، الموافقات).
@@ -116,6 +129,10 @@ export async function verifyOwnerRequest(
     .maybeSingle();
 
   if (!restaurant) return { ok: false, status: 403, error: 'ليست لديك صلاحية على هذا المطعم' };
+
+  if (await isRestaurantSuspended(restaurantId)) {
+    return { ok: false, status: 403, error: 'الحساب موقوف — تواصل مع الإدارة' };
+  }
 
   return { ok: true, userId: data.user.id };
 }
@@ -158,6 +175,9 @@ export async function resolveStaffIdentity(req: NextRequest, expectedRestaurantI
     .maybeSingle();
 
   if (restaurant) {
+    if (await isRestaurantSuspended(expectedRestaurantId)) {
+      return { ok: false, status: 403, error: 'الحساب موقوف — تواصل مع الإدارة' };
+    }
     return {
       ok: true,
       identity: {
@@ -175,6 +195,10 @@ export async function resolveStaffIdentity(req: NextRequest, expectedRestaurantI
 
   const staff = await getStaffContext(claims.userId, expectedRestaurantId);
   if (!staff) return { ok: false, status: 403, error: 'لا تملك صلاحية على هذا المطعم' };
+
+  if (await isRestaurantSuspended(staff.restaurant_id)) {
+    return { ok: false, status: 403, error: 'الحساب موقوف — تواصل مع الإدارة' };
+  }
 
   return {
     ok: true,

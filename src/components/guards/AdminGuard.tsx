@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
+import { useSettings } from '@/context/SettingsContext';
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { setRestaurant } = useRestaurant();
+  const { restaurantId, setRestaurant } = useRestaurant();
+  const { is_suspended: liveIsSuspended, loaded: settingsLoaded } = useSettings();
   const [checking,  setChecking]  = useState(true);
   const [suspended, setSuspended] = useState(false);
 
@@ -53,6 +55,16 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     });
     return () => subscription.unsubscribe();
   }, [router, setRestaurant]);
+
+  // مراقبة تعليق حيّة أثناء الجلسة — تستهلك useSettings (نفس قناة
+  // postgres_changes التي يفتحها SettingsProvider أصلاً بـ layout.tsx)
+  // بدل فحص my-restaurant عند mount فقط، فيظهر تعليق المطعم فوراً
+  // حتى لو حصل بعد أن دخل المستخدم للوحة أصلاً.
+  useEffect(() => {
+    if (!checking && restaurantId && settingsLoaded && liveIsSuspended) {
+      setSuspended(true);
+    }
+  }, [checking, restaurantId, settingsLoaded, liveIsSuspended]);
 
   if (checking) return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center">
