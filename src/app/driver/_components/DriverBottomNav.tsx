@@ -11,6 +11,8 @@ const tabs = [
 export default function DriverBottomNav() {
   const path = usePathname();
 
+  if (path === '/driver') return null;
+
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-slate-900/95 backdrop-blur border-t border-white/5 flex pb-[env(safe-area-inset-bottom)]">
       {tabs.map(({ href, icon: Icon, label }) => {
