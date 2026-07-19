@@ -10,6 +10,7 @@ type Restaurant = {
   admin_email?: string | null; admin_password?: string | null;
   subscription_start?: string | null; is_suspended?: boolean | null;
   restaurant_id?: string | null; slug?: string | null; owner_id?: string | null;
+  owner_name?: string | null; owner_phone?: string | null;
 };
 type AuthUser = { id: string; email: string | null; created_at: string };
 type Driver   = { id: string; name: string; phone: string; status: string };
@@ -208,6 +209,100 @@ function UserCredentialRow({ user, restaurantDbId, onCredentialChange }: {
   );
 }
 
+// ─── Owner Contact Row ────────────────────────────────────────────────────────
+function OwnerContactRow({ ownerName, ownerPhone, onSave }: {
+  restaurantDbId: string;
+  ownerName: string | null;
+  ownerPhone: string | null;
+  onSave: (name: string | null, phone: string | null) => Promise<boolean>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name,    setName]    = useState(ownerName ?? '');
+  const [phone,   setPhone]   = useState(ownerPhone ?? '');
+  const [saving,  setSaving]  = useState(false);
+  const [status,  setStatus]  = useState<'idle'|'ok'|'err'>('idle');
+
+  const handleSave = async () => {
+    setSaving(true); setStatus('idle');
+    const ok = await onSave(name.trim() || null, phone.trim() || null);
+    setSaving(false);
+    setStatus(ok ? 'ok' : 'err');
+    if (ok) { setEditing(false); setTimeout(() => setStatus('idle'), 2000); }
+  };
+
+  return (
+    <div className="bg-[#0d0d20] rounded-xl border border-slate-700/40 overflow-hidden">
+      {/* Header row */}
+      <div className="flex items-center justify-between px-3 py-3">
+        <p className="text-slate-500 text-[10px]">بيانات التواصل</p>
+        <button
+          onClick={() => { setEditing(v => !v); setStatus('idle'); setName(ownerName ?? ''); setPhone(ownerPhone ?? ''); }}
+          className={`flex-shrink-0 text-xs px-2.5 py-1.5 rounded-lg font-bold transition-all ${
+            editing ? 'bg-slate-700 text-slate-300' : 'bg-violet-600/20 text-violet-400 hover:bg-violet-600/30'
+          }`}
+        >
+          {editing ? 'إلغاء' : 'تعديل'}
+        </button>
+      </div>
+
+      {!editing ? (
+        <div className="border-t border-slate-700/30 px-3 py-2.5 space-y-2">
+          <div>
+            <p className="text-[10px] text-slate-500 mb-0.5">الاسم</p>
+            {ownerName
+              ? <p className="text-slate-100 text-sm" dir="ltr">{ownerName}</p>
+              : <p className="text-slate-600 text-sm">لم تتم الإضافة</p>}
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-500 mb-0.5">رقم الهاتف</p>
+            {ownerPhone
+              ? <p className="text-slate-100 text-sm font-mono" dir="ltr">{ownerPhone}</p>
+              : <p className="text-slate-600 text-sm">لم تتم الإضافة</p>}
+          </div>
+        </div>
+      ) : (
+        <div className="border-t border-slate-700/30 px-3 pb-3 pt-2.5 space-y-3">
+          <div className="space-y-1">
+            <p className="text-slate-500 text-[10px]">الاسم</p>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              type="text"
+              dir="ltr"
+              placeholder="اختياري"
+              className="w-full bg-[#1a1a35] text-slate-100 text-sm outline-none px-3 py-2 rounded-lg placeholder:text-slate-600 border border-slate-600/40 focus:border-violet-500/50 transition-colors"
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-slate-500 text-[10px]">رقم الهاتف</p>
+            <input
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              type="text"
+              dir="ltr"
+              placeholder="اختياري"
+              onKeyDown={e => e.key === 'Enter' && handleSave()}
+              className="w-full bg-[#1a1a35] text-slate-100 text-sm outline-none px-3 py-2 rounded-lg placeholder:text-slate-600 border border-slate-600/40 focus:border-violet-500/50 transition-colors font-mono"
+            />
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`w-full py-2 rounded-lg text-xs font-bold transition-all active:scale-95 disabled:opacity-40 ${
+              status === 'ok'  ? 'bg-green-600/30 text-green-400 border border-green-500/30' :
+              status === 'err' ? 'bg-red-600/30 text-red-400 border border-red-500/30' :
+              'bg-violet-600/20 text-violet-400 border border-violet-500/30 hover:bg-violet-600/30'
+            }`}
+          >
+            {saving ? 'جاري الحفظ...' : status === 'ok' ? '✓ تم الحفظ' : status === 'err' ? '✗ فشل' : 'حفظ'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Restaurant Card ──────────────────────────────────────────────────────────
 function RestaurantCard({
   r, toggling, matchedUser, onToggleSuspended, onRefresh,
@@ -277,6 +372,25 @@ function RestaurantCard({
                 }}
               />
             )}
+          </div>
+
+          {/* ── معلومات صاحب المطعم (خاص بسوبر أدمن فقط) ── */}
+          <div className="space-y-2">
+            <p className="text-slate-400 text-xs font-bold">معلومات صاحب المطعم <span className="text-slate-600 font-normal">(ملاحظة خاصة، غير مرئية لأحد سوى سوبر أدمن)</span></p>
+            <OwnerContactRow
+              restaurantDbId={r.restaurant_id ?? r.id}
+              ownerName={r.owner_name ?? null}
+              ownerPhone={r.owner_phone ?? null}
+              onSave={async (name, phone) => {
+                const res = await fetch('/api/super-admin/restaurants', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ restaurantDbId: r.restaurant_id ?? r.id, ownerName: name, ownerPhone: phone }),
+                }).catch(() => null);
+                if (res?.ok) { onRefresh(); }
+                return !!res?.ok;
+              }}
+            />
           </div>
 
           {/* ── Subscription ── */}
@@ -350,17 +464,21 @@ export default function SuperAdminDashboard() {
       fetch('/api/super-admin/restaurants').catch(() => null),
     ]);
     // جلب restaurants من الـ API (يستخدم service role — موثوق دائماً)
-    let rests: {id: string; name: string; slug: string; owner_id: string}[] = [];
+    let rests: {id: string; name: string; slug: string; owner_id: string; owner_name: string | null; owner_phone: string | null}[] = [];
     if (restsResp?.ok) {
       const json = await restsResp.json().catch(() => ({}));
       rests = json.restaurants ?? [];
     }
-    const slugMap     = new Map(rests.map(r => [r.id, r.slug]));
-    const ownerMap    = new Map(rests.map(r => [r.id, r.owner_id]));
+    const slugMap      = new Map(rests.map(r => [r.id, r.slug]));
+    const ownerMap     = new Map(rests.map(r => [r.id, r.owner_id]));
+    const ownerNameMap  = new Map(rests.map(r => [r.id, r.owner_name]));
+    const ownerPhoneMap = new Map(rests.map(r => [r.id, r.owner_phone]));
     const merged = (rs || []).map((r: Restaurant) => ({
       ...r,
-      slug:     r.restaurant_id ? (slugMap.get(r.restaurant_id)  ?? null) : null,
-      owner_id: r.restaurant_id ? (ownerMap.get(r.restaurant_id) ?? null) : null,
+      slug:        r.restaurant_id ? (slugMap.get(r.restaurant_id)      ?? null) : null,
+      owner_id:    r.restaurant_id ? (ownerMap.get(r.restaurant_id)     ?? null) : null,
+      owner_name:  r.restaurant_id ? (ownerNameMap.get(r.restaurant_id)  ?? null) : null,
+      owner_phone: r.restaurant_id ? (ownerPhoneMap.get(r.restaurant_id) ?? null) : null,
     }));
     setRestaurants(merged as Restaurant[]);
     setOrders((or || []) as Order[]);

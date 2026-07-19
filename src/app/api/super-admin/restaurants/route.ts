@@ -31,7 +31,21 @@ export async function GET() {
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ restaurants: data });
+
+  // دمج معلومات صاحب المطعم الخاصة (اسم/هاتف) — جدول منفصل بلا أي سياسة
+  // RLS عامة، يُقرأ هنا فقط عبر service role داخل route محمي بـ isAuthed().
+  const { data: contacts } = await supabaseAdmin
+    .from('restaurant_owner_contacts')
+    .select('restaurant_id, owner_name, owner_phone');
+
+  const contactMap = new Map((contacts ?? []).map(c => [c.restaurant_id, c]));
+  const restaurants = (data ?? []).map(r => ({
+    ...r,
+    owner_name:  contactMap.get(r.id)?.owner_name  ?? null,
+    owner_phone: contactMap.get(r.id)?.owner_phone ?? null,
+  }));
+
+  return NextResponse.json({ restaurants });
 }
 
 // POST — إنشاء مطعم جديد + حساب بدون إيميل
@@ -122,13 +136,14 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   if (!await isAuthed()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { restaurantDbId, newSlug, newPassword } = await req.json();
+  const { restaurantDbId, newSlug, newPassword, ownerName, ownerPhone } = await req.json();
 
   if (!restaurantDbId) {
     return NextResponse.json({ error: 'restaurantDbId مطلوب' }, { status: 400 });
   }
-  if (!newSlug && !newPassword) {
-    return NextResponse.json({ error: 'يجب تقديم newSlug أو newPassword على الأقل' }, { status: 400 });
+  const hasOwnerContactFields = ownerName !== undefined || ownerPhone !== undefined;
+  if (!newSlug && !newPassword && !hasOwnerContactFields) {
+    return NextResponse.json({ error: 'يجب تقديم newSlug أو newPassword أو ownerName/ownerPhone على الأقل' }, { status: 400 });
   }
 
   // جلب المطعم الحالي
@@ -183,6 +198,28 @@ export async function PATCH(req: NextRequest) {
       .eq('id', restaurantDbId);
 
     if (slugError) return NextResponse.json({ error: slugError.message }, { status: 500 });
+  }
+
+  // تحديث ملاحظة صاحب المطعم الخاصة بسوبر أدمن (اسم/هاتف) — جدول منفصل
+  // بلا أي سياسة RLS عامة، الكتابة هنا فقط عبر service role.
+  if (hasOwnerContactFields) {
+    const contactUpdate: { restaurant_id: string; owner_name?: string | null; owner_phone?: string | null } = {
+      restaurant_id: restaurantDbId,
+    };
+    if (ownerName !== undefined) {
+      const trimmed = typeof ownerName === 'string' ? ownerName.trim() : '';
+      contactUpdate.owner_name = trimmed || null;
+    }
+    if (ownerPhone !== undefined) {
+      const trimmed = typeof ownerPhone === 'string' ? ownerPhone.trim() : '';
+      contactUpdate.owner_phone = trimmed || null;
+    }
+
+    const { error: contactError } = await supabaseAdmin
+      .from('restaurant_owner_contacts')
+      .upsert(contactUpdate, { onConflict: 'restaurant_id' });
+
+    if (contactError) return NextResponse.json({ error: contactError.message }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
