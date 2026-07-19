@@ -1,8 +1,11 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
-import { Bell, BellOff, LogOut, MessageCircle, MapPin, ChevronLeft, Loader2, CheckCircle2, Clock, TrendingUp, X, Check, Package, History } from 'lucide-react';
+import { Bell, BellOff, LogOut, MessageCircle, MapPin, ChevronLeft, Loader2, CheckCircle2, Clock, TrendingUp, X, Check, Package } from 'lucide-react';
+import DriverHeader from '../_components/DriverHeader';
+import MapSheet from '../_components/MapSheet';
 
 type Order = {
   id: string;
@@ -261,58 +264,61 @@ export default function DriverDashboard() {
   const todayEarnings  = completed.reduce((s, o) => s + o.total_amount, 0);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white pb-10">
+    <div className="min-h-screen bg-slate-950 text-white pb-24">
 
       {/* هيدر */}
-      <header className="sticky top-0 z-40 bg-slate-800/95 backdrop-blur border-b border-slate-700/60 px-4 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button onClick={logout} className="p-2 rounded-xl bg-slate-700 active:scale-90 transition-all">
+      <DriverHeader
+        right={
+          <button onClick={logout} className="p-2.5 rounded-xl bg-slate-800 active:scale-90 transition-all">
             <LogOut size={17} className="text-slate-300" />
           </button>
-          <button onClick={() => router.push('/driver/archive')} className="p-2 rounded-xl bg-slate-700 active:scale-90 transition-all">
-            <History size={17} className="text-slate-300" />
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🏍️</span>
-          <p className="font-black text-white text-base">{session.name}</p>
-        </div>
-        {notifStatus === 'granted' ? (
-          <div className="flex items-center gap-2">
-            <p className={`text-xs font-bold ${isAvailable ? 'text-green-400' : 'text-red-400'}`}>
-              {isAvailable ? 'متاح للطلبات' : 'غير متاح'}
-            </p>
+        }
+        center={
+          <>
+            <span className="text-xl">🏍️</span>
+            <p className="font-extrabold text-white text-base">{session.name}</p>
+          </>
+        }
+        left={
+          notifStatus === 'granted' ? (
+            <div className="flex items-center gap-2">
+              <p className={`text-xs font-medium ${isAvailable ? 'text-green-400' : 'text-red-400'}`}>
+                {isAvailable ? 'متاح للطلبات' : 'غير متاح'}
+              </p>
+              <button
+                onClick={toggleAvailability}
+                disabled={togglingAvail}
+                className={`relative w-16 h-8 rounded-full transition-colors duration-300 flex-shrink-0 disabled:opacity-60 ${
+                  isAvailable ? 'bg-gradient-to-r from-green-500 to-green-400 shadow-md shadow-green-900/40' : 'bg-slate-700'
+                }`}
+              >
+                {togglingAvail ? (
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 size={15} className="animate-spin text-white" />
+                  </span>
+                ) : (
+                  <motion.span
+                    className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md"
+                    animate={{ x: isAvailable ? 32 : 0 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+                  />
+                )}
+              </button>
+            </div>
+          ) : (
             <button
-              onClick={toggleAvailability}
-              disabled={togglingAvail}
-              className={`relative w-14 h-7 rounded-full transition-all duration-300 flex-shrink-0 disabled:opacity-60 ${
-                isAvailable ? 'bg-green-500 shadow-md shadow-green-900/40' : 'bg-slate-600'
+              onClick={enableNotifications}
+              disabled={subscribing || notifStatus === 'denied'}
+              className={`p-2.5 rounded-xl transition-all active:scale-90 ${
+                notifStatus === 'denied' ? 'bg-red-900/30 text-red-400' : 'bg-amber-500 text-white'
               }`}
             >
-              {togglingAvail ? (
-                <span className="absolute inset-0 flex items-center justify-center">
-                  <Loader2 size={14} className="animate-spin text-white" />
-                </span>
-              ) : (
-                <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
-                  isAvailable ? 'translate-x-7' : 'translate-x-0.5'
-                }`} />
-              )}
+              {subscribing ? <Loader2 size={17} className="animate-spin" /> :
+               notifStatus === 'denied' ? <BellOff size={17} /> : <Bell size={17} />}
             </button>
-          </div>
-        ) : (
-          <button
-            onClick={enableNotifications}
-            disabled={subscribing || notifStatus === 'denied'}
-            className={`p-2 rounded-xl transition-all active:scale-90 ${
-              notifStatus === 'denied' ? 'bg-red-900/30 text-red-400' : 'bg-amber-500 text-white'
-            }`}
-          >
-            {subscribing ? <Loader2 size={17} className="animate-spin" /> :
-             notifStatus === 'denied' ? <BellOff size={17} /> : <Bell size={17} />}
-          </button>
-        )}
-      </header>
+          )
+        }
+      />
 
       <div className="px-4 pt-4 space-y-4 max-w-lg mx-auto">
 
@@ -328,10 +334,10 @@ export default function DriverDashboard() {
             <div className="flex gap-3 items-start">
               <span className="text-3xl leading-none mt-0.5">📲</span>
               <div className="flex-1">
-                <p className="text-white font-black text-sm mb-2">فعّل الإشعارات على iPhone</p>
+                <p className="text-white font-extrabold text-sm mb-2">فعّل الإشعارات على iPhone</p>
                 <p className="text-blue-300 text-xs leading-6">
-                  ١. اضغط على أيقونة <span className="font-bold text-white">المشاركة</span> <span className="text-base">⎙</span> في شريط Safari<br />
-                  ٢. اختر <span className="font-bold text-white">"إضافة إلى الشاشة الرئيسية"</span><br />
+                  ١. اضغط على أيقونة <span className="font-extrabold text-white">المشاركة</span> <span className="text-base">⎙</span> في شريط Safari<br />
+                  ٢. اختر <span className="font-extrabold text-white">"إضافة إلى الشاشة الرئيسية"</span><br />
                   ٣. افتح التطبيق من الشاشة الرئيسية<br />
                   ٤. اضغط على زر الجرس 🔔 لتفعيل الإشعارات
                 </p>
@@ -344,7 +350,7 @@ export default function DriverDashboard() {
         {/* تنبيه الإشعارات */}
         {notifStatus === 'default' && (
           <button onClick={enableNotifications} disabled={subscribing}
-            className="w-full py-3.5 bg-amber-500 text-white font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+            className="w-full py-3.5 bg-amber-500 text-white font-medium rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
             {subscribing ? <Loader2 size={18} className="animate-spin" /> : <Bell size={18} />}
             فعّل الإشعارات لتستلم الطلبات فوراً
           </button>
@@ -360,94 +366,82 @@ export default function DriverDashboard() {
           <div className="space-y-3">
             <div className="flex items-center gap-2 px-1">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse" />
-              <p className="text-blue-300 text-sm font-black">طلبات جديدة ({incoming.length})</p>
+              <p className="text-blue-300 text-sm font-extrabold">طلبات جديدة ({incoming.length})</p>
             </div>
 
-            {incoming.map(order => (
-              <div key={order.id}
-                className={`rounded-3xl border-2 overflow-hidden transition-all ${
-                  flashId === order.id
-                    ? 'border-red-500 bg-red-900/30'
-                    : 'border-blue-500/60 bg-slate-800'
-                }`}>
-                {flashId === order.id ? (
-                  <div className="px-4 py-5 text-center">
-                    <p className="text-red-300 font-black text-lg">⚡ استلمها سائق آخر!</p>
-                    <p className="text-red-400 text-sm mt-1">الطلب لم يعد متاحاً</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="px-4 py-2 bg-blue-600/20 flex items-center justify-between border-b border-blue-500/20">
-                      <div className="flex items-center gap-1.5">
-                        <Clock size={12} className="text-blue-400" />
-                        <span className="text-blue-300 text-xs">{timeAgo(order.created_at)}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Package size={13} className="text-blue-400" />
-                        <span className="text-blue-200 text-xs font-bold">طلب جديد</span>
-                      </div>
+            <AnimatePresence>
+              {incoming.map(order => (
+                <motion.div key={order.id}
+                  layout
+                  initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9, x: -40 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                  className={`rounded-3xl border-2 overflow-hidden ${
+                    flashId === order.id
+                      ? 'border-red-500 bg-red-900/30'
+                      : 'border-blue-500/60 bg-slate-900'
+                  }`}>
+                  {flashId === order.id ? (
+                    <div className="px-4 py-5 text-center">
+                      <p className="text-red-300 font-extrabold text-lg">⚡ استلمها سائق آخر!</p>
+                      <p className="text-red-400 text-sm mt-1">الطلب لم يعد متاحاً</p>
                     </div>
-
-                    <div className="px-4 py-3.5">
-                      <div className="flex items-start justify-between mb-3">
-                        <span className="text-green-400 font-black text-xl">
-                          {order.total_amount.toLocaleString()}
-                          <span className="text-xs font-normal text-slate-400"> د.ع</span>
-                        </span>
-                        <div className="text-right">
-                          <p className="font-black text-white text-lg">{order.client_name}</p>
-                          {order.delivery_address && (
-                            <p className="text-slate-400 text-xs flex items-center gap-1 justify-end mt-0.5">
-                              <MapPin size={10} /> {order.delivery_address}
-                            </p>
-                          )}
+                  ) : (
+                    <>
+                      <div className="px-4 py-2 bg-blue-600/20 flex items-center justify-between border-b border-blue-500/20">
+                        <div className="flex items-center gap-1.5">
+                          <Clock size={12} className="text-blue-400" />
+                          <span className="text-blue-300 text-xs">{timeAgo(order.created_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Package size={13} className="text-blue-400" />
+                          <span className="text-blue-200 text-xs font-medium">طلب جديد</span>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => rejectOrder(order.id)}
-                          disabled={accepting === order.id}
-                          className="flex items-center justify-center gap-1.5 py-3 bg-slate-700 text-slate-300 font-bold rounded-2xl text-sm active:scale-95 transition-all disabled:opacity-40">
-                          <X size={17} /> رفض
-                        </button>
-                        <button
-                          onClick={() => acceptOrder(order)}
-                          disabled={!!accepting}
-                          className="flex items-center justify-center gap-1.5 py-3 bg-blue-600 text-white font-black rounded-2xl text-sm active:scale-95 transition-all disabled:opacity-60 shadow-lg shadow-blue-900/50">
-                          {accepting === order.id
-                            ? <Loader2 size={17} className="animate-spin" />
-                            : <Check size={17} />
-                          }
-                          قبول
-                        </button>
+                      <div className="px-4 py-3.5">
+                        <div className="flex items-start justify-between mb-3">
+                          <span className="text-green-400 font-extrabold text-xl">
+                            {order.total_amount.toLocaleString()}
+                            <span className="text-xs font-normal text-slate-400"> د.ع</span>
+                          </span>
+                          <div className="text-right">
+                            <p className="font-extrabold text-white text-lg">{order.client_name}</p>
+                            {order.delivery_address && (
+                              <p className="text-slate-400 text-xs flex items-center gap-1 justify-end mt-0.5">
+                                <MapPin size={10} /> {order.delivery_address}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => rejectOrder(order.id)}
+                            disabled={accepting === order.id}
+                            className="flex items-center justify-center gap-1.5 py-3 bg-slate-800 text-slate-300 font-medium rounded-2xl text-sm active:scale-95 transition-all disabled:opacity-40">
+                            <X size={17} /> رفض
+                          </button>
+                          <button
+                            onClick={() => acceptOrder(order)}
+                            disabled={!!accepting}
+                            className="flex items-center justify-center gap-1.5 py-3 bg-blue-600 text-white font-extrabold rounded-2xl text-sm active:scale-95 transition-all disabled:opacity-60 shadow-lg shadow-blue-900/50">
+                            {accepting === order.id
+                              ? <Loader2 size={17} className="animate-spin" />
+                              : <Check size={17} />
+                            }
+                            قبول
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
+                    </>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
-
-        {/* إحصائيات اليوم */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/60 text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <CheckCircle2 size={14} className="text-green-400" />
-              <span className="text-slate-400 text-xs font-medium">توصيلات اليوم</span>
-            </div>
-            <p className="text-white font-black text-3xl">{completed.length}</p>
-          </div>
-          <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700/60 text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <TrendingUp size={14} className="text-green-400" />
-              <span className="text-slate-400 text-xs font-medium">مجموع اليوم</span>
-            </div>
-            <p className="text-green-400 font-black text-2xl">{todayEarnings.toLocaleString()}</p>
-            <p className="text-slate-500 text-xs">دينار</p>
-          </div>
-        </div>
 
         {/* طلبات "جاهز للاستلام" — الطلب جاهز في المطعم */}
         {pickupOrders.map(order => (
@@ -457,16 +451,16 @@ export default function DriverDashboard() {
                 <Clock size={12} className="text-green-200" />
                 <span className="text-green-200 text-xs">{timeAgo(order.created_at)}</span>
               </div>
-              <span className="text-green-100 text-xs font-black">🍔 الطلب جاهز! اذهب للمطعم</span>
+              <span className="text-green-100 text-xs font-extrabold">🍔 الطلب جاهز! اذهب للمطعم</span>
             </div>
             <div className="px-4 py-4">
               <div className="flex items-start justify-between mb-3">
-                <span className="text-green-900 font-black text-2xl">
+                <span className="text-green-900 font-extrabold text-2xl">
                   {order.total_amount.toLocaleString()}
                   <span className="text-sm font-normal"> د.ع</span>
                 </span>
                 <div className="text-right">
-                  <p className="font-black text-white text-xl">{order.client_name}</p>
+                  <p className="font-extrabold text-white text-xl">{order.client_name}</p>
                   {order.delivery_address && (
                     <p className="text-green-100 text-xs flex items-center gap-1 justify-end mt-0.5">
                       <MapPin size={10} /> {order.delivery_address}
@@ -478,12 +472,12 @@ export default function DriverDashboard() {
                 {order.client_phone && (
                   <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 py-2.5 bg-white/20 text-white font-bold rounded-2xl text-sm active:scale-95 transition-all">
+                    className="flex items-center justify-center gap-1.5 py-2.5 bg-white/20 text-white font-medium rounded-2xl text-sm active:scale-95 transition-all">
                     <MessageCircle size={16} /> واتساب
                   </a>
                 )}
                 <a href={`/delivery/${order.id}`}
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-white text-green-600 font-black rounded-2xl text-sm active:scale-95 transition-all">
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-white text-green-600 font-extrabold rounded-2xl text-sm active:scale-95 transition-all">
                   ابدأ <ChevronLeft size={16} />
                 </a>
               </div>
@@ -499,16 +493,16 @@ export default function DriverDashboard() {
                 <Clock size={12} className="text-amber-200" />
                 <span className="text-amber-200 text-xs">{timeAgo(order.created_at)}</span>
               </div>
-              <span className="text-amber-100 text-xs font-black">🔔 اذهب للمطعم الآن</span>
+              <span className="text-amber-100 text-xs font-extrabold">🔔 اذهب للمطعم الآن</span>
             </div>
             <div className="px-4 py-4">
               <div className="flex items-start justify-between mb-3">
-                <span className="text-amber-900 font-black text-2xl">
+                <span className="text-amber-900 font-extrabold text-2xl">
                   {order.total_amount.toLocaleString()}
                   <span className="text-sm font-normal"> د.ع</span>
                 </span>
                 <div className="text-right">
-                  <p className="font-black text-white text-xl">{order.client_name}</p>
+                  <p className="font-extrabold text-white text-xl">{order.client_name}</p>
                   {order.delivery_address && (
                     <p className="text-amber-100 text-xs flex items-center gap-1 justify-end mt-0.5">
                       <MapPin size={10} /> {order.delivery_address}
@@ -520,12 +514,12 @@ export default function DriverDashboard() {
                 {order.client_phone && (
                   <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 py-2.5 bg-white/20 text-white font-bold rounded-2xl text-sm active:scale-95 transition-all">
+                    className="flex items-center justify-center gap-1.5 py-2.5 bg-white/20 text-white font-medium rounded-2xl text-sm active:scale-95 transition-all">
                     <MessageCircle size={16} /> واتساب
                   </a>
                 )}
                 <a href={`/delivery/${order.id}`}
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-white text-amber-600 font-black rounded-2xl text-sm active:scale-95 transition-all">
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-white text-amber-600 font-extrabold rounded-2xl text-sm active:scale-95 transition-all">
                   ابدأ <ChevronLeft size={16} />
                 </a>
               </div>
@@ -533,13 +527,32 @@ export default function DriverDashboard() {
           </div>
         ))}
 
+        {/* إحصائيات اليوم */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-900 rounded-2xl p-4 border border-slate-800 text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <CheckCircle2 size={14} className="text-green-400" />
+              <span className="text-slate-400 text-xs font-medium">توصيلات اليوم</span>
+            </div>
+            <p className="text-white font-black text-3xl">{completed.length}</p>
+          </div>
+          <div className="bg-slate-900 rounded-2xl p-4 border border-slate-800 text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <TrendingUp size={14} className="text-green-400" />
+              <span className="text-slate-400 text-xs font-medium">مجموع اليوم</span>
+            </div>
+            <p className="text-green-400 font-black text-2xl">{todayEarnings.toLocaleString()}</p>
+            <p className="text-slate-500 text-xs">دينار</p>
+          </div>
+        </div>
+
         {/* طلبات قيد التجهيز */}
         {preparingOrders.length > 0 && (
           <div className="space-y-2.5">
-            <p className="text-slate-400 text-xs font-bold px-1">⏳ قيد التجهيز في المطعم</p>
+            <p className="text-slate-400 text-xs font-medium px-1">⏳ قيد التجهيز في المطعم</p>
             {preparingOrders.map(order => (
               <div key={order.id}
-                className="bg-slate-800 rounded-2xl border border-slate-700/60 overflow-hidden">
+                className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
                 <div className="h-1 bg-blue-500" />
                 <div className="px-4 py-4">
                   {/* وقت + رابط تفاصيل */}
@@ -555,14 +568,14 @@ export default function DriverDashboard() {
                   </div>
 
                   {/* الاسم — كبير */}
-                  <p className="font-black text-white text-2xl text-right mb-2">{order.client_name}</p>
+                  <p className="font-extrabold text-white text-2xl text-right mb-2">{order.client_name}</p>
 
                   {/* الرقم — كبير وقابل للضغط لواتساب */}
                   {order.client_phone && (
                     <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
                       target="_blank" rel="noopener noreferrer"
                       className="flex items-center justify-end gap-2 mb-3 active:scale-95 transition-all">
-                      <span className="text-[#25D366] font-black text-2xl tracking-wide" dir="ltr">
+                      <span className="text-[#25D366] font-extrabold text-2xl tracking-wide" dir="ltr">
                         {order.client_phone}
                       </span>
                       <MessageCircle size={22} className="text-[#25D366]" />
@@ -575,13 +588,13 @@ export default function DriverDashboard() {
                       onClick={() => setMapAddress(order.delivery_address!)}
                       className="w-full flex items-center gap-2 bg-blue-900/30 border border-blue-700/40 rounded-xl px-3 py-2.5 mb-3 active:scale-[0.98] transition-all text-right">
                       <MapPin size={18} className="text-blue-400 flex-shrink-0" />
-                      <span className="text-blue-300 font-bold text-base flex-1">{order.delivery_address}</span>
+                      <span className="text-blue-300 font-medium text-base flex-1">{order.delivery_address}</span>
                     </button>
                   )}
 
                   {/* المبلغ */}
                   <div className="flex items-center justify-end">
-                    <span className="text-green-400 font-black text-xl">
+                    <span className="text-green-400 font-extrabold text-xl">
                       {order.total_amount.toLocaleString()}
                       <span className="text-xs font-normal text-slate-500"> د.ع</span>
                     </span>
@@ -593,48 +606,7 @@ export default function DriverDashboard() {
         )}
 
         {/* Modal الخريطة */}
-        {mapAddress && (
-          <div
-            className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center"
-            onClick={() => setMapAddress(null)}
-          >
-            <div
-              className="bg-slate-800 w-full max-w-lg rounded-t-3xl p-5 space-y-4"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between" dir="rtl">
-                <p className="text-white font-black text-lg">📍 عنوان التوصيل</p>
-                <button onClick={() => setMapAddress(null)}
-                  className="p-2 rounded-xl bg-slate-700 active:scale-90 transition-all">
-                  <X size={18} className="text-slate-300" />
-                </button>
-              </div>
-              <div className="flex items-center gap-2 bg-slate-700 rounded-2xl px-4 py-3" dir="rtl">
-                <MapPin size={16} className="text-blue-400 flex-shrink-0" />
-                <p className="text-white font-bold text-base">{mapAddress}</p>
-              </div>
-              <iframe
-                src={`https://maps.google.com/maps?q=${encodeURIComponent(mapAddress)}&output=embed&hl=ar`}
-                className="w-full h-56 rounded-2xl border-0"
-                loading="lazy"
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapAddress)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white font-black rounded-2xl text-sm active:scale-95 transition-all">
-                  🗺️ Google Maps
-                </a>
-                <a
-                  href={`https://waze.com/ul?q=${encodeURIComponent(mapAddress)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 py-3.5 bg-[#00B4FF] text-white font-black rounded-2xl text-sm active:scale-95 transition-all">
-                  🚗 Waze
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
+        <MapSheet address={mapAddress} onClose={() => setMapAddress(null)} />
 
         {/* لا يوجد طلبات */}
         {active.length === 0 && pickupOrders.length === 0 && (isAvailable ? incoming.length === 0 : true) && (
@@ -642,13 +614,13 @@ export default function DriverDashboard() {
             {isAvailable ? (
               <>
                 <p className="text-6xl">😴</p>
-                <p className="text-slate-300 text-xl font-black">لا يوجد طلبات الآن</p>
+                <p className="text-slate-300 text-xl font-extrabold">لا يوجد طلبات الآن</p>
                 <p className="text-slate-500 text-sm">ستظهر الطلبات الجديدة هنا فوراً</p>
               </>
             ) : (
               <>
                 <p className="text-6xl">⏸️</p>
-                <p className="text-slate-300 text-xl font-black">أنت غير متاح حالياً</p>
+                <p className="text-slate-300 text-xl font-extrabold">أنت غير متاح حالياً</p>
                 <p className="text-slate-500 text-sm">فعّل السويتش أعلاه لتستلم الطلبات</p>
               </>
             )}
@@ -660,20 +632,20 @@ export default function DriverDashboard() {
           <div className="space-y-2.5 pt-2">
             <div className="flex items-center gap-2 px-1">
               <CheckCircle2 size={14} className="text-green-400" />
-              <p className="text-slate-400 text-xs font-bold">مكتملة اليوم ({completed.length})</p>
+              <p className="text-slate-400 text-xs font-medium">مكتملة اليوم ({completed.length})</p>
             </div>
             {completed.map(order => (
-              <div key={order.id} className="bg-slate-800/50 rounded-2xl border border-slate-700/40 px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-slate-600 text-xs">
+              <div key={order.id} className="bg-slate-900/50 rounded-2xl border border-slate-800 px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-slate-500 text-xs">
                   <Clock size={11} />
                   <span>{timeAgo(order.created_at)}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-green-500 font-bold text-sm">
+                  <span className="text-green-500 font-medium text-sm">
                     {order.total_amount.toLocaleString()}
                     <span className="text-xs font-normal text-slate-600"> د.ع</span>
                   </span>
-                  <p className="text-slate-400 font-bold text-sm">{order.client_name}</p>
+                  <p className="text-slate-400 font-medium text-sm">{order.client_name}</p>
                   <CheckCircle2 size={15} className="text-green-600" />
                 </div>
               </div>

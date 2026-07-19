@@ -2,7 +2,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { ChevronRight, MessageCircle, MapPin, Loader2, X, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, MessageCircle, MapPin, Loader2, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
+import DriverHeader from '../_components/DriverHeader';
+import MapSheet from '../_components/MapSheet';
 
 type ArchiveItem = { id: string; item_name: string; quantity: number; price: number };
 
@@ -140,16 +142,18 @@ export default function DriverArchive() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white pb-10">
+    <div className="min-h-screen bg-slate-950 text-white pb-24">
 
       {/* هيدر */}
-      <header className="sticky top-0 z-40 bg-slate-800/95 backdrop-blur border-b border-slate-700/60 px-4 py-3.5 flex items-center justify-between">
-        <button onClick={() => router.push('/driver/dashboard')} className="p-2 rounded-xl bg-slate-700 active:scale-90 transition-all">
-          <ChevronRight size={20} className="text-slate-300" />
-        </button>
-        <h1 className="text-lg font-black text-white">الأرشيف</h1>
-        <div className="w-9" />
-      </header>
+      <DriverHeader
+        right={
+          <button onClick={() => router.push('/driver/dashboard')}
+            className="p-2.5 rounded-xl bg-slate-800 active:scale-90 transition-all">
+            <ChevronRight size={20} className="text-slate-300" />
+          </button>
+        }
+        center={<h1 className="text-lg font-extrabold text-white">الأرشيف</h1>}
+      />
 
       <div className="px-4 pt-4 space-y-3 max-w-lg mx-auto">
 
@@ -160,10 +164,10 @@ export default function DriverArchive() {
         ) : loadError ? (
           <div className="text-center py-14 space-y-3">
             <p className="text-5xl">⚠️</p>
-            <p className="text-slate-300 text-lg font-black">تعذّر تحميل السجل</p>
+            <p className="text-slate-300 text-lg font-extrabold">تعذّر تحميل السجل</p>
             <button
               onClick={() => loadFirst(session.id)}
-              className="mt-2 px-6 py-2.5 bg-blue-600 text-white font-bold rounded-2xl active:scale-95 transition-all"
+              className="mt-2 px-6 py-2.5 bg-blue-600 text-white font-medium rounded-2xl active:scale-95 transition-all"
             >
               إعادة المحاولة
             </button>
@@ -171,7 +175,7 @@ export default function DriverArchive() {
         ) : orders.length === 0 ? (
           <div className="text-center py-14 space-y-3">
             <p className="text-6xl">📭</p>
-            <p className="text-slate-300 text-xl font-black">لا يوجد سجل توصيلات بعد</p>
+            <p className="text-slate-300 text-xl font-extrabold">لا يوجد سجل توصيلات بعد</p>
             <p className="text-slate-500 text-sm">ستظهر توصيلاتك المكتملة هنا</p>
           </div>
         ) : (
@@ -186,40 +190,40 @@ export default function DriverArchive() {
                   {showHeader && (
                     <div className="flex items-center gap-2 px-1 pt-2 pb-1">
                       <CheckCircle2 size={14} className="text-green-400" />
-                      <p className="text-slate-400 text-xs font-bold">{dayLabel(key)}</p>
+                      <p className="text-slate-400 text-xs font-medium">{dayLabel(key)}</p>
                     </div>
                   )}
-                  <div className="bg-slate-800 rounded-2xl border border-slate-700/60 overflow-hidden">
+                  <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
                     {/* السطر المطوي — قابل للنقر للتوسيع */}
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : order.id)}
-                      className="w-full px-4 py-3.5 flex items-center justify-between active:bg-slate-700/40 transition-all"
+                      className="w-full px-4 py-3.5 flex items-center justify-between active:bg-slate-800/40 transition-all"
                     >
                       <div className="flex items-center gap-2">
                         {isExpanded
                           ? <ChevronUp size={16} className="text-slate-500" />
                           : <ChevronDown size={16} className="text-slate-500" />
                         }
-                        <span className="text-green-400 font-black text-base">
+                        <span className="text-green-400 font-extrabold text-base">
                           {(order.total_amount ?? 0).toLocaleString()}
                           <span className="text-xs font-normal text-slate-500"> د.ع</span>
                         </span>
                       </div>
                       <div className="text-right">
-                        <p className="font-black text-white text-base">{order.client_name}</p>
+                        <p className="font-extrabold text-white text-base">{order.client_name}</p>
                         <p className="text-slate-500 text-xs mt-0.5">{timeLabel(order.created_at)}</p>
                       </div>
                     </button>
 
                     {/* التفاصيل الموسّعة */}
                     {isExpanded && (
-                      <div className="px-4 pb-4 pt-1 space-y-3 border-t border-slate-700/60">
+                      <div className="px-4 pb-4 pt-1 space-y-3 border-t border-slate-800">
                         {/* الرقم — واتساب */}
                         {order.client_phone && (
                           <a href={`https://wa.me/${order.client_phone.replace(/\D/g, '')}`}
                             target="_blank" rel="noopener noreferrer"
                             className="flex items-center justify-end gap-2 pt-3 active:scale-95 transition-all">
-                            <span className="text-[#25D366] font-black text-xl tracking-wide" dir="ltr">
+                            <span className="text-[#25D366] font-extrabold text-xl tracking-wide" dir="ltr">
                               {order.client_phone}
                             </span>
                             <MessageCircle size={20} className="text-[#25D366]" />
@@ -232,26 +236,26 @@ export default function DriverArchive() {
                             onClick={() => setMapAddress(order.delivery_address!)}
                             className="w-full flex items-center gap-2 bg-blue-900/30 border border-blue-700/40 rounded-xl px-3 py-2.5 active:scale-[0.98] transition-all text-right">
                             <MapPin size={18} className="text-blue-400 flex-shrink-0" />
-                            <span className="text-blue-300 font-bold text-base flex-1">{order.delivery_address}</span>
+                            <span className="text-blue-300 font-medium text-base flex-1">{order.delivery_address}</span>
                           </button>
                         )}
 
                         {/* عناصر الطلب */}
                         {order.items.length > 0 && (
-                          <div className="bg-slate-700/40 rounded-xl px-3 py-2.5 space-y-2">
-                            <p className="text-xs font-bold text-slate-400 text-right mb-1.5">محتوى الطلب</p>
+                          <div className="bg-slate-800/60 rounded-xl px-3 py-2.5 space-y-2">
+                            <p className="text-xs font-medium text-slate-400 text-right mb-1.5">محتوى الطلب</p>
                             {order.items.map(item => (
                               <div key={item.id} className="flex justify-between items-center">
-                                <span className="text-green-400 font-bold text-xs">{(item.price * item.quantity).toLocaleString()} د.ع</span>
+                                <span className="text-green-400 font-medium text-xs">{(item.price * item.quantity).toLocaleString()} د.ع</span>
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-slate-300 text-sm">{item.item_name}</span>
-                                  <span className="bg-slate-600 text-slate-300 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{item.quantity}×</span>
+                                  <span className="bg-slate-700 text-slate-300 text-xs font-medium w-5 h-5 rounded-full flex items-center justify-center">{item.quantity}×</span>
                                 </div>
                               </div>
                             ))}
-                            <div className="pt-1 border-t border-slate-600 flex justify-between items-center">
-                              <span className="text-green-400 font-black text-sm">{(order.total_amount ?? 0).toLocaleString()} د.ع</span>
-                              <span className="text-xs font-bold text-slate-400">الإجمالي</span>
+                            <div className="pt-1 border-t border-slate-700 flex justify-between items-center">
+                              <span className="text-green-400 font-extrabold text-sm">{(order.total_amount ?? 0).toLocaleString()} د.ع</span>
+                              <span className="text-xs font-medium text-slate-400">الإجمالي</span>
                             </div>
                           </div>
                         )}
@@ -276,7 +280,7 @@ export default function DriverArchive() {
                 <button
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="w-full py-3.5 bg-blue-600 text-white font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60"
+                  className="w-full py-3.5 bg-blue-600 text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60"
                 >
                   {loadingMore ? <Loader2 size={18} className="animate-spin" /> : null}
                   تحميل المزيد
@@ -288,48 +292,7 @@ export default function DriverArchive() {
       </div>
 
       {/* Modal الخريطة */}
-      {mapAddress && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center"
-          onClick={() => setMapAddress(null)}
-        >
-          <div
-            className="bg-slate-800 w-full max-w-lg rounded-t-3xl p-5 space-y-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between" dir="rtl">
-              <p className="text-white font-black text-lg">📍 عنوان التوصيل</p>
-              <button onClick={() => setMapAddress(null)}
-                className="p-2 rounded-xl bg-slate-700 active:scale-90 transition-all">
-                <X size={18} className="text-slate-300" />
-              </button>
-            </div>
-            <div className="flex items-center gap-2 bg-slate-700 rounded-2xl px-4 py-3" dir="rtl">
-              <MapPin size={16} className="text-blue-400 flex-shrink-0" />
-              <p className="text-white font-bold text-base">{mapAddress}</p>
-            </div>
-            <iframe
-              src={`https://maps.google.com/maps?q=${encodeURIComponent(mapAddress)}&output=embed&hl=ar`}
-              className="w-full h-56 rounded-2xl border-0"
-              loading="lazy"
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapAddress)}`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white font-black rounded-2xl text-sm active:scale-95 transition-all">
-                🗺️ Google Maps
-              </a>
-              <a
-                href={`https://waze.com/ul?q=${encodeURIComponent(mapAddress)}`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 py-3.5 bg-[#00B4FF] text-white font-black rounded-2xl text-sm active:scale-95 transition-all">
-                🚗 Waze
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
+      <MapSheet address={mapAddress} onClose={() => setMapAddress(null)} />
     </div>
   );
 }

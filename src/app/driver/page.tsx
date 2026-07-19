@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
-import { Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn, Bike } from 'lucide-react';
 
 export default function DriverLoginPage() {
   const router = useRouter();
@@ -10,12 +11,16 @@ export default function DriverLoginPage() {
   const [password, setPassword] = useState('');
   const [error,    setError]    = useState('');
   const [loading,  setLoading]  = useState(false);
+  const [shaking,  setShaking]  = useState(false);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) router.replace('/driver/dashboard');
     });
   }, [router]);
+
+  useEffect(() => { if (error) setShaking(true); }, [error]);
 
   const login = async () => {
     setError('');
@@ -46,48 +51,64 @@ export default function DriverLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm space-y-5">
-        <div className="text-center">
-          <p className="text-5xl mb-3">🏍️</p>
-          <h1 className="text-2xl font-black text-white">بوابة السائق</h1>
-          <p className="text-slate-400 text-sm mt-1">سجّل دخولك لتستلم طلباتك</p>
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+        className="w-full max-w-sm space-y-5"
+      >
+        <div className="text-center space-y-3">
+          <div className="mx-auto w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center shadow-lg shadow-blue-900/50">
+            <Bike size={38} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-white">بوابة السائق</h1>
+            <p className="text-slate-400 text-sm mt-1">سجّل دخولك لتستلم طلباتك</p>
+          </div>
         </div>
 
-        <div className="bg-slate-800 rounded-2xl p-5 space-y-3 border border-slate-700">
-          <div className="flex items-center bg-slate-700 border border-slate-600 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
-            <span className="px-3 text-slate-400 font-bold text-sm border-r border-slate-600 h-full flex items-center py-3 select-none">
-              +964
-            </span>
+        <div
+          className={shaking ? 'shake' : ''}
+          onAnimationEnd={() => setShaking(false)}
+        >
+          <div className="bg-slate-900 rounded-3xl p-5 space-y-3 border border-slate-800">
+            <div className="flex items-center bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+              <span className="px-3 text-slate-400 font-medium text-sm border-r border-slate-700 h-full flex items-center py-3 select-none">
+                +964
+              </span>
+              <input
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && passwordRef.current?.focus()}
+                placeholder="07XXXXXXXX"
+                dir="ltr"
+                type="tel"
+                inputMode="tel"
+                className="flex-1 bg-transparent px-3 py-3 text-white placeholder-slate-400 outline-none text-center text-lg"
+              />
+            </div>
             <input
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="07XXXXXXXX"
-              dir="ltr"
-              type="tel"
-              inputMode="tel"
-              className="flex-1 bg-transparent px-3 py-3 text-white placeholder-slate-400 outline-none text-center text-lg"
+              ref={passwordRef}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="كلمة المرور"
+              type="password"
+              onKeyDown={e => e.key === 'Enter' && login()}
+              className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-4 py-3 text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg"
             />
+            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+            <button
+              onClick={login}
+              disabled={loading}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-black text-lg rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60 shadow-lg shadow-blue-900/40"
+            >
+              {loading ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
+              دخول
+            </button>
           </div>
-          <input
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="كلمة المرور"
-            type="password"
-            onKeyDown={e => e.key === 'Enter' && login()}
-            className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg"
-          />
-          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-          <button
-            onClick={login}
-            disabled={loading}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60"
-          >
-            {loading ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
-            دخول
-          </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
