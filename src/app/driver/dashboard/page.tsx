@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { Bell, BellOff, LogOut, MessageCircle, MapPin, ChevronLeft, Loader2, CheckCircle2, Clock, TrendingUp, X, Check, Package } from 'lucide-react';
+import { Bell, BellOff, LogOut, MessageCircle, MapPin, ChevronLeft, Loader2, CheckCircle2, Clock, TrendingUp, X, Check, Package, History } from 'lucide-react';
 
 type Order = {
   id: string;
@@ -265,9 +265,14 @@ export default function DriverDashboard() {
 
       {/* هيدر */}
       <header className="sticky top-0 z-40 bg-slate-800/95 backdrop-blur border-b border-slate-700/60 px-4 py-3.5 flex items-center justify-between">
-        <button onClick={logout} className="p-2 rounded-xl bg-slate-700 active:scale-90 transition-all">
-          <LogOut size={17} className="text-slate-300" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={logout} className="p-2 rounded-xl bg-slate-700 active:scale-90 transition-all">
+            <LogOut size={17} className="text-slate-300" />
+          </button>
+          <button onClick={() => router.push('/driver/archive')} className="p-2 rounded-xl bg-slate-700 active:scale-90 transition-all">
+            <History size={17} className="text-slate-300" />
+          </button>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-xl">🏍️</span>
           <p className="font-black text-white text-base">{session.name}</p>
