@@ -303,6 +303,64 @@ function OwnerContactRow({ ownerName, ownerPhone, onSave }: {
   );
 }
 
+// ─── Send Message Sheet ───────────────────────────────────────────────────────
+function SendMessageSheet({ title, restaurantId, onClose }: {
+  title: string;
+  restaurantId: string | null; // null = بث للجميع
+  onClose: () => void;
+}) {
+  const [msgTitle, setMsgTitle] = useState('');
+  const [msgBody,  setMsgBody]  = useState('');
+  const [sending,  setSending]  = useState(false);
+  const [result,   setResult]   = useState<{ ok: boolean; text: string } | null>(null);
+
+  const send = async () => {
+    if (!msgTitle.trim() || !msgBody.trim()) return;
+    setSending(true); setResult(null);
+    const res = await fetch('/api/super-admin/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: msgTitle.trim(), body: msgBody.trim(), restaurantId }),
+    }).catch(() => null);
+    const json = await res?.json().catch(() => ({}));
+    setSending(false);
+    if (res?.ok) {
+      setResult({ ok: true, text: '✓ تم الإرسال' });
+      setMsgTitle(''); setMsgBody('');
+      setTimeout(onClose, 1200);
+    } else {
+      setResult({ ok: false, text: json?.error || 'فشل الإرسال' });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={onClose}>
+      <div className="bg-[#13132b] rounded-3xl w-full max-w-md p-5 border border-white/10" onClick={e => e.stopPropagation()} dir="rtl">
+        <p className="text-white font-black text-sm mb-4">{title}</p>
+        <div className="space-y-3">
+          <input value={msgTitle} onChange={e => setMsgTitle(e.target.value.slice(0, 120))}
+            placeholder="عنوان الرسالة" dir="rtl"
+            className="w-full bg-[#0d0d20] border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 text-sm outline-none focus:border-violet-500/50 placeholder:text-slate-600" />
+          <textarea value={msgBody} onChange={e => setMsgBody(e.target.value.slice(0, 2000))}
+            placeholder="نص الرسالة..." dir="rtl" rows={4}
+            className="w-full bg-[#0d0d20] border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 text-sm outline-none focus:border-violet-500/50 placeholder:text-slate-600 resize-none" />
+          <p className="text-slate-600 text-[10px] text-left">{msgBody.length}/2000</p>
+          {result && (
+            <p className={`text-xs font-bold text-center ${result.ok ? 'text-green-400' : 'text-red-400'}`}>{result.text}</p>
+          )}
+          <div className="flex gap-2">
+            <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-slate-700/50 text-slate-300 font-bold text-sm active:scale-95 transition-all">إلغاء</button>
+            <button onClick={send} disabled={sending || !msgTitle.trim() || !msgBody.trim()}
+              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-40">
+              {sending ? 'جاري الإرسال...' : 'إرسال'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Restaurant Card ──────────────────────────────────────────────────────────
 function RestaurantCard({
   r, toggling, matchedUser, onToggleSuspended, onRefresh,
@@ -314,6 +372,7 @@ function RestaurantCard({
   onRefresh: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [showMsg, setShowMsg] = useState(false);
 
   return (
     <div className="bg-[#13132b] rounded-2xl border border-slate-700/50 overflow-hidden">
@@ -434,6 +493,15 @@ function RestaurantCard({
             معاينة داشبورد المطعم
           </button>
 
+          {/* ── Send message button ── */}
+          <button onClick={() => setShowMsg(true)}
+            className="w-full py-3 rounded-xl bg-violet-600/20 border border-violet-500/30 text-violet-300 font-bold text-sm hover:bg-violet-600/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+            💬 إرسال رسالة لهذا المطعم
+          </button>
+          {showMsg && (
+            <SendMessageSheet title={`رسالة إلى: ${r.restaurant_name}`} restaurantId={r.restaurant_id ?? r.id} onClose={() => setShowMsg(false)} />
+          )}
+
         </div>
       )}
     </div>
@@ -448,6 +516,7 @@ export default function SuperAdminDashboard() {
   const [loading,     setLoading]     = useState(true);
   const [tab,         setTab]         = useState<'overview'|'restaurants'|'add'>('overview');
   const [toggling,    setToggling]    = useState<string|null>(null);
+  const [showBroadcast, setShowBroadcast] = useState(false);
 
   // ── نموذج إضافة مطعم ──
   const [addName,    setAddName]    = useState('');
@@ -645,6 +714,10 @@ export default function SuperAdminDashboard() {
               <p className="text-slate-400 text-xs">{restaurants.length} مطعم مسجل</p>
               <p className="text-slate-400 text-xs">{activeRest} نشط · {suspendedRest} موقوف</p>
             </div>
+            <button onClick={() => setShowBroadcast(true)}
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white font-black text-sm active:scale-95 transition-all flex items-center justify-center gap-2">
+              📢 إرسال رسالة لكل المطاعم
+            </button>
             {restaurants.length === 0 ? (
               <div className="bg-[#13132b] rounded-2xl p-10 text-center text-slate-600 border border-white/5">لا توجد مطاعم</div>
             ) : restaurants.map(r => {
@@ -742,6 +815,10 @@ export default function SuperAdminDashboard() {
         )}
 
       </div>
+
+      {showBroadcast && (
+        <SendMessageSheet title="بث لكل المطاعم" restaurantId={null} onClose={() => setShowBroadcast(false)} />
+      )}
     </div>
   );
 }

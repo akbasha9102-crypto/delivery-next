@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, ChevronDown, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Ticket, Flame, Percent, Search, Check } from 'lucide-react';
+import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, ChevronDown, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Ticket, Flame, Percent, Search, Check, Bell } from 'lucide-react';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -738,6 +738,9 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
   );
 }
 
+/* ─── إشعارات سوبر أدمن ─── */
+type SANotification = { id: string; restaurant_id: string | null; title: string; body: string; created_at: string; read: boolean };
+
 /* ─── الصفحة الرئيسية ─── */
 export default function SettingsPage() {
   const router = useRouter();
@@ -773,6 +776,10 @@ export default function SettingsPage() {
   const [couponSaved,      setCouponSaved]      = useState(false);
   const [bestSellersLocal, setBestSellersLocal] = useState(true);
   const [bestSellersSaving, setBestSellersSaving] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications,    setNotifications]    = useState<SANotification[]>([]);
+  const [notifLoading,     setNotifLoading]     = useState(true);
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -793,6 +800,39 @@ export default function SettingsPage() {
     const id = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    const load = async () => {
+      setNotifLoading(true);
+      const [{ data: msgs }, { data: reads }] = await Promise.all([
+        supabase.from('super_admin_notifications')
+          .select('id, restaurant_id, title, body, created_at')
+          .or(`restaurant_id.eq.${restaurantId},restaurant_id.is.null`)
+          .order('created_at', { ascending: false })
+          .limit(100),
+        supabase.from('super_admin_notification_reads')
+          .select('notification_id')
+          .eq('restaurant_id', restaurantId),
+      ]);
+      const readSet = new Set((reads ?? []).map(r => r.notification_id));
+      setNotifications((msgs ?? []).map(m => ({ ...m, read: readSet.has(m.id) })));
+      setNotifLoading(false);
+    };
+    load();
+    const ch = supabase.channel('sa-notifications-' + restaurantId)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'super_admin_notifications' }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [restaurantId]);
+
+  const markAllRead = async () => {
+    const unread = notifications.filter(n => !n.read);
+    if (!unread.length || !restaurantId) return;
+    await supabase.from('super_admin_notification_reads')
+      .upsert(unread.map(n => ({ notification_id: n.id, restaurant_id: restaurantId })), { onConflict: 'notification_id,restaurant_id', ignoreDuplicates: true });
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
 
   // حالة معلوماتية فقط: هل يُفترض أن يكون المطعم مفتوحاً الآن حسب الجدولة؟
   // لا تكتب لقاعدة البيانات إطلاقاً — الحساب الفعلي المعروض للزبون يتم ديناميكياً بنفس الدالة المشتركة
@@ -944,6 +984,28 @@ export default function SettingsPage() {
             <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${dark ? 'translate-x-6' : ''}`} />
           </button>
         </div>
+
+        {/* الإشعارات — مخفية عن الكاشير */}
+        {!isCashier && (
+          <button onClick={() => { setShowNotifications(true); markAllRead(); }}
+            className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {unreadCount > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">{unreadCount}</span>
+              )}
+              <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإشعارات</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">رسائل من إدارة المنصة</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <Bell size={18} className="text-gray-600 dark:text-slate-400" />
+              </div>
+            </div>
+          </button>
+        )}
 
         {/* ─ حساب الدخول ─ */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4" dir="rtl">
@@ -1152,7 +1214,7 @@ export default function SettingsPage() {
 
       </div>
 
-      {!showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && !showDiscounts && <AdminBottomNav />}
+      {!showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && !showDiscounts && !showNotifications && <AdminBottomNav />}
 
       {/* نافذة تغيير كلمة المرور */}
       {showChangePass && (
@@ -1251,6 +1313,30 @@ export default function SettingsPage() {
           onClose={() => setShowDiscounts(false)}
           restaurantId={restaurantId}
         />
+      )}
+
+      {/* نافذة الإشعارات */}
+      {showNotifications && (
+        <BottomSheet title="الإشعارات" onClose={() => setShowNotifications(false)} maxHeight="80vh">
+          {notifLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="animate-spin text-gray-400" size={26} /></div>
+          ) : notifications.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">لا توجد إشعارات</p>
+          ) : (
+            <div className="space-y-2">
+              {notifications.map(n => (
+                <div key={n.id} className={`rounded-xl px-4 py-3 border ${n.read ? 'bg-gray-50 dark:bg-slate-800/50 border-gray-100 dark:border-slate-700' : 'bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800/40'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] text-gray-400">{new Date(n.created_at).toLocaleString('ar-IQ')}</p>
+                    {!n.read && <span className="w-2 h-2 rounded-full bg-orange-500" />}
+                  </div>
+                  <p className="font-bold text-gray-900 dark:text-slate-100 text-sm mb-1">{n.title}</p>
+                  <p className="text-gray-600 dark:text-slate-400 text-sm whitespace-pre-wrap">{n.body}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </BottomSheet>
       )}
 
       {/* موديل جدولة الدوام */}
