@@ -19,13 +19,14 @@ const MAP_CSS = `
   @keyframes pin-bounce { 0%,100%{transform:translate(-50%,-100%) translateY(0)} 45%{transform:translate(-50%,-100%) translateY(-8px)} }
 `;
 
-type OrderItem = { id: string; order_id: string; item_name: string; quantity: number; price: number };
+type OrderItem = { id: string; order_id: string; item_id: string | null; item_name: string; quantity: number; price: number };
 type Order = {
   id: string; client_name: string; client_phone: string;
   delivery_address: string | null; total_amount: number;
   status: string; created_at: string;
   client_lat?: number | null; client_lng?: number | null;
   order_type: 'delivery' | 'pickup' | null;
+  restaurant_id: string | null;
 };
 
 function isInternalOrder(orderType?: string | null) {
@@ -308,6 +309,13 @@ export default function OrdersPage() {
   //    pickup flow, which skips the map entirely) ─────────────────────────────
   const submitReorder = async () => {
     if (!reorderTarget) return;
+
+    if (!reorderTarget.restaurant_id) {
+      alert('تعذر إعادة هذا الطلب، الرجاء الطلب من قائمة الطعام مباشرة');
+      setSubmitting(false);
+      return;
+    }
+
     setSubmitting(true);
 
     const orderType: 'delivery' | 'pickup' =
@@ -325,6 +333,7 @@ export default function OrdersPage() {
     const lng   = lngRef.current;
 
     const { data: order, error } = await supabase.from('orders').insert([{
+      restaurant_id:     reorderTarget.restaurant_id,
       client_name:      clientName,
       client_phone:     ph,
       delivery_address: isInternal ? null : (addr || null),
@@ -335,11 +344,20 @@ export default function OrdersPage() {
       ...(!isInternal && lat && lng ? { client_lat: lat, client_lng: lng } : {}),
     }]).select().single();
 
-    if (error || !order) { alert('حدث خطأ، حاول مجدداً'); setSubmitting(false); return; }
+    if (error || !order) {
+      const msg = error?.message?.toLowerCase() || '';
+      const isPolicyRejection = msg.includes('policy') || msg.includes('rls') || msg.includes('permission');
+      alert(isPolicyRejection
+        ? 'تعذر إرسال الطلب، قد يكون المطعم موقوفاً مؤقتاً عن استقبال الطلبات'
+        : 'حدث خطأ، حاول مجدداً');
+      setSubmitting(false);
+      return;
+    }
 
     const { error: itemsError } = await supabase.from('order_items').insert(
       reorderItems.map(i => ({
         order_id:  order.id,
+        item_id:   i.item_id ?? null,
         item_name: i.item_name,
         quantity:  i.quantity,
         price:     i.price,
