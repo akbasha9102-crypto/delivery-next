@@ -35,6 +35,32 @@ function getItemImages(item: Item): string[] {
 const DEFAULT_IMAGE = 'https://via.placeholder.com/300x200.png?text=Food';
 const MAX_ITEM_IMAGES = 3;
 
+type UpdateResult<T> =
+  | { ok: true; row: T }
+  | { ok: false; reason: 'blocked' }
+  | { ok: false; reason: 'error'; message: string };
+
+// تحديث موثّق: يتحقق فعلياً من عدد/محتوى الصفوف المُعادة بدل افتراض النجاح
+// لمجرد غياب خطأ صريح — لأن RLS يمنع UPDATE بصمت (0 صفوف، بلا error) في PostgREST.
+async function updateAndVerify<T extends Record<string, unknown>>(
+  table: 'categories' | 'items',
+  id: string,
+  patch: Record<string, unknown>
+): Promise<UpdateResult<T>> {
+  const { data, error } = await supabase
+    .from(table)
+    .update(patch)
+    .eq('id', id)
+    .select()
+    .maybeSingle();
+
+  if (error) return { ok: false, reason: 'error', message: error.message };
+  if (!data) return { ok: false, reason: 'blocked' };
+  return { ok: true, row: data as T };
+}
+
+const RLS_BLOCKED_MSG = 'تعذّر الحفظ — لا تملك صلاحية كافية لهذا التعديل';
+
 const getTextColor = (hex: string): string => {
   const h = (hex || '#000000').replace('#', '');
   if (h.length !== 6) return '#ffffff';
@@ -165,11 +191,11 @@ export default function MenuPage() {
     const prevCat = categories.find(c => c.id === id);
     setSaving(true);
     setCategories(prev => prev.map(c => c.id === id ? { ...c, ...editCatColors } : c));
-    const { error } = await supabase.from('categories').update(editCatColors).eq('id', id);
+    const result = await updateAndVerify<Category>('categories', id, editCatColors);
     setSaving(false);
-    if (error) {
+    if (!result.ok) {
       if (prevCat) setCategories(prev => prev.map(c => c.id === id ? prevCat : c));
-      showToast('تعذّر حفظ الألوان', false);
+      showToast(result.reason === 'blocked' ? RLS_BLOCKED_MSG : `تعذّر حفظ الألوان — ${result.message}`, false);
       return;
     }
     showToast('✓ تم حفظ الألوان');
@@ -329,28 +355,52 @@ export default function MenuPage() {
     setSaving(true);
     const images = editImages.map(u => u.trim()).filter(Boolean).slice(0, MAX_ITEM_IMAGES);
     const primaryImage = images[0] || DEFAULT_IMAGE;
-    const { error } = await supabase.from('items').update({ ...editForm, name: editForm.name.trim(), description: editForm.description.trim(), price, image_url: primaryImage, images_json: JSON.stringify(images.length ? images : [primaryImage]) }).eq('id', editItem.id);
-    error ? showToast('تعذّر الحفظ', false) : (fetchMenu(), setEditItem(null), showToast('✓ تم الحفظ'));
+    const result = await updateAndVerify<Item>('items', editItem.id, {
+      ...editForm,
+      name: editForm.name.trim(),
+      description: editForm.description.trim(),
+      price,
+      image_url: primaryImage,
+      images_json: JSON.stringify(images.length ? images : [primaryImage]),
+    });
     setSaving(false);
+    if (!result.ok) {
+      showToast(result.reason === 'blocked' ? RLS_BLOCKED_MSG : `تعذّر الحفظ — ${result.message}`, false);
+      return;
+    }
+    fetchMenu();
+    setEditItem(null);
+    showToast('✓ تم الحفظ');
   };
 
   const saveExtras = async (updated: Extra[]) => {
     if (!editItem) return;
-    await supabase.from('items').update({ extras_json: JSON.stringify(updated) }).eq('id', editItem.id);
+    const result = await updateAndVerify<Item>('items', editItem.id, { extras_json: JSON.stringify(updated) });
+    if (!result.ok) {
+      showToast(result.reason === 'blocked' ? RLS_BLOCKED_MSG : `تعذّر حفظ الإضافات — ${result.message}`, false);
+      return;
+    }
     setExtras(updated);
   };
 
   const addExtra = async () => {
     if (!extraName.trim()) return;
     const price = parseFloat(extraPrice.replace(',', '.')) || 0;
-    await saveExtras([...extras, { id: Date.now().toString(), name: extraName.trim(), price }]);
+    // eslint-disable-next-line react-hooks/purity -- معرّف مؤقت للعنصر محلياً فقط، نفس نمط Date.now() المستخدم بلا مشاكل في نفس الملف (الأسطر 280, 619)
+    const newExtra = { id: Date.now().toString(), name: extraName.trim(), price };
+    await saveExtras([...extras, newExtra]);
     setExtraName(''); setExtraPrice('');
   };
 
   const setItemStatus = async (item: Item, status: string) => {
     const is_available = status === 'available';
-    await supabase.from('items').update({ item_status: status, is_available }).eq('id', item.id);
+    const prevItem = item;
     setItems(prev => prev.map(i => i.id === item.id ? { ...i, item_status: status, is_available } : i));
+    const result = await updateAndVerify<Item>('items', item.id, { item_status: status, is_available });
+    if (!result.ok) {
+      setItems(prev => prev.map(i => i.id === item.id ? prevItem : i));
+      showToast(result.reason === 'blocked' ? RLS_BLOCKED_MSG : `تعذّر تغيير الحالة — ${result.message}`, false);
+    }
   };
 
   const deleteItem = async (id: string) => {
@@ -377,14 +427,18 @@ export default function MenuPage() {
 
   const saveReorder = async () => {
     setSaving(true);
-    await Promise.all(
-      reorderCats.map((cat, i) =>
-        supabase.from('categories').update({ sort_order: i }).eq('id', cat.id)
-      )
+    const results = await Promise.all(
+      reorderCats.map((cat, i) => updateAndVerify<Category>('categories', cat.id, { sort_order: i }))
     );
     await fetchMenu();
     setShowReorder(false);
     setSaving(false);
+    const failed = results.filter(r => !r.ok);
+    if (failed.length > 0) {
+      const blocked = failed.some(r => !r.ok && r.reason === 'blocked');
+      showToast(blocked ? RLS_BLOCKED_MSG : 'تعذّر حفظ ترتيب بعض الأقسام', false);
+      return;
+    }
     showToast('✓ تم حفظ الترتيب');
   };
 
@@ -455,10 +509,16 @@ export default function MenuPage() {
   const saveCatName = async () => {
     if (!editCatSheet || !editCatName.trim()) return;
     const id = editCatSheet.catId;
+    const prevCat = categories.find(c => c.id === id);
     setSaving(true);
     setCategories(prev => prev.map(c => c.id === id ? { ...c, name: editCatName.trim() } : c));
-    await supabase.from('categories').update({ name: editCatName.trim() }).eq('id', id);
+    const result = await updateAndVerify<Category>('categories', id, { name: editCatName.trim() });
     setSaving(false);
+    if (!result.ok) {
+      if (prevCat) setCategories(prev => prev.map(c => c.id === id ? prevCat : c));
+      showToast(result.reason === 'blocked' ? RLS_BLOCKED_MSG : `تعذّر حفظ القسم — ${result.message}`, false);
+      return;
+    }
     showToast('✓ تم حفظ القسم');
   };
 
