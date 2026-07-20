@@ -6,6 +6,8 @@ import { AdminGuard } from '@/components/guards/AdminGuard';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { StaffProvider } from '@/context/StaffContext';
 import { StaffGate } from '@/components/guards/StaffGate';
+import { SuperAdminNotificationsProvider } from '@/context/SuperAdminNotificationsContext';
+import { SuperAdminMessageOverlay } from '@/components/staff/SuperAdminMessageOverlay';
 
 function makeBellWavUrl(): string | null {
   if (typeof window === 'undefined') return null;
@@ -56,7 +58,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <AdminGuard>
       <StaffProvider>
         <StaffGate>
-          <NewOrdersProvider>{children}</NewOrdersProvider>
+          <NewOrdersProvider>
+            <SuperAdminNotificationsProvider>
+              {children}
+              <SuperAdminMessageOverlay />
+            </SuperAdminNotificationsProvider>
+          </NewOrdersProvider>
         </StaffGate>
       </StaffProvider>
     </AdminGuard>
