@@ -575,9 +575,11 @@ export default function SuperAdminDashboard() {
   const toggleSuspended = async (r: Restaurant) => {
     setToggling(r.id);
     const next = !r.is_suspended;
-    await supabase.from('restaurant_settings')
-      .update({ is_suspended: next, ...(next ? { is_closed: true } : {}) })
-      .eq('id', r.id);
+    await fetch('/api/super-admin/restaurants', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurantDbId: r.restaurant_id ?? r.id, suspend: next }),
+    }).catch(() => null);
     await loadAll(); setToggling(null);
   };
 

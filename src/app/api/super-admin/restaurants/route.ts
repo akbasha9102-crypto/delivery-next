@@ -136,14 +136,15 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   if (!await isAuthed()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { restaurantDbId, newSlug, newPassword, ownerName, ownerPhone } = await req.json();
+  const { restaurantDbId, newSlug, newPassword, ownerName, ownerPhone, suspend } = await req.json();
 
   if (!restaurantDbId) {
     return NextResponse.json({ error: 'restaurantDbId مطلوب' }, { status: 400 });
   }
   const hasOwnerContactFields = ownerName !== undefined || ownerPhone !== undefined;
-  if (!newSlug && !newPassword && !hasOwnerContactFields) {
-    return NextResponse.json({ error: 'يجب تقديم newSlug أو newPassword أو ownerName/ownerPhone على الأقل' }, { status: 400 });
+  const hasSuspendField = typeof suspend === 'boolean';
+  if (!newSlug && !newPassword && !hasOwnerContactFields && !hasSuspendField) {
+    return NextResponse.json({ error: 'يجب تقديم newSlug أو newPassword أو ownerName/ownerPhone أو suspend على الأقل' }, { status: 400 });
   }
 
   // جلب المطعم الحالي
@@ -220,6 +221,19 @@ export async function PATCH(req: NextRequest) {
       .upsert(contactUpdate, { onConflict: 'restaurant_id' });
 
     if (contactError) return NextResponse.json({ error: contactError.message }, { status: 500 });
+  }
+
+  // تبديل تعليق الاشتراك (is_suspended) — عبر service role حصراً (بعد migration
+  // 20260723100000 الذي يسمح لـ auth.role() = 'service_role' بتجاوز trigger
+  // trg_restaurant_settings_suspend_guard). restaurant_settings.restaurant_id
+  // هو الـ FK الصحيح لـ restaurants.id (وليس id الخاص بجدول الإعدادات نفسه).
+  if (hasSuspendField) {
+    const { error: suspendError } = await supabaseAdmin
+      .from('restaurant_settings')
+      .update({ is_suspended: suspend, ...(suspend ? { is_closed: true } : {}) })
+      .eq('restaurant_id', restaurantDbId);
+
+    if (suspendError) return NextResponse.json({ error: suspendError.message }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
