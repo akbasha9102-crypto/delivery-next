@@ -387,7 +387,7 @@ export default function ProfilePage() {
 
   return (
     <CustomerGuard>
-    <div data-theme-fade className="min-h-screen bg-gray-50 dark:bg-slate-950 pb-32 md:pr-[70px]">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 pb-32 md:pr-[70px]">
 
       {/* ══ HERO ══ */}
       <div className="relative overflow-hidden">
@@ -529,7 +529,8 @@ export default function ProfilePage() {
                 <div className="relative flex bg-gray-100 dark:bg-slate-700/50 rounded-2xl p-1">
                   <button
                     onClick={() => { setAuthMode('signin'); setAuthError(''); }}
-                    className={`relative z-10 flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${authMode === 'signin' ? 'text-white' : 'text-gray-500 dark:text-slate-400'}`}
+                    className={`relative z-10 flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${authMode === 'signin' ? '' : 'text-gray-500 dark:text-slate-400'}`}
+                    style={authMode === 'signin' ? { color: heroTextColor } : undefined}
                   >
                     {authMode === 'signin' && (
                       <motion.span
@@ -543,7 +544,8 @@ export default function ProfilePage() {
                   </button>
                   <button
                     onClick={() => { setAuthMode('signup'); setAuthError(''); }}
-                    className={`relative z-10 flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${authMode === 'signup' ? 'text-white' : 'text-gray-500 dark:text-slate-400'}`}
+                    className={`relative z-10 flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${authMode === 'signup' ? '' : 'text-gray-500 dark:text-slate-400'}`}
+                    style={authMode === 'signup' ? { color: heroTextColor } : undefined}
                   >
                     {authMode === 'signup' && (
                       <motion.span
@@ -584,8 +586,8 @@ export default function ProfilePage() {
                 <button
                   onClick={handleAuth}
                   disabled={phoneAuthLoading}
-                  className="w-full py-3 rounded-xl font-black text-white text-sm active:scale-95 transition-all disabled:opacity-60"
-                  style={{ backgroundColor: brandColor }}
+                  className="w-full py-3 rounded-xl font-black text-sm active:scale-95 transition-all disabled:opacity-60"
+                  style={{ backgroundColor: brandColor, color: heroTextColor }}
                 >
                   {phoneAuthLoading ? '...' : authMode === 'signin' ? 'دخول' : 'إنشاء حساب'}
                 </button>
@@ -610,7 +612,6 @@ export default function ProfilePage() {
     <AnimatePresence>
     {showAddressPanel && (
       <motion.div
-        data-theme-fade
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-end justify-center"
         style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
@@ -753,7 +754,6 @@ export default function ProfilePage() {
     <AnimatePresence>
     {showAddMap && (
       <motion.div
-        data-theme-fade
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-[60] flex flex-col justify-end"
         style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}

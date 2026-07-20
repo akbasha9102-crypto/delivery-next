@@ -9,16 +9,6 @@
   --primary-light: #fff3e0;
 }
 
-/* انتقال ناعم عند تبديل المظهر (فاتح/ليلي) — صفحة "معلوماتي" فقط */
-@media (prefers-reduced-motion: no-preference) {
-  [data-theme-fade]:not([class*="transition-"]),
-  [data-theme-fade] :where(*):not([class*="transition-"]) {
-    transition-property: background-color, border-color, color, fill, stroke;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 300ms;
-  }
-}
-
 html, body { height: 100%; direction: rtl; }
 * { box-sizing: border-box; }
 
