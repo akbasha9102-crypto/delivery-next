@@ -37,7 +37,7 @@ export async function PATCH(req: NextRequest) {
 
   const { data: request, error: fetchError } = await supabaseAdmin
     .from('account_creation_requests')
-    .select('id, status')
+    .select('id, status, auth_user_id')
     .eq('id', id)
     .maybeSingle();
 
@@ -54,6 +54,10 @@ export async function PATCH(req: NextRequest) {
     .eq('id', id);
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+  if (action === 'reject' && request.auth_user_id) {
+    await supabaseAdmin.auth.admin.deleteUser(request.auth_user_id).catch(() => null);
+  }
 
   return NextResponse.json({ ok: true });
 }

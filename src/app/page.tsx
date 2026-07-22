@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
+import { getPendingSignup } from '@/lib/pendingSignup';
 
 export default function RootPage() {
   const router = useRouter();
@@ -19,6 +20,8 @@ export default function RootPage() {
           // أدمن → لوحة التحكم
           router.replace('/admin/dashboard');
         }
+      } else if (getPendingSignup()) {
+        router.replace('/track-signup');
       } else {
         router.replace('/home');
       }

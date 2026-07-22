@@ -1,10 +1,8 @@
 'use client';
-import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { mashiRoundedFont, MASHI_FONT } from '@/app/home/brand';
-import SignupRequestModal from '@/app/home/SignupRequestModal';
 import { FEATURE_CONTENT, type FeatureSlug } from '@/app/home/featureContent';
 
 function HighlightedTitle({ title, label }: { title: string; label: string }) {
@@ -22,7 +20,6 @@ function HighlightedTitle({ title, label }: { title: string; label: string }) {
 }
 
 export default function FeaturePageClient({ slug }: { slug: FeatureSlug }) {
-  const [showSignupModal, setShowSignupModal] = useState(false);
   const content = FEATURE_CONTENT[slug];
   const Icon = content.icon;
 
@@ -138,12 +135,12 @@ export default function FeaturePageClient({ slug }: { slug: FeatureSlug }) {
           <h2 className="text-2xl sm:text-4xl font-extrabold text-[#1d1d1f]" style={MASHI_FONT}>
             جاهز تبدأ مع <span className="text-[#15803D]">ماشي</span>؟
           </h2>
-          <button
-            onClick={() => setShowSignupModal(true)}
-            className="mt-8 px-8 py-4 rounded-2xl bg-[#1d1d1f] text-white font-black text-base active:scale-95 transition-all"
+          <Link
+            href="/signup"
+            className="mt-8 inline-block px-8 py-4 rounded-2xl bg-[#1d1d1f] text-white font-black text-base active:scale-95 transition-all"
           >
             إنشاء حساب
-          </button>
+          </Link>
         </motion.div>
       </section>
 
@@ -152,8 +149,6 @@ export default function FeaturePageClient({ slug }: { slug: FeatureSlug }) {
         <p className="text-[#86868b] text-xs">© 2026 <span className="text-[#15803D]">ماشي</span></p>
         <p className="text-[#86868b] text-[11px] mt-1">منصّة توصيل مطاعم متعددة المستأجرين</p>
       </footer>
-
-      {showSignupModal && <SignupRequestModal onClose={() => setShowSignupModal(false)} />}
     </div>
   );
 }

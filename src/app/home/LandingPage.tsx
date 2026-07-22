@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, Truck, PackageSearch, Smartphone, Menu, X, ChevronLeft } from 'lucide-react';
-import SignupRequestModal from './SignupRequestModal';
 import { mashiRoundedFont, MASHI_FONT } from './brand';
 import { FEATURE_CONTENT } from './featureContent';
 import FloatingLeaves from './FloatingLeaves';
@@ -34,7 +33,6 @@ const FEATURES = [
 const MENU_ITEMS = Object.values(FEATURE_CONTENT);
 
 export default function LandingPage() {
-  const [showSignupModal, setShowSignupModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
 
   useEffect(() => {
@@ -170,19 +168,20 @@ export default function LandingPage() {
             transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }}
             className="mt-10"
           >
-            <button
-              onClick={() => setShowSignupModal(true)}
-              className="px-8 py-4 rounded-2xl bg-[#1d1d1f] text-white font-black text-base active:scale-95 transition-all"
+            <Link
+              href="/signup"
+              className="inline-block px-8 py-4 rounded-2xl bg-[#1d1d1f] text-white font-black text-base active:scale-95 transition-all"
             >
               إنشاء حساب
-            </button>
+            </Link>
           </motion.div>
         </div>
       </section>
 
       {/* ── Features ── */}
-      <section className="px-4 py-20 sm:py-28 bg-[#f5f5f7]">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="relative overflow-hidden px-4 py-20 sm:py-28 bg-[#f5f5f7]">
+        <FloatingLeaves density="light" />
+        <div className="relative max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {FEATURES.map((f, i) => (
             <motion.div
               key={f.title}
@@ -217,13 +216,56 @@ export default function LandingPage() {
           <h2 className="text-2xl sm:text-4xl font-extrabold text-[#1d1d1f]" style={MASHI_FONT}>
             جاهز تبدأ مع <span className="text-[#15803D]">ماشي</span>؟
           </h2>
-          <button
-            onClick={() => setShowSignupModal(true)}
-            className="mt-8 px-8 py-4 rounded-2xl bg-[#1d1d1f] text-white font-black text-base active:scale-95 transition-all"
+          <Link
+            href="/signup"
+            className="mt-8 inline-block px-8 py-4 rounded-2xl bg-[#1d1d1f] text-white font-black text-base active:scale-95 transition-all"
           >
             إنشاء حساب
-          </button>
+          </Link>
         </motion.div>
+      </section>
+
+      {/* ── تتبع الطلب ── */}
+      <section className="relative overflow-hidden px-4 py-20 sm:py-28 bg-[#f5f5f7]">
+        <FloatingLeaves density="light" />
+        <div className="relative max-w-4xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-center text-[#1d1d1f] mb-3" style={MASHI_FONT}>
+            قدّمت طلب إنشاء حساب؟
+          </h2>
+          <p className="text-center text-[#6e6e73] text-sm sm:text-base mb-10 max-w-xl mx-auto">
+            تابع حالة طلبك بثوانٍ — هذي رحلته من لحظة التقديم لحظة التفعيل.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { n: '١', title: 'قدّم بياناتك', desc: 'تعبي نموذج بسيط ببياناتك وبيانات مطعمك.' },
+              { n: '٢', title: 'ننتظر يوافق فريقنا', desc: 'فريق ماشي يراجع طلبك بأسرع وقت ممكن.' },
+              { n: '٣', title: 'تفعيل حسابك وابدأ', desc: 'بعد الموافقة، حسابك جاهز وتقدر تبدأ فوراً.' },
+            ].map((s, i) => (
+              <motion.div
+                key={s.n}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-80px' }}
+                transition={{ duration: 0.5, ease: 'easeOut', delay: i * 0.08 }}
+                className="bg-white border border-black/5 shadow-[0_2px_20px_rgba(0,0,0,0.04)] rounded-2xl p-6 flex flex-col gap-3"
+              >
+                <span className="w-9 h-9 rounded-xl bg-[#15803D]/10 flex items-center justify-center text-[#15803D] font-extrabold text-sm">
+                  {s.n}
+                </span>
+                <p className="font-bold text-sm text-[#1d1d1f] leading-snug">{s.title}</p>
+                <p className="text-[#6e6e73] text-xs leading-relaxed">{s.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+          <div className="text-center mt-10">
+            <Link
+              href="/track-signup"
+              className="inline-block px-7 py-3.5 rounded-2xl bg-white border border-black/10 text-[#1d1d1f] font-bold text-sm active:scale-95 transition-all"
+            >
+              تتبع طلبك
+            </Link>
+          </div>
+        </div>
       </section>
 
       {/* ── Footer ── */}
@@ -231,8 +273,6 @@ export default function LandingPage() {
         <p className="text-[#86868b] text-xs">© 2026 <span className="text-[#15803D]">ماشي</span></p>
         <p className="text-[#86868b] text-[11px] mt-1">منصّة توصيل مطاعم متعددة المستأجرين</p>
       </footer>
-
-      {showSignupModal && <SignupRequestModal onClose={() => setShowSignupModal(false)} />}
     </div>
   );
 }
