@@ -65,7 +65,7 @@ export default function LandingPage() {
             className="text-4xl sm:text-6xl font-extrabold leading-tight"
             style={BRAND_FONT}
           >
-            ماشي. توصيل مطاعم، بلا تعقيد.
+            ماشي.. نظامك المتكامل لإدارة مطعمك.
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 24 }}
@@ -73,7 +73,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 }}
             className="mt-6 text-base sm:text-lg text-slate-400 leading-relaxed max-w-xl mx-auto"
           >
-            منصّة واحدة تدير بها مطعمك بالكامل — طلبات، مطبخ، سائقين، ومخزون — بينما زبائنك يطلبون بضغطة.
+            ابتداءً من المنيو الإلكتروني الذكي، مروراً بلواحة التحكم الأسطورية لإدارة الطلبات والمطبخ، انتهاءً بنظام التوصيل والسائقين — كل ما تحتاجه لإدارة مطعمك بضغطة زر.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 24 }}
