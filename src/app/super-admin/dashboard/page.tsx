@@ -19,6 +19,11 @@ type Order    = {
   delivery_address: string | null; total_amount: number;
   status: string; created_at: string; driver_name?: string | null;
 };
+type SignupRequest = {
+  id: string; full_name: string; phone: string; restaurant_name: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string; updated_at: string;
+};
 
 // توليد slug من اسم المطعم (يتطابق مع منطق الـ API)
 function autoSlug(name: string): string {
@@ -514,9 +519,14 @@ export default function SuperAdminDashboard() {
   const [authUsers,   setAuthUsers]   = useState<AuthUser[]>([]);
   const [orders,      setOrders]      = useState<Order[]>([]);
   const [loading,     setLoading]     = useState(true);
-  const [tab,         setTab]         = useState<'overview'|'restaurants'|'add'>('overview');
+  const [tab,         setTab]         = useState<'overview'|'restaurants'|'requests'|'add'>('overview');
   const [toggling,    setToggling]    = useState<string|null>(null);
   const [showBroadcast, setShowBroadcast] = useState(false);
+
+  // ── طلبات إنشاء حساب ──
+  const [signupRequests,   setSignupRequests]   = useState<SignupRequest[]>([]);
+  const [actingRequestId,  setActingRequestId]  = useState<string|null>(null);
+  const [pendingOwnerContact, setPendingOwnerContact] = useState<{name: string; phone: string} | null>(null);
 
   // ── نموذج إضافة مطعم ──
   const [addName,    setAddName]    = useState('');
@@ -561,15 +571,23 @@ export default function SuperAdminDashboard() {
     setAuthUsers(users ?? []);
   }, []);
 
+  const loadSignupRequests = useCallback(async () => {
+    const res = await fetch('/api/super-admin/signup-requests').catch(() => null);
+    if (!res?.ok) return;
+    const { requests } = await res.json().catch(() => ({ requests: [] }));
+    setSignupRequests(requests ?? []);
+  }, []);
+
   useEffect(() => {
     loadAll();
     loadAuthUsers();
+    loadSignupRequests();
     const ch = supabase.channel('sa-live')
       .on('postgres_changes', { event:'*', schema:'public', table:'orders' }, loadAll)
       .on('postgres_changes', { event:'*', schema:'public', table:'restaurant_settings' }, loadAll)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [loadAll, loadAuthUsers]);
+  }, [loadAll, loadAuthUsers, loadSignupRequests]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
   const toggleSuspended = async (r: Restaurant) => {
@@ -601,11 +619,42 @@ export default function SuperAdminDashboard() {
     if (res?.ok) {
       setAddResult({ ok: true, msg: `✓ تم إنشاء مطعم "${addName.trim()}" — اسم المستخدم: ${slug}` });
       setAddName(''); setAddSlug(''); setAddPass('');
+      setPendingOwnerContact(null);
       loadAll(); loadAuthUsers();
     } else {
       setAddResult({ ok: false, msg: json?.error || 'حدث خطأ' });
     }
     setAddLoading(false);
+  };
+
+  const approveSignupRequest = async (r: SignupRequest) => {
+    setActingRequestId(r.id);
+    const res = await fetch('/api/super-admin/signup-requests', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: r.id, action: 'approve' }),
+    }).catch(() => null);
+    if (res?.ok) {
+      setPendingOwnerContact({ name: r.full_name, phone: r.phone });
+      setTab('add');
+      setAddName(r.restaurant_name);
+      setAddSlug(autoSlug(r.restaurant_name));
+      setAddPass('');
+      setAddResult(null);
+      loadSignupRequests();
+    }
+    setActingRequestId(null);
+  };
+
+  const rejectSignupRequest = async (r: SignupRequest) => {
+    setActingRequestId(r.id);
+    const res = await fetch('/api/super-admin/signup-requests', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: r.id, action: 'reject' }),
+    }).catch(() => null);
+    if (res?.ok) { loadSignupRequests(); }
+    setActingRequestId(null);
   };
 
   // ── Derived ──────────────────────────────────────────────────────────────
@@ -614,6 +663,7 @@ export default function SuperAdminDashboard() {
   const liveOrders    = orders.filter(o => !['completed','rejected'].includes(o.status));
   const todayRevenue  = orders.filter(o => o.status === 'completed').reduce((s,o) => s+o.total_amount, 0);
   const commission    = Math.round(todayRevenue * COMMISSION);
+  const pendingRequestsCount = signupRequests.filter(r => r.status === 'pending').length;
 
   if (loading) return (
     <div className="min-h-screen bg-[#09090f] flex items-center justify-center">
@@ -666,18 +716,24 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="grid grid-cols-3 bg-[#13132b] rounded-2xl p-1 gap-1 border border-white/5">
+        <div className="grid grid-cols-4 bg-[#13132b] rounded-2xl p-1 gap-1 border border-white/5">
           {([
-            { key: 'overview',    label: 'عام',      icon: '📊' },
-            { key: 'restaurants', label: 'مطاعم',    icon: '🏪' },
-            { key: 'add',         label: 'إضافة',    icon: '➕' },
+            { key: 'overview',    label: 'عام',            icon: '📊' },
+            { key: 'restaurants', label: 'مطاعم',          icon: '🏪' },
+            { key: 'requests',    label: 'طلبات الإنشاء',  icon: '📝' },
+            { key: 'add',         label: 'إضافة',          icon: '➕' },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
-              className={`flex flex-col items-center py-2.5 rounded-xl text-[11px] font-bold transition-all ${
+              className={`relative flex flex-col items-center py-2.5 rounded-xl text-[11px] font-bold transition-all ${
                 tab === t.key
                   ? 'bg-gradient-to-b from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-900/30'
                   : 'text-slate-500 hover:text-slate-300'
               }`}>
+              {t.key === 'requests' && pendingRequestsCount > 0 && (
+                <span className="absolute -top-1 -left-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+                  {pendingRequestsCount}
+                </span>
+              )}
               <span className="text-base">{t.icon}</span>
               <span className="mt-0.5">{t.label}</span>
             </button>
@@ -738,10 +794,74 @@ export default function SuperAdminDashboard() {
           </div>
         )}
 
+        {/* ══ Tab: طلبات الإنشاء ══ */}
+        {tab === 'requests' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-slate-400 text-xs">{signupRequests.length} طلب</p>
+              <p className="text-slate-400 text-xs">{pendingRequestsCount} بانتظار المراجعة</p>
+            </div>
+            {signupRequests.length === 0 ? (
+              <div className="bg-[#13132b] rounded-2xl p-10 text-center text-slate-600 border border-white/5">لا توجد طلبات</div>
+            ) : signupRequests.map(r => {
+              const statusInfo = r.status === 'pending'
+                ? { label: 'معلّق', cls: 'bg-amber-500/20 text-amber-400' }
+                : r.status === 'approved'
+                ? { label: 'مقبول', cls: 'bg-green-500/20 text-green-400' }
+                : { label: 'مرفوض', cls: 'bg-red-500/20 text-red-400' };
+              const acting = actingRequestId === r.id;
+              return (
+                <div key={r.id} className="bg-[#13132b] rounded-2xl border border-slate-700/50 p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm text-white leading-tight truncate">{r.full_name}</p>
+                      <p className="text-slate-400 text-xs mt-0.5 truncate">{r.restaurant_name}</p>
+                    </div>
+                    <span className={`flex-shrink-0 text-[10px] px-2 py-0.5 rounded-full font-bold ${statusInfo.cls}`}>
+                      {statusInfo.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-slate-100 text-sm font-mono" dir="ltr">{r.phone}</p>
+                    <p className="text-slate-500 text-[10px]">{fmtDate(r.created_at)} · {fmtTime(r.created_at)}</p>
+                  </div>
+                  {r.status === 'pending' && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => rejectSignupRequest(r)}
+                        disabled={acting}
+                        className="flex-1 py-2.5 rounded-xl bg-red-600/20 border border-red-500/30 text-red-300 font-bold text-xs hover:bg-red-600/30 transition-all active:scale-95 disabled:opacity-40"
+                      >
+                        رفض
+                      </button>
+                      <button
+                        onClick={() => approveSignupRequest(r)}
+                        disabled={acting}
+                        className="flex-1 py-2.5 rounded-xl bg-green-600/20 border border-green-500/30 text-green-300 font-bold text-xs hover:bg-green-600/30 transition-all active:scale-95 disabled:opacity-40"
+                      >
+                        قبول
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* ══ Tab: إضافة مطعم ══ */}
         {tab === 'add' && (
           <div className="bg-[#13132b] rounded-2xl border border-white/5 p-5 space-y-4">
             <p className="text-white font-black text-sm text-right">إضافة مطعم جديد</p>
+
+            {pendingOwnerContact && (
+              <div className="bg-indigo-900/20 border border-indigo-700/30 rounded-xl px-4 py-3 text-right">
+                <p className="text-indigo-400 text-[11px] mb-0.5">مقدّم الطلب</p>
+                <p className="text-white text-sm font-bold">
+                  {pendingOwnerContact.name} — <span className="font-mono" dir="ltr">{pendingOwnerContact.phone}</span>
+                </p>
+              </div>
+            )}
 
             {/* اسم المطعم */}
             <div>
