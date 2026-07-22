@@ -45,11 +45,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-[#0e5a2b] via-[#15803D] to-[#f5f5f7] flex items-center justify-center p-4">
-      <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 w-96 h-96 rounded-full bg-[#4ADE80]/30 blur-[110px]" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-24 w-[28rem] h-[28rem] rounded-full bg-white/50 blur-[130px]" />
-
-      <div className="relative z-10 w-full max-w-sm rounded-[14px] p-6 bg-white/55 backdrop-blur-2xl backdrop-saturate-150 border border-black/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.55),0_25px_50px_-12px_rgba(6,54,25,0.45),0_10px_25px_-5px_rgba(0,0,0,0.15)] card-float-in transition-transform duration-300 ease-out hover:-translate-y-1 hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.6),0_32px_64px_-12px_rgba(6,54,25,0.5),0_14px_30px_-5px_rgba(0,0,0,0.2)]">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="w-full max-w-sm card-float-in">
         <h1
           className={`${mashiRoundedFont.variable} text-4xl font-extrabold text-center mb-1`}
           style={{
@@ -63,7 +60,7 @@ export default function LoginPage() {
         <p className="text-[#1d1d1f]/70 text-center mb-6 text-sm">تسجيل الدخول لإدارة الطلبات</p>
 
         {error && (
-          <div className="bg-red-50/90 backdrop-blur-sm border border-red-200/70 rounded-xl px-4 py-3 mb-4 text-red-700 text-sm text-center">
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-red-700 text-sm text-center">
             {error}
           </div>
         )}
@@ -76,7 +73,7 @@ export default function LoginPage() {
             onChange={e => setIdentifier(e.target.value)}
             placeholder="dari"
             dir="ltr"
-            className="w-full bg-white/70 border border-black/10 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all font-mono"
+            className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all font-mono"
           />
         </div>
         <div className="mb-6">
@@ -87,7 +84,7 @@ export default function LoginPage() {
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && signIn()}
             placeholder="••••••••"
-            className="w-full bg-white/70 border border-black/10 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all"
+            className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all"
           />
         </div>
         <button
