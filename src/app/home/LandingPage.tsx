@@ -97,15 +97,15 @@ export default function LandingPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.28, ease: 'easeOut' }}
-              className="absolute top-full inset-x-0 z-10 bg-white border-b border-black/5 shadow-[0_16px_40px_rgba(0,0,0,0.16)] max-h-[calc(100vh-4.5rem)] overflow-y-auto"
+              className="absolute top-full inset-x-0 z-10 bg-[#f5f5f7] border-b border-black/5 shadow-[0_16px_40px_rgba(0,0,0,0.16)] max-h-[calc(100vh-4.5rem)] overflow-y-auto"
             >
-              <div className="max-w-5xl mx-auto px-4 py-2">
+              <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col gap-2.5">
                 {MENU_ITEMS.map((item) => (
                   <Link
                     key={item.id}
                     href={`/features/${item.id}`}
                     onClick={() => setShowMenu(false)}
-                    className="w-full flex items-center gap-3 py-3.5 border-b border-black/5 last:border-b-0"
+                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white border border-black/5 shadow-[0_2px_20px_rgba(0,0,0,0.04)] active:scale-[0.98] transition-all"
                   >
                     <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-[#15803D]/10">
                       <item.icon className="w-4 h-4 text-[#15803D]" />
