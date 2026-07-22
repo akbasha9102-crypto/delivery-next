@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
+import { mashiRoundedFont, MASHI_FONT, BRAND } from '../home/brand';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,42 +45,55 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 stagger-0">
-        <p className="text-gray-500 dark:text-slate-400 text-center mb-6 text-sm">تسجيل الدخول لإدارة الطلبات</p>
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-[#0e5a2b] via-[#15803D] to-[#f5f5f7] flex items-center justify-center p-4">
+      <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 w-96 h-96 rounded-full bg-[#4ADE80]/30 blur-[110px]" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-24 w-[28rem] h-[28rem] rounded-full bg-white/50 blur-[130px]" />
+
+      <div className="relative z-10 w-full max-w-sm rounded-[14px] p-6 bg-white/55 backdrop-blur-2xl backdrop-saturate-150 border border-black/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.55),0_25px_50px_-12px_rgba(6,54,25,0.45),0_10px_25px_-5px_rgba(0,0,0,0.15)] card-float-in transition-transform duration-300 ease-out hover:-translate-y-1 hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.6),0_32px_64px_-12px_rgba(6,54,25,0.5),0_14px_30px_-5px_rgba(0,0,0,0.2)]">
+        <h1
+          className={`${mashiRoundedFont.variable} text-4xl font-extrabold text-center mb-1`}
+          style={{
+            ...MASHI_FONT,
+            color: BRAND.green,
+            textShadow: '0 1px 2px rgba(6,54,25,0.25), 0 4px 14px rgba(21,128,61,0.35), 0 0 30px rgba(74,222,128,0.25)',
+          }}
+        >
+          ماشي
+        </h1>
+        <p className="text-[#1d1d1f]/70 text-center mb-6 text-sm">تسجيل الدخول لإدارة الطلبات</p>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 mb-4 text-red-600 dark:text-red-400 text-sm text-center">
+          <div className="bg-red-50/90 backdrop-blur-sm border border-red-200/70 rounded-xl px-4 py-3 mb-4 text-red-700 text-sm text-center">
             {error}
           </div>
         )}
 
         <div className="mb-4">
-          <label className="block text-gray-700 dark:text-slate-300 font-semibold mb-2 text-sm">البريد الإلكتروني أو اسم المستخدم</label>
+          <label className="block text-[#1d1d1f] font-semibold mb-2 text-sm">البريد الإلكتروني أو اسم المستخدم</label>
           <input
             type="text"
             value={identifier}
             onChange={e => setIdentifier(e.target.value)}
             placeholder="dari"
             dir="ltr"
-            className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-left text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#4f46e5] font-mono"
+            className="w-full bg-white/70 border border-black/10 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all font-mono"
           />
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 dark:text-slate-300 font-semibold mb-2 text-sm">كلمة المرور</label>
+          <label className="block text-[#1d1d1f] font-semibold mb-2 text-sm">كلمة المرور</label>
           <input
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && signIn()}
             placeholder="••••••••"
-            className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#4f46e5]"
+            className="w-full bg-white/70 border border-black/10 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all"
           />
         </div>
         <button
           onClick={signIn}
           disabled={loading}
-          className="w-full bg-[#4f46e5] hover:bg-[#4338ca] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl transition-all active:scale-95"
+          className="w-full bg-gradient-to-r from-[#15803D] to-[#116830] hover:from-[#116830] hover:to-[#0e5a2b] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(21,128,61,0.5)] transition-all active:scale-95"
         >
           {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
         </button>
