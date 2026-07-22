@@ -1,16 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Truck, PackageSearch, Smartphone, Menu, X, BookOpen, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Truck, PackageSearch, Smartphone, Menu, X, ChevronLeft } from 'lucide-react';
 import SignupRequestModal from './SignupRequestModal';
-import { Baloo_Bhaijaan_2 } from 'next/font/google';
-
-const mashiRoundedFont = Baloo_Bhaijaan_2({
-  subsets: ['arabic', 'latin'],
-  weight: ['600', '700', '800'],
-  display: 'swap',
-  variable: '--font-mashi-rounded',
-});
+import { mashiRoundedFont, MASHI_FONT } from './brand';
+import { FEATURE_CONTENT } from './featureContent';
+import FloatingLeaves from './FloatingLeaves';
 
 const FEATURES = [
   {
@@ -35,59 +31,11 @@ const FEATURES = [
   },
 ];
 
-const MENU_ITEMS = [
-  {
-    id: 'menu',
-    label: 'المنيو الإلكتروني',
-    icon: BookOpen,
-    explanation:
-      "تعرف لو زبونك يفتح تلفونه ويشوف المنيو كلها ملونة ومرتبة ويطلب بضغطة زر؟ اهذا المنيو الإلكتروني — ما تحتاج تطبع ورق ولا تحدث قائمة يدوياً، كل شي محدث لحظة بلحظة، وإذا خلص صنف تقدر تسويله 'مو متوفر' بثانية وما يوصلك طلب عليه.",
-  },
-  {
-    id: 'dashboard',
-    label: 'لوحة التحكم',
-    icon: LayoutDashboard,
-    explanation:
-      "لوحة التحكم الأسطورية — من فوق تشوف كل طلباتك حية، شكد مبيعاتك اليوم، شنو الأكثر طلب، وين المطبخ متأخر... كلشي بشاشة وحدة، ما تحتاج تدور بين دفاتر ولا تكصر راسك تحسب. كأنك قاعد بغرفة العمليات مال مطعمك.",
-  },
-  {
-    id: 'delivery',
-    label: 'نظام التوصيل',
-    icon: Truck,
-    explanation:
-      "نظام التوصيل والسائقين — تعرف وين وصل الطلب هذا اللحظة، مثل ما تتبع الطلبية بأي تطبيق عالمي. السائق يستلم، يتحرك، والزبون يشوف كل شي live. ما راح تسمع بعد اليوم 'وين طلبي؟' لأن الجواب جاهز قدامك.",
-  },
-] as const;
-
-function Typewriter({ text, speed = 18 }: { text: string; speed?: number }) {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    if (count >= text.length) return;
-    const id = setTimeout(() => setCount((c) => c + 1), speed);
-    return () => clearTimeout(id);
-  }, [count, text, speed]);
-
-  const done = count >= text.length;
-
-  return (
-    <p className="text-[#3a3a3c] text-[13px] sm:text-sm leading-relaxed">
-      {text.slice(0, count)}
-      {!done && (
-        <span className="inline-block w-[2px] h-[1em] mx-0.5 -mb-[2px] bg-[#15803D] animate-pulse" />
-      )}
-    </p>
-  );
-}
-
-const MASHI_FONT = {
-  fontFamily: 'ui-rounded, "SF Pro Rounded", var(--font-mashi-rounded), sans-serif',
-};
+const MENU_ITEMS = Object.values(FEATURE_CONTENT);
 
 export default function LandingPage() {
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [activeMenuItem, setActiveMenuItem] = useState<'menu' | 'dashboard' | 'delivery' | null>(null);
 
   useEffect(() => {
     if (!showMenu) return;
@@ -154,36 +102,20 @@ export default function LandingPage() {
               className="absolute top-full inset-x-0 z-10 bg-white border-b border-black/5 shadow-[0_16px_40px_rgba(0,0,0,0.16)] max-h-[calc(100vh-4.5rem)] overflow-y-auto"
             >
               <div className="max-w-5xl mx-auto px-4 py-2">
-                {MENU_ITEMS.map((item) => {
-                  const isActive = activeMenuItem === item.id;
-                  return (
-                    <div key={item.id} className="border-b border-black/5 last:border-b-0">
-                      <button
-                        onClick={() => setActiveMenuItem((cur) => (cur === item.id ? null : item.id))}
-                        className="w-full flex items-center gap-3 py-3.5"
-                      >
-                        <span
-                          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                            isActive ? 'bg-[#15803D]' : 'bg-[#15803D]/10'
-                          }`}
-                        >
-                          <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#15803D]'}`} />
-                        </span>
-                        <span className="flex-1 font-bold text-sm text-[#1d1d1f]">{item.label}</span>
-                        <ChevronDown
-                          className={`w-4 h-4 text-[#86868b] transition-transform duration-200 ${
-                            isActive ? 'rotate-180' : ''
-                          }`}
-                        />
-                      </button>
-                      {isActive && (
-                        <div className="pb-4 pr-12">
-                          <Typewriter key={item.id} text={item.explanation} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {MENU_ITEMS.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/features/${item.id}`}
+                    onClick={() => setShowMenu(false)}
+                    className="w-full flex items-center gap-3 py-3.5 border-b border-black/5 last:border-b-0"
+                  >
+                    <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-[#15803D]/10">
+                      <item.icon className="w-4 h-4 text-[#15803D]" />
+                    </span>
+                    <span className="flex-1 font-bold text-sm text-[#1d1d1f]">{item.label}</span>
+                    <ChevronLeft className="w-4 h-4 text-[#86868b]" />
+                  </Link>
+                ))}
               </div>
             </motion.div>
           )}
@@ -213,6 +145,7 @@ export default function LandingPage() {
               'radial-gradient(60% 50% at 50% 20%, rgba(52,199,89,0.06) 0%, rgba(255,255,255,0) 70%), linear-gradient(180deg, rgba(52,199,89,0.04) 0%, rgba(255,255,255,0) 40%)',
           }}
         />
+        <FloatingLeaves />
         <div className="relative max-w-3xl mx-auto text-center">
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
