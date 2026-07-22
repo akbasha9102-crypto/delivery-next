@@ -48,17 +48,141 @@ export async function GET() {
   return NextResponse.json({ restaurants });
 }
 
-// POST — إنشاء مطعم جديد + حساب بدون إيميل
+// زرع restaurant_settings + inventory_categories الافتراضية لمطعم جديد —
+// مشتركة بين مسار الإنشاء المستقل ومسار الربط (signupRequestId).
+async function seedNewRestaurant(restaurantId: string, name: string) {
+  await supabaseAdmin.from('restaurant_settings').insert({
+    restaurant_name: name,
+    restaurant_id: restaurantId,
+    subscription_start: new Date().toISOString(),
+    is_suspended: false,
+  });
+
+  // زرع فئات المخزون الافتراضية للمطعم الجديد (نفس الفئات المزروعة
+  // للمطاعم الموجودة بـ migration 20260715090000_inventory_categories_system_seed)
+  await supabaseAdmin.from('inventory_categories').insert([
+    { restaurant_id: restaurantId, name: 'عام',      color: '#64748b', is_active: true, is_system: true, sort_order: 0 },
+    { restaurant_id: restaurantId, name: 'مشروبات',  color: '#3b82f6', is_active: true, is_system: true, sort_order: 1 },
+    { restaurant_id: restaurantId, name: 'لحوم',     color: '#ef4444', is_active: true, is_system: true, sort_order: 2 },
+    { restaurant_id: restaurantId, name: 'خبز',      color: '#a16207', is_active: true, is_system: true, sort_order: 3 },
+    { restaurant_id: restaurantId, name: 'خضار',     color: '#22c55e', is_active: true, is_system: true, sort_order: 4 },
+    { restaurant_id: restaurantId, name: 'توابل',    color: '#eab308', is_active: true, is_system: true, sort_order: 5 },
+    { restaurant_id: restaurantId, name: 'زيوت',     color: '#a855f7', is_active: true, is_system: true, sort_order: 6 },
+    { restaurant_id: restaurantId, name: 'تغليف',    color: '#14b8a6', is_active: true, is_system: true, sort_order: 7 },
+  ]);
+}
+
+// POST — إنشاء مطعم جديد، بوضعين:
+//  1) مستقل (بدون signupRequestId): يُنشئ حساب Auth جديد بالكامل، يتطلب
+//     password — هذا هو السلوك الأصلي، بلا أي تغيير.
+//  2) مربوط (signupRequestId): إعادة استخدام حساب Auth "الخامل" الذي
+//     أُنشئ مسبقاً عند التقديم بـ /signup (انظر migration
+//     20260725100000) بدل إنشاء حساب جديد قد يتصادم أو يُهدر الحساب
+//     الحقيقي الذي اختار العميل كلمة سره فيه بنفسه. password غير مطلوب
+//     هنا لأن كلمة السر موجودة أصلاً بـ Supabase Auth ولا تُطلب أبداً من
+//     سوبر أدمن (نلتزم بقاعدة عدم تخزين/تمرير كلمات السر — راجع خلفية
+//     migration 20260725100000).
 export async function POST(req: NextRequest) {
   if (!await isAuthed()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { name, slug: customSlug, password } = await req.json();
+  const { name, slug: customSlug, password, signupRequestId } = await req.json();
 
-  if (!name?.trim())     return NextResponse.json({ error: 'name مطلوب' },     { status: 400 });
-  if (!password?.trim()) return NextResponse.json({ error: 'password مطلوب' }, { status: 400 });
+  if (!name?.trim()) return NextResponse.json({ error: 'name مطلوب' }, { status: 400 });
 
   const slug  = (customSlug?.trim() || generateSlug(name.trim())).toLowerCase().replace(/\s+/g, '-');
   const email = slugToEmail(slug);
+
+  // ── وضع الربط: signupRequestId موجود ──────────────────────────────────
+  if (signupRequestId) {
+    const { data: signupRequest, error: fetchError } = await supabaseAdmin
+      .from('account_creation_requests')
+      .select('id, status, username, auth_user_id, linked_restaurant_id, full_name, phone')
+      .eq('id', signupRequestId)
+      .maybeSingle();
+
+    if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    if (!signupRequest) return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
+    if (signupRequest.status !== 'approved') {
+      return NextResponse.json({ error: 'يجب قبول الطلب أولاً' }, { status: 400 });
+    }
+    if (signupRequest.linked_restaurant_id) {
+      // حارس منع الازدواج: يحمي من نقرتين متزامنتين (تبويبين مفتوحين مثلاً)
+      // يحاولان ربط نفس الطلب بمطعمين مختلفين.
+      return NextResponse.json({ error: 'هذا الطلب مرتبط بمطعم مسبقاً' }, { status: 409 });
+    }
+    if (!signupRequest.auth_user_id) {
+      // صفوف قديمة سابقة لـ migration 20260725100000 لا تملك حساب Auth
+      // خامل لإعادة استخدامه — لا يوجد ما يُربَط.
+      return NextResponse.json({ error: 'هذا الطلب لا يملك حساب مرتبط قابلاً للربط، استخدم الإنشاء المستقل' }, { status: 400 });
+    }
+
+    const ownerId = signupRequest.auth_user_id;
+
+    // نفس فحوصات التصادم بالمسار المستقل
+    const { data: existing } = await supabaseAdmin
+      .from('restaurants')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json({ error: `اسم المستخدم "${slug}" مستخدم بالفعل` }, { status: 409 });
+    }
+    const { data: staffClash } = await supabaseAdmin.from('user_roles').select('id').ilike('code', slug).maybeSingle();
+    if (staffClash) {
+      return NextResponse.json({ error: `اسم المستخدم "${slug}" مستخدم بالفعل` }, { status: 409 });
+    }
+
+    // لو الأدمن غيّر الـ slug عن اسم المستخدم الأصلي المحجوز عند التسجيل،
+    // يجب تحديث إيميل حساب Auth ليطابق — Auth أولاً (نفس ترتيب PATCH
+    // بهذا الملف): لو فشل، نتوقف قبل أي كتابة بالداتابيس.
+    let emailChanged = false;
+    if (slug !== signupRequest.username) {
+      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(ownerId, { email });
+      if (authError) return NextResponse.json({ error: authError.message }, { status: 500 });
+      emailChanged = true;
+    }
+
+    // إنشاء المطعم في جدول restaurants
+    const { data: restaurant, error: restError } = await supabaseAdmin
+      .from('restaurants')
+      .insert({ name: name.trim(), slug, owner_id: ownerId })
+      .select()
+      .single();
+
+    if (restError) {
+      // لا نحذف الحساب هنا إطلاقاً تحت أي ظرف — هذا حساب العميل الحقيقي
+      // الحي، وليس حساباً أُنشئ للتو بهذا الطلب (كما بالمسار المستقل).
+      // نكتفي بمحاولة إرجاع الإيميل كما كان (best-effort) ونترك
+      // linked_restaurant_id فارغاً ليعيد الأدمن المحاولة بأمان.
+      if (emailChanged) {
+        try { await supabaseAdmin.auth.admin.updateUserById(ownerId, { email: slugToEmail(signupRequest.username!) }); } catch { /* best-effort rollback */ }
+      }
+      return NextResponse.json({ error: restError.message }, { status: 500 });
+    }
+
+    await seedNewRestaurant(restaurant.id, name.trim());
+
+    // حفظ بيانات تواصل صاحب المطعم التي التُقطت أصلاً عند التسجيل —
+    // يوفر على الأدمن إعادة كتابتها يدوياً (نفس جدول/نمط PATCH بهذا الملف).
+    await supabaseAdmin.from('restaurant_owner_contacts').upsert(
+      { restaurant_id: restaurant.id, owner_name: signupRequest.full_name, owner_phone: signupRequest.phone },
+      { onConflict: 'restaurant_id' },
+    );
+
+    await supabaseAdmin
+      .from('account_creation_requests')
+      .update({ linked_restaurant_id: restaurant.id, linked_at: new Date().toISOString() })
+      .eq('id', signupRequestId);
+
+    return NextResponse.json({
+      ok: true,
+      restaurant: { id: restaurant.id, name: restaurant.name, slug: restaurant.slug },
+      username: slug,
+    });
+  }
+
+  // ── الوضع المستقل: بدون signupRequestId (السلوك الأصلي، بلا تغيير) ────
+  if (!password?.trim()) return NextResponse.json({ error: 'password مطلوب' }, { status: 400 });
 
   // التحقق من أن الـ slug غير مكرر
   const { data: existing } = await supabaseAdmin
@@ -104,26 +228,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: restError.message }, { status: 500 });
   }
 
-  // إنشاء restaurant_settings للمطعم الجديد
-  await supabaseAdmin.from('restaurant_settings').insert({
-    restaurant_name: name.trim(),
-    restaurant_id: restaurant.id,
-    subscription_start: new Date().toISOString(),
-    is_suspended: false,
-  });
-
-  // زرع فئات المخزون الافتراضية للمطعم الجديد (نفس الفئات المزروعة
-  // للمطاعم الموجودة بـ migration 20260715090000_inventory_categories_system_seed)
-  await supabaseAdmin.from('inventory_categories').insert([
-    { restaurant_id: restaurant.id, name: 'عام',      color: '#64748b', is_active: true, is_system: true, sort_order: 0 },
-    { restaurant_id: restaurant.id, name: 'مشروبات',  color: '#3b82f6', is_active: true, is_system: true, sort_order: 1 },
-    { restaurant_id: restaurant.id, name: 'لحوم',     color: '#ef4444', is_active: true, is_system: true, sort_order: 2 },
-    { restaurant_id: restaurant.id, name: 'خبز',      color: '#a16207', is_active: true, is_system: true, sort_order: 3 },
-    { restaurant_id: restaurant.id, name: 'خضار',     color: '#22c55e', is_active: true, is_system: true, sort_order: 4 },
-    { restaurant_id: restaurant.id, name: 'توابل',    color: '#eab308', is_active: true, is_system: true, sort_order: 5 },
-    { restaurant_id: restaurant.id, name: 'زيوت',     color: '#a855f7', is_active: true, is_system: true, sort_order: 6 },
-    { restaurant_id: restaurant.id, name: 'تغليف',    color: '#14b8a6', is_active: true, is_system: true, sort_order: 7 },
-  ]);
+  await seedNewRestaurant(restaurant.id, name.trim());
 
   return NextResponse.json({
     ok: true,

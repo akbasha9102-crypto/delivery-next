@@ -23,6 +23,8 @@ type SignupRequest = {
   id: string; full_name: string; phone: string; restaurant_name: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string; updated_at: string;
+  username: string | null; auth_user_id: string | null;
+  linked_restaurant_id: string | null; linked_at: string | null;
 };
 
 // توليد slug من اسم المطعم (يتطابق مع منطق الـ API)
@@ -519,14 +521,18 @@ export default function SuperAdminDashboard() {
   const [authUsers,   setAuthUsers]   = useState<AuthUser[]>([]);
   const [orders,      setOrders]      = useState<Order[]>([]);
   const [loading,     setLoading]     = useState(true);
-  const [tab,         setTab]         = useState<'overview'|'restaurants'|'requests'|'add'>('overview');
+  const [tab,         setTab]         = useState<'overview'|'restaurants'|'requests'|'archive'|'add'>('overview');
   const [toggling,    setToggling]    = useState<string|null>(null);
   const [showBroadcast, setShowBroadcast] = useState(false);
 
   // ── طلبات إنشاء حساب ──
   const [signupRequests,   setSignupRequests]   = useState<SignupRequest[]>([]);
   const [actingRequestId,  setActingRequestId]  = useState<string|null>(null);
-  const [pendingOwnerContact, setPendingOwnerContact] = useState<{name: string; phone: string} | null>(null);
+  const [linkedRequest, setLinkedRequest] = useState<SignupRequest | null>(null);
+
+  // ── فلاتر تبويب الأرشيف ──
+  const [archiveSearch, setArchiveSearch] = useState('');
+  const [archiveStatusFilter, setArchiveStatusFilter] = useState<'all'|'approved'|'rejected'>('all');
 
   // ── نموذج إضافة مطعم ──
   const [addName,    setAddName]    = useState('');
@@ -607,24 +613,48 @@ export default function SuperAdminDashboard() {
   };
 
   const addRestaurant = async () => {
-    if (!addName.trim() || !addPass.trim()) return;
+    if (!addName.trim() || !addSlug.trim() || (!linkedRequest && !addPass.trim())) return;
     setAddLoading(true); setAddResult(null);
     const slug = addSlug.trim() || autoSlug(addName.trim());
+    const body = linkedRequest
+      ? { name: addName.trim(), slug, signupRequestId: linkedRequest.id }
+      : { name: addName.trim(), slug, password: addPass.trim() };
     const res = await fetch('/api/super-admin/restaurants', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: addName.trim(), slug, password: addPass.trim() }),
+      body: JSON.stringify(body),
     }).catch(() => null);
     const json = await res?.json().catch(() => ({}));
     if (res?.ok) {
       setAddResult({ ok: true, msg: `✓ تم إنشاء مطعم "${addName.trim()}" — اسم المستخدم: ${slug}` });
       setAddName(''); setAddSlug(''); setAddPass('');
-      setPendingOwnerContact(null);
-      loadAll(); loadAuthUsers();
+      setLinkedRequest(null);
+      loadAll(); loadAuthUsers(); loadSignupRequests();
     } else {
       setAddResult({ ok: false, msg: json?.error || 'حدث خطأ' });
     }
     setAddLoading(false);
+  };
+
+  // يُستخدم بعد نجاح "قبول" مباشرة وأيضاً من زر "استئناف الربط" بتبويب
+  // الأرشيف — يفتح نموذج "إضافة مطعم" مُعبّأً مسبقاً، مربوطاً بحساب Auth
+  // الخامل الحقيقي لصاحب الطلب إن وُجد.
+  const openLinkedAddForm = (r: SignupRequest) => {
+    if (r.auth_user_id && r.username) {
+      // اسم المستخدم الحقيقي المحجوز فعلاً بحساب Auth — وليس autoSlug(r.restaurant_name)
+      // الذي قد ينتج نصاً مختلفاً كلياً عمّا هو محجوز فعلاً (هذا كان خطأً سابقاً).
+      setLinkedRequest(r);
+      setAddSlug(r.username);
+    } else {
+      // طلب قديم بلا username/auth_user_id (سابق لـ migration 20260725100000) —
+      // لا يوجد حساب خامل لإعادة استخدامه، نرجع للسلوك المستقل المعتاد.
+      setLinkedRequest(null);
+      setAddSlug(autoSlug(r.restaurant_name));
+    }
+    setAddName(r.restaurant_name);
+    setAddPass('');
+    setAddResult(null);
+    setTab('add');
   };
 
   const approveSignupRequest = async (r: SignupRequest) => {
@@ -635,12 +665,7 @@ export default function SuperAdminDashboard() {
       body: JSON.stringify({ id: r.id, action: 'approve' }),
     }).catch(() => null);
     if (res?.ok) {
-      setPendingOwnerContact({ name: r.full_name, phone: r.phone });
-      setTab('add');
-      setAddName(r.restaurant_name);
-      setAddSlug(autoSlug(r.restaurant_name));
-      setAddPass('');
-      setAddResult(null);
+      openLinkedAddForm(r);
       loadSignupRequests();
     }
     setActingRequestId(null);
@@ -663,7 +688,21 @@ export default function SuperAdminDashboard() {
   const liveOrders    = orders.filter(o => !['completed','rejected'].includes(o.status));
   const todayRevenue  = orders.filter(o => o.status === 'completed').reduce((s,o) => s+o.total_amount, 0);
   const commission    = Math.round(todayRevenue * COMMISSION);
-  const pendingRequestsCount = signupRequests.filter(r => r.status === 'pending').length;
+  const pendingSignupRequests = signupRequests.filter(r => r.status === 'pending');
+  const historySignupRequests = signupRequests.filter(r => r.status !== 'pending');
+  const pendingRequestsCount  = pendingSignupRequests.length;
+
+  const filteredHistorySignupRequests = historySignupRequests.filter(r => {
+    if (archiveStatusFilter !== 'all' && r.status !== archiveStatusFilter) return false;
+    if (!archiveSearch.trim()) return true;
+    const q = archiveSearch.trim().toLowerCase();
+    return (
+      r.full_name.toLowerCase().includes(q) ||
+      r.phone.toLowerCase().includes(q) ||
+      r.restaurant_name.toLowerCase().includes(q) ||
+      (r.username ?? '').toLowerCase().includes(q)
+    );
+  });
 
   if (loading) return (
     <div className="min-h-screen bg-[#09090f] flex items-center justify-center">
@@ -716,11 +755,12 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="grid grid-cols-4 bg-[#13132b] rounded-2xl p-1 gap-1 border border-white/5">
+        <div className="grid grid-cols-5 bg-[#13132b] rounded-2xl p-1 gap-1 border border-white/5">
           {([
             { key: 'overview',    label: 'عام',            icon: '📊' },
             { key: 'restaurants', label: 'مطاعم',          icon: '🏪' },
-            { key: 'requests',    label: 'طلبات الإنشاء',  icon: '📝' },
+            { key: 'requests',    label: 'طلبات جديدة',    icon: '📝' },
+            { key: 'archive',     label: 'الأرشيف',        icon: '🗄️' },
             { key: 'add',         label: 'إضافة',          icon: '➕' },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
@@ -794,22 +834,91 @@ export default function SuperAdminDashboard() {
           </div>
         )}
 
-        {/* ══ Tab: طلبات الإنشاء ══ */}
+        {/* ══ Tab: طلبات جديدة (pending فقط) ══ */}
         {tab === 'requests' && (
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-              <p className="text-slate-400 text-xs">{signupRequests.length} طلب</p>
-              <p className="text-slate-400 text-xs">{pendingRequestsCount} بانتظار المراجعة</p>
+              <p className="text-slate-400 text-xs">{pendingRequestsCount} طلب بانتظار المراجعة</p>
             </div>
-            {signupRequests.length === 0 ? (
-              <div className="bg-[#13132b] rounded-2xl p-10 text-center text-slate-600 border border-white/5">لا توجد طلبات</div>
-            ) : signupRequests.map(r => {
-              const statusInfo = r.status === 'pending'
-                ? { label: 'معلّق', cls: 'bg-amber-500/20 text-amber-400' }
-                : r.status === 'approved'
-                ? { label: 'مقبول', cls: 'bg-green-500/20 text-green-400' }
-                : { label: 'مرفوض', cls: 'bg-red-500/20 text-red-400' };
+            {pendingSignupRequests.length === 0 ? (
+              <div className="bg-[#13132b] rounded-2xl p-10 text-center text-slate-600 border border-white/5">لا توجد طلبات معلّقة</div>
+            ) : pendingSignupRequests.map(r => {
               const acting = actingRequestId === r.id;
+              return (
+                <div key={r.id} className="bg-[#13132b] rounded-2xl border border-slate-700/50 p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm text-white leading-tight truncate">{r.full_name}</p>
+                      <p className="text-slate-400 text-xs mt-0.5 truncate">{r.restaurant_name}</p>
+                    </div>
+                    <span className="flex-shrink-0 text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-400">
+                      معلّق
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-slate-100 text-sm font-mono" dir="ltr">{r.phone}</p>
+                    <p className="text-slate-500 text-[10px]">{fmtDate(r.created_at)} · {fmtTime(r.created_at)}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => rejectSignupRequest(r)}
+                      disabled={acting}
+                      className="flex-1 py-2.5 rounded-xl bg-red-600/20 border border-red-500/30 text-red-300 font-bold text-xs hover:bg-red-600/30 transition-all active:scale-95 disabled:opacity-40"
+                    >
+                      رفض
+                    </button>
+                    <button
+                      onClick={() => approveSignupRequest(r)}
+                      disabled={acting}
+                      className="flex-1 py-2.5 rounded-xl bg-green-600/20 border border-green-500/30 text-green-300 font-bold text-xs hover:bg-green-600/30 transition-all active:scale-95 disabled:opacity-40"
+                    >
+                      قبول
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ══ Tab: الأرشيف (approved + rejected، للقراءة فقط) ══ */}
+        {tab === 'archive' && (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                value={archiveSearch}
+                onChange={e => setArchiveSearch(e.target.value)}
+                placeholder="بحث بالاسم، الهاتف، المطعم، اسم المستخدم..."
+                dir="rtl"
+                className="flex-1 bg-[#13132b] border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-100 text-sm outline-none focus:border-violet-500/50 placeholder:text-slate-600"
+              />
+            </div>
+            <div className="grid grid-cols-3 bg-[#13132b] rounded-xl p-1 gap-1 border border-white/5">
+              {([
+                { key: 'all',      label: 'الكل' },
+                { key: 'approved', label: 'مقبول' },
+                { key: 'rejected', label: 'مرفوض' },
+              ] as const).map(f => (
+                <button key={f.key} onClick={() => setArchiveStatusFilter(f.key)}
+                  className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                    archiveStatusFilter === f.key
+                      ? 'bg-gradient-to-b from-violet-600 to-indigo-600 text-white'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {filteredHistorySignupRequests.length === 0 ? (
+              <div className="bg-[#13132b] rounded-2xl p-10 text-center text-slate-600 border border-white/5">لا توجد نتائج</div>
+            ) : filteredHistorySignupRequests.map(r => {
+              const statusInfo = r.status === 'rejected'
+                ? { label: 'مرفوض', cls: 'bg-red-500/20 text-red-400' }
+                : r.linked_restaurant_id
+                ? { label: 'مقبول ومُفعّل', cls: 'bg-green-500/20 text-green-400' }
+                : { label: 'مقبول — لم يُستكمل', cls: 'bg-amber-500/20 text-amber-400' };
+              const canResume = r.status === 'approved' && !r.linked_restaurant_id;
               return (
                 <div key={r.id} className="bg-[#13132b] rounded-2xl border border-slate-700/50 p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
@@ -825,23 +934,13 @@ export default function SuperAdminDashboard() {
                     <p className="text-slate-100 text-sm font-mono" dir="ltr">{r.phone}</p>
                     <p className="text-slate-500 text-[10px]">{fmtDate(r.created_at)} · {fmtTime(r.created_at)}</p>
                   </div>
-                  {r.status === 'pending' && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => rejectSignupRequest(r)}
-                        disabled={acting}
-                        className="flex-1 py-2.5 rounded-xl bg-red-600/20 border border-red-500/30 text-red-300 font-bold text-xs hover:bg-red-600/30 transition-all active:scale-95 disabled:opacity-40"
-                      >
-                        رفض
-                      </button>
-                      <button
-                        onClick={() => approveSignupRequest(r)}
-                        disabled={acting}
-                        className="flex-1 py-2.5 rounded-xl bg-green-600/20 border border-green-500/30 text-green-300 font-bold text-xs hover:bg-green-600/30 transition-all active:scale-95 disabled:opacity-40"
-                      >
-                        قبول
-                      </button>
-                    </div>
+                  {canResume && (
+                    <button
+                      onClick={() => openLinkedAddForm(r)}
+                      className="w-full py-2.5 rounded-xl bg-amber-600/20 border border-amber-500/30 text-amber-300 font-bold text-xs hover:bg-amber-600/30 transition-all active:scale-95"
+                    >
+                      استئناف الربط
+                    </button>
                   )}
                 </div>
               );
@@ -854,11 +953,20 @@ export default function SuperAdminDashboard() {
           <div className="bg-[#13132b] rounded-2xl border border-white/5 p-5 space-y-4">
             <p className="text-white font-black text-sm text-right">إضافة مطعم جديد</p>
 
-            {pendingOwnerContact && (
-              <div className="bg-indigo-900/20 border border-indigo-700/30 rounded-xl px-4 py-3 text-right">
-                <p className="text-indigo-400 text-[11px] mb-0.5">مقدّم الطلب</p>
+            {linkedRequest && (
+              <div className="bg-indigo-900/20 border border-indigo-700/30 rounded-xl px-4 py-3 text-right space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-indigo-400 text-[11px]">مقدّم الطلب</p>
+                  <button
+                    type="button"
+                    onClick={() => setLinkedRequest(null)}
+                    className="text-slate-500 text-[11px] hover:text-slate-300 transition-colors underline"
+                  >
+                    إلغاء الربط
+                  </button>
+                </div>
                 <p className="text-white text-sm font-bold">
-                  {pendingOwnerContact.name} — <span className="font-mono" dir="ltr">{pendingOwnerContact.phone}</span>
+                  {linkedRequest.full_name} — <span className="font-mono" dir="ltr">{linkedRequest.phone}</span>
                 </p>
               </div>
             )}
@@ -893,6 +1001,11 @@ export default function SuperAdminDashboard() {
               {!addSlug.trim() && addName.trim() && (
                 <p className="text-amber-400 text-[10px] mt-1 text-right">اكتب الـ slug بالإنجليزي مثل: milano</p>
               )}
+              {linkedRequest && addSlug.trim() !== linkedRequest.username && (
+                <p className="text-amber-400 text-[10px] mt-1 text-right">
+                  تغيير الـ slug عن اسم المستخدم الأصلي ({linkedRequest.username}) سيحدّث إيميل حساب العميل المرتبط.
+                </p>
+              )}
             </div>
 
             {/* معلومة اسم المستخدم */}
@@ -903,18 +1016,27 @@ export default function SuperAdminDashboard() {
               </div>
             )}
 
-            {/* الباسورد */}
-            <div>
-              <p className="text-slate-500 text-[11px] mb-1.5 text-right">كلمة المرور *</p>
-              <input
-                value={addPass}
-                onChange={e => setAddPass(e.target.value)}
-                type="text"
-                placeholder="كلمة مرور قوية"
-                dir="ltr"
-                className="w-full bg-[#0d0d20] border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 text-sm outline-none focus:border-violet-500/50 placeholder:text-slate-600 font-mono"
-              />
-            </div>
+            {/* الباسورد — مخفي بوضع الربط: الحساب يستخدم كلمة السر الحقيقية
+                التي اختارها العميل بنفسه عند التسجيل، ولا تُطلب/تُخزَّن هنا أبداً. */}
+            {linkedRequest ? (
+              <div className="bg-emerald-900/20 border border-emerald-700/30 rounded-xl px-4 py-3 text-right">
+                <p className="text-emerald-400 text-sm font-bold leading-relaxed">
+                  🔒 كلمة المرور محفوظة كما اختارها العميل — لا حاجة لإدخال كلمة مرور، الحساب يستخدم بالفعل كلمة السر التي اختارها صاحب الطلب عند التسجيل.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-slate-500 text-[11px] mb-1.5 text-right">كلمة المرور *</p>
+                <input
+                  value={addPass}
+                  onChange={e => setAddPass(e.target.value)}
+                  type="text"
+                  placeholder="كلمة مرور قوية"
+                  dir="ltr"
+                  className="w-full bg-[#0d0d20] border border-slate-700/50 rounded-xl px-4 py-3 text-slate-100 text-sm outline-none focus:border-violet-500/50 placeholder:text-slate-600 font-mono"
+                />
+              </div>
+            )}
 
             {/* نتيجة */}
             {addResult && (
@@ -925,7 +1047,7 @@ export default function SuperAdminDashboard() {
 
             <button
               onClick={addRestaurant}
-              disabled={addLoading || !addName.trim() || !addSlug.trim() || !addPass.trim()}
+              disabled={addLoading || !addName.trim() || !addSlug.trim() || (!linkedRequest && !addPass.trim())}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black text-sm transition-all active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {addLoading ? (

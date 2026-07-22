@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronRight, Hourglass, Loader2 } from 'lucide-react';
 import { mashiRoundedFont, MASHI_FONT } from '@/app/home/brand';
@@ -37,6 +38,7 @@ const inputClass =
 
 export default function SignupPage() {
   const reduceMotion = useReducedMotion();
+  const router = useRouter();
 
   const [fullName, setFullName]             = useState('');
   const [phone, setPhone]                   = useState('');
@@ -95,14 +97,22 @@ export default function SignupPage() {
     if (res?.status === 201) {
       setPendingSignup({ phone: phone.trim(), username: username.trim().toLowerCase() });
       setSuccess(true);
-      setTimeout(() => {
-        window.location.href = '/track-signup';
-      }, 2500);
       return;
     }
 
     setServerError(json?.error || 'حدث خطأ، الرجاء المحاولة لاحقاً');
   };
+
+  // مؤقّت إعادة التوجيه مربوط بدورة حياة المكوّن: لو المستخدم غادر الصفحة
+  // (مثلاً ضغط "الرجوع للرئيسية") قبل انتهاء الـ 2.5 ثانية، cleanup يلغي
+  // المؤقّت فلا يُعاد توجيهه قسرياً عن الصفحة التي اختارها بنفسه.
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => {
+      router.push('/track-signup');
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [success, router]);
 
   return (
     <div className={`min-h-screen bg-white text-[#1d1d1f] ${mashiRoundedFont.variable}`} dir="rtl">
@@ -159,6 +169,12 @@ export default function SignupPage() {
               <p className="text-sm text-[#6e6e73] leading-relaxed">
                 استلمنا طلبك بنجاح، وفريق ماشي بيراجعه ويوافق عليه بأسرع وقت ممكن. رح ننقلك لصفحة متابعة الطلب.
               </p>
+              <Link
+                href="/"
+                className="mt-2 w-full py-3.5 rounded-2xl border border-black/10 text-[#1d1d1f] font-bold text-sm text-center active:scale-95 transition-all"
+              >
+                الرجوع للرئيسية
+              </Link>
             </motion.div>
           ) : (
             <>

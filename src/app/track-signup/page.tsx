@@ -196,6 +196,12 @@ export default function TrackSignupPage() {
               <p className="text-sm text-[#6e6e73] leading-relaxed">
                 فريقنا يراجع طلبك حالياً وبيوافق عليه بأسرع وقت ممكن. ارجع لهذي الصفحة بأي وقت لمتابعة الحالة.
               </p>
+              <Link
+                href="/"
+                className="mt-2 w-full py-3.5 rounded-2xl border border-black/10 text-[#1d1d1f] font-bold text-sm text-center active:scale-95 transition-all"
+              >
+                الرجوع للرئيسية
+              </Link>
             </motion.div>
           )}
 
