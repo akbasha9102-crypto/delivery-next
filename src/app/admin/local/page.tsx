@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { AdminHeader } from '@/components/layout/AdminHeader';
 import { LowStockAlert } from '@/components/shared/LowStockAlert';
 import {
   ShoppingCart, Plus, Minus, X, Check, Wallet, LogOut, Clock,
@@ -536,18 +537,20 @@ export default function LocalCashierPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]" dir="rtl">
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
-        <button onClick={() => setShowClose(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold active:scale-95 transition-all">
-          <LogOut size={14} /> إغلاق الوردية
-        </button>
-        <div className="flex items-center gap-1.5">
-          <ShoppingCart size={18} className="text-[#f97316]" />
-          <p className="font-bold text-gray-900 dark:text-slate-100">الكاشير</p>
-        </div>
-        <div className="flex items-center gap-1 text-xs font-bold text-gray-400 dark:text-slate-500">
-          <Clock size={12} /> وردية مفتوحة
-        </div>
-      </header>
+      <AdminHeader
+        title="الكاشير"
+        icon={<ShoppingCart size={18} className="text-[#f97316]" />}
+        right={
+          <button onClick={() => setShowClose(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold active:scale-95 transition-all">
+            <LogOut size={14} /> إغلاق الوردية
+          </button>
+        }
+        left={
+          <div className="flex items-center gap-1 text-xs font-bold text-gray-400 dark:text-slate-500">
+            <Clock size={12} /> وردية مفتوحة
+          </div>
+        }
+      />
 
       <LowStockAlert />
 

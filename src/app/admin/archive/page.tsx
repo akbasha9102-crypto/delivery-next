@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { AdminHeader } from '@/components/layout/AdminHeader';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { MessageSquare, AlertCircle, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, MapPin, Car, Search, Calendar, X } from 'lucide-react';
@@ -250,13 +251,14 @@ export default function ArchivePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-28 md:pb-0 md:mr-[70px]">
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
-          <ChevronRight size={20} className="text-gray-500 dark:text-slate-400" />
-        </button>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">الأرشيف</h1>
-        <div className="w-9" />
-      </header>
+      <AdminHeader
+        title="الأرشيف"
+        right={
+          <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
+            <ChevronRight size={20} className="text-gray-500 dark:text-slate-400" />
+          </button>
+        }
+      />
 
       {/* شريط البحث + زر التاريخ */}
       <div className="flex items-center gap-2 px-3 pt-3">

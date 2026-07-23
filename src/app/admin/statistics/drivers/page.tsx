@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { AdminHeader } from '@/components/layout/AdminHeader';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import { ChevronRight, ChevronDown, Car, Phone } from 'lucide-react';
 
@@ -138,13 +139,15 @@ export default function DriverStatisticsPage() {
     <OwnerOnly>
     <div className="min-h-screen pb-24 md:pb-0 md:mr-[70px]" style={{ backgroundColor: s.bg }}>
 
-      <header className="sticky top-0 z-40 border-b px-4 py-4 flex items-center justify-between" style={{ backgroundColor: s.surface, borderColor: s.border }}>
-        <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl active:scale-90 transition-all" style={{ backgroundColor: s.muted }}>
-          <ChevronRight size={20} style={{ color: s.sub }} />
-        </button>
-        <h1 className="text-xl font-bold" style={{ color: s.text }}>إحصائيات السائقين</h1>
-        <div className="w-9" />
-      </header>
+      <AdminHeader
+        style={{ backgroundColor: s.surface, borderColor: s.border }}
+        title={<span style={{ color: s.text }}>إحصائيات السائقين</span>}
+        right={
+          <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl active:scale-90 transition-all" style={{ backgroundColor: s.muted }}>
+            <ChevronRight size={20} style={{ color: s.sub }} />
+          </button>
+        }
+      />
 
       {/* Quick range */}
       <div className="flex gap-2 px-4 pt-4 pb-2">

@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { AdminHeader } from '@/components/layout/AdminHeader';
 import { ClipboardList, Clock, ChevronLeft, MapPin, AlertTriangle, User, Phone, X, Check, Bell, Plus, Minus, Ticket } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
@@ -997,12 +998,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-center">
-        <div className="flex items-center gap-1.5">
-          <ClipboardList size={18} className="text-gray-500 dark:text-slate-400" />
-          <p className="font-bold text-gray-500 dark:text-slate-400">الطلبات</p>
-        </div>
-      </header>
+      <AdminHeader title="الطلبات" icon={<ClipboardList size={18} className="text-gray-500 dark:text-slate-400" />} />
 
       <LowStockAlert />
 
@@ -1028,7 +1024,7 @@ export default function DashboardPage() {
           </button>
         ))}
         <button onClick={() => setShowQuickAdd(true)}
-          className="flex items-center justify-center gap-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2 border-[#f97316] bg-[#f97316] text-white"
+          className="flex items-center justify-center gap-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2 border-[#D96846] bg-[#D96846] text-white"
           aria-label="إضافة طلب زبون بدون جوال">
           <Plus size={16} /> المحل
         </button>

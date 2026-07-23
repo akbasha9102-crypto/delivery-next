@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { AdminHeader } from '@/components/layout/AdminHeader';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import { Search, X, ChevronLeft, ChevronRight, Flame, Car, Package, LayoutGrid, ClipboardList, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { exportStatisticsToExcel, exportStatisticsToWord, type StatsExportData } from '@/lib/export/exportStatistics';
@@ -286,42 +287,47 @@ export default function StatisticsPage() {
     <div className="min-h-screen pb-24 md:pb-0 md:mr-[70px]" style={{ backgroundColor: s.bg }}>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b px-4 py-4 flex items-center justify-between" style={{ backgroundColor: s.surface, borderColor: s.border }}>
-        <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl active:scale-90 transition-all" style={{ backgroundColor: s.muted }}>
-          <ChevronRight size={20} style={{ color: s.sub }} />
-        </button>
-        <h1 className="text-xl font-bold" style={{ color: s.text }}>الإحصائيات</h1>
-        <div className="relative">
-          <button onClick={() => setExportOpen(o => !o)} disabled={exporting}
-            className="w-9 h-9 flex items-center justify-center rounded-xl active:scale-90 transition-all disabled:opacity-50"
-            style={{ backgroundColor: s.muted }}>
-            {exporting
-              ? <div className="w-4 h-4 border-2 border-[#f97316] border-t-transparent rounded-full animate-spin" />
-              : <Download size={18} style={{ color: s.sub }} />}
+      <AdminHeader
+        style={{ backgroundColor: s.surface, borderColor: s.border }}
+        title={<span style={{ color: s.text }}>الإحصائيات</span>}
+        right={
+          <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl active:scale-90 transition-all" style={{ backgroundColor: s.muted }}>
+            <ChevronRight size={20} style={{ color: s.sub }} />
           </button>
-          {exportOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setExportOpen(false)} />
-              <div className="absolute left-0 top-11 z-50 w-44 rounded-xl border shadow-lg overflow-hidden"
-                style={{ backgroundColor: s.surface, borderColor: s.border }}>
-                <button onClick={() => handleExport('excel')}
-                  className="w-full flex items-center gap-2 justify-end px-3 py-2.5 text-sm font-bold active:scale-[0.98] transition-all"
-                  style={{ color: s.text }}>
-                  تصدير Excel
-                  <FileSpreadsheet size={16} style={{ color: '#22c55e' }} />
-                </button>
-                <div className="h-px" style={{ backgroundColor: s.border }} />
-                <button onClick={() => handleExport('word')}
-                  className="w-full flex items-center gap-2 justify-end px-3 py-2.5 text-sm font-bold active:scale-[0.98] transition-all"
-                  style={{ color: s.text }}>
-                  تصدير Word
-                  <FileText size={16} style={{ color: '#3b82f6' }} />
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </header>
+        }
+        left={
+          <div className="relative">
+            <button onClick={() => setExportOpen(o => !o)} disabled={exporting}
+              className="w-9 h-9 flex items-center justify-center rounded-xl active:scale-90 transition-all disabled:opacity-50"
+              style={{ backgroundColor: s.muted }}>
+              {exporting
+                ? <div className="w-4 h-4 border-2 border-[#f97316] border-t-transparent rounded-full animate-spin" />
+                : <Download size={18} style={{ color: s.sub }} />}
+            </button>
+            {exportOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setExportOpen(false)} />
+                <div className="absolute left-0 top-11 z-50 w-44 rounded-xl border shadow-lg overflow-hidden"
+                  style={{ backgroundColor: s.surface, borderColor: s.border }}>
+                  <button onClick={() => handleExport('excel')}
+                    className="w-full flex items-center gap-2 justify-end px-3 py-2.5 text-sm font-bold active:scale-[0.98] transition-all"
+                    style={{ color: s.text }}>
+                    تصدير Excel
+                    <FileSpreadsheet size={16} style={{ color: '#22c55e' }} />
+                  </button>
+                  <div className="h-px" style={{ backgroundColor: s.border }} />
+                  <button onClick={() => handleExport('word')}
+                    className="w-full flex items-center gap-2 justify-end px-3 py-2.5 text-sm font-bold active:scale-[0.98] transition-all"
+                    style={{ color: s.text }}>
+                    تصدير Word
+                    <FileText size={16} style={{ color: '#3b82f6' }} />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        }
+      />
 
       {/* روابط إحصائيات السائقين والمخزون */}
       <div className="grid grid-cols-2 gap-2 px-4 pt-4">

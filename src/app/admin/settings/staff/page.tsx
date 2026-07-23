@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
+import { AdminHeader } from '@/components/layout/AdminHeader';
 import { createStaff, updateStaff, type StaffMember, type StaffRole } from '@/lib/api/staffApi';
 
 async function getAccessToken(): Promise<string | undefined> {
@@ -134,14 +135,12 @@ export default function StaffManagementPage() {
   return (
     <OwnerOnly>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-10" dir="rtl">
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <button onClick={openAdd} className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 active:scale-90 transition-all"><Plus size={18} /></button>
-        <div className="flex items-center gap-2">
-          <ShieldCheck size={18} className="text-[#2563eb]" />
-          <p className="font-bold text-gray-900 dark:text-slate-100">إدارة الموظفين</p>
-        </div>
-        <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all"><ChevronRight size={18} /></button>
-      </header>
+      <AdminHeader
+        title="إدارة الموظفين"
+        icon={<ShieldCheck size={18} className="text-[#2563eb]" />}
+        right={<button onClick={openAdd} className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 active:scale-90 transition-all"><Plus size={18} /></button>}
+        left={<button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all"><ChevronRight size={18} /></button>}
+      />
 
       {toast && (
         <div className={`mx-4 mt-3 px-4 py-3 rounded-xl border text-center font-bold text-sm ${toast.ok ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'}`}>

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
+import { AdminHeader } from '@/components/layout/AdminHeader';
 import type { StaffActionLog } from '@/lib/api/staffApi';
 import { translateAuditAction } from '@/lib/constants/audit-translations';
 import { describeAuditLog } from '@/lib/utils/audit-describe';
@@ -88,21 +89,21 @@ export default function AuditLogPage() {
   return (
     <OwnerOnly>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-10" dir="rtl">
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        {isOwner ? (
-          <button onClick={() => setShowFilters(true)} className="relative w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
-            <SlidersHorizontal size={16} />
-            {hasActiveFilter && <span className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full bg-[#2563eb]" />}
-          </button>
-        ) : (
-          <div className="w-9" />
-        )}
-        <div className="flex items-center gap-2">
-          <History size={18} className="text-[#2563eb]" />
-          <p className="font-bold text-gray-900 dark:text-slate-100">سجل التدقيق</p>
-        </div>
-        <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all"><ChevronRight size={18} /></button>
-      </header>
+      <AdminHeader
+        title="سجل التدقيق"
+        icon={<History size={18} className="text-[#2563eb]" />}
+        right={
+          isOwner ? (
+            <button onClick={() => setShowFilters(true)} className="relative w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
+              <SlidersHorizontal size={16} />
+              {hasActiveFilter && <span className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full bg-[#2563eb]" />}
+            </button>
+          ) : undefined
+        }
+        left={
+          <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all"><ChevronRight size={18} /></button>
+        }
+      />
 
       <div className="px-4 pt-4">
         {types.length > 0 && (

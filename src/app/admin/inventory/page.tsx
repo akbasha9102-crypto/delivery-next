@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { AdminHeader } from '@/components/layout/AdminHeader';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { Pencil, Trash2, Search, X, AlertTriangle, Package, TrendingUp, TrendingDown, RotateCcw, ArrowLeftRight, ChevronDown, PackagePlus, FolderPlus, ShoppingCart, ArrowUp, ArrowDown, GitBranch, ChevronRight, Plus } from 'lucide-react';
 
@@ -527,17 +528,14 @@ export default function InventoryPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Package size={18} className="text-gray-500 dark:text-slate-400" />
-          <p className="font-bold text-gray-500 dark:text-slate-400">المخزون</p>
-          {lowStockCount > 0 && (
-            <span className="flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-              <AlertTriangle size={10} /> {lowStockCount}
-            </span>
-          )}
-        </div>
-      </header>
+      <AdminHeader
+        title={<>المخزون{lowStockCount > 0 && (
+          <span className="flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            <AlertTriangle size={10} /> {lowStockCount}
+          </span>
+        )}</>}
+        icon={<Package size={18} className="text-gray-500 dark:text-slate-400" />}
+      />
 
       {toast && (
         <div className={`mx-4 mt-3 px-4 py-3 rounded-xl border text-center font-bold text-sm ${toast.ok ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'}`}>

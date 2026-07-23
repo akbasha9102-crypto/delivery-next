@@ -5,6 +5,7 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { useStaff } from '@/context/StaffContext';
 import { listInventoryForStaff, registerWaste, type CashierInventoryItem } from '@/lib/api/staffApi';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { AdminHeader } from '@/components/layout/AdminHeader';
 
 /**
  * شاشة مخزون الكاشير المبسّطة — عرض الكمية فقط (بدون تكلفة الشراء أو المورّد إطلاقاً)
@@ -66,14 +67,7 @@ export default function CashierInventoryWastePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]" dir="rtl">
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <div className="w-9" />
-        <div className="flex items-center gap-2">
-          <Package size={18} className="text-[#f97316]" />
-          <p className="font-bold text-gray-900 dark:text-slate-100">المخزون — تسجيل هدر</p>
-        </div>
-        <div className="w-9" />
-      </header>
+      <AdminHeader title="المخزون — تسجيل هدر" icon={<Package size={18} className="text-[#f97316]" />} />
 
       {toast && (
         <div className={`mx-4 mt-3 px-4 py-3 rounded-xl border text-center font-bold text-sm ${toast.ok ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'}`}>

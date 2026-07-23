@@ -9,11 +9,11 @@
   --primary-light: #fff3e0;
 
   /* لون تفعيل/اختيار/ضغط الأزرار بلوحة تحكم المطعم (/admin) فقط — لا علاقة له بـ --primary (هوية منيو الزبون).
-     --admin-accent-light-bg الآن قيمة نهائية ثابتة (#110d50)، وليست تجريبية. */
-  --admin-accent-light-bg:      #110d50;
-  --admin-accent-light-border:  #1d1d1f;
+     قيمة رمادي غامق من عائلة slate (متطابقة مع dark:bg-slate-800 / dark:border-slate-700 المستخدمة أصلاً بكل الهيدرات). */
+  --admin-accent-light-bg:      #1e293b;
+  --admin-accent-light-border:  #334155;
   --admin-accent-dark:          #f97316;
-  --admin-accent-light-bg-soft: rgba(17,13,80,0.12);
+  --admin-accent-light-bg-soft: rgba(30,41,59,0.12);
   --admin-accent-dark-soft:     rgba(249,115,22,0.1);
 }
 

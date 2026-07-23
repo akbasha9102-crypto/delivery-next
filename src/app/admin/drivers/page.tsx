@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
+import { AdminHeader } from '@/components/layout/AdminHeader';
 import { Plus, Trash2, CheckCircle, Circle, Copy, Check, KeyRound, X, RefreshCw, Loader2 } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
 
@@ -131,16 +132,17 @@ export default function DriversPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
 
       {/* هيدر */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <button
-          onClick={openAdd}
-          className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 flex items-center justify-center active:scale-90 transition-all shadow-sm"
-        >
-          <Plus size={20} />
-        </button>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">السائقين</h1>
-        <div className="w-9" />
-      </header>
+      <AdminHeader
+        title="السائقين"
+        right={
+          <button
+            onClick={openAdd}
+            className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 flex items-center justify-center active:scale-90 transition-all shadow-sm"
+          >
+            <Plus size={20} />
+          </button>
+        }
+      />
 
       {/* قائمة السائقين */}
       <div className="px-4 pt-4">
