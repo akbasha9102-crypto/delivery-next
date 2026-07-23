@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, ChevronDown, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Ticket, Flame, Percent, Search, Check, Bell, Store } from 'lucide-react';
+import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, ChevronDown, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Ticket, Flame, Percent, Search, Check, Bell, Power } from 'lucide-react';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -752,7 +752,7 @@ export default function SettingsPage() {
   const [showClosedModal,  setShowClosedModal]  = useState(false);
   const [opensAtInput,     setOpensAtInput]     = useState('');
   const [showSchedule,     setShowSchedule]     = useState(false);
-  const [showMyRestaurant, setShowMyRestaurant] = useState(false);
+  const [showRestaurantStatus, setShowRestaurantStatus] = useState(false);
   const [showInfo,         setShowInfo]         = useState(false);
   const [showChangePass,   setShowChangePass]   = useState(false);
   const [showAccount,      setShowAccount]      = useState(false);
@@ -916,84 +916,66 @@ export default function SettingsPage() {
 
       <div className="px-4 pt-4 space-y-4">
 
-        {/* ـ مطعمي ـ */}
+        {/* تعديل معلومات المطعم */}
         <button
-          onClick={() => setShowMyRestaurant(true)}
-          className="w-full flex items-center justify-between px-4 py-4 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all"
+          onClick={() => setShowInfo(true)}
+          className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <Store size={18} className="text-gray-600 dark:text-slate-400" />
+            <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+              <PenLine size={18} className="text-orange-600 dark:text-orange-400" />
             </div>
             <div className="text-right">
-              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">مطعمي</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">المعلومات، والحساب وتسجيل الدخول</p>
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">تعديل معلومات المطعم</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">الاسم، الشعار، الواتساب، الموقع</p>
             </div>
           </div>
           <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
         </button>
 
-        {/* المظهر */}
-        <div className="w-full flex items-center justify-between px-4 py-4 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl">
+        {/* الحساب وتسجيل الدخول */}
+        <button
+          onClick={() => setShowAccount(true)}
+          className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all"
+        >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              {dark ? <Moon size={18} className="text-gray-600 dark:text-slate-400" /> : <Sun size={18} className="text-yellow-400" />}
+            <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center flex-shrink-0">
+              <KeyRound size={18} className="text-violet-600 dark:text-violet-400" />
             </div>
             <div className="text-right">
-              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">المظهر</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{dark ? 'الوضع الليلي' : 'الوضع النهاري'}</p>
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحساب وتسجيل الدخول</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">اسم المستخدم وكلمة المرور</p>
             </div>
           </div>
-          <button onClick={toggleDark} dir="ltr"
-            className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${dark ? 'bg-[#f97316]' : 'bg-gray-300 dark:bg-slate-500'}`}>
-            <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${dark ? 'translate-x-6' : ''}`} />
-          </button>
-        </div>
+          <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+        </button>
 
         {/* ─ حالة المطعم ─ */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 space-y-3">
-          <p className="text-right font-bold text-gray-900 dark:text-slate-100 text-sm">حالة المطعم</p>
-          <div className="flex gap-2">
-            <button onClick={() => setShowSchedule(true)}
-              className="relative flex flex-col items-center justify-center gap-1 px-4 py-3 rounded-xl border bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 active:scale-95 transition-all">
-              <Calendar size={18} className="text-gray-500 dark:text-slate-400" />
-              <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">جدولة</span>
-              {scheduleLocal?.auto && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-green-400" />}
-            </button>
-            <button onClick={handleToggleClosed}
-              className={`flex-1 rounded-xl px-4 py-3 border flex items-center justify-between transition-all active:scale-[0.98] ${effectivelyClosed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'}`}>
-              <div dir="ltr" className={`relative w-10 h-5 rounded-full transition-colors duration-300 flex-shrink-0 ${effectivelyClosed ? 'bg-red-500' : 'bg-green-400'}`}>
-                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${effectivelyClosed ? 'translate-x-0' : 'translate-x-5'}`} />
-              </div>
-              <div className="text-right">
-                <p className={`font-bold text-sm ${effectivelyClosed ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                  {is_closed ? '🔒 المطعم مغلق' : closedBySchedule ? '⏰ مغلق الآن (حسب الجدولة)' : '✅ المطعم مفتوح'}
-                </p>
-                {is_closed && opens_at && (
-                  <p className="text-xs text-gray-400 mt-0.5">سيفتح الساعة {opens_at}</p>
-                )}
-                {closedBySchedule && (
-                  <p className="text-xs text-gray-400 mt-0.5">اضغط للفتح الفوري (يوقف التطبيق التلقائي)</p>
-                )}
-              </div>
-            </button>
+        <button onClick={() => setShowRestaurantStatus(true)}
+          className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
+              <Power size={18} className="text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="text-right">
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">حالة المطعم</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">فتح/إغلاق المطعم وجدولة الدوام</p>
+            </div>
           </div>
-          {scheduleLocal?.auto && (
-            <p className="text-center text-[11px] font-bold text-gray-400 dark:text-slate-500">
-              حسب الجدولة الآن يُفترض أن يكون المطعم {scheduleExpectedOpen ? 'مفتوحاً 🟢' : 'مغلقاً 🔴'} — هذا يُطبَّق تلقائياً بصفحة الزبون والمفتاح أعلاه. لو أغلق المطعم بسبب الجدولة، اضغط المفتاح لفتحه فوراً وإيقاف التطبيق التلقائي
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <p className={`text-xs font-bold ${effectivelyClosed ? 'text-red-500' : 'text-green-500'}`}>
+              {effectivelyClosed ? '🔒 مغلق' : '✅ مفتوح'}
             </p>
-          )}
-          {toggleError && (
-            <p className="text-red-500 text-xs text-center font-bold">{toggleError}</p>
-          )}
-        </div>
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+          </div>
+        </button>
 
         {/* رسوم التوصيل */}
         <button onClick={() => setShowDeliveryFee(true)}
           className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <Truck size={18} className="text-gray-600 dark:text-slate-400" />
+            <div className="w-10 h-10 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center flex-shrink-0">
+              <Truck size={18} className="text-cyan-600 dark:text-cyan-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">رسوم التوصيل</p>
@@ -1010,8 +992,8 @@ export default function SettingsPage() {
         <button onClick={() => setShowMinOrder(true)}
           className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <Wallet size={18} className="text-gray-600 dark:text-slate-400" />
+            <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0">
+              <Wallet size={18} className="text-green-600 dark:text-green-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحد الأدنى للطلب</p>
@@ -1028,8 +1010,8 @@ export default function SettingsPage() {
         <button onClick={() => setShowCoupon(true)}
           className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <Ticket size={18} className="text-gray-600 dark:text-slate-400" />
+            <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center flex-shrink-0">
+              <Ticket size={18} className="text-pink-600 dark:text-pink-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">كوبون الخصم</p>
@@ -1046,8 +1028,8 @@ export default function SettingsPage() {
         <button onClick={() => setShowDiscounts(true)}
           className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <Percent size={18} className="text-gray-600 dark:text-slate-400" />
+            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
+              <Percent size={18} className="text-amber-600 dark:text-amber-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">خصومات الأقسام والوجبات</p>
@@ -1060,8 +1042,8 @@ export default function SettingsPage() {
         {/* ─ الأكثر مبيعاً — قسم ثابت يظهر دائماً أولاً في منيو الزبون، بأفضل 3 وجبات مبيعاً ─ */}
         <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <Flame size={18} className="text-gray-600 dark:text-slate-400" />
+            <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
+              <Flame size={18} className="text-red-600 dark:text-red-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأكثر مبيعاً</p>
@@ -1082,8 +1064,8 @@ export default function SettingsPage() {
             <button onClick={() => router.push('/admin/statistics')}
               className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all active:scale-95">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                  <BarChart2 size={16} className="text-gray-600 dark:text-slate-400" />
+                <div className="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-900/20 flex items-center justify-center">
+                  <BarChart2 size={16} className="text-sky-600 dark:text-sky-400" />
                 </div>
                 <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصائيات</span>
               </div>
@@ -1093,8 +1075,8 @@ export default function SettingsPage() {
           <button onClick={() => router.push('/admin/archive')}
             className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all active:scale-95 ${isCashier ? 'col-span-2' : ''}`}>
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                <Archive size={16} className="text-gray-600 dark:text-slate-400" />
+              <div className="w-9 h-9 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center">
+                <Archive size={16} className="text-yellow-600 dark:text-yellow-400" />
               </div>
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأرشيف</span>
             </div>
@@ -1108,8 +1090,8 @@ export default function SettingsPage() {
             disabled={isCashier}
             className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                <User size={16} className="text-gray-600 dark:text-slate-400" />
+              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                <User size={16} className="text-blue-500" />
               </div>
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الموظفين</span>
             </div>
@@ -1119,8 +1101,8 @@ export default function SettingsPage() {
             disabled={isCashier}
             className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-                <KeyRound size={16} className="text-gray-600 dark:text-slate-400" />
+              <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                <KeyRound size={16} className="text-purple-600 dark:text-purple-400" />
               </div>
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">سجل التدقيق</span>
             </div>
@@ -1128,12 +1110,22 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* ─ تسجيل الخروج ─ */}
-        <button onClick={logout}
-          className="w-full py-4 rounded-2xl bg-red-500 text-white font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
-          <LogOut size={16} />
-          تسجيل الخروج
-        </button>
+        {/* المظهر */}
+        <div className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center flex-shrink-0">
+              {dark ? <Moon size={18} className="text-indigo-600 dark:text-indigo-400" /> : <Sun size={18} className="text-yellow-400" />}
+            </div>
+            <div className="text-right">
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">المظهر</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{dark ? 'الوضع الليلي' : 'الوضع النهاري'}</p>
+            </div>
+          </div>
+          <button onClick={toggleDark} dir="ltr"
+            className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${dark ? 'bg-[#f97316]' : 'bg-gray-300 dark:bg-slate-500'}`}>
+            <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${dark ? 'translate-x-6' : ''}`} />
+          </button>
+        </div>
 
         {/* الإشعارات — مخفية عن الكاشير */}
         {!isCashier && (
@@ -1150,46 +1142,23 @@ export default function SettingsPage() {
                 <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإشعارات</p>
                 <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">رسائل من إدارة المنصة</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                <Bell size={18} className="text-gray-600 dark:text-slate-400" />
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center flex-shrink-0">
+                <Bell size={18} className="text-rose-600 dark:text-rose-400" />
               </div>
             </div>
           </button>
         )}
 
+        {/* ─ تسجيل الخروج ─ */}
+        <button onClick={logout}
+          className="w-full py-4 rounded-2xl bg-red-500 text-white font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
+          <LogOut size={16} />
+          تسجيل الخروج
+        </button>
+
       </div>
 
-      {!showMyRestaurant && !showAccount && !showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && !showDiscounts && !showNotifications && <AdminBottomNav />}
-
-      {/* نافذة مطعمي */}
-      {showMyRestaurant && (
-        <BottomSheet title="مطعمي" onClose={() => setShowMyRestaurant(false)} maxHeight="40vh">
-          <button
-            onClick={() => { setShowMyRestaurant(false); setShowInfo(true); }}
-            className="w-full flex items-center justify-between bg-gray-50 dark:bg-slate-800 rounded-xl px-4 py-3.5 active:scale-[0.98] transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                <PenLine size={18} className="text-gray-600 dark:text-slate-400" />
-              </div>
-              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">تعديل معلومات المطعم</p>
-            </div>
-            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-          </button>
-          <button
-            onClick={() => { setShowMyRestaurant(false); setShowAccount(true); }}
-            className="w-full flex items-center justify-between bg-gray-50 dark:bg-slate-800 rounded-xl px-4 py-3.5 active:scale-[0.98] transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                <KeyRound size={18} className="text-gray-600 dark:text-slate-400" />
-              </div>
-              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحساب وتسجيل الدخول</p>
-            </div>
-            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-          </button>
-        </BottomSheet>
-      )}
+      {!showRestaurantStatus && !showAccount && !showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && !showDiscounts && !showNotifications && <AdminBottomNav />}
 
       {/* نافذة الحساب وتسجيل الدخول */}
       {showAccount && (
@@ -1227,6 +1196,45 @@ export default function SettingsPage() {
           settingsId={settingsId}
           refreshSettings={refreshSettings}
         />
+      )}
+
+      {/* نافذة حالة المطعم */}
+      {showRestaurantStatus && (
+        <BottomSheet title="حالة المطعم" onClose={() => setShowRestaurantStatus(false)}>
+          <div className="flex gap-2">
+            <button onClick={() => setShowSchedule(true)}
+              className="relative flex flex-col items-center justify-center gap-1 px-4 py-3 rounded-xl border bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 active:scale-95 transition-all">
+              <Calendar size={18} className="text-gray-500 dark:text-slate-400" />
+              <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">جدولة</span>
+              {scheduleLocal?.auto && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-green-400" />}
+            </button>
+            <button onClick={handleToggleClosed}
+              className={`flex-1 rounded-xl px-4 py-3 border flex items-center justify-between transition-all active:scale-[0.98] ${effectivelyClosed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'}`}>
+              <div dir="ltr" className={`relative w-10 h-5 rounded-full transition-colors duration-300 flex-shrink-0 ${effectivelyClosed ? 'bg-red-500' : 'bg-green-400'}`}>
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${effectivelyClosed ? 'translate-x-0' : 'translate-x-5'}`} />
+              </div>
+              <div className="text-right">
+                <p className={`font-bold text-sm ${effectivelyClosed ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                  {is_closed ? '🔒 المطعم مغلق' : closedBySchedule ? '⏰ مغلق الآن (حسب الجدولة)' : '✅ المطعم مفتوح'}
+                </p>
+                {is_closed && opens_at && (
+                  <p className="text-xs text-gray-400 mt-0.5">سيفتح الساعة {opens_at}</p>
+                )}
+                {closedBySchedule && (
+                  <p className="text-xs text-gray-400 mt-0.5">اضغط للفتح الفوري (يوقف التطبيق التلقائي)</p>
+                )}
+              </div>
+            </button>
+          </div>
+          {scheduleLocal?.auto && (
+            <p className="text-center text-[11px] font-bold text-gray-400 dark:text-slate-500">
+              حسب الجدولة الآن يُفترض أن يكون المطعم {scheduleExpectedOpen ? 'مفتوحاً 🟢' : 'مغلقاً 🔴'} — هذا يُطبَّق تلقائياً بصفحة الزبون والمفتاح أعلاه. لو أغلق المطعم بسبب الجدولة، اضغط المفتاح لفتحه فوراً وإيقاف التطبيق التلقائي
+            </p>
+          )}
+          {toggleError && (
+            <p className="text-red-500 text-xs text-center font-bold">{toggleError}</p>
+          )}
+        </BottomSheet>
       )}
 
       {/* نافذة رسوم التوصيل */}
