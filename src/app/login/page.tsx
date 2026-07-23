@@ -82,7 +82,7 @@ export default function LoginPage() {
             value={identifier}
             onChange={e => setIdentifier(e.target.value)}
             dir="ltr"
-            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all font-mono"
+            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#110d50]/50 focus:border-[#110d50]/40 transition-all font-mono"
           />
         </div>
         <div className="mb-6">
@@ -93,13 +93,13 @@ export default function LoginPage() {
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && signIn()}
             placeholder="••••••••"
-            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all"
+            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#110d50]/50 focus:border-[#110d50]/40 transition-all"
           />
         </div>
         <button
           onClick={signIn}
           disabled={loading}
-          className="w-full bg-gradient-to-r from-[#15803D] to-[#116830] hover:from-[#116830] hover:to-[#0e5a2b] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(21,128,61,0.5)] transition-all active:scale-95"
+          className="w-full bg-gradient-to-r from-[#110d50] to-[#0E0B41] hover:from-[#0E0B41] hover:to-[#0C0938] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(17,13,80,0.5)] transition-all active:scale-95"
         >
           {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
         </button>

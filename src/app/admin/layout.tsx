@@ -9,15 +9,6 @@ import { StaffGate } from '@/components/guards/StaffGate';
 import { SuperAdminNotificationsProvider } from '@/context/SuperAdminNotificationsContext';
 import { SuperAdminMessageOverlay } from '@/components/staff/SuperAdminMessageOverlay';
 
-// تجريبي — سيُحذف لاحقاً (يخدم AccentColorExperimentSheet بصفحة الإعدادات)
-function hexToRgba(hex: string, alpha: number): string {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.substring(0, 2), 16);
-  const g = parseInt(h.substring(2, 4), 16);
-  const b = parseInt(h.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 function makeBellWavUrl(): string | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -61,27 +52,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [restaurantId]);
-
-  // تجريبي — سيُحذف لاحقاً: يطبّق لون الهوية البصرية المخصّص من AccentColorExperimentSheet (localStorage) على كامل لوحة التحكم
-  useEffect(() => {
-    if (!restaurantId) return;
-    const key = `admin_accent_experiment_v1_${restaurantId}`;
-    const raw = localStorage.getItem(key);
-    if (!raw) return;
-    try {
-      const v = JSON.parse(raw) as { lightBg: string; lightBorder: string; dark: string };
-      const root = document.documentElement;
-      root.style.setProperty('--admin-accent-light-bg', v.lightBg);
-      root.style.setProperty('--admin-accent-light-border', v.lightBorder);
-      root.style.setProperty('--admin-accent-dark', v.dark);
-      root.style.setProperty('--admin-accent-light-bg-soft', hexToRgba(v.lightBg, 0.12));
-      root.style.setProperty('--admin-accent-dark-soft', hexToRgba(v.dark, 0.1));
-    } catch {}
-    return () => {
-      const root = document.documentElement;
-      ['--admin-accent-light-bg','--admin-accent-light-border','--admin-accent-dark','--admin-accent-light-bg-soft','--admin-accent-dark-soft'].forEach(p => root.style.removeProperty(p));
-    };
   }, [restaurantId]);
 
   return (

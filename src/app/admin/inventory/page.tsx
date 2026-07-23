@@ -838,7 +838,7 @@ export default function InventoryPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[96dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveItem} disabled={saving || !form.name.trim()} className="bg-[#15803D] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
+              <button onClick={saveItem} disabled={saving || !form.name.trim()} className="bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
                 {saving ? '...' : editItem ? 'حفظ' : 'إضافة'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100">{editItem ? '✏️ تعديل مادة' : '➕ مادة جديدة'}</h3>
@@ -861,7 +861,7 @@ export default function InventoryPage() {
                         colorStyle
                           ? 'text-black'
                           : selected
-                            ? 'bg-[#15803D] border-[#15803D] text-white dark:bg-[#15803D] dark:border-[#15803D]'
+                            ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]'
                             : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
                       }`}
                       style={colorStyle}>
@@ -929,7 +929,7 @@ export default function InventoryPage() {
                   const cfg = MOVEMENT_LABELS[t];
                   return (
                     <button key={t} onClick={() => setMovType(t)}
-                      className={`py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${movType === t ? 'bg-[#15803D] border-[#15803D] text-white dark:bg-[#15803D] dark:border-[#15803D]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300'}`}>
+                      className={`py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${movType === t ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300'}`}>
                       {cfg.label}
                     </button>
                   );
@@ -965,7 +965,7 @@ export default function InventoryPage() {
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">فلترة حسب الفئة</p>
               <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
                 <button onClick={() => selectPurchaseCatFilter(null)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!purchaseCatFilter ? 'bg-[#15803D] border-[#15803D] text-white dark:bg-[#15803D] dark:border-[#15803D]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!purchaseCatFilter ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                   الكل
                 </button>
                 {categories.map(c => {
@@ -977,7 +977,7 @@ export default function InventoryPage() {
                         hasColor
                           ? 'text-black'
                           : purchaseCatFilter === c
-                            ? 'bg-[#15803D] border-[#15803D] text-white dark:bg-[#15803D] dark:border-[#15803D]'
+                            ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]'
                             : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
                       }`}
                       style={hasColor ? { backgroundColor: hexToRgba(dbCat!.color as string, purchaseCatFilter === c ? 1 : 0.55), borderColor: dbCat!.color as string } : undefined}>
@@ -998,14 +998,14 @@ export default function InventoryPage() {
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">
                 الكمية المشتراة {selectedPurchaseItem ? `(${selectedPurchaseItem.unit})` : ''}
-                {selectedPurchaseItem?.reorder_quantity ? <span className="text-[#15803D]"> — مقترحة حسب كمية إعادة الطلب</span> : ''}
+                {selectedPurchaseItem?.reorder_quantity ? <span className="text-[var(--admin-accent-light-bg)]"> — مقترحة حسب كمية إعادة الطلب</span> : ''}
               </p>
               <input type="number" value={purchaseQty} onChange={e => setPurchaseQty(e.target.value)} placeholder="0" dir="rtl"
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">
                 سعر الشراء (د.ع) {selectedPurchaseItem ? `— لكل ${selectedPurchaseItem.unit}` : ''}
-                {selectedPurchaseItem && selectedPurchaseItem.cost_per_unit > 0 ? <span className="text-[#15803D]"> — مقترح حسب آخر سعر</span> : ''}
+                {selectedPurchaseItem && selectedPurchaseItem.cost_per_unit > 0 ? <span className="text-[var(--admin-accent-light-bg)]"> — مقترح حسب آخر سعر</span> : ''}
               </p>
               <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} placeholder="0" dir="rtl"
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
@@ -1015,7 +1015,7 @@ export default function InventoryPage() {
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-4" />
 
               <button onClick={recordPurchase} disabled={purchaseSaving || !purchaseItemId || !purchaseQty || !purchasePrice}
-                className="w-full bg-[#15803D] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
+                className="w-full bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
                 {purchaseSaving ? 'جاري الحفظ...' : 'تسجيل الشراء'}
               </button>
             </div>
@@ -1147,11 +1147,11 @@ export default function InventoryPage() {
                 </>
               ) : (
                 <>
-                  <p className="font-bold text-[#15803D] text-right mb-1">{treeMaterial.name}</p>
+                  <p className="font-bold text-[var(--admin-accent-light-bg)] text-right mb-1">{treeMaterial.name}</p>
                   <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-4">وحدة المخزون: {treeMaterial.unit}</p>
 
                   {treeLoading ? (
-                    <div className="flex justify-center py-6"><div className="w-8 h-8 border-4 border-[#15803D] border-t-transparent rounded-full animate-spin" /></div>
+                    <div className="flex justify-center py-6"><div className="w-8 h-8 border-4 border-[var(--admin-accent-light-border)] border-t-transparent rounded-full animate-spin" /></div>
                   ) : (
                     <>
                       {treeLinks.length === 0 && (
@@ -1189,7 +1189,7 @@ export default function InventoryPage() {
                           <div className="flex gap-2">
                             <input value={treeYield} onChange={e => setTreeYield(e.target.value)} placeholder="مثال: 4" type="number" min="1" className={`${input} flex-1 mb-0`} />
                             <button onClick={addTreeLink} disabled={treeSaving || !treeDishId || !treeYield}
-                              className="bg-[#15803D] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all">
+                              className="bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all">
                               {treeSaving ? '...' : <Plus size={18} />}
                             </button>
                           </div>
