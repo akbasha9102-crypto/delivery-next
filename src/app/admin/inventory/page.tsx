@@ -565,8 +565,8 @@ export default function InventoryPage() {
         <div className="px-4 space-y-3 pb-4">
           <button onClick={openPurchase}
             className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-            <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
-              <ShoppingCart size={26} className="text-[#f97316]" />
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <ShoppingCart size={26} className="text-gray-500 dark:text-slate-400" />
             </div>
             <div className="text-right flex-1">
               <p className="font-bold text-gray-900 dark:text-slate-100">تسجيل عملية شراء</p>
@@ -576,8 +576,8 @@ export default function InventoryPage() {
 
           <button onClick={openAdd}
             className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-            <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
-              <PackagePlus size={26} className="text-[#f97316]" />
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <PackagePlus size={26} className="text-gray-500 dark:text-slate-400" />
             </div>
             <div className="text-right flex-1">
               <p className="font-bold text-gray-900 dark:text-slate-100">مادة جديدة</p>
@@ -587,8 +587,8 @@ export default function InventoryPage() {
 
           <button onClick={openAddCategory}
             className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-            <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
-              <FolderPlus size={26} className="text-[#f97316]" />
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <FolderPlus size={26} className="text-gray-500 dark:text-slate-400" />
             </div>
             <div className="text-right flex-1">
               <p className="font-bold text-gray-900 dark:text-slate-100">فئة جديدة</p>
@@ -598,8 +598,8 @@ export default function InventoryPage() {
 
           <button onClick={openRecipeTree}
             className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-            <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
-              <GitBranch size={26} className="text-[#f97316]" />
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <GitBranch size={26} className="text-gray-500 dark:text-slate-400" />
             </div>
             <div className="text-right flex-1">
               <p className="font-bold text-gray-900 dark:text-slate-100">شجرة المكونات</p>
@@ -756,7 +756,7 @@ export default function InventoryPage() {
                       {/* Cost + Move button */}
                       <div className="flex items-center justify-between">
                         <button onClick={() => { setMovementTarget(item); setMovType('IN'); setMovQty(''); setMovNotes(''); }}
-                          className="flex items-center gap-1.5 bg-[#f97316] text-white font-bold text-xs px-3 py-2 rounded-xl active:scale-95 transition-all">
+                          className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 font-bold text-xs px-3 py-2 rounded-xl active:scale-95 transition-all">
                           <ArrowLeftRight size={12} /> حركة مخزون
                         </button>
                         {item.cost_per_unit > 0 && (
@@ -838,7 +838,7 @@ export default function InventoryPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[96dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveItem} disabled={saving || !form.name.trim()} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
+              <button onClick={saveItem} disabled={saving || !form.name.trim()} className="bg-[#15803D] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
                 {saving ? '...' : editItem ? 'حفظ' : 'إضافة'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100">{editItem ? '✏️ تعديل مادة' : '➕ مادة جديدة'}</h3>
@@ -861,7 +861,7 @@ export default function InventoryPage() {
                         colorStyle
                           ? 'text-black'
                           : selected
-                            ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]'
+                            ? 'bg-[#15803D] border-[#15803D] text-white dark:bg-[#15803D] dark:border-[#15803D]'
                             : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
                       }`}
                       style={colorStyle}>
@@ -875,7 +875,7 @@ export default function InventoryPage() {
               <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
                 {UNITS.map(u => (
                   <button key={u} onClick={() => setForm(p => ({ ...p, unit: u }))}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${form.unit === u ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${form.unit === u ? 'bg-gray-600 dark:bg-slate-500 border-gray-600 dark:border-slate-500 text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                     {u}
                   </button>
                 ))}
@@ -921,7 +921,7 @@ export default function InventoryPage() {
             <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-4" />
             <div className="px-5 pb-2">
               <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-1">حركة مخزون</p>
-              <p className="text-sm text-[#f97316] font-bold text-right mb-4">{movementTarget.name} — {movementTarget.current_stock} {movementTarget.unit}</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400 font-bold text-right mb-4">{movementTarget.name} — {movementTarget.current_stock} {movementTarget.unit}</p>
 
               {/* نوع الحركة */}
               <div className="grid grid-cols-3 gap-2 mb-4">
@@ -929,7 +929,7 @@ export default function InventoryPage() {
                   const cfg = MOVEMENT_LABELS[t];
                   return (
                     <button key={t} onClick={() => setMovType(t)}
-                      className={`py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${movType === t ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300'}`}>
+                      className={`py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${movType === t ? 'bg-[#15803D] border-[#15803D] text-white dark:bg-[#15803D] dark:border-[#15803D]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300'}`}>
                       {cfg.label}
                     </button>
                   );
@@ -947,7 +947,7 @@ export default function InventoryPage() {
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-4" />
 
               <button onClick={submitMovement} disabled={movSaving || !movQty}
-                className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
+                className="w-full bg-gray-100 dark:bg-slate-700 disabled:opacity-40 text-gray-600 dark:text-slate-400 font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
                 {movSaving ? 'جاري الحفظ...' : 'تسجيل الحركة'}
               </button>
             </div>
@@ -965,7 +965,7 @@ export default function InventoryPage() {
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">فلترة حسب الفئة</p>
               <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
                 <button onClick={() => selectPurchaseCatFilter(null)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!purchaseCatFilter ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!purchaseCatFilter ? 'bg-[#15803D] border-[#15803D] text-white dark:bg-[#15803D] dark:border-[#15803D]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                   الكل
                 </button>
                 {categories.map(c => {
@@ -977,7 +977,7 @@ export default function InventoryPage() {
                         hasColor
                           ? 'text-black'
                           : purchaseCatFilter === c
-                            ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]'
+                            ? 'bg-[#15803D] border-[#15803D] text-white dark:bg-[#15803D] dark:border-[#15803D]'
                             : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
                       }`}
                       style={hasColor ? { backgroundColor: hexToRgba(dbCat!.color as string, purchaseCatFilter === c ? 1 : 0.55), borderColor: dbCat!.color as string } : undefined}>
@@ -998,14 +998,14 @@ export default function InventoryPage() {
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">
                 الكمية المشتراة {selectedPurchaseItem ? `(${selectedPurchaseItem.unit})` : ''}
-                {selectedPurchaseItem?.reorder_quantity ? <span className="text-[#f97316]"> — مقترحة حسب كمية إعادة الطلب</span> : ''}
+                {selectedPurchaseItem?.reorder_quantity ? <span className="text-[#15803D]"> — مقترحة حسب كمية إعادة الطلب</span> : ''}
               </p>
               <input type="number" value={purchaseQty} onChange={e => setPurchaseQty(e.target.value)} placeholder="0" dir="rtl"
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">
                 سعر الشراء (د.ع) {selectedPurchaseItem ? `— لكل ${selectedPurchaseItem.unit}` : ''}
-                {selectedPurchaseItem && selectedPurchaseItem.cost_per_unit > 0 ? <span className="text-[#f97316]"> — مقترح حسب آخر سعر</span> : ''}
+                {selectedPurchaseItem && selectedPurchaseItem.cost_per_unit > 0 ? <span className="text-[#15803D]"> — مقترح حسب آخر سعر</span> : ''}
               </p>
               <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} placeholder="0" dir="rtl"
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
@@ -1015,7 +1015,7 @@ export default function InventoryPage() {
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-4" />
 
               <button onClick={recordPurchase} disabled={purchaseSaving || !purchaseItemId || !purchaseQty || !purchasePrice}
-                className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
+                className="w-full bg-[#15803D] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
                 {purchaseSaving ? 'جاري الحفظ...' : 'تسجيل الشراء'}
               </button>
             </div>
@@ -1061,7 +1061,7 @@ export default function InventoryPage() {
               )}
 
               <button onClick={saveCategory} disabled={catSaving || !newCatName.trim()}
-                className="w-full bg-[#f97316] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
+                className="w-full bg-gray-100 dark:bg-slate-700 disabled:opacity-40 text-gray-600 dark:text-slate-400 font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
                 {catSaving ? 'جاري الحفظ...' : editingCat ? 'حفظ التعديلات' : 'إضافة الفئة'}
               </button>
             </div>
@@ -1147,11 +1147,11 @@ export default function InventoryPage() {
                 </>
               ) : (
                 <>
-                  <p className="font-bold text-[#f97316] text-right mb-1">{treeMaterial.name}</p>
+                  <p className="font-bold text-[#15803D] text-right mb-1">{treeMaterial.name}</p>
                   <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-4">وحدة المخزون: {treeMaterial.unit}</p>
 
                   {treeLoading ? (
-                    <div className="flex justify-center py-6"><div className="w-8 h-8 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
+                    <div className="flex justify-center py-6"><div className="w-8 h-8 border-4 border-[#15803D] border-t-transparent rounded-full animate-spin" /></div>
                   ) : (
                     <>
                       {treeLinks.length === 0 && (
@@ -1189,7 +1189,7 @@ export default function InventoryPage() {
                           <div className="flex gap-2">
                             <input value={treeYield} onChange={e => setTreeYield(e.target.value)} placeholder="مثال: 4" type="number" min="1" className={`${input} flex-1 mb-0`} />
                             <button onClick={addTreeLink} disabled={treeSaving || !treeDishId || !treeYield}
-                              className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all">
+                              className="bg-[#15803D] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all">
                               {treeSaving ? '...' : <Plus size={18} />}
                             </button>
                           </div>

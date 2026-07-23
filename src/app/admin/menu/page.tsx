@@ -531,7 +531,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={addCategory} disabled={saving || !newCat.trim()} className="bg-black text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={addCategory} disabled={saving || !newCat.trim()} className="bg-[#15803D] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">➕ قسم جديد</h3>
@@ -555,7 +555,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={addItem} disabled={saving} className="bg-black text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={addItem} disabled={saving} className="bg-[#15803D] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">🍽️ طبق جديد</h3>
@@ -566,7 +566,7 @@ export default function MenuPage() {
               <div className="flex gap-2 overflow-x-auto mb-4 flex-row-reverse">
                 {categories.map(cat => (
                   <button key={cat.id} onClick={() => setForm(p => ({ ...p, category_id: cat.id }))}
-                    className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border active:scale-95 transition-all ${form.category_id === cat.id ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+                    className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border active:scale-95 transition-all ${form.category_id === cat.id ? 'bg-[#15803D] border-[#15803D] text-white dark:bg-[#15803D] dark:border-[#15803D]' : 'bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
                     {cat.name}
                   </button>
                 ))}
@@ -592,7 +592,7 @@ export default function MenuPage() {
                     <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة رابط صورة</p>
                     <div className="flex gap-2">
                       <input value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)} placeholder="رابط الصورة" dir="rtl" className={`${input} flex-1 mb-0`} />
-                      <button onClick={addNewItemImage} disabled={!newImageUrl.trim()} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                      <button onClick={addNewItemImage} disabled={!newImageUrl.trim()} className="bg-[#15803D] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                     </div>
                   </div>
                 )}
@@ -619,7 +619,7 @@ export default function MenuPage() {
                       const price = parseFloat(newExtraPrice.replace(',', '.')) || 0;
                       setNewItemExtras([...newItemExtras, { id: Date.now().toString(), name: newExtraName.trim(), price }]);
                       setNewExtraName(''); setNewExtraPrice('');
-                    }} disabled={!newExtraName.trim()} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                    }} disabled={!newExtraName.trim()} className="bg-[#15803D] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                   </div>
                 </div>
               </div>
@@ -657,7 +657,7 @@ export default function MenuPage() {
                     </select>
                     <div className="flex gap-2">
                       <input value={newRecipeQty} onChange={e => setNewRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
-                      <button onClick={addNewItemRecipe} disabled={!newRecipeInvId} className="bg-[#f97316] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                      <button onClick={addNewItemRecipe} disabled={!newRecipeInvId} className="bg-[#15803D] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                     </div>
                     {(() => {
                       const inv = inventoryItems.find(i => i.id === newRecipeInvId);
@@ -668,7 +668,7 @@ export default function MenuPage() {
                         <div className="flex gap-1.5 flex-wrap justify-end mt-2">
                           {opts.map(u => (
                             <button key={u} type="button" onClick={() => setNewRecipeUnit(u)}
-                              className={`px-3 py-1 rounded-full text-xs font-bold border active:scale-95 transition-all ${newRecipeUnit === u ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                              className={`px-3 py-1 rounded-full text-xs font-bold border active:scale-95 transition-all ${newRecipeUnit === u ? 'bg-[#15803D] border-[#15803D] text-white dark:bg-[#15803D] dark:border-[#15803D]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                               {u}
                             </button>
                           ))}
@@ -879,8 +879,8 @@ export default function MenuPage() {
             <button
               onClick={() => setShowAddCatSheet(true)}
               className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-              <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
-                <FolderPlus size={26} className="text-[#f97316]" />
+              <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <FolderPlus size={26} className="text-gray-500 dark:text-slate-400" />
               </div>
               <div className="text-right flex-1">
                 <p className="font-bold text-gray-900 dark:text-slate-100">إضافة قسم جديد</p>
@@ -891,8 +891,8 @@ export default function MenuPage() {
             <button
               onClick={() => setShowAddItemSheet(true)}
               className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 active:scale-95 transition-all">
-              <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
-                <UtensilsCrossed size={26} className="text-[#f97316]" />
+              <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <UtensilsCrossed size={26} className="text-gray-500 dark:text-slate-400" />
               </div>
               <div className="text-right flex-1">
                 <p className="font-bold text-gray-900 dark:text-slate-100">إضافة وجبة جديدة</p>
