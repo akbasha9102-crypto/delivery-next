@@ -8,6 +8,7 @@ import { StaffProvider } from '@/context/StaffContext';
 import { StaffGate } from '@/components/guards/StaffGate';
 import { SuperAdminNotificationsProvider } from '@/context/SuperAdminNotificationsContext';
 import { SuperAdminMessageOverlay } from '@/components/staff/SuperAdminMessageOverlay';
+import { changaFont, ADMIN_FONT_STYLE } from '@/lib/fonts';
 
 function makeBellWavUrl(): string | null {
   if (typeof window === 'undefined') return null;
@@ -55,17 +56,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [restaurantId]);
 
   return (
-    <AdminGuard>
-      <StaffProvider>
-        <StaffGate>
-          <NewOrdersProvider>
-            <SuperAdminNotificationsProvider>
-              {children}
-              <SuperAdminMessageOverlay />
-            </SuperAdminNotificationsProvider>
-          </NewOrdersProvider>
-        </StaffGate>
-      </StaffProvider>
-    </AdminGuard>
+    <div className={changaFont.variable} style={ADMIN_FONT_STYLE}>
+      <AdminGuard>
+        <StaffProvider>
+          <StaffGate>
+            <NewOrdersProvider>
+              <SuperAdminNotificationsProvider>
+                {children}
+                <SuperAdminMessageOverlay />
+              </SuperAdminNotificationsProvider>
+            </NewOrdersProvider>
+          </StaffGate>
+        </StaffProvider>
+      </AdminGuard>
+    </div>
   );
 }
