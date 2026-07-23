@@ -922,8 +922,8 @@ export default function SettingsPage() {
           className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
-              <PenLine size={18} className="text-orange-600 dark:text-orange-400" />
+            <div className="w-10 h-10 rounded-xl bg-orange-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+              <PenLine size={18} className="text-white dark:text-orange-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">تعديل معلومات المطعم</p>
@@ -939,8 +939,8 @@ export default function SettingsPage() {
           className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center flex-shrink-0">
-              <KeyRound size={18} className="text-violet-600 dark:text-violet-400" />
+            <div className="w-10 h-10 rounded-xl bg-violet-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+              <KeyRound size={18} className="text-white dark:text-violet-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحساب وتسجيل الدخول</p>
@@ -954,8 +954,8 @@ export default function SettingsPage() {
         <button onClick={() => setShowRestaurantStatus(true)}
           className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
-              <Power size={18} className="text-emerald-600 dark:text-emerald-400" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+              <Power size={18} className="text-white dark:text-emerald-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">حالة المطعم</p>
@@ -974,8 +974,8 @@ export default function SettingsPage() {
         <button onClick={() => setShowDeliveryFee(true)}
           className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center flex-shrink-0">
-              <Truck size={18} className="text-cyan-600 dark:text-cyan-400" />
+            <div className="w-10 h-10 rounded-xl bg-cyan-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+              <Truck size={18} className="text-white dark:text-cyan-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">رسوم التوصيل</p>
@@ -992,8 +992,8 @@ export default function SettingsPage() {
         <button onClick={() => setShowMinOrder(true)}
           className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0">
-              <Wallet size={18} className="text-green-600 dark:text-green-400" />
+            <div className="w-10 h-10 rounded-xl bg-green-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+              <Wallet size={18} className="text-white dark:text-green-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحد الأدنى للطلب</p>
@@ -1010,8 +1010,8 @@ export default function SettingsPage() {
         <button onClick={() => setShowCoupon(true)}
           className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center flex-shrink-0">
-              <Ticket size={18} className="text-pink-600 dark:text-pink-400" />
+            <div className="w-10 h-10 rounded-xl bg-pink-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+              <Ticket size={18} className="text-white dark:text-pink-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">كوبون الخصم</p>
@@ -1028,8 +1028,8 @@ export default function SettingsPage() {
         <button onClick={() => setShowDiscounts(true)}
           className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
-              <Percent size={18} className="text-amber-600 dark:text-amber-400" />
+            <div className="w-10 h-10 rounded-xl bg-amber-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+              <Percent size={18} className="text-white dark:text-amber-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">خصومات الأقسام والوجبات</p>
@@ -1042,8 +1042,8 @@ export default function SettingsPage() {
         {/* ─ الأكثر مبيعاً — قسم ثابت يظهر دائماً أولاً في منيو الزبون، بأفضل 3 وجبات مبيعاً ─ */}
         <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
-              <Flame size={18} className="text-red-600 dark:text-red-400" />
+            <div className="w-10 h-10 rounded-xl bg-red-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+              <Flame size={18} className="text-white dark:text-red-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأكثر مبيعاً</p>
@@ -1064,8 +1064,8 @@ export default function SettingsPage() {
             <button onClick={() => router.push('/admin/statistics')}
               className="flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all active:scale-95">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-900/20 flex items-center justify-center">
-                  <BarChart2 size={16} className="text-sky-600 dark:text-sky-400" />
+                <div className="w-9 h-9 rounded-xl bg-sky-500 dark:bg-black flex items-center justify-center">
+                  <BarChart2 size={16} className="text-white dark:text-sky-400" />
                 </div>
                 <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصائيات</span>
               </div>
@@ -1075,8 +1075,8 @@ export default function SettingsPage() {
           <button onClick={() => router.push('/admin/archive')}
             className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all active:scale-95 ${isCashier ? 'col-span-2' : ''}`}>
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center">
-                <Archive size={16} className="text-yellow-600 dark:text-yellow-400" />
+              <div className="w-9 h-9 rounded-xl bg-yellow-500 dark:bg-black flex items-center justify-center">
+                <Archive size={16} className="text-white dark:text-yellow-400" />
               </div>
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأرشيف</span>
             </div>
@@ -1090,8 +1090,8 @@ export default function SettingsPage() {
             disabled={isCashier}
             className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                <User size={16} className="text-blue-500" />
+              <div className="w-9 h-9 rounded-xl bg-blue-500 dark:bg-black flex items-center justify-center">
+                <User size={16} className="text-white dark:text-blue-400" />
               </div>
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الموظفين</span>
             </div>
@@ -1101,29 +1101,12 @@ export default function SettingsPage() {
             disabled={isCashier}
             className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
-                <KeyRound size={16} className="text-purple-600 dark:text-purple-400" />
+              <div className="w-9 h-9 rounded-xl bg-purple-500 dark:bg-black flex items-center justify-center">
+                <KeyRound size={16} className="text-white dark:text-purple-400" />
               </div>
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">سجل التدقيق</span>
             </div>
             {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
-          </button>
-        </div>
-
-        {/* المظهر */}
-        <div className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center flex-shrink-0">
-              {dark ? <Moon size={18} className="text-indigo-600 dark:text-indigo-400" /> : <Sun size={18} className="text-yellow-400" />}
-            </div>
-            <div className="text-right">
-              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">المظهر</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{dark ? 'الوضع الليلي' : 'الوضع النهاري'}</p>
-            </div>
-          </div>
-          <button onClick={toggleDark} dir="ltr"
-            className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${dark ? 'bg-[#f97316]' : 'bg-gray-300 dark:bg-slate-500'}`}>
-            <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${dark ? 'translate-x-6' : ''}`} />
           </button>
         </div>
 
@@ -1142,12 +1125,29 @@ export default function SettingsPage() {
                 <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإشعارات</p>
                 <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">رسائل من إدارة المنصة</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center flex-shrink-0">
-                <Bell size={18} className="text-rose-600 dark:text-rose-400" />
+              <div className="w-10 h-10 rounded-xl bg-rose-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+                <Bell size={18} className="text-white dark:text-rose-400" />
               </div>
             </div>
           </button>
         )}
+
+        {/* المظهر */}
+        <div className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+              {dark ? <Moon size={18} className="text-indigo-400" /> : <Sun size={18} className="text-white" />}
+            </div>
+            <div className="text-right">
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">المظهر</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{dark ? 'الوضع الليلي' : 'الوضع النهاري'}</p>
+            </div>
+          </div>
+          <button onClick={toggleDark} dir="ltr"
+            className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${dark ? 'bg-[#f97316]' : 'bg-gray-300 dark:bg-slate-500'}`}>
+            <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${dark ? 'translate-x-6' : ''}`} />
+          </button>
+        </div>
 
         {/* ─ تسجيل الخروج ─ */}
         <button onClick={logout}
