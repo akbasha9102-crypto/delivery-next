@@ -51,8 +51,18 @@ export default function LoginPage() {
           className={`${mashiRoundedFont.variable} text-4xl font-extrabold text-center mb-1`}
           style={{
             ...MASHI_FONT,
-            color: '#04170B',
-            textShadow: '0 1px 2px rgba(4,23,11,0.35), 0 4px 14px rgba(21,128,61,0.45), 0 0 34px rgba(74,222,128,0.35)',
+            color: BRAND.green,
+            WebkitTextStroke: `0.5px ${BRAND.dark}`,
+            textShadow: [
+              `0.5px 0 0 ${BRAND.dark}`,
+              `-0.5px 0 0 ${BRAND.dark}`,
+              `0 0.5px 0 ${BRAND.dark}`,
+              `0 -0.5px 0 ${BRAND.dark}`,
+              `0.5px 0.5px 0 ${BRAND.dark}`,
+              `-0.5px 0.5px 0 ${BRAND.dark}`,
+              `0.5px -0.5px 0 ${BRAND.dark}`,
+              `-0.5px -0.5px 0 ${BRAND.dark}`,
+            ].join(', '),
           }}
         >
           ماشي
