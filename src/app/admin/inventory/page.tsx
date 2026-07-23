@@ -529,8 +529,8 @@ export default function InventoryPage() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-center">
         <div className="flex items-center gap-2">
-          <Package size={18} className="text-[#f97316]" />
-          <p className="font-bold text-gray-900 dark:text-slate-100">المخزون</p>
+          <Package size={18} className="text-gray-500 dark:text-slate-400" />
+          <p className="font-bold text-gray-500 dark:text-slate-400">المخزون</p>
           {lowStockCount > 0 && (
             <span className="flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
               <AlertTriangle size={10} /> {lowStockCount}

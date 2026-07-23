@@ -999,8 +999,8 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-center">
         <div className="flex items-center gap-1.5">
-          <ClipboardList size={18} className="text-[#f97316]" />
-          <p className="font-bold text-red-500">الطلبات</p>
+          <ClipboardList size={18} className="text-gray-500 dark:text-slate-400" />
+          <p className="font-bold text-gray-500 dark:text-slate-400">الطلبات</p>
         </div>
       </header>
 
