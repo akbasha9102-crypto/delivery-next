@@ -109,7 +109,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
                 <div key={d} className={`bg-gray-50 dark:bg-slate-700/50 rounded-2xl px-4 py-3 transition-opacity ${!day.enabled ? 'opacity-50' : ''}`}>
                   <div className="flex items-center justify-between mb-2">
                     <button onClick={() => updateDay(key, 'enabled', !day.enabled)} dir="ltr"
-                      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${day.enabled ? 'bg-[#f97316]' : 'bg-gray-300 dark:bg-slate-500'}`}>
+                      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${day.enabled ? 'bg-[#15803D] border border-[#1d1d1f] dark:bg-[#f97316] dark:border-transparent' : 'bg-gray-300 dark:bg-slate-500'}`}>
                       <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${day.enabled ? 'translate-x-5' : ''}`} />
                     </button>
                     <p className="font-bold text-sm text-gray-800 dark:text-slate-200">{DAY_NAMES[d]}</p>

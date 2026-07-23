@@ -277,7 +277,7 @@ export default function ArchivePage() {
         </div>
         <button
           onClick={() => setShowDatePicker(v => !v)}
-          className={`w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-2xl border transition-all active:scale-95 ${showDatePicker || selectedDate ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}
+          className={`w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-2xl border transition-all active:scale-95 ${showDatePicker || selectedDate ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}
           aria-label="فلترة حسب التاريخ"
         >
           <Calendar size={18} />
@@ -300,7 +300,7 @@ export default function ArchivePage() {
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {last14Days.map(d => (
-              <button key={d} onClick={() => setSelectedDate(d === localDate() ? '' : d)} className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${currentDate === d ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+              <button key={d} onClick={() => setSelectedDate(d === localDate() ? '' : d)} className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${currentDate === d ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                 {dayLabel(d)}
               </button>
             ))}
@@ -315,7 +315,7 @@ export default function ArchivePage() {
       {/* التابات الرئيسية */}
       <div className="flex gap-2 px-3 pt-3 pb-2">
         <button onClick={() => setSection('feedback')}
-          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'feedback' ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'feedback' ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
           💬 ملاحظة/شكوى{feedbacks.length > 0 ? ` (${feedbacks.length})` : ''}
         </button>
         <button onClick={() => setSection('drivers')}
@@ -349,7 +349,7 @@ export default function ArchivePage() {
               const labels = { feedback: '💡 ملاحظات', complaint: '⚠️ شكاوى' };
               return (
                 <button key={t} onClick={() => setFilterType(filterType === t ? null : t)}
-                  className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-all active:scale-95 ${filterType === t ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+                  className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-all active:scale-95 ${filterType === t ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
                   {labels[t]}
                 </button>
               );

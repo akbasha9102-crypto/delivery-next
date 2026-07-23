@@ -547,16 +547,16 @@ export default function InventoryPage() {
 
       {/* Tabs */}
       <div className="flex mx-4 mt-4 mb-3 bg-gray-100 dark:bg-slate-800 rounded-2xl p-1">
-        <button onClick={() => setTab('items')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'items' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
+        <button onClick={() => setTab('items')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'items' ? 'bg-[#15803D] text-white border border-[#1d1d1f] dark:bg-[#f97316] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
           المواد ({items.length})
         </button>
-        <button onClick={() => setTab('categories')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'categories' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
+        <button onClick={() => setTab('categories')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'categories' ? 'bg-[#15803D] text-white border border-[#1d1d1f] dark:bg-[#f97316] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
           الفئات
         </button>
-        <button onClick={() => setTab('movements')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'movements' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
+        <button onClick={() => setTab('movements')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'movements' ? 'bg-[#15803D] text-white border border-[#1d1d1f] dark:bg-[#f97316] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
           الحركات
         </button>
-        <button onClick={() => setTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'add' ? 'bg-[#f97316] text-white' : 'text-gray-500 dark:text-slate-400'}`}>
+        <button onClick={() => setTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'add' ? 'bg-[#15803D] text-white border border-[#1d1d1f] dark:bg-[#f97316] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
           إضافة
         </button>
       </div>
@@ -677,7 +677,7 @@ export default function InventoryPage() {
               <AlertTriangle size={12} /> منخفض ({lowStockCount})
             </button>
             <button onClick={() => setCatFilter(null)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!catFilter ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!catFilter ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
               الكل
             </button>
             {categories.map(c => {
@@ -690,7 +690,7 @@ export default function InventoryPage() {
                     colorStyle
                       ? 'text-black'
                       : selected
-                        ? 'bg-[#f97316] border-[#f97316] text-white'
+                        ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]'
                         : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
                   }`}
                   style={colorStyle}>
@@ -777,12 +777,12 @@ export default function InventoryPage() {
           {movements.length > 0 && movementCategories.length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-none">
               <button onClick={() => setMovCatFilter(null)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!movCatFilter ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!movCatFilter ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                 الكل
               </button>
               {movementCategories.map(c => (
                 <button key={c} onClick={() => setMovCatFilter(movCatFilter === c ? null : c)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${movCatFilter === c ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${movCatFilter === c ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                   {c}
                 </button>
               ))}
@@ -861,7 +861,7 @@ export default function InventoryPage() {
                         colorStyle
                           ? 'text-black'
                           : selected
-                            ? 'bg-[#f97316] border-[#f97316] text-white'
+                            ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]'
                             : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
                       }`}
                       style={colorStyle}>
@@ -875,7 +875,7 @@ export default function InventoryPage() {
               <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
                 {UNITS.map(u => (
                   <button key={u} onClick={() => setForm(p => ({ ...p, unit: u }))}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${form.unit === u ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${form.unit === u ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                     {u}
                   </button>
                 ))}
@@ -929,7 +929,7 @@ export default function InventoryPage() {
                   const cfg = MOVEMENT_LABELS[t];
                   return (
                     <button key={t} onClick={() => setMovType(t)}
-                      className={`py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${movType === t ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300'}`}>
+                      className={`py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${movType === t ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300'}`}>
                       {cfg.label}
                     </button>
                   );
@@ -965,7 +965,7 @@ export default function InventoryPage() {
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">فلترة حسب الفئة</p>
               <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
                 <button onClick={() => selectPurchaseCatFilter(null)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!purchaseCatFilter ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!purchaseCatFilter ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                   الكل
                 </button>
                 {categories.map(c => {
@@ -977,7 +977,7 @@ export default function InventoryPage() {
                         hasColor
                           ? 'text-black'
                           : purchaseCatFilter === c
-                            ? 'bg-[#f97316] border-[#f97316] text-white'
+                            ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]'
                             : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'
                       }`}
                       style={hasColor ? { backgroundColor: hexToRgba(dbCat!.color as string, purchaseCatFilter === c ? 1 : 0.55), borderColor: dbCat!.color as string } : undefined}>

@@ -164,13 +164,13 @@ export default function InventoryStatisticsPage() {
         {(['today','week','month'] as const).map(r => (
           <button key={r} onClick={() => handleQuick(r)}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95"
-            style={{ backgroundColor: range===r ? '#f97316' : s.surface, borderColor: range===r ? '#f97316' : s.border, color: range===r ? '#fff' : s.sub }}>
+            style={{ backgroundColor: range===r ? (dark ? '#f97316' : '#15803D') : s.surface, borderColor: range===r ? (dark ? '#f97316' : '#1d1d1f') : s.border, color: range===r ? '#fff' : s.sub }}>
             {r==='today'?'اليوم':r==='week'?'الأسبوع':'الشهر'}
           </button>
         ))}
         <button onClick={() => setRange('custom')}
           className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95"
-          style={{ backgroundColor: range==='custom' ? '#f97316' : s.surface, borderColor: range==='custom' ? '#f97316' : s.border, color: range==='custom' ? '#fff' : s.sub }}>
+          style={{ backgroundColor: range==='custom' ? (dark ? '#f97316' : '#15803D') : s.surface, borderColor: range==='custom' ? (dark ? '#f97316' : '#1d1d1f') : s.border, color: range==='custom' ? '#fff' : s.sub }}>
           تخصيص
         </button>
       </div>
@@ -190,7 +190,7 @@ export default function InventoryStatisticsPage() {
       {categoryTabs.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2 px-4 mb-1 scrollbar-none">
           <button onClick={() => setCategoryTab(null)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!activeCategoryTab ? 'bg-[#f97316] border-[#f97316] text-white' : ''}`}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!activeCategoryTab ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : ''}`}
             style={!activeCategoryTab ? undefined : { backgroundColor: s.surface, borderColor: s.border, color: s.sub }}>
             الكل
           </button>
@@ -201,7 +201,7 @@ export default function InventoryStatisticsPage() {
             return (
               <button key={c} onClick={() => setCategoryTab(selected ? null : c)}
                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
-                  colorStyle ? 'text-black' : selected ? 'bg-[#f97316] border-[#f97316] text-white' : ''
+                  colorStyle ? 'text-black' : selected ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : ''
                 }`}
                 style={colorStyle || (selected ? undefined : { backgroundColor: s.surface, borderColor: s.border, color: s.sub })}>
                 {c}

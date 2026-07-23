@@ -482,6 +482,7 @@ function getMenuExtras(item: MenuItem): MenuExtra[] {
 }
 
 function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId: string; onClose: () => void; onCreated: () => void }) {
+  const { dark } = useDarkMode();
   const [categories,  setCategories]  = useState<MenuCategory[]>([]);
   const [items,        setItems]      = useState<MenuItem[]>([]);
   const [loading,      setLoading]    = useState(true);
@@ -619,7 +620,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
             <button
               onClick={() => setSelectedCat(null)}
               className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border active:scale-95 transition-all"
-              style={{ backgroundColor: !selectedCat ? '#f97316' : '#fff', borderColor: !selectedCat ? '#f97316' : '#e2e8f0', color: !selectedCat ? '#fff' : '#64748b' }}>
+              style={{ backgroundColor: !selectedCat ? (dark?'#f97316':'#15803D') : '#fff', borderColor: !selectedCat ? (dark?'#f97316':'#1d1d1f') : '#e2e8f0', color: !selectedCat ? '#fff' : '#64748b' }}>
               الكل
             </button>
             {categories.map(cat => (
@@ -627,7 +628,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
                 key={cat.id}
                 onClick={() => setSelectedCat(selectedCat === cat.id ? null : cat.id)}
                 className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border active:scale-95 transition-all"
-                style={{ backgroundColor: selectedCat === cat.id ? '#f97316' : '#fff', borderColor: selectedCat === cat.id ? '#f97316' : '#e2e8f0', color: selectedCat === cat.id ? '#fff' : '#64748b' }}>
+                style={{ backgroundColor: selectedCat === cat.id ? (dark?'#f97316':'#15803D') : '#fff', borderColor: selectedCat === cat.id ? (dark?'#f97316':'#1d1d1f') : '#e2e8f0', color: selectedCat === cat.id ? '#fff' : '#64748b' }}>
                 {cat.name}
               </button>
             ))}
@@ -797,11 +798,11 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
                       })}
                       className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-right transition-all"
                       style={on
-                        ? { backgroundColor: 'rgba(249,115,22,0.1)', borderColor: '#f97316' }
+                        ? (dark ? { backgroundColor: 'rgba(249,115,22,0.1)', borderColor: '#f97316' } : { backgroundColor: 'rgba(21,128,61,0.12)', borderColor: '#1d1d1f' })
                         : { backgroundColor: 'transparent', borderColor: '#e2e8f0' }
                       }>
                       <span className="flex items-center gap-2">
-                        {on ? <Check size={16} className="text-[#f97316]" strokeWidth={3} /> : <Plus size={16} className="text-gray-400" />}
+                        {on ? <Check size={16} className={dark ? 'text-[#f97316]' : 'text-[#15803D]'} strokeWidth={3} /> : <Plus size={16} className="text-gray-400" />}
                         {e.price > 0 && <span className="text-xs font-bold text-gray-400">+{e.price.toLocaleString()}</span>}
                       </span>
                       <span className="font-bold text-sm text-gray-900 dark:text-white">{e.name}</span>
@@ -1100,10 +1101,10 @@ export default function DashboardPage() {
           const labels   = { pending: 'واردة', preparing: 'التجهيز', pickup: 'انتظار السائق', delivery: scope === 'internal' ? 'جاهز' : 'التوصيل', completed: 'مكتمل' };
           const btn = (
             <button key={tab} onClick={() => setFilter(tab)}
-              className={`flex-1 min-w-[60px] py-2 px-2 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-white'}`}>
+              className={`flex-1 min-w-[60px] py-2 px-2 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-white'}`}>
               <span className="block">{labels[tab]}</span>
               {count > 0 && (
-                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-black mt-1 ${isActive ? 'bg-white text-[#f97316]' : 'bg-[#f97316] text-white'}`}>
+                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-black mt-1 ${isActive ? 'bg-white text-[#15803D] dark:text-[#f97316]' : 'bg-[#15803D] text-white dark:bg-[#f97316]'}`}>
                   {count}
                 </span>
               )}
