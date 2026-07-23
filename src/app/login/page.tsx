@@ -45,13 +45,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-4">
       <div className="w-full max-w-sm card-float-in">
         <h1
           className={`${mashiRoundedFont.variable} text-4xl font-extrabold text-center mb-1`}
           style={{
             ...MASHI_FONT,
-            color: BRAND.green,
+            color: '#0B2E1A',
             textShadow: '0 1px 2px rgba(6,54,25,0.25), 0 4px 14px rgba(21,128,61,0.35), 0 0 30px rgba(74,222,128,0.25)',
           }}
         >
@@ -73,7 +73,7 @@ export default function LoginPage() {
             onChange={e => setIdentifier(e.target.value)}
             placeholder="dari"
             dir="ltr"
-            className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all font-mono"
+            className="w-full bg-gray-200 border border-gray-300 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all font-mono"
           />
         </div>
         <div className="mb-6">
@@ -84,7 +84,7 @@ export default function LoginPage() {
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && signIn()}
             placeholder="••••••••"
-            className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all"
+            className="w-full bg-gray-200 border border-gray-300 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all"
           />
         </div>
         <button
