@@ -2,7 +2,20 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { mashiRoundedFont, MASHI_FONT, BRAND } from '../home/brand';
+import { Lateef } from 'next/font/google';
+import { BRAND } from '../home/brand';
+
+// خط عنوان "ماشي" الخاص بصفحة تسجيل الدخول فقط — لا علاقة له بـ mashiRoundedFont المشترك بـ brand.ts
+const loginTitleFont = Lateef({
+  subsets: ['arabic', 'latin'],
+  weight: '700',
+  display: 'swap',
+  variable: '--font-login-title',
+});
+
+const LOGIN_TITLE_FONT_FAMILY = {
+  fontFamily: 'var(--font-login-title), "Lateef", serif',
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,9 +61,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-4">
       <div className="w-full max-w-sm card-float-in">
         <h1
-          className={`${mashiRoundedFont.variable} text-6xl font-extrabold text-center mb-1`}
+          className={`${loginTitleFont.variable} text-6xl font-extrabold text-center mb-1`}
           style={{
-            ...MASHI_FONT,
+            ...LOGIN_TITLE_FONT_FAMILY,
             color: BRAND.green,
             WebkitTextStroke: `0.3px ${BRAND.dark}`,
             textShadow: [
