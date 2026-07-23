@@ -927,7 +927,6 @@ export default function SettingsPage() {
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">تعديل معلومات المطعم</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">الاسم، الشعار، الواتساب، الموقع</p>
             </div>
           </div>
           <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
@@ -944,7 +943,6 @@ export default function SettingsPage() {
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحساب وتسجيل الدخول</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">اسم المستخدم وكلمة المرور</p>
             </div>
           </div>
           <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
@@ -959,7 +957,6 @@ export default function SettingsPage() {
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">حالة المطعم</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">فتح/إغلاق المطعم وجدولة الدوام</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -979,7 +976,6 @@ export default function SettingsPage() {
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">رسوم التوصيل</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">تُضاف تلقائياً عند اختيار &quot;توصيل&quot;</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -997,7 +993,6 @@ export default function SettingsPage() {
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحد الأدنى للطلب</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">أقل قيمة مسموحة لطلب &quot;توصيل&quot;</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -1015,7 +1010,6 @@ export default function SettingsPage() {
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">كوبون الخصم</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">كود خصم يدخله الزبون بالسلة</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -1033,7 +1027,6 @@ export default function SettingsPage() {
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">خصومات الأقسام والوجبات</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">حدد خصم لقسم كامل أو لوجبة معينة</p>
             </div>
           </div>
           <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600 flex-shrink-0" />
@@ -1047,7 +1040,6 @@ export default function SettingsPage() {
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأكثر مبيعاً</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">يظهر دائماً أول قسم بمنيو الزبون، بأفضل 3 وجبات مبيعاً</p>
             </div>
           </div>
           <button type="button" onClick={toggleBestSellers} dir="ltr"
@@ -1114,20 +1106,19 @@ export default function SettingsPage() {
         {!isCashier && (
           <button onClick={() => { setShowNotifications(true); markAllRead(); }}
             className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+                <Bell size={18} className="text-white dark:text-rose-400" />
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإشعارات</p>
+              </div>
+            </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {unreadCount > 0 && (
                 <span className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">{unreadCount}</span>
               )}
               <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإشعارات</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">رسائل من إدارة المنصة</p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-rose-500 dark:bg-black flex items-center justify-center flex-shrink-0">
-                <Bell size={18} className="text-white dark:text-rose-400" />
-              </div>
             </div>
           </button>
         )}
@@ -1140,7 +1131,6 @@ export default function SettingsPage() {
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">المظهر</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{dark ? 'الوضع الليلي' : 'الوضع النهاري'}</p>
             </div>
           </div>
           <button onClick={toggleDark} dir="ltr"
