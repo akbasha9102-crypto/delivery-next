@@ -920,7 +920,7 @@ export default function SettingsPage() {
           className="w-full flex items-center justify-between px-4 py-4 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
               <PenLine size={18} className="text-gray-600 dark:text-slate-400" />
             </div>
             <div className="text-right">
@@ -934,7 +934,7 @@ export default function SettingsPage() {
         {/* المظهر */}
         <div className="w-full flex items-center justify-between px-4 py-4 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
               {dark ? <Moon size={18} className="text-gray-600 dark:text-slate-400" /> : <Sun size={18} className="text-yellow-400" />}
             </div>
             <div className="text-right">
@@ -1078,8 +1078,8 @@ export default function SettingsPage() {
         {/* ─ الأكثر مبيعاً — قسم ثابت يظهر دائماً أولاً في منيو الزبون، بأفضل 3 وجبات مبيعاً ─ */}
         <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
-              <Flame size={18} className="text-[#f97316]" />
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <Flame size={18} className="text-gray-600 dark:text-slate-400" />
             </div>
             <div className="text-right">
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأكثر مبيعاً</p>
@@ -1102,8 +1102,8 @@ export default function SettingsPage() {
               <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
               <div className="flex items-center gap-2">
                 <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الإحصائيات</span>
-                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                  <BarChart2 size={16} className="text-blue-500" />
+                <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                  <BarChart2 size={16} className="text-gray-600 dark:text-slate-400" />
                 </div>
               </div>
             </button>
@@ -1113,8 +1113,8 @@ export default function SettingsPage() {
             <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الأرشيف</span>
-              <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-                <Archive size={16} className="text-amber-500" />
+              <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                <Archive size={16} className="text-gray-600 dark:text-slate-400" />
               </div>
             </div>
           </button>
@@ -1128,8 +1128,8 @@ export default function SettingsPage() {
             {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الموظفين</span>
-              <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
-                <User size={16} className="text-purple-500" />
+              <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                <User size={16} className="text-gray-600 dark:text-slate-400" />
               </div>
             </div>
           </button>
@@ -1139,8 +1139,8 @@ export default function SettingsPage() {
             {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">سجل التدقيق</span>
-              <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                <KeyRound size={16} className="text-slate-500" />
+              <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                <KeyRound size={16} className="text-gray-600 dark:text-slate-400" />
               </div>
             </div>
           </button>

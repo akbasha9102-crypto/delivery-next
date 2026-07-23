@@ -134,7 +134,7 @@ export default function DriversPage() {
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
         <button
           onClick={openAdd}
-          className="w-9 h-9 rounded-xl bg-[#2563eb] text-white flex items-center justify-center active:scale-90 transition-all shadow-sm"
+          className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 flex items-center justify-center active:scale-90 transition-all shadow-sm"
         >
           <Plus size={20} />
         </button>

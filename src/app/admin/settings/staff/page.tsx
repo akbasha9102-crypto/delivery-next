@@ -135,7 +135,7 @@ export default function StaffManagementPage() {
     <OwnerOnly>
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-10" dir="rtl">
       <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-4 py-4 flex items-center justify-between">
-        <button onClick={openAdd} className="w-9 h-9 flex items-center justify-center rounded-full bg-[#2563eb] text-white active:scale-90 transition-all"><Plus size={18} /></button>
+        <button onClick={openAdd} className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 active:scale-90 transition-all"><Plus size={18} /></button>
         <div className="flex items-center gap-2">
           <ShieldCheck size={18} className="text-[#2563eb]" />
           <p className="font-bold text-gray-900 dark:text-slate-100">إدارة الموظفين</p>
