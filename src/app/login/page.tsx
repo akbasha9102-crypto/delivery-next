@@ -48,26 +48,26 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-4">
       <div className="w-full max-w-sm card-float-in">
         <h1
-          className={`${mashiRoundedFont.variable} text-4xl font-extrabold text-center mb-1`}
+          className={`${mashiRoundedFont.variable} text-6xl font-extrabold text-center mb-1`}
           style={{
             ...MASHI_FONT,
             color: BRAND.green,
-            WebkitTextStroke: `0.5px ${BRAND.dark}`,
+            WebkitTextStroke: `0.3px ${BRAND.dark}`,
             textShadow: [
-              `0.5px 0 0 ${BRAND.dark}`,
-              `-0.5px 0 0 ${BRAND.dark}`,
-              `0 0.5px 0 ${BRAND.dark}`,
-              `0 -0.5px 0 ${BRAND.dark}`,
-              `0.5px 0.5px 0 ${BRAND.dark}`,
-              `-0.5px 0.5px 0 ${BRAND.dark}`,
-              `0.5px -0.5px 0 ${BRAND.dark}`,
-              `-0.5px -0.5px 0 ${BRAND.dark}`,
+              `0.3px 0 0 ${BRAND.dark}`,
+              `-0.3px 0 0 ${BRAND.dark}`,
+              `0 0.3px 0 ${BRAND.dark}`,
+              `0 -0.3px 0 ${BRAND.dark}`,
+              `0.3px 0.3px 0 ${BRAND.dark}`,
+              `-0.3px 0.3px 0 ${BRAND.dark}`,
+              `0.3px -0.3px 0 ${BRAND.dark}`,
+              `-0.3px -0.3px 0 ${BRAND.dark}`,
             ].join(', '),
           }}
         >
           ماشي
         </h1>
-        <p className="text-[#1d1d1f]/70 text-center mb-6 text-sm">تسجيل الدخول لإدارة الطلبات</p>
+        <p className="text-[#1d1d1f]/70 text-center mb-6 text-sm">تسجيل الدخول لإدارة مطعمك</p>
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-red-700 text-sm text-center">
