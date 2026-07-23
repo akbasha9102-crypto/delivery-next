@@ -187,13 +187,13 @@ function QuickOrderSheet({ restaurantId, onClose, onCreated }: { restaurantId: s
         <div className="flex-1 overflow-y-auto pb-40">
           <div className="flex gap-2 px-4 pt-4 pb-3 overflow-x-auto">
             <button onClick={() => setSelectedCat(null)} className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border active:scale-95 transition-all"
-              style={{ backgroundColor: !selectedCat ? (dark?'#f97316':'#15803D') : '#fff', borderColor: !selectedCat ? (dark?'#f97316':'#1d1d1f') : '#e2e8f0', color: !selectedCat ? '#fff' : '#64748b' }}>
+              style={{ backgroundColor: !selectedCat ? (dark?'var(--admin-accent-dark)':'var(--admin-accent-light-bg)') : '#fff', borderColor: !selectedCat ? (dark?'var(--admin-accent-dark)':'var(--admin-accent-light-border)') : '#e2e8f0', color: !selectedCat ? '#fff' : '#64748b' }}>
               الكل
             </button>
             {categories.map(cat => (
               <button key={cat.id} onClick={() => setSelectedCat(selectedCat === cat.id ? null : cat.id)}
                 className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border active:scale-95 transition-all"
-                style={{ backgroundColor: selectedCat === cat.id ? (dark?'#f97316':'#15803D') : '#fff', borderColor: selectedCat === cat.id ? (dark?'#f97316':'#1d1d1f') : '#e2e8f0', color: selectedCat === cat.id ? '#fff' : '#64748b' }}>
+                style={{ backgroundColor: selectedCat === cat.id ? (dark?'var(--admin-accent-dark)':'var(--admin-accent-light-bg)') : '#fff', borderColor: selectedCat === cat.id ? (dark?'var(--admin-accent-dark)':'var(--admin-accent-light-border)') : '#e2e8f0', color: selectedCat === cat.id ? '#fff' : '#64748b' }}>
                 {cat.name}
               </button>
             ))}
@@ -290,9 +290,9 @@ function QuickOrderSheet({ restaurantId, onClose, onCreated }: { restaurantId: s
                   return (
                     <button key={e.id} onClick={() => setPickedExtras(prev => { const next = new Set(prev); on ? next.delete(e.id) : next.add(e.id); return next; })}
                       className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-right transition-all"
-                      style={on ? (dark ? { backgroundColor: 'rgba(249,115,22,0.1)', borderColor: '#f97316' } : { backgroundColor: 'rgba(21,128,61,0.12)', borderColor: '#1d1d1f' }) : { backgroundColor: 'transparent', borderColor: '#e2e8f0' }}>
+                      style={on ? (dark ? { backgroundColor: 'var(--admin-accent-dark-soft)', borderColor: 'var(--admin-accent-dark)' } : { backgroundColor: 'var(--admin-accent-light-bg-soft)', borderColor: 'var(--admin-accent-light-border)' }) : { backgroundColor: 'transparent', borderColor: '#e2e8f0' }}>
                       <span className="flex items-center gap-2">
-                        {on ? <Check size={16} className={dark ? 'text-[#f97316]' : 'text-[#15803D]'} strokeWidth={3} /> : <Plus size={16} className="text-gray-400" />}
+                        {on ? <Check size={16} className={dark ? 'text-[var(--admin-accent-dark)]' : 'text-[var(--admin-accent-light-bg)]'} strokeWidth={3} /> : <Plus size={16} className="text-gray-400" />}
                         {e.price > 0 && <span className="text-xs font-bold text-gray-400">+{e.price.toLocaleString()}</span>}
                       </span>
                       <span className="font-bold text-sm text-gray-900 dark:text-white">{e.name}</span>

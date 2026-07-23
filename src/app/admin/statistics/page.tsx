@@ -348,13 +348,13 @@ export default function StatisticsPage() {
         {(['today','week','month'] as const).map(r => (
           <button key={r} onClick={() => handleQuick(r)}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95"
-            style={{ backgroundColor: range===r ? (dark ? '#f97316' : '#15803D') : s.surface, borderColor: range===r ? (dark ? '#f97316' : '#1d1d1f') : s.border, color: range===r ? '#fff' : s.sub }}>
+            style={{ backgroundColor: range===r ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-bg)') : s.surface, borderColor: range===r ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-border)') : s.border, color: range===r ? '#fff' : s.sub }}>
             {r==='today'?'اليوم':r==='week'?'الأسبوع':'الشهر'}
           </button>
         ))}
         <button onClick={() => setRange('custom')}
           className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95"
-          style={{ backgroundColor: range==='custom' ? (dark ? '#f97316' : '#15803D') : s.surface, borderColor: range==='custom' ? (dark ? '#f97316' : '#1d1d1f') : s.border, color: range==='custom' ? '#fff' : s.sub }}>
+          style={{ backgroundColor: range==='custom' ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-bg)') : s.surface, borderColor: range==='custom' ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-border)') : s.border, color: range==='custom' ? '#fff' : s.sub }}>
           تخصيص
         </button>
       </div>
@@ -611,7 +611,7 @@ export default function StatisticsPage() {
         <div className="flex gap-2 px-4 pb-3 overflow-x-auto">
           <button onClick={() => setSelectedCat(null)}
             className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border active:scale-95 transition-all"
-            style={{ backgroundColor: !selectedCat ? (dark ? '#f97316' : '#15803D') : s.surface, borderColor: !selectedCat ? (dark ? '#f97316' : '#1d1d1f') : s.border, color: !selectedCat ? '#fff' : s.sub }}>
+            style={{ backgroundColor: !selectedCat ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-bg)') : s.surface, borderColor: !selectedCat ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-border)') : s.border, color: !selectedCat ? '#fff' : s.sub }}>
             الكل ({orders.length})
           </button>
           {categories.map(cat => {
@@ -620,7 +620,7 @@ export default function StatisticsPage() {
             return (
               <button key={cat.id} onClick={() => setSelectedCat(selectedCat===cat.id ? null : cat.id)}
                 className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border active:scale-95 transition-all"
-                style={{ backgroundColor: selectedCat===cat.id ? (dark ? '#f97316' : '#15803D') : s.surface, borderColor: selectedCat===cat.id ? (dark ? '#f97316' : '#1d1d1f') : s.border, color: selectedCat===cat.id ? '#fff' : s.sub }}>
+                style={{ backgroundColor: selectedCat===cat.id ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-bg)') : s.surface, borderColor: selectedCat===cat.id ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-border)') : s.border, color: selectedCat===cat.id ? '#fff' : s.sub }}>
                 {cat.name} ({count})
               </button>
             );

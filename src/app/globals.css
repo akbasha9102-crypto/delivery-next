@@ -7,6 +7,14 @@
   --primary-dark:  #d35400;
   --primary-text:  #944a00;
   --primary-light: #fff3e0;
+
+  /* لون تفعيل/اختيار/ضغط الأزرار بلوحة تحكم المطعم (/admin) فقط — لا علاقة له بـ --primary (هوية منيو الزبون).
+     القيم الافتراضية = القيم الأصلية المكتوبة يدوياً سابقاً، بدون أي تغيير بصري. */
+  --admin-accent-light-bg:      #15803D;
+  --admin-accent-light-border:  #1d1d1f;
+  --admin-accent-dark:          #f97316;
+  --admin-accent-light-bg-soft: rgba(21,128,61,0.12);
+  --admin-accent-dark-soft:     rgba(249,115,22,0.1);
 }
 
 html, body { height: 100%; direction: rtl; }

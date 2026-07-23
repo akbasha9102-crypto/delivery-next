@@ -867,8 +867,8 @@ export default function MenuPage() {
 
       {/* Tabs — القائمة يمين، إضافة يسار (RTL) */}
       <div className="flex mx-4 mt-4 mb-4 bg-gray-100 dark:bg-slate-800 rounded-2xl p-1 stagger-1">
-        <button onClick={() => setActiveTab('list')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${activeTab === 'list' ? 'bg-[#15803D] text-white border border-[#1d1d1f] dark:bg-[#f97316] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>القائمة ({items.length})</button>
-        <button onClick={() => setActiveTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${activeTab === 'add' ? 'bg-[#15803D] text-white border border-[#1d1d1f] dark:bg-[#f97316] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>إضافة</button>
+        <button onClick={() => setActiveTab('list')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${activeTab === 'list' ? 'bg-[var(--admin-accent-light-bg)] text-white border border-[var(--admin-accent-light-border)] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>القائمة ({items.length})</button>
+        <button onClick={() => setActiveTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${activeTab === 'add' ? 'bg-[var(--admin-accent-light-bg)] text-white border border-[var(--admin-accent-light-border)] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>إضافة</button>
       </div>
 
       <div className="px-4 stagger-2">
@@ -924,7 +924,7 @@ export default function MenuPage() {
               <div className="flex gap-2 overflow-x-auto pb-1">
                 <button
                   onClick={() => setSelectedCat(null)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${!selectedCat ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${!selectedCat ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                   الكل ({items.length})
                 </button>
                 {categories.map(cat => {
@@ -934,7 +934,7 @@ export default function MenuPage() {
                     <div key={cat.id} className="flex-shrink-0 flex items-center gap-1">
                       <button
                         onClick={() => setSelectedCat(active ? null : cat.id)}
-                        className={`px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[#15803D] border-[#1d1d1f] text-white dark:bg-[#f97316] dark:border-[#f97316]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                        className={`px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                         {cat.name} ({count})
                       </button>
                       <button
@@ -1100,7 +1100,7 @@ export default function MenuPage() {
                     <div key={key} className="flex items-center justify-between gap-3 p-2 rounded-xl">
                       <button
                         onClick={(e) => openColorPicker(key, e)}
-                        className={`w-9 h-9 rounded-xl flex-shrink-0 border-2 transition-all active:scale-90 ${activeColorPicker === key ? 'border-[#1d1d1f] scale-110 shadow-md dark:border-[#f97316]' : 'border-gray-300 dark:border-slate-500'}`}
+                        className={`w-9 h-9 rounded-xl flex-shrink-0 border-2 transition-all active:scale-90 ${activeColorPicker === key ? 'border-[var(--admin-accent-light-border)] scale-110 shadow-md dark:border-[var(--admin-accent-dark)]' : 'border-gray-300 dark:border-slate-500'}`}
                         style={{ backgroundColor: editCatColors?.[key] ?? '#e67e22' }}
                       />
                       <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{name}</span>

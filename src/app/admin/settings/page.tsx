@@ -11,6 +11,7 @@ import { useStaff } from '@/context/StaffContext';
 import { useSuperAdminNotifications } from '@/context/SuperAdminNotificationsContext';
 import { applyDiscountPct } from '@/lib/utils/pricing';
 import { isRestaurantOpenNow, getNextOpenTime } from '@/lib/utils/schedule';
+import { HexColorPicker, HexColorInput } from 'react-colorful';
 
 /** ينسّق تاريخاً لصيغة "HH:mm" المطلوبة كقيمة لعنصر input[type=time] */
 const formatHHMM = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -109,7 +110,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
                 <div key={d} className={`bg-gray-50 dark:bg-slate-700/50 rounded-2xl px-4 py-3 transition-opacity ${!day.enabled ? 'opacity-50' : ''}`}>
                   <div className="flex items-center justify-between mb-2">
                     <button onClick={() => updateDay(key, 'enabled', !day.enabled)} dir="ltr"
-                      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${day.enabled ? 'bg-[#15803D] border border-[#1d1d1f] dark:bg-[#f97316] dark:border-transparent' : 'bg-gray-300 dark:bg-slate-500'}`}>
+                      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${day.enabled ? 'bg-[var(--admin-accent-light-bg)] border border-[var(--admin-accent-light-border)] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'bg-gray-300 dark:bg-slate-500'}`}>
                       <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${day.enabled ? 'translate-x-5' : ''}`} />
                     </button>
                     <p className="font-bold text-sm text-gray-800 dark:text-slate-200">{DAY_NAMES[d]}</p>
@@ -739,6 +740,139 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
   );
 }
 
+/* ─── تجريبي — سيُحذف لاحقاً: تجربة اختيار لون تفعيل/اختيار/ضغط أزرار لوحة التحكم (/admin) ─── */
+const ACCENT_DEFAULTS = { lightBg: '#15803D', lightBorder: '#1d1d1f', dark: '#f97316' };
+
+function hexToRgbaLocal(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function AccentColorExperimentSheet({ onClose, restaurantId }: { onClose: () => void; restaurantId: string | null }) {
+  const storageKey = restaurantId ? `admin_accent_experiment_v1_${restaurantId}` : null;
+
+  const [mode,        setMode]        = useState<'light' | 'dark'>('light');
+  const [lightBg,     setLightBg]     = useState(ACCENT_DEFAULTS.lightBg);
+  const [lightBorder, setLightBorder] = useState(ACCENT_DEFAULTS.lightBorder);
+  const [darkColor,   setDarkColor]   = useState(ACCENT_DEFAULTS.dark);
+  const [saved,       setSaved]       = useState(false);
+
+  useEffect(() => {
+    if (!storageKey) return;
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return;
+    try {
+      const v = JSON.parse(raw) as { lightBg: string; lightBorder: string; dark: string };
+      setLightBg(v.lightBg ?? ACCENT_DEFAULTS.lightBg);
+      setLightBorder(v.lightBorder ?? ACCENT_DEFAULTS.lightBorder);
+      setDarkColor(v.dark ?? ACCENT_DEFAULTS.dark);
+    } catch {}
+  }, [storageKey]);
+
+  // معاينة حية فورية بكل تغيير — بدون حفظ
+  const previewLightBg = (v: string) => {
+    setLightBg(v);
+    document.documentElement.style.setProperty('--admin-accent-light-bg', v);
+    document.documentElement.style.setProperty('--admin-accent-light-bg-soft', hexToRgbaLocal(v, 0.12));
+  };
+  const previewLightBorder = (v: string) => {
+    setLightBorder(v);
+    document.documentElement.style.setProperty('--admin-accent-light-border', v);
+  };
+  const previewDark = (v: string) => {
+    setDarkColor(v);
+    document.documentElement.style.setProperty('--admin-accent-dark', v);
+    document.documentElement.style.setProperty('--admin-accent-dark-soft', hexToRgbaLocal(v, 0.1));
+  };
+
+  const handleSave = () => {
+    if (!storageKey) return;
+    localStorage.setItem(storageKey, JSON.stringify({ lightBg, lightBorder, dark: darkColor }));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleReset = () => {
+    if (storageKey) localStorage.removeItem(storageKey);
+    const root = document.documentElement;
+    ['--admin-accent-light-bg', '--admin-accent-light-border', '--admin-accent-dark', '--admin-accent-light-bg-soft', '--admin-accent-dark-soft']
+      .forEach(p => root.style.removeProperty(p));
+    setLightBg(ACCENT_DEFAULTS.lightBg);
+    setLightBorder(ACCENT_DEFAULTS.lightBorder);
+    setDarkColor(ACCENT_DEFAULTS.dark);
+  };
+
+  return (
+    <BottomSheet title="الهوية البصرية (تجريبي)" onClose={onClose} maxHeight="90vh">
+      <p className="text-[10px] font-bold text-orange-500 dark:text-orange-400 text-center -mt-1 mb-1">
+        ⚠️ إعداد تجريبي — سيُحذف لاحقاً
+      </p>
+
+      {/* تبويبان نهاري/ليلي */}
+      <div className="flex bg-gray-100 dark:bg-slate-800 rounded-xl p-1 gap-1">
+        <button onClick={() => setMode('light')}
+          className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'light' ? 'bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-400 dark:text-slate-500'}`}>
+          نهاري 🌞
+        </button>
+        <button onClick={() => setMode('dark')}
+          className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'dark' ? 'bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-400 dark:text-slate-500'}`}>
+          ليلي 🌙
+        </button>
+      </div>
+
+      {mode === 'light' ? (
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-2 text-right">لون الخلفية</p>
+            <HexColorPicker color={lightBg} onChange={previewLightBg} style={{ width: '100%', height: '160px' }} />
+            <div className="mt-2 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg flex-shrink-0 border border-gray-200 dark:border-slate-600" style={{ backgroundColor: lightBg }} />
+              <HexColorInput color={lightBg} onChange={previewLightBg} prefixed
+                className="flex-1 min-w-0 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm font-mono text-gray-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-[#f97316]"
+                dir="ltr" />
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-2 text-right">لون الحافة</p>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg flex-shrink-0 border border-gray-200 dark:border-slate-600" style={{ backgroundColor: lightBorder }} />
+              <HexColorInput color={lightBorder} onChange={previewLightBorder} prefixed
+                className="flex-1 min-w-0 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm font-mono text-gray-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-[#f97316]"
+                dir="ltr" />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <p className="text-xs font-bold text-gray-500 dark:text-slate-400 mb-2 text-right">اللون (خلفية وحافة معاً)</p>
+          <HexColorPicker color={darkColor} onChange={previewDark} style={{ width: '100%', height: '160px' }} />
+          <div className="mt-2 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex-shrink-0 border border-gray-200 dark:border-slate-600" style={{ backgroundColor: darkColor }} />
+            <HexColorInput color={darkColor} onChange={previewDark} prefixed
+              className="flex-1 min-w-0 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm font-mono text-gray-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-[#f97316]"
+              dir="ltr" />
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2 pt-1">
+        <button onClick={handleReset}
+          className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400 font-bold text-sm active:scale-95 transition-all">
+          إعادة تعيين للافتراضي
+        </button>
+        <button onClick={handleSave}
+          className="flex-1 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-1.5">
+          {saved ? <Check size={15} /> : <Save size={15} />}
+          {saved ? '✓ تم الحفظ' : 'حفظ'}
+        </button>
+      </div>
+    </BottomSheet>
+  );
+}
+
 /* ─── الصفحة الرئيسية ─── */
 export default function SettingsPage() {
   const router = useRouter();
@@ -778,6 +912,7 @@ export default function SettingsPage() {
   const [bestSellersLocal, setBestSellersLocal] = useState(true);
   const [bestSellersSaving, setBestSellersSaving] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showAccentExperiment, setShowAccentExperiment] = useState(false); // تجريبي — سيُحذف لاحقاً
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -1139,6 +1274,21 @@ export default function SettingsPage() {
           </button>
         </div>
 
+        {/* الهوية البصرية — تجريبي، سيُحذف لاحقاً */}
+        <button onClick={() => setShowAccentExperiment(true)}
+          className="w-full flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 border border-dashed border-orange-300 dark:border-orange-700 rounded-2xl active:scale-[0.98] transition-all">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-500 dark:bg-black flex items-center justify-center flex-shrink-0">
+              <Palette size={18} className="text-white dark:text-orange-400" />
+            </div>
+            <div className="text-right">
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الهوية البصرية</p>
+              <p className="text-[10px] font-bold text-orange-500 dark:text-orange-400 mt-0.5">تجريبي — سيُحذف لاحقاً</p>
+            </div>
+          </div>
+          <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+        </button>
+
         {/* ─ تسجيل الخروج ─ */}
         <button onClick={logout}
           className="w-full py-4 rounded-2xl bg-red-500 text-white font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
@@ -1148,7 +1298,7 @@ export default function SettingsPage() {
 
       </div>
 
-      {!showRestaurantStatus && !showAccount && !showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && !showDiscounts && !showNotifications && <AdminBottomNav />}
+      {!showRestaurantStatus && !showAccount && !showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && !showDiscounts && !showNotifications && !showAccentExperiment && <AdminBottomNav />}
 
       {/* نافذة الحساب وتسجيل الدخول */}
       {showAccount && (
@@ -1373,6 +1523,11 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* نافذة تجربة الهوية البصرية — تجريبي، سيُحذف لاحقاً */}
+      {showAccentExperiment && (
+        <AccentColorExperimentSheet onClose={() => setShowAccentExperiment(false)} restaurantId={restaurantId} />
       )}
     </div>
   );
