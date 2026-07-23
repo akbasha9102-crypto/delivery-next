@@ -51,8 +51,8 @@ export default function LoginPage() {
           className={`${mashiRoundedFont.variable} text-4xl font-extrabold text-center mb-1`}
           style={{
             ...MASHI_FONT,
-            color: '#0B2E1A',
-            textShadow: '0 1px 2px rgba(6,54,25,0.25), 0 4px 14px rgba(21,128,61,0.35), 0 0 30px rgba(74,222,128,0.25)',
+            color: '#04170B',
+            textShadow: '0 1px 2px rgba(4,23,11,0.35), 0 4px 14px rgba(21,128,61,0.45), 0 0 34px rgba(74,222,128,0.35)',
           }}
         >
           ماشي
@@ -71,9 +71,8 @@ export default function LoginPage() {
             type="text"
             value={identifier}
             onChange={e => setIdentifier(e.target.value)}
-            placeholder="dari"
             dir="ltr"
-            className="w-full bg-gray-200 border border-gray-300 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all font-mono"
+            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all font-mono"
           />
         </div>
         <div className="mb-6">
@@ -84,7 +83,7 @@ export default function LoginPage() {
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && signIn()}
             placeholder="••••••••"
-            className="w-full bg-gray-200 border border-gray-300 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all"
+            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#15803D]/50 focus:border-[#15803D]/40 transition-all"
           />
         </div>
         <button
