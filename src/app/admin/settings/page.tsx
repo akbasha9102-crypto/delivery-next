@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useSettings, type DaySchedule, type WeekSchedule } from '@/context/SettingsContext';
-import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, ChevronDown, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Ticket, Flame, Percent, Search, Check, Bell } from 'lucide-react';
+import { Save, Palette, Type, Loader2, Moon, Sun, ShoppingBag, MapPin, MessageCircle, X, LogOut, Clock, Calendar, BarChart2, Archive, ChevronLeft, ChevronDown, PenLine, KeyRound, Eye, EyeOff, User, Lock, Truck, Wallet, Ticket, Flame, Percent, Search, Check, Bell, Store } from 'lucide-react';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
@@ -752,8 +752,10 @@ export default function SettingsPage() {
   const [showClosedModal,  setShowClosedModal]  = useState(false);
   const [opensAtInput,     setOpensAtInput]     = useState('');
   const [showSchedule,     setShowSchedule]     = useState(false);
+  const [showMyRestaurant, setShowMyRestaurant] = useState(false);
   const [showInfo,         setShowInfo]         = useState(false);
   const [showChangePass,   setShowChangePass]   = useState(false);
+  const [showAccount,      setShowAccount]      = useState(false);
   const [showDeliveryFee,  setShowDeliveryFee]  = useState(false);
   const [showMinOrder,     setShowMinOrder]     = useState(false);
   const [showCoupon,       setShowCoupon]       = useState(false);
@@ -914,18 +916,18 @@ export default function SettingsPage() {
 
       <div className="px-4 pt-4 space-y-4">
 
-        {/* ـ معلومات المطعم ـ */}
+        {/* ـ مطعمي ـ */}
         <button
-          onClick={() => setShowInfo(true)}
+          onClick={() => setShowMyRestaurant(true)}
           className="w-full flex items-center justify-between px-4 py-4 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl active:scale-[0.98] transition-all"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <PenLine size={18} className="text-gray-600 dark:text-slate-400" />
+              <Store size={18} className="text-gray-600 dark:text-slate-400" />
             </div>
             <div className="text-right">
-              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">معلومات المطعم</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">الاسم، الشعار، الواتساب، الموقع</p>
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">مطعمي</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">المعلومات، والحساب وتسجيل الدخول</p>
             </div>
           </div>
           <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
@@ -945,26 +947,6 @@ export default function SettingsPage() {
           <button onClick={toggleDark} dir="ltr"
             className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${dark ? 'bg-[#f97316]' : 'bg-gray-300 dark:bg-slate-500'}`}>
             <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${dark ? 'translate-x-6' : ''}`} />
-          </button>
-        </div>
-
-        {/* ─ حساب الدخول ─ */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4" dir="rtl">
-          <p className="font-bold text-gray-900 dark:text-slate-100 text-sm mb-3">حساب الدخول</p>
-          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
-            <p className="font-mono font-bold text-gray-800 dark:text-slate-200 text-sm" dir="ltr">{username}</p>
-            <p className="text-xs font-bold text-gray-400 dark:text-slate-500">اسم المستخدم</p>
-          </div>
-          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-3">
-            <p className="font-mono text-gray-400 tracking-widest text-sm">••••••••</p>
-            <p className="text-xs font-bold text-gray-400 dark:text-slate-500">كلمة المرور</p>
-          </div>
-          <button
-            onClick={() => setShowChangePass(true)}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
-          >
-            <KeyRound size={15} />
-            تغيير كلمة المرور
           </button>
         </div>
 
@@ -1177,7 +1159,58 @@ export default function SettingsPage() {
 
       </div>
 
-      {!showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && !showDiscounts && !showNotifications && <AdminBottomNav />}
+      {!showMyRestaurant && !showAccount && !showInfo && !showChangePass && !showDeliveryFee && !showMinOrder && !showCoupon && !showDiscounts && !showNotifications && <AdminBottomNav />}
+
+      {/* نافذة مطعمي */}
+      {showMyRestaurant && (
+        <BottomSheet title="مطعمي" onClose={() => setShowMyRestaurant(false)} maxHeight="40vh">
+          <button
+            onClick={() => { setShowMyRestaurant(false); setShowInfo(true); }}
+            className="w-full flex items-center justify-between bg-gray-50 dark:bg-slate-800 rounded-xl px-4 py-3.5 active:scale-[0.98] transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <PenLine size={18} className="text-gray-600 dark:text-slate-400" />
+              </div>
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">تعديل معلومات المطعم</p>
+            </div>
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+          </button>
+          <button
+            onClick={() => { setShowMyRestaurant(false); setShowAccount(true); }}
+            className="w-full flex items-center justify-between bg-gray-50 dark:bg-slate-800 rounded-xl px-4 py-3.5 active:scale-[0.98] transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <KeyRound size={18} className="text-gray-600 dark:text-slate-400" />
+              </div>
+              <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">الحساب وتسجيل الدخول</p>
+            </div>
+            <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
+          </button>
+        </BottomSheet>
+      )}
+
+      {/* نافذة الحساب وتسجيل الدخول */}
+      {showAccount && (
+        <BottomSheet title="الحساب وتسجيل الدخول" onClose={() => setShowAccount(false)}>
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3">
+            <p className="font-mono font-bold text-gray-800 dark:text-slate-200 text-sm" dir="ltr">{username}</p>
+            <p className="text-xs font-bold text-gray-400 dark:text-slate-500">اسم المستخدم</p>
+          </div>
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-xl px-4 py-3">
+            <p className="font-mono text-gray-400 tracking-widest text-sm">••••••••</p>
+            <p className="text-xs font-bold text-gray-400 dark:text-slate-500">كلمة المرور</p>
+          </div>
+          <button
+            onClick={() => setShowChangePass(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-bold text-sm active:scale-95 transition-all"
+          >
+            <KeyRound size={15} />
+            تغيير كلمة المرور
+          </button>
+        </BottomSheet>
+      )}
 
       {/* نافذة تغيير كلمة المرور */}
       {showChangePass && (
