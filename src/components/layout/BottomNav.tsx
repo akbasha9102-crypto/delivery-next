@@ -75,7 +75,7 @@ export function AdminBottomNav() {
   const tabs = adminTabs;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex z-50 md:top-0 md:bottom-0 md:left-auto md:w-[70px] md:flex-col md:border-t-0 md:border-l">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#212121] border-t border-gray-200 dark:border-slate-700 flex z-50 md:top-0 md:bottom-0 md:left-auto md:w-[70px] md:flex-col md:border-t-0 md:border-l">
       {tabs.map(({ href, icon: Icon, label }) => {
         const active = path === href;
         // /admin/dashboard: يُخفى إن كان المستخدم بنفس الصفحة حالياً. /admin/settings: يبقى
@@ -84,13 +84,13 @@ export function AdminBottomNav() {
         const showBadge = href === '/admin/dashboard' ? (path !== '/admin/dashboard' && newCount > 0) : href === '/admin/settings' ? saUnread > 0 : false;
         return (
           <Link key={href} href={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all active:scale-90 relative md:flex-none md:w-full md:py-5">
-            <Icon size={22} className={active ? 'text-[#2563eb]' : 'text-gray-400 dark:text-slate-500'} />
+            <Icon size={22} className={active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-slate-500'} />
             {showBadge && (
               <span className="absolute top-1.5 right-1/2 translate-x-3.5 bg-red-500 text-white text-[10px] font-bold min-w-[17px] h-[17px] rounded-full flex items-center justify-center px-1 leading-none">
                 {badgeCount > 99 ? '99+' : badgeCount}
               </span>
             )}
-            <span className={`text-xs font-medium ${active ? 'text-[#2563eb]' : 'text-gray-400 dark:text-slate-500'}`}>{label}</span>
+            <span className={`text-xs font-medium ${active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-slate-500'}`}>{label}</span>
           </Link>
         );
       })}

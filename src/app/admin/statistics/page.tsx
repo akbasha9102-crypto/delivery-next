@@ -274,7 +274,7 @@ export default function StatisticsPage() {
   };
 
   const s = {
-    bg:      dark ? '#0f172a' : '#f8fafc',
+    bg:      dark ? '#212121' : '#f8fafc',
     surface: dark ? '#1e293b' : '#fff',
     border:  dark ? '#334155' : '#e2e8f0',
     text:    dark ? '#f1f5f9' : '#0f172a',

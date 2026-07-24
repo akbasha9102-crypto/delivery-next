@@ -88,7 +88,7 @@ export default function AuditLogPage() {
 
   return (
     <OwnerOnly>
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-10" dir="rtl">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#212121] pb-10" dir="rtl">
       <AdminHeader
         title="سجل التدقيق"
         icon={<History size={18} className="text-[#2563eb]" />}

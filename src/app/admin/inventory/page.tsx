@@ -525,7 +525,7 @@ export default function InventoryPage() {
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#212121] pb-24 md:pb-0 md:mr-[70px]">
 
       {/* Header */}
       <AdminHeader
@@ -836,7 +836,7 @@ export default function InventoryPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[96dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveItem} disabled={saving || !form.name.trim()} className="bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
+              <button onClick={saveItem} disabled={saving || !form.name.trim()} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
                 {saving ? '...' : editItem ? 'حفظ' : 'إضافة'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100">{editItem ? '✏️ تعديل مادة' : '➕ مادة جديدة'}</h3>
@@ -1013,7 +1013,7 @@ export default function InventoryPage() {
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-4" />
 
               <button onClick={recordPurchase} disabled={purchaseSaving || !purchaseItemId || !purchaseQty || !purchasePrice}
-                className="w-full bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
+                className="w-full bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
                 {purchaseSaving ? 'جاري الحفظ...' : 'تسجيل الشراء'}
               </button>
             </div>
@@ -1187,7 +1187,7 @@ export default function InventoryPage() {
                           <div className="flex gap-2">
                             <input value={treeYield} onChange={e => setTreeYield(e.target.value)} placeholder="مثال: 4" type="number" min="1" className={`${input} flex-1 mb-0`} />
                             <button onClick={addTreeLink} disabled={treeSaving || !treeDishId || !treeYield}
-                              className="bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all">
+                              className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all">
                               {treeSaving ? '...' : <Plus size={18} />}
                             </button>
                           </div>

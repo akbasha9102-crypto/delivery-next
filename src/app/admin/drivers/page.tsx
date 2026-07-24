@@ -129,7 +129,7 @@ export default function DriversPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#212121] pb-24 md:pb-0 md:mr-[70px]">
 
       {/* هيدر */}
       <AdminHeader
@@ -276,7 +276,7 @@ export default function DriversPage() {
             <button
               onClick={addDriver}
               disabled={adding || !name.trim() || !phone.trim() || !password.trim()}
-              className="w-full py-3.5 bg-[var(--admin-accent-light-bg)] text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 mt-1"
+              className="w-full py-3.5 bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 mt-1"
             >
               {adding ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
               إضافة سائق

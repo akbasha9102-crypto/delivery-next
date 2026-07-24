@@ -526,13 +526,13 @@ export default function MenuPage() {
   const input = `w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3`;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#212121] pb-24 md:pb-0 md:mr-[70px]">
       {/* Add Category Modal */}
       {showAddCatSheet && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={addCategory} disabled={saving || !newCat.trim()} className="bg-[var(--admin-accent-light-bg)] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={addCategory} disabled={saving || !newCat.trim()} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">➕ قسم جديد</h3>
@@ -556,7 +556,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={addItem} disabled={saving} className="bg-[var(--admin-accent-light-bg)] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={addItem} disabled={saving} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">🍽️ طبق جديد</h3>
@@ -593,7 +593,7 @@ export default function MenuPage() {
                     <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة رابط صورة</p>
                     <div className="flex gap-2">
                       <input value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)} placeholder="رابط الصورة" dir="rtl" className={`${input} flex-1 mb-0`} />
-                      <button onClick={addNewItemImage} disabled={!newImageUrl.trim()} className="bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                      <button onClick={addNewItemImage} disabled={!newImageUrl.trim()} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                     </div>
                   </div>
                 )}
@@ -620,7 +620,7 @@ export default function MenuPage() {
                       const price = parseFloat(newExtraPrice.replace(',', '.')) || 0;
                       setNewItemExtras([...newItemExtras, { id: Date.now().toString(), name: newExtraName.trim(), price }]);
                       setNewExtraName(''); setNewExtraPrice('');
-                    }} disabled={!newExtraName.trim()} className="bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                    }} disabled={!newExtraName.trim()} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                   </div>
                 </div>
               </div>
@@ -658,7 +658,7 @@ export default function MenuPage() {
                     </select>
                     <div className="flex gap-2">
                       <input value={newRecipeQty} onChange={e => setNewRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
-                      <button onClick={addNewItemRecipe} disabled={!newRecipeInvId} className="bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                      <button onClick={addNewItemRecipe} disabled={!newRecipeInvId} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                     </div>
                     {(() => {
                       const inv = inventoryItems.find(i => i.id === newRecipeInvId);
@@ -689,7 +689,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveEdit} disabled={saving} className="bg-[var(--admin-accent-light-bg)] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={saveEdit} disabled={saving} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">✏️ تعديل الطبق</h3>
@@ -729,7 +729,7 @@ export default function MenuPage() {
                     <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة رابط صورة</p>
                     <div className="flex gap-2">
                       <input value={editImageUrl} onChange={e => setEditImageUrl(e.target.value)} placeholder="رابط الصورة" dir="rtl" className={`${input} flex-1 mb-0`} />
-                      <button onClick={addEditImage} disabled={!editImageUrl.trim()} className="bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                      <button onClick={addEditImage} disabled={!editImageUrl.trim()} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                     </div>
                   </div>
                 )}
@@ -751,7 +751,7 @@ export default function MenuPage() {
                   <input value={extraName} onChange={e => setExtraName(e.target.value)} placeholder="اسم الإضافة" dir="rtl" className={`${input} mb-2`} />
                   <div className="flex gap-2">
                     <input value={extraPrice} onChange={e => setExtraPrice(e.target.value)} placeholder="السعر (0=مجاني)" type="number" className={`${input} flex-1 mb-0`} />
-                    <button onClick={addExtra} disabled={!extraName.trim()} className="bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                    <button onClick={addExtra} disabled={!extraName.trim()} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                   </div>
                 </div>
               </div>
@@ -789,7 +789,7 @@ export default function MenuPage() {
                     </select>
                     <div className="flex gap-2">
                       <input value={recipeQty} onChange={e => setRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
-                      <button onClick={addRecipe} disabled={!recipeInvId} className="bg-[var(--admin-accent-light-bg)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                      <button onClick={addRecipe} disabled={!recipeInvId} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
                     </div>
                     {(() => {
                       const inv = inventoryItems.find(i => i.id === recipeInvId);

@@ -602,7 +602,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-white dark:bg-slate-900 flex flex-col">
+    <div className="fixed inset-0 z-[60] bg-white dark:bg-[#212121] flex flex-col">
       <header className="sticky top-0 z-10 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <button onClick={onClose} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
           <X size={18} className="text-gray-600 dark:text-slate-300" />
@@ -707,7 +707,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
       {showReview && (
         <div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/50" onClick={() => setShowReview(false)}>
           <div
-            className="w-full max-w-lg rounded-t-3xl bg-white dark:bg-slate-900 max-h-[88vh] flex flex-col"
+            className="w-full max-w-lg rounded-t-3xl bg-white dark:bg-[#212121] max-h-[88vh] flex flex-col"
             onClick={e => e.stopPropagation()}>
 
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
@@ -775,7 +775,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
         return (
           <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50" onClick={() => setExtrasItem(null)}>
             <div
-              className="w-full max-w-lg rounded-t-3xl pb-6 bg-white dark:bg-slate-900"
+              className="w-full max-w-lg rounded-t-3xl pb-6 bg-white dark:bg-[#212121]"
               onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-700">
                 <button onClick={() => setExtrasItem(null)} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
@@ -995,7 +995,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#212121] pb-24 md:pb-0 md:mr-[70px]">
 
       {/* Header */}
       <AdminHeader title="الطلبات" icon={<ClipboardList size={18} className="text-gray-500 dark:text-slate-400" />} />

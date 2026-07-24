@@ -1,6 +1,7 @@
 'use client';
 import { ReactNode, CSSProperties } from 'react';
 import Image from 'next/image';
+import { useDarkMode } from '@/context/ThemeContext';
 
 interface AdminHeaderProps {
   title: ReactNode;
@@ -12,6 +13,7 @@ interface AdminHeaderProps {
 }
 
 export function AdminHeader({ title, icon, right, left, className = '', style }: AdminHeaderProps) {
+  const { dark } = useDarkMode();
   return (
     <header
       style={style}
@@ -24,7 +26,7 @@ export function AdminHeader({ title, icon, right, left, className = '', style }:
       <div className="flex items-center gap-1.5 shrink-0">
         {left}
         <Image
-          src="/mashi-logo.png"
+          src={dark ? '/mashi-logo-dark.png' : '/mashi-logo.png'}
           alt="ماشي"
           width={949}
           height={579}

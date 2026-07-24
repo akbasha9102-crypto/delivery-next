@@ -250,7 +250,7 @@ export default function ArchivePage() {
   const totalDriverRevenue = driverGroups.reduce((s, g) => s + g.total, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-28 md:pb-0 md:mr-[70px]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#212121] pb-28 md:pb-0 md:mr-[70px]">
       <AdminHeader
         title="الأرشيف"
         right={

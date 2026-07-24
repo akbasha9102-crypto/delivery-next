@@ -66,7 +66,7 @@ export default function CashierInventoryWastePage() {
   const filtered = items.filter(i => !search || i.name.includes(search));
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]" dir="rtl">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#212121] pb-24 md:pb-0 md:mr-[70px]" dir="rtl">
       <AdminHeader title="المخزون — تسجيل هدر" icon={<Package size={18} className="text-[#f97316]" />} />
 
       {toast && (

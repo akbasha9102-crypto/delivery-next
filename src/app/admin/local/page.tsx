@@ -52,7 +52,7 @@ function OpenShiftScreen({ staffToken, restaurantId, onOpened }: { staffToken: s
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6" dir="rtl">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#212121] flex flex-col items-center justify-center p-6" dir="rtl">
       <div className="w-16 h-16 rounded-2xl bg-[#f97316]/10 flex items-center justify-center mb-4">
         <Wallet size={28} className="text-[#f97316]" />
       </div>
@@ -173,7 +173,7 @@ function QuickOrderSheet({ restaurantId, onClose, onCreated }: { restaurantId: s
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-white dark:bg-slate-900 flex flex-col">
+    <div className="fixed inset-0 z-[60] bg-white dark:bg-[#212121] flex flex-col">
       <header className="sticky top-0 z-10 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <button onClick={onClose} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
           <X size={18} className="text-gray-600 dark:text-slate-300" />
@@ -245,7 +245,7 @@ function QuickOrderSheet({ restaurantId, onClose, onCreated }: { restaurantId: s
 
       {showReview && (
         <div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/50" onClick={() => setShowReview(false)}>
-          <div className="w-full max-w-lg rounded-t-3xl bg-white dark:bg-slate-900 max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-lg rounded-t-3xl bg-white dark:bg-[#212121] max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
               <button onClick={() => setShowReview(false)} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all"><X size={18} className="text-gray-600 dark:text-slate-300" /></button>
               <p className="font-bold text-gray-900 dark:text-white">مراجعة الطلب</p>
@@ -279,7 +279,7 @@ function QuickOrderSheet({ restaurantId, onClose, onCreated }: { restaurantId: s
         const extrasSum = extras.filter(e => pickedExtras.has(e.id)).reduce((s, e) => s + e.price, 0);
         return (
           <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50" onClick={() => setExtrasItem(null)}>
-            <div className="w-full max-w-lg rounded-t-3xl pb-6 bg-white dark:bg-slate-900" onClick={e => e.stopPropagation()}>
+            <div className="w-full max-w-lg rounded-t-3xl pb-6 bg-white dark:bg-[#212121]" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-700">
                 <button onClick={() => setExtrasItem(null)} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all"><X size={18} className="text-gray-600 dark:text-slate-300" /></button>
                 <p className="font-bold text-gray-900 dark:text-white">{extrasItem.name}</p>
@@ -519,7 +519,7 @@ export default function LocalCashierPage() {
 
   if (checkingShift) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#212121] flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -529,14 +529,14 @@ export default function LocalCashierPage() {
     return staffId && staffToken && restaurantId && activeStaff.role !== 'owner'
       ? <OpenShiftScreen staffToken={staffToken} restaurantId={restaurantId} onOpened={setShift} />
       : (
-        <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center p-6 text-center" dir="rtl">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#212121] flex items-center justify-center p-6 text-center" dir="rtl">
           <p className="text-gray-500 dark:text-slate-400">تعذّر تحديد هويتك الحالية لفتح وردية — أعد تسجيل الدخول</p>
         </div>
       );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 md:pb-0 md:mr-[70px]" dir="rtl">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#212121] pb-24 md:pb-0 md:mr-[70px]" dir="rtl">
       <AdminHeader
         title="الكاشير"
         icon={<ShoppingCart size={18} className="text-[#f97316]" />}

@@ -134,7 +134,7 @@ export default function StaffManagementPage() {
 
   return (
     <OwnerOnly>
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-10" dir="rtl">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#212121] pb-10" dir="rtl">
       <AdminHeader
         title="إدارة الموظفين"
         icon={<ShieldCheck size={18} className="text-gray-600 dark:text-slate-400" />}
