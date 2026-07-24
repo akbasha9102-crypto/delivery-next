@@ -98,7 +98,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
                 className="flex-1 text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
             </div>
             <button onClick={applyToAllDays}
-              className="w-full py-2.5 rounded-xl bg-[#f97316] text-white font-bold text-sm active:scale-95 transition-all">
+              className="w-full py-2.5 rounded-xl bg-green-300 text-white font-bold text-sm active:scale-95 transition-all">
               تطبيق على الكل
             </button>
           </div>
@@ -110,7 +110,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
                 <div key={d} className={`bg-gray-50 dark:bg-slate-700/50 rounded-2xl px-4 py-3 transition-opacity ${!day.enabled ? 'opacity-50' : ''}`}>
                   <div className="flex items-center justify-between mb-2">
                     <button onClick={() => updateDay(key, 'enabled', !day.enabled)} dir="ltr"
-                      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${day.enabled ? 'bg-[var(--admin-accent-light-bg)] border border-[var(--admin-accent-light-border)] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'bg-gray-300 dark:bg-slate-500'}`}>
+                      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${day.enabled ? 'bg-green-400' : 'bg-gray-300 dark:bg-slate-500'}`}>
                       <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${day.enabled ? 'translate-x-5' : ''}`} />
                     </button>
                     <p className="font-bold text-sm text-gray-800 dark:text-slate-200">{DAY_NAMES[d]}</p>

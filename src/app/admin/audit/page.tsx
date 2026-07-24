@@ -108,10 +108,10 @@ export default function AuditLogPage() {
       <div className="px-4 pt-4">
         {types.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-none">
-            <button onClick={() => setTypeFilter(null)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!typeFilter ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>الكل</button>
+            <button onClick={() => setTypeFilter(null)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${!typeFilter ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>الكل</button>
             {types.map(t => (
               <button key={t} onClick={() => setTypeFilter(typeFilter === t ? null : t)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${typeFilter === t ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${typeFilter === t ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                 {translateAuditAction(t)}
               </button>
             ))}
@@ -178,10 +178,10 @@ export default function AuditLogPage() {
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-center text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb] mb-4" />
 
               <div className="flex gap-2 mb-6">
-                <button onClick={clearFilters} className="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 font-bold py-3.5 rounded-2xl text-sm active:scale-95 transition-all">
+                <button onClick={clearFilters} className="flex-1 bg-[var(--admin-accent-light-bg)] border border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)] font-bold py-3.5 rounded-2xl text-sm active:scale-95 transition-all">
                   مسح الفلاتر
                 </button>
-                <button onClick={applyFilters} className="flex-1 bg-[#2563eb] text-white font-bold py-3.5 rounded-2xl text-sm active:scale-95 transition-all">
+                <button onClick={applyFilters} className="flex-1 bg-[var(--admin-accent-light-bg)] text-white dark:bg-[var(--admin-accent-dark)] font-bold py-3.5 rounded-2xl text-sm active:scale-95 transition-all">
                   تطبيق
                 </button>
               </div>

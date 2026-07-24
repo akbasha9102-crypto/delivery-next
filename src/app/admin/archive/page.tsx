@@ -321,12 +321,12 @@ export default function ArchivePage() {
           💬 ملاحظة/شكوى{feedbacks.length > 0 ? ` (${feedbacks.length})` : ''}
         </button>
         <button onClick={() => setSection('drivers')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'drivers' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'drivers' ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
           <span aria-hidden="true">🏍️</span>
           <span>السائقين{totalDriverTrips > 0 ? ` (${totalDriverTrips})` : ''}</span>
         </button>
         <button onClick={() => setSection('rejected')}
-          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'rejected' ? 'bg-red-500 border-red-500 text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'rejected' ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
           ✕ مرفوضة{rejected.length > 0 ? ` (${rejected.length})` : ''}
         </button>
       </div>
