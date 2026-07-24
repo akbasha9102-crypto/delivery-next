@@ -9,7 +9,7 @@
   --primary-light: #fff3e0;
 
   /* لون تفعيل/اختيار/ضغط الأزرار بلوحة تحكم المطعم (/admin) فقط — لا علاقة له بـ --primary (هوية منيو الزبون).
-     قيمة رمادي غامق من عائلة slate (متطابقة مع dark:bg-slate-800 / dark:border-slate-700 المستخدمة أصلاً بكل الهيدرات). */
+     أخضر هوية "MaShe" (نفس BRAND.green بـ home/brand.ts) بالوضع النهاري فقط — يطابق شعار البار العلوي وعنوان /login. */
   --admin-accent-light-bg:      #15803D;
   --admin-accent-light-border:  #16A34A;
   --admin-accent-dark:          #f97316;
