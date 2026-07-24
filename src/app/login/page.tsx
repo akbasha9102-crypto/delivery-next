@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { BRAND, mashiWordmarkFont, MASHI_WORDMARK_FONT_FAMILY } from '../home/brand';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,45 +47,16 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-4">
       <div className="w-full max-w-sm card-float-in border border-[#1d1d1f]/10 rounded-3xl p-8">
-        <h1
-          className={`${mashiWordmarkFont.variable} text-6xl font-extrabold text-center mb-1`}
-          style={{
-            ...MASHI_WORDMARK_FONT_FAMILY,
-            color: BRAND.green,
-          }}
-        >
-          <span
-            style={{
-              WebkitTextStroke: `0.3px ${BRAND.dark}`,
-              textShadow: [
-                `0.3px 0 0 ${BRAND.dark}`,
-                `-0.3px 0 0 ${BRAND.dark}`,
-                `0 0.3px 0 ${BRAND.dark}`,
-                `0 -0.3px 0 ${BRAND.dark}`,
-                `0.3px 0.3px 0 ${BRAND.dark}`,
-                `-0.3px 0.3px 0 ${BRAND.dark}`,
-                `0.3px -0.3px 0 ${BRAND.dark}`,
-                `-0.3px -0.3px 0 ${BRAND.dark}`,
-              ].join(', '),
-            }}
-          >
-            م
-          </span><span
-            style={{
-              WebkitTextStroke: `0.15px ${BRAND.dark}`,
-              textShadow: [
-                `0.15px 0 0 ${BRAND.dark}`,
-                `-0.15px 0 0 ${BRAND.dark}`,
-                `0 0.15px 0 ${BRAND.dark}`,
-                `0 -0.15px 0 ${BRAND.dark}`,
-                `0.15px 0.15px 0 ${BRAND.dark}`,
-                `-0.15px 0.15px 0 ${BRAND.dark}`,
-                `0.15px -0.15px 0 ${BRAND.dark}`,
-                `-0.15px -0.15px 0 ${BRAND.dark}`,
-              ].join(', '),
-            }}
-          >اشي</span>
-        </h1>
+        <div className="text-center mb-1">
+          <Image
+            src="/mashi-logo.png"
+            alt="ماشي"
+            width={957}
+            height={521}
+            priority
+            className="h-16 w-auto inline-block"
+          />
+        </div>
         <p className="text-[#1d1d1f]/70 text-center mb-6 text-sm">تسجيل الدخول لإدارة مطعمك</p>
 
         {error && (
