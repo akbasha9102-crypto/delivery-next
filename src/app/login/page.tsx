@@ -2,19 +2,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { Lateef } from 'next/font/google';
+import { Reem_Kufi } from 'next/font/google';
 import { BRAND } from '../home/brand';
 
-// خط عنوان "ماشي" الخاص بصفحة تسجيل الدخول فقط — لا علاقة له بـ mashiRoundedFont المشترك بـ brand.ts
-const loginTitleFont = Lateef({
-  subsets: ['arabic', 'latin'],
+// خط عنوان "MaShe" (Reem Kufi) الخاص بصفحة تسجيل الدخول فقط — لا علاقة له بـ mashiRoundedFont المشترك بـ brand.ts
+const loginTitleFont = Reem_Kufi({
+  subsets: ['latin'],
   weight: '700',
   display: 'swap',
   variable: '--font-login-title',
 });
 
 const LOGIN_TITLE_FONT_FAMILY = {
-  fontFamily: 'var(--font-login-title), "Lateef", serif',
+  fontFamily: 'var(--font-login-title), "Reem Kufi", sans-serif',
 };
 
 export default function LoginPage() {
@@ -62,23 +62,29 @@ export default function LoginPage() {
       <div className="w-full max-w-sm card-float-in">
         <h1
           className={`${loginTitleFont.variable} text-6xl font-extrabold text-center mb-1`}
+          dir="ltr"
           style={{
             ...LOGIN_TITLE_FONT_FAMILY,
             color: BRAND.green,
-            WebkitTextStroke: `0.3px ${BRAND.dark}`,
-            textShadow: [
-              `0.3px 0 0 ${BRAND.dark}`,
-              `-0.3px 0 0 ${BRAND.dark}`,
-              `0 0.3px 0 ${BRAND.dark}`,
-              `0 -0.3px 0 ${BRAND.dark}`,
-              `0.3px 0.3px 0 ${BRAND.dark}`,
-              `-0.3px 0.3px 0 ${BRAND.dark}`,
-              `0.3px -0.3px 0 ${BRAND.dark}`,
-              `-0.3px -0.3px 0 ${BRAND.dark}`,
-            ].join(', '),
           }}
         >
-          ماشي
+          <span
+            style={{
+              WebkitTextStroke: `0.3px ${BRAND.dark}`,
+              textShadow: [
+                `0.3px 0 0 ${BRAND.dark}`,
+                `-0.3px 0 0 ${BRAND.dark}`,
+                `0 0.3px 0 ${BRAND.dark}`,
+                `0 -0.3px 0 ${BRAND.dark}`,
+                `0.3px 0.3px 0 ${BRAND.dark}`,
+                `-0.3px 0.3px 0 ${BRAND.dark}`,
+                `0.3px -0.3px 0 ${BRAND.dark}`,
+                `-0.3px -0.3px 0 ${BRAND.dark}`,
+              ].join(', '),
+            }}
+          >
+            M
+          </span>aShe
         </h1>
         <p className="text-[#1d1d1f]/70 text-center mb-6 text-sm">تسجيل الدخول لإدارة مطعمك</p>
 
@@ -112,7 +118,7 @@ export default function LoginPage() {
         <button
           onClick={signIn}
           disabled={loading}
-          className="w-full bg-[#D96846] hover:bg-[#D96846] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(217,104,70,0.5)] transition-all active:scale-95"
+          className="w-full bg-[#15803D] hover:bg-[#15803D] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(21,128,61,0.5)] transition-all active:scale-95"
         >
           {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
         </button>
