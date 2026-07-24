@@ -532,7 +532,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={addCategory} disabled={saving || !newCat.trim()} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={addCategory} disabled={saving || !newCat.trim()} className="bg-[#D96846] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">➕ قسم جديد</h3>
@@ -556,7 +556,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={addItem} disabled={saving} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={addItem} disabled={saving} className="bg-[#D96846] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">🍽️ طبق جديد</h3>
@@ -689,7 +689,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveEdit} disabled={saving} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={saveEdit} disabled={saving} className="bg-[#D96846] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">✏️ تعديل الطبق</h3>
@@ -820,7 +820,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[88vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveReorder} disabled={saving} className="bg-black text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={saveReorder} disabled={saving} className="bg-[#D96846] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">ترتيب الأقسام</h3>
@@ -923,7 +923,7 @@ export default function MenuPage() {
               <div className="flex gap-2 overflow-x-auto pb-1">
                 <button
                   onClick={() => setSelectedCat(null)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${!selectedCat ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${!selectedCat ? 'bg-[#9C391B] border-[#9C391B] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                   الكل ({items.length})
                 </button>
                 {categories.map(cat => {
@@ -933,7 +933,7 @@ export default function MenuPage() {
                     <div key={cat.id} className="flex-shrink-0 flex items-center gap-1">
                       <button
                         onClick={() => setSelectedCat(active ? null : cat.id)}
-                        className={`px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                        className={`px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[#9C391B] border-[#9C391B] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                         {cat.name} ({count})
                       </button>
                       <button
@@ -1077,7 +1077,7 @@ export default function MenuPage() {
                 <button
                   onClick={saveCatName}
                   disabled={saving || !editCatName.trim()}
-                  className="px-4 py-3 bg-[#f97316] disabled:opacity-40 text-white font-bold rounded-xl active:scale-95 transition-all text-sm flex-shrink-0">
+                  className="px-4 py-3 bg-[#D96846] disabled:opacity-40 text-white font-bold rounded-xl active:scale-95 transition-all text-sm flex-shrink-0">
                   {saving ? '...' : 'حفظ'}
                 </button>
                 <input
@@ -1111,7 +1111,7 @@ export default function MenuPage() {
               <button
                 onClick={saveCatColors}
                 disabled={saving}
-                className="w-full py-3 mb-5 bg-[#f97316] disabled:opacity-40 text-white font-bold rounded-xl active:scale-95 transition-all">
+                className="w-full py-3 mb-5 bg-[#D96846] disabled:opacity-40 text-white font-bold rounded-xl active:scale-95 transition-all">
                 {saving ? '...' : 'حفظ الألوان'}
               </button>
 

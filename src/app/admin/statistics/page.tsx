@@ -354,13 +354,13 @@ export default function StatisticsPage() {
         {(['today','week','month'] as const).map(r => (
           <button key={r} onClick={() => handleQuick(r)}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95"
-            style={{ backgroundColor: range===r ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-bg)') : s.surface, borderColor: range===r ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-border)') : s.border, color: range===r ? '#fff' : s.sub }}>
+            style={{ backgroundColor: range===r ? '#D96846' : s.surface, borderColor: range===r ? '#D96846' : s.border, color: range===r ? '#fff' : s.sub }}>
             {r==='today'?'اليوم':r==='week'?'الأسبوع':'الشهر'}
           </button>
         ))}
         <button onClick={() => setRange('custom')}
           className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95"
-          style={{ backgroundColor: range==='custom' ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-bg)') : s.surface, borderColor: range==='custom' ? (dark ? 'var(--admin-accent-dark)' : 'var(--admin-accent-light-border)') : s.border, color: range==='custom' ? '#fff' : s.sub }}>
+          style={{ backgroundColor: range==='custom' ? '#D96846' : s.surface, borderColor: range==='custom' ? '#D96846' : s.border, color: range==='custom' ? '#fff' : s.sub }}>
           تخصيص
         </button>
       </div>

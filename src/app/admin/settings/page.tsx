@@ -134,7 +134,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
             <p className="text-red-500 text-xs text-center mb-2 font-bold">{saveError}</p>
           )}
           <button onClick={handleSave} disabled={saving}
-            className="w-full py-4 rounded-2xl bg-black text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60">
+            className="w-full py-4 rounded-2xl bg-[#D96846] text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60">
             {saving ? 'جاري الحفظ...' : 'حفظ الجدولة'}
           </button>
         </div>
@@ -409,7 +409,7 @@ function ChangePasswordSheet({ onClose, username }: { onClose: () => void; usern
           <button
             onClick={handleSave}
             disabled={saving || !newPass || !confirm}
-            className="w-full py-4 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-bold text-base active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+            className="w-full py-4 rounded-2xl bg-[#D96846] text-white font-bold text-base active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
           >
             {saving ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
             {saving ? 'جاري الحفظ...' : 'حفظ كلمة المرور'}
@@ -464,7 +464,7 @@ function DiscountRow({ name, value, onChange, onSave, saving, saved, previewPric
         className="w-16 flex-shrink-0 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-center text-sm text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
       <span className="text-[10px] text-gray-400 flex-shrink-0">%</span>
       <button onClick={onSave} disabled={saving}
-        className="h-8 px-3 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center gap-1 active:scale-90 transition-all disabled:opacity-50 flex-shrink-0">
+        className="h-8 px-3 rounded-lg bg-[#D96846] text-white flex items-center justify-center gap-1 active:scale-90 transition-all disabled:opacity-50 flex-shrink-0">
         {saving ? (
           <Loader2 size={13} className="animate-spin" />
         ) : saved ? (
@@ -725,7 +725,7 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
           </div>
 
           <button onClick={confirmSave} disabled={pendingSaving}
-            className="w-full py-3.5 rounded-xl mb-3 font-bold text-base bg-black dark:bg-white text-white dark:text-black active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
+            className="w-full py-3.5 rounded-xl mb-3 font-bold text-base bg-[#D96846] text-white active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
             {pendingSaving ? <Loader2 size={16} className="animate-spin" /> : null}
             {pendingSaving ? 'جاري الحفظ...' : 'تأكيد'}
           </button>
