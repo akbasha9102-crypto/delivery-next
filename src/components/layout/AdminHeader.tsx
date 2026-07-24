@@ -28,6 +28,7 @@ export function AdminHeader({ title, icon, right, left, className = '', style }:
           alt="ماشي"
           width={949}
           height={579}
+          preload
           className="h-6 w-auto"
         />
       </div>
