@@ -1013,7 +1013,7 @@ export default function DashboardPage() {
             style={scope === s.key
               ? (dark
                   ? { backgroundColor: '#ffffff', borderColor: '#ffffff', color: '#000000' }
-                  : { backgroundColor: '#000000', borderColor: '#000000', color: '#ffffff' })
+                  : { backgroundColor: '#D96846', borderColor: '#D96846', color: '#ffffff' })
               : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}>
             {s.label}
             {pendingByScope[s.key] > 0 && (

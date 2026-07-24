@@ -545,16 +545,16 @@ export default function InventoryPage() {
 
       {/* Tabs */}
       <div className="flex mx-4 mt-4 mb-3 bg-gray-100 dark:bg-slate-800 rounded-2xl p-1">
-        <button onClick={() => setTab('items')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'items' ? 'bg-[var(--admin-accent-light-bg)] text-white border border-[var(--admin-accent-light-border)] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
+        <button onClick={() => setTab('items')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'items' ? 'bg-[#D96846] text-white border border-[#D96846] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
           المواد ({items.length})
         </button>
-        <button onClick={() => setTab('categories')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'categories' ? 'bg-[var(--admin-accent-light-bg)] text-white border border-[var(--admin-accent-light-border)] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
+        <button onClick={() => setTab('categories')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'categories' ? 'bg-[#D96846] text-white border border-[#D96846] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
           الفئات
         </button>
-        <button onClick={() => setTab('movements')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'movements' ? 'bg-[var(--admin-accent-light-bg)] text-white border border-[var(--admin-accent-light-border)] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
+        <button onClick={() => setTab('movements')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'movements' ? 'bg-[#D96846] text-white border border-[#D96846] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
           الحركات
         </button>
-        <button onClick={() => setTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'add' ? 'bg-[var(--admin-accent-light-bg)] text-white border border-[var(--admin-accent-light-border)] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
+        <button onClick={() => setTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${tab === 'add' ? 'bg-[#D96846] text-white border border-[#D96846] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>
           إضافة
         </button>
       </div>

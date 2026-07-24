@@ -866,8 +866,8 @@ export default function MenuPage() {
 
       {/* Tabs — القائمة يمين، إضافة يسار (RTL) */}
       <div className="flex mx-4 mt-4 mb-4 bg-gray-100 dark:bg-slate-800 rounded-2xl p-1">
-        <button onClick={() => setActiveTab('list')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${activeTab === 'list' ? 'bg-[var(--admin-accent-light-bg)] text-white border border-[var(--admin-accent-light-border)] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>القائمة ({items.length})</button>
-        <button onClick={() => setActiveTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${activeTab === 'add' ? 'bg-[var(--admin-accent-light-bg)] text-white border border-[var(--admin-accent-light-border)] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>إضافة</button>
+        <button onClick={() => setActiveTab('list')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${activeTab === 'list' ? 'bg-[#D96846] text-white border border-[#D96846] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>القائمة ({items.length})</button>
+        <button onClick={() => setActiveTab('add')} className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${activeTab === 'add' ? 'bg-[#D96846] text-white border border-[#D96846] dark:bg-[var(--admin-accent-dark)] dark:border-transparent' : 'text-gray-500 dark:text-slate-400'}`}>إضافة</button>
       </div>
 
       <div className="px-4">
