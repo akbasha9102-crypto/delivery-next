@@ -1,28 +1,122 @@
-import { supabaseAdmin } from '@/lib/supabase/admin';
-import { isValidFontKey, DEFAULT_BRAND_FONT_KEY, DEFAULT_LOGIN_FONT_KEY } from './login-fonts';
-import LoginPageClient, { type LoginIdentity } from './LoginPageClient';
+'use client';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase/client';
+import { Lateef } from 'next/font/google';
 import { BRAND } from '../home/brand';
 
-// ISR برقم صريح — الهوية البصرية عامة لكل الزوار (لا localStorage)، مخزّنة
-// بجدول login_page_identity (singleton). رقم صريح يعني أن أي تعديل يُحفظ
-// عبر /api/login-settings ينعكس على كل الزوار خلال 30 ثانية كحد أقصى.
-export const revalidate = 30;
+// خط عنوان "ماشي" الخاص بصفحة تسجيل الدخول فقط — لا علاقة له بـ mashiRoundedFont المشترك بـ brand.ts
+const loginTitleFont = Lateef({
+  subsets: ['arabic', 'latin'],
+  weight: '700',
+  display: 'swap',
+  variable: '--font-login-title',
+});
 
-export default async function LoginPage() {
-  const { data } = await supabaseAdmin
-    .from('login_page_identity')
-    .select('brand_font_key, brand_color, login_font_key, login_color')
-    .eq('id', '00000000-0000-0000-0000-000000000001')
-    .maybeSingle();
+const LOGIN_TITLE_FONT_FAMILY = {
+  fontFamily: 'var(--font-login-title), "Lateef", serif',
+};
 
-  const initialIdentity: LoginIdentity | null = data
-    ? {
-        brandFontKey: isValidFontKey(data.brand_font_key) ? data.brand_font_key : DEFAULT_BRAND_FONT_KEY,
-        brandColor: data.brand_color || BRAND.green,
-        loginFontKey: isValidFontKey(data.login_font_key) ? data.login_font_key : DEFAULT_LOGIN_FONT_KEY,
-        loginColor: data.login_color || '#1d1d1f',
-      }
-    : null;
+export default function LoginPage() {
+  const router = useRouter();
 
-  return <LoginPageClient initialIdentity={initialIdentity} />;
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const signIn = async () => {
+    if (!identifier.trim() || !password.trim()) return;
+    setLoading(true);
+    setError('');
+
+    const local = identifier.trim().split('@')[0].trim().toLowerCase();
+
+    const res = await fetch('/api/auth/resolve-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: local }),
+    });
+    const resolved = await res.json().catch(() => ({}));
+
+    if (!res.ok || !resolved.email) {
+      setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+      setLoading(false);
+      return;
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: resolved.email,
+      password: password.trim(),
+    });
+    if (signInError) {
+      setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+      setLoading(false);
+      return;
+    }
+    router.replace('/admin/dashboard');
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-4">
+      <div className="w-full max-w-sm card-float-in">
+        <h1
+          className={`${loginTitleFont.variable} text-6xl font-extrabold text-center mb-1`}
+          style={{
+            ...LOGIN_TITLE_FONT_FAMILY,
+            color: BRAND.green,
+            WebkitTextStroke: `0.3px ${BRAND.dark}`,
+            textShadow: [
+              `0.3px 0 0 ${BRAND.dark}`,
+              `-0.3px 0 0 ${BRAND.dark}`,
+              `0 0.3px 0 ${BRAND.dark}`,
+              `0 -0.3px 0 ${BRAND.dark}`,
+              `0.3px 0.3px 0 ${BRAND.dark}`,
+              `-0.3px 0.3px 0 ${BRAND.dark}`,
+              `0.3px -0.3px 0 ${BRAND.dark}`,
+              `-0.3px -0.3px 0 ${BRAND.dark}`,
+            ].join(', '),
+          }}
+        >
+          ماشي
+        </h1>
+        <p className="text-[#1d1d1f]/70 text-center mb-6 text-sm">تسجيل الدخول لإدارة مطعمك</p>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-red-700 text-sm text-center">
+            {error}
+          </div>
+        )}
+
+        <div className="mb-4">
+          <label className="block text-[#1d1d1f] font-semibold mb-2 text-sm">البريد الإلكتروني أو اسم المستخدم</label>
+          <input
+            type="text"
+            value={identifier}
+            onChange={e => setIdentifier(e.target.value)}
+            dir="ltr"
+            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#D96846]/50 focus:border-[#D96846]/40 transition-all font-mono"
+          />
+        </div>
+        <div className="mb-6">
+          <label className="block text-[#1d1d1f] font-semibold mb-2 text-sm">كلمة المرور</label>
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && signIn()}
+            placeholder="••••••••"
+            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#D96846]/50 focus:border-[#D96846]/40 transition-all"
+          />
+        </div>
+        <button
+          onClick={signIn}
+          disabled={loading}
+          className="w-full bg-[#D96846] hover:bg-[#D96846] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(217,104,70,0.5)] transition-all active:scale-95"
+        >
+          {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
+        </button>
+      </div>
+    </div>
+  );
 }
