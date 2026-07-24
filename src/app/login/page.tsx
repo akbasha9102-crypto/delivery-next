@@ -2,20 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { Reem_Kufi } from 'next/font/google';
-import { BRAND } from '../home/brand';
-
-// خط عنوان "MaShe" (Reem Kufi) الخاص بصفحة تسجيل الدخول فقط — لا علاقة له بـ mashiRoundedFont المشترك بـ brand.ts
-const loginTitleFont = Reem_Kufi({
-  subsets: ['latin'],
-  weight: '700',
-  display: 'swap',
-  variable: '--font-login-title',
-});
-
-const LOGIN_TITLE_FONT_FAMILY = {
-  fontFamily: 'var(--font-login-title), "Reem Kufi", sans-serif',
-};
+import { BRAND, mashiWordmarkFont, MASHI_WORDMARK_FONT_FAMILY } from '../home/brand';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -61,10 +48,10 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-4">
       <div className="w-full max-w-sm card-float-in border border-[#1d1d1f]/10 rounded-3xl p-8">
         <h1
-          className={`${loginTitleFont.variable} text-6xl font-extrabold text-center mb-1`}
+          className={`${mashiWordmarkFont.variable} text-6xl font-extrabold text-center mb-1`}
           dir="ltr"
           style={{
-            ...LOGIN_TITLE_FONT_FAMILY,
+            ...MASHI_WORDMARK_FONT_FAMILY,
             color: BRAND.green,
           }}
         >

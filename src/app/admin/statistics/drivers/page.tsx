@@ -154,13 +154,13 @@ export default function DriverStatisticsPage() {
         {(['today','week','month'] as const).map(r => (
           <button key={r} onClick={() => handleQuick(r)}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95"
-            style={{ backgroundColor: range===r ? '#3b82f6' : s.surface, borderColor: range===r ? '#3b82f6' : s.border, color: range===r ? '#fff' : s.sub }}>
+            style={{ backgroundColor: range===r ? (dark ? '#3b82f6' : 'var(--admin-accent-light-bg)') : s.surface, borderColor: range===r ? (dark ? '#3b82f6' : 'var(--admin-accent-light-border)') : s.border, color: range===r ? '#fff' : s.sub }}>
             {r==='today'?'اليوم':r==='week'?'الأسبوع':'الشهر'}
           </button>
         ))}
         <button onClick={() => setRange('custom')}
           className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95"
-          style={{ backgroundColor: range==='custom' ? '#3b82f6' : s.surface, borderColor: range==='custom' ? '#3b82f6' : s.border, color: range==='custom' ? '#fff' : s.sub }}>
+          style={{ backgroundColor: range==='custom' ? (dark ? '#3b82f6' : 'var(--admin-accent-light-bg)') : s.surface, borderColor: range==='custom' ? (dark ? '#3b82f6' : 'var(--admin-accent-light-border)') : s.border, color: range==='custom' ? '#fff' : s.sub }}>
           تخصيص
         </button>
       </div>

@@ -10,10 +10,10 @@
 
   /* لون تفعيل/اختيار/ضغط الأزرار بلوحة تحكم المطعم (/admin) فقط — لا علاقة له بـ --primary (هوية منيو الزبون).
      قيمة رمادي غامق من عائلة slate (متطابقة مع dark:bg-slate-800 / dark:border-slate-700 المستخدمة أصلاً بكل الهيدرات). */
-  --admin-accent-light-bg:      #1e293b;
-  --admin-accent-light-border:  #334155;
+  --admin-accent-light-bg:      #15803D;
+  --admin-accent-light-border:  #16A34A;
   --admin-accent-dark:          #f97316;
-  --admin-accent-light-bg-soft: rgba(30,41,59,0.12);
+  --admin-accent-light-bg-soft: rgba(21,128,61,0.12);
   --admin-accent-dark-soft:     rgba(249,115,22,0.1);
 }
 
