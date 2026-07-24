@@ -15,7 +15,6 @@ function MashiWordmark() {
   return (
     <span
       className={`${mashiWordmarkFont.variable} text-[19px] font-bold leading-none select-none shrink-0`}
-      dir="ltr"
       style={{ ...MASHI_WORDMARK_FONT_FAMILY, color: BRAND.green }}
     >
       <span
@@ -28,7 +27,7 @@ function MashiWordmark() {
             `0.2px -0.2px 0 ${BRAND.dark}`, `-0.2px -0.2px 0 ${BRAND.dark}`,
           ].join(', '),
         }}
-      >M</span>
+      >م</span>
       <span
         style={{
           WebkitTextStroke: `0.1px ${BRAND.dark}`,
@@ -39,7 +38,7 @@ function MashiWordmark() {
             `0.1px -0.1px 0 ${BRAND.dark}`, `-0.1px -0.1px 0 ${BRAND.dark}`,
           ].join(', '),
         }}
-      >aShe</span>
+      >اشي</span>
     </span>
   );
 }

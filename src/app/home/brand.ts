@@ -12,7 +12,7 @@ export const MASHI_FONT = {
 };
 
 export const mashiWordmarkFont = Reem_Kufi({
-  subsets: ['latin'],
+  subsets: ['arabic', 'latin'],
   weight: '700',
   display: 'swap',
   variable: '--font-mashi-wordmark',
@@ -23,7 +23,7 @@ export const MASHI_WORDMARK_FONT_FAMILY = {
 } as const;
 
 export const BRAND = {
-  green: '#15803D',
+  green: '#12301F',
   accent: '#4ADE80',
   dark: '#1d1d1f',
   bgAlt: '#f5f5f7',

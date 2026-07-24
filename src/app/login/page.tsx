@@ -49,7 +49,6 @@ export default function LoginPage() {
       <div className="w-full max-w-sm card-float-in border border-[#1d1d1f]/10 rounded-3xl p-8">
         <h1
           className={`${mashiWordmarkFont.variable} text-6xl font-extrabold text-center mb-1`}
-          dir="ltr"
           style={{
             ...MASHI_WORDMARK_FONT_FAMILY,
             color: BRAND.green,
@@ -70,7 +69,7 @@ export default function LoginPage() {
               ].join(', '),
             }}
           >
-            M
+            م
           </span><span
             style={{
               WebkitTextStroke: `0.15px ${BRAND.dark}`,
@@ -85,7 +84,7 @@ export default function LoginPage() {
                 `-0.15px -0.15px 0 ${BRAND.dark}`,
               ].join(', '),
             }}
-          >aShe</span>
+          >اشي</span>
         </h1>
         <p className="text-[#1d1d1f]/70 text-center mb-6 text-sm">تسجيل الدخول لإدارة مطعمك</p>
 
@@ -119,7 +118,7 @@ export default function LoginPage() {
         <button
           onClick={signIn}
           disabled={loading}
-          className="w-full bg-[#15803D] hover:bg-[#15803D] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(21,128,61,0.5)] transition-all active:scale-95"
+          className="w-full bg-[#12301F] hover:bg-[#12301F] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(18,48,31,0.5)] transition-all active:scale-95"
         >
           {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
         </button>
