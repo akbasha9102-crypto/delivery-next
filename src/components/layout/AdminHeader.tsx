@@ -1,20 +1,6 @@
 'use client';
 import { ReactNode, CSSProperties } from 'react';
-import { Ruwudu } from 'next/font/google';
-import { BRAND } from '@/app/home/brand';
-
-const mashiHeaderWordmarkFont = Ruwudu({
-  subsets: ['arabic'],
-  weight: '700',
-  display: 'swap',
-  variable: '--font-mashi-header-wordmark',
-});
-
-const MASHI_HEADER_WORDMARK_FONT_FAMILY = {
-  fontFamily: 'var(--font-mashi-header-wordmark), "Ruwudu", sans-serif',
-} as const;
-
-const HEADER_WORDMARK_COLOR = '#DD7855';
+import Image from 'next/image';
 
 interface AdminHeaderProps {
   title: ReactNode;
@@ -23,38 +9,6 @@ interface AdminHeaderProps {
   left?: ReactNode;
   className?: string;
   style?: CSSProperties;
-}
-
-function MashiWordmark() {
-  return (
-    <span
-      className={`${mashiHeaderWordmarkFont.variable} text-[19px] font-bold leading-none select-none shrink-0`}
-      style={{ ...MASHI_HEADER_WORDMARK_FONT_FAMILY, color: HEADER_WORDMARK_COLOR }}
-    >
-      <span
-        style={{
-          WebkitTextStroke: `0.2px ${BRAND.dark}`,
-          textShadow: [
-            `0.2px 0 0 ${BRAND.dark}`, `-0.2px 0 0 ${BRAND.dark}`,
-            `0 0.2px 0 ${BRAND.dark}`, `0 -0.2px 0 ${BRAND.dark}`,
-            `0.2px 0.2px 0 ${BRAND.dark}`, `-0.2px 0.2px 0 ${BRAND.dark}`,
-            `0.2px -0.2px 0 ${BRAND.dark}`, `-0.2px -0.2px 0 ${BRAND.dark}`,
-          ].join(', '),
-        }}
-      >م</span>
-      <span
-        style={{
-          WebkitTextStroke: `0.1px ${BRAND.dark}`,
-          textShadow: [
-            `0.1px 0 0 ${BRAND.dark}`, `-0.1px 0 0 ${BRAND.dark}`,
-            `0 0.1px 0 ${BRAND.dark}`, `0 -0.1px 0 ${BRAND.dark}`,
-            `0.1px 0.1px 0 ${BRAND.dark}`, `-0.1px 0.1px 0 ${BRAND.dark}`,
-            `0.1px -0.1px 0 ${BRAND.dark}`, `-0.1px -0.1px 0 ${BRAND.dark}`,
-          ].join(', '),
-        }}
-      >اشي</span>
-    </span>
-  );
 }
 
 export function AdminHeader({ title, icon, right, left, className = '', style }: AdminHeaderProps) {
@@ -69,7 +23,13 @@ export function AdminHeader({ title, icon, right, left, className = '', style }:
       </h1>
       <div className="flex items-center gap-1.5 shrink-0">
         {left}
-        <MashiWordmark />
+        <Image
+          src="/mashi-logo.png"
+          alt="ماشي"
+          width={949}
+          height={579}
+          className="h-6 w-auto"
+        />
       </div>
     </header>
   );

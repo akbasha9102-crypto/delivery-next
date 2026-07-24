@@ -52,7 +52,7 @@ export default function LoginPage() {
             src="/mashi-logo.png"
             alt="ماشي"
             width={949}
-            height={614}
+            height={579}
             priority
             className="h-16 w-auto inline-block"
           />
@@ -89,7 +89,7 @@ export default function LoginPage() {
         <button
           onClick={signIn}
           disabled={loading}
-          className="w-full bg-[#12301F] hover:bg-[#12301F] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(18,48,31,0.5)] transition-all active:scale-95"
+          className="w-full bg-[#D96846] hover:bg-[#D96846] disabled:opacity-60 text-white font-bold py-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(217,104,70,0.5)] transition-all active:scale-95"
         >
           {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
         </button>
