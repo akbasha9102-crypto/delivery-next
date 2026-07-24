@@ -1024,7 +1024,12 @@ export default function DashboardPage() {
           </button>
         ))}
         <button onClick={() => setShowQuickAdd(true)}
-          className="flex items-center justify-center gap-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2 border-[#D96846] bg-[#D96846] text-white"
+          className="flex items-center justify-center gap-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2"
+          style={showQuickAdd
+            ? (dark
+                ? { backgroundColor: '#ffffff', borderColor: '#ffffff', color: '#000000' }
+                : { backgroundColor: '#D96846', borderColor: '#D96846', color: '#ffffff' })
+            : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}
           aria-label="إضافة طلب زبون بدون جوال">
           <Plus size={16} /> المحل
         </button>
@@ -1097,10 +1102,10 @@ export default function DashboardPage() {
           const labels   = { pending: 'واردة', preparing: 'التجهيز', pickup: 'انتظار السائق', delivery: scope === 'internal' ? 'جاهز' : 'التوصيل', completed: 'مكتمل' };
           const btn = (
             <button key={tab} onClick={() => setFilter(tab)}
-              className={`flex-1 min-w-[60px] py-2 px-2 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-white'}`}>
+              className={`flex-1 min-w-[60px] py-2 px-2 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-[#A33818] border-[#A33818] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-white'}`}>
               <span className="block">{labels[tab]}</span>
               {count > 0 && (
-                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-black mt-1 ${isActive ? 'bg-white text-[var(--admin-accent-light-bg)] dark:text-[var(--admin-accent-dark)]' : 'bg-[var(--admin-accent-light-bg)] text-white dark:bg-[var(--admin-accent-dark)]'}`}>
+                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-black mt-1 ${isActive ? 'bg-white text-[#A33818] dark:text-[var(--admin-accent-dark)]' : 'bg-[#A33818] text-white dark:bg-[var(--admin-accent-dark)]'}`}>
                   {count}
                 </span>
               )}

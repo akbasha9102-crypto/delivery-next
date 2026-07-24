@@ -1,6 +1,20 @@
 'use client';
 import { ReactNode, CSSProperties } from 'react';
-import { BRAND, mashiWordmarkFont, MASHI_WORDMARK_FONT_FAMILY } from '@/app/home/brand';
+import { Ruwudu } from 'next/font/google';
+import { BRAND } from '@/app/home/brand';
+
+const mashiHeaderWordmarkFont = Ruwudu({
+  subsets: ['arabic'],
+  weight: '700',
+  display: 'swap',
+  variable: '--font-mashi-header-wordmark',
+});
+
+const MASHI_HEADER_WORDMARK_FONT_FAMILY = {
+  fontFamily: 'var(--font-mashi-header-wordmark), "Ruwudu", sans-serif',
+} as const;
+
+const HEADER_WORDMARK_COLOR = '#DD7855';
 
 interface AdminHeaderProps {
   title: ReactNode;
@@ -14,8 +28,8 @@ interface AdminHeaderProps {
 function MashiWordmark() {
   return (
     <span
-      className={`${mashiWordmarkFont.variable} text-[19px] font-bold leading-none select-none shrink-0`}
-      style={{ ...MASHI_WORDMARK_FONT_FAMILY, color: BRAND.green }}
+      className={`${mashiHeaderWordmarkFont.variable} text-[19px] font-bold leading-none select-none shrink-0`}
+      style={{ ...MASHI_HEADER_WORDMARK_FONT_FAMILY, color: HEADER_WORDMARK_COLOR }}
     >
       <span
         style={{
