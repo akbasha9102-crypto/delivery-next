@@ -51,8 +51,8 @@ export default function LoginPage() {
           <Image
             src="/mashi-logo.png"
             alt="ماشي"
-            width={957}
-            height={521}
+            width={949}
+            height={614}
             priority
             className="h-16 w-auto inline-block"
           />
