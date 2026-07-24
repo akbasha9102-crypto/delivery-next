@@ -101,7 +101,7 @@ export default function LoginPage() {
             value={identifier}
             onChange={e => setIdentifier(e.target.value)}
             dir="ltr"
-            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#D96846]/50 focus:border-[#D96846]/40 transition-all font-mono"
+            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-left text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#1d1d1f]/50 focus:border-[#1d1d1f]/40 transition-all font-mono"
           />
         </div>
         <div className="mb-6">
@@ -112,7 +112,7 @@ export default function LoginPage() {
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && signIn()}
             placeholder="••••••••"
-            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#D96846]/50 focus:border-[#D96846]/40 transition-all"
+            className="w-full bg-gray-300 border border-gray-400 rounded-xl px-4 py-3 text-right text-[#1d1d1f] placeholder:text-[#86868b] outline-none focus:ring-2 focus:ring-[#1d1d1f]/50 focus:border-[#1d1d1f]/40 transition-all"
           />
         </div>
         <button
