@@ -1012,7 +1012,7 @@ export default function DashboardPage() {
             className="relative py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2"
             style={scope === s.key
               ? (dark
-                  ? { backgroundColor: '#ffffff', borderColor: '#ffffff', color: '#000000' }
+                  ? { backgroundColor: '#f97316', borderColor: '#f97316', color: '#ffffff' }
                   : { backgroundColor: '#D96846', borderColor: '#D96846', color: '#ffffff' })
               : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}>
             {s.label}
@@ -1027,7 +1027,7 @@ export default function DashboardPage() {
           className="flex items-center justify-center gap-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 border-2"
           style={showQuickAdd
             ? (dark
-                ? { backgroundColor: '#ffffff', borderColor: '#ffffff', color: '#000000' }
+                ? { backgroundColor: '#f97316', borderColor: '#f97316', color: '#ffffff' }
                 : { backgroundColor: '#D96846', borderColor: '#D96846', color: '#ffffff' })
             : { backgroundColor: 'transparent', borderColor: '#d1d5db', color: '#9ca3af' }}
           aria-label="إضافة طلب زبون بدون جوال">

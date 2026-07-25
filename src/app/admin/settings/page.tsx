@@ -442,10 +442,10 @@ function DiscountRow({ name, value, onChange, saving, saved, previewPrice, tone 
   const pct = parseFloat(value);
   const active = !isNaN(pct) && pct > 0;
   const toneClasses = tone === 'category'
-    ? 'bg-gray-200/90 dark:bg-black/40 border border-gray-300/70 dark:border-slate-700/70'
+    ? 'bg-gray-200/90 dark:bg-white border border-gray-300/70'
     : 'bg-gray-50/80 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700/40';
   const nameClasses = tone === 'category'
-    ? 'font-semibold text-sm text-gray-500 dark:text-slate-400 truncate'
+    ? 'font-semibold text-sm text-gray-500 truncate'
     : 'font-bold text-sm text-gray-800 dark:text-slate-200 truncate';
   return (
     <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${toneClasses}`}>
@@ -456,7 +456,7 @@ function DiscountRow({ name, value, onChange, saving, saved, previewPrice, tone 
           <p className={nameClasses}>{name}</p>
         </div>
         {active && previewPrice !== undefined && (
-          <p className="text-[10px] text-gray-400 dark:text-slate-500 truncate">
+          <p className="text-[10px] text-gray-400 truncate">
             قبل: {previewPrice.toLocaleString()} — بعد: {applyDiscountPct(previewPrice, pct).toLocaleString()}
           </p>
         )}
@@ -692,7 +692,7 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
                         previewPrice={categoryPreviewPrice(g.allItems)}
                         leading={
                           <button onClick={() => toggleGroup(g.id)}
-                            className="p-1 -m-1 text-gray-500 dark:text-slate-400 flex-shrink-0"
+                            className="p-1 -m-1 text-gray-500 flex-shrink-0"
                             aria-label={open ? 'طي القسم' : 'توسيع القسم'}>
                             <ChevronDown size={16} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
                           </button>
