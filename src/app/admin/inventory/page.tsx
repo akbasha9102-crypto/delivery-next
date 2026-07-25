@@ -1051,7 +1051,7 @@ export default function InventoryPage() {
                 <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-4">
                   <button type="button" onClick={() => setNewCatActive(v => !v)} dir="ltr"
                     className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
-                    style={{ backgroundColor: newCatActive ? '#22c55e' : '#d1d5db' }}>
+                    style={{ backgroundColor: newCatActive ? '#10B981' : '#EF4444' }}>
                     <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ right: newCatActive ? '2px' : '22px' }} />
                   </button>
                   <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{newCatActive ? 'الفئة مفعّلة' : 'الفئة معطّلة'}</span>

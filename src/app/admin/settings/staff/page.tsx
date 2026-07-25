@@ -161,8 +161,8 @@ export default function StaffManagementPage() {
             {staffList.map(s => (
               <div key={s.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
                 <div className="flex items-start justify-between mb-2">
-                  <button onClick={() => toggleActive(s)} className="text-gray-400 active:scale-90 transition-all">
-                    {s.is_active ? <ToggleRight size={26} className="text-green-500" /> : <ToggleLeft size={26} />}
+                  <button onClick={() => toggleActive(s)} className="active:scale-90 transition-all">
+                    {s.is_active ? <ToggleRight size={26} className="text-[#10B981]" /> : <ToggleLeft size={26} className="text-[#EF4444]" />}
                   </button>
                   <div className="text-right flex-1 px-3">
                     <p className="font-bold text-gray-900 dark:text-slate-100 text-sm">{s.display_name}</p>

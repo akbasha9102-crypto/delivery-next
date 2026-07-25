@@ -80,7 +80,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
         <div className="overflow-y-auto flex-1 px-5 pt-4">
           <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-2xl px-4 py-3 mb-5">
             <button onClick={() => setSched(prev => ({ ...prev, auto: !prev.auto }))} dir="ltr"
-              className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${sched.auto ? 'bg-green-400' : 'bg-gray-300 dark:bg-slate-500'}`}>
+              className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${sched.auto ? 'bg-[#10B981]' : 'bg-[#EF4444]'}`}>
               <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${sched.auto ? 'translate-x-6' : ''}`} />
             </button>
             <div className="text-right">
@@ -110,7 +110,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
                 <div key={d} className={`bg-gray-50 dark:bg-slate-700/50 rounded-2xl px-4 py-3 transition-opacity ${!day.enabled ? 'opacity-50' : ''}`}>
                   <div className="flex items-center justify-between mb-2">
                     <button onClick={() => updateDay(key, 'enabled', !day.enabled)} dir="ltr"
-                      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${day.enabled ? 'bg-green-400' : 'bg-gray-300 dark:bg-slate-500'}`}>
+                      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${day.enabled ? 'bg-[#10B981]' : 'bg-[#EF4444]'}`}>
                       <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${day.enabled ? 'translate-x-5' : ''}`} />
                     </button>
                     <p className="font-bold text-sm text-gray-800 dark:text-slate-200">{DAY_NAMES[d]}</p>
@@ -1043,7 +1043,7 @@ export default function SettingsPage() {
           </div>
           <button type="button" onClick={toggleBestSellers} dir="ltr"
             className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
-            style={{ backgroundColor: bestSellersLocal ? '#22c55e' : '#d1d5db' }}>
+            style={{ backgroundColor: bestSellersLocal ? '#10B981' : '#EF4444' }}>
             <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
               style={{ right: bestSellersLocal ? '2px' : '22px' }} />
           </button>
@@ -1199,7 +1199,7 @@ export default function SettingsPage() {
             </button>
             <button onClick={handleToggleClosed}
               className={`flex-1 rounded-xl px-4 py-3 border flex items-center justify-between transition-all active:scale-[0.98] ${effectivelyClosed ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'}`}>
-              <div dir="ltr" className={`relative w-10 h-5 rounded-full transition-colors duration-300 flex-shrink-0 ${effectivelyClosed ? 'bg-red-500' : 'bg-green-400'}`}>
+              <div dir="ltr" className={`relative w-10 h-5 rounded-full transition-colors duration-300 flex-shrink-0 ${effectivelyClosed ? 'bg-[#EF4444]' : 'bg-[#10B981]'}`}>
                 <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${effectivelyClosed ? 'translate-x-0' : 'translate-x-5'}`} />
               </div>
               <div className="text-right">
@@ -1269,7 +1269,7 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-500 dark:text-slate-400 flex-1">كود يدخله الزبون بالسلة فيحصل على خصم بالنسبة المحددة</p>
             <button type="button" onClick={() => setCouponEnabledLocal(v => !v)} dir="ltr"
               className="w-11 h-6 rounded-full transition-all relative flex-shrink-0 mr-3"
-              style={{ backgroundColor: couponEnabledLocal ? '#22c55e' : '#d1d5db' }}>
+              style={{ backgroundColor: couponEnabledLocal ? '#10B981' : '#EF4444' }}>
               <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
                 style={{ right: couponEnabledLocal ? '2px' : '22px' }} />
             </button>
@@ -1278,7 +1278,7 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-500 dark:text-slate-400 flex-1">السماح بتطبيق الكوبون على طلب موجود مسبقاً (رجعياً)</p>
             <button type="button" onClick={() => setCouponAllowRetroactiveLocal(v => !v)} dir="ltr"
               className="w-11 h-6 rounded-full transition-all relative flex-shrink-0 mr-3"
-              style={{ backgroundColor: couponAllowRetroactiveLocal ? '#22c55e' : '#d1d5db' }}>
+              style={{ backgroundColor: couponAllowRetroactiveLocal ? '#10B981' : '#EF4444' }}>
               <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
                 style={{ right: couponAllowRetroactiveLocal ? '2px' : '22px' }} />
             </button>
