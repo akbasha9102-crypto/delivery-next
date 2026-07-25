@@ -957,9 +957,14 @@ export default function InventoryPage() {
       {showPurchaseForm && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowPurchaseForm(false)}>
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pt-6 pb-2">
-              <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-4">🛒 تسجيل عملية شراء</p>
-
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
+              <button onClick={recordPurchase} disabled={purchaseSaving || !purchaseItemId || !purchaseQty || !purchasePrice} className="bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
+                {purchaseSaving ? '...' : 'تسجيل الشراء'}
+              </button>
+              <h3 className="font-bold text-gray-900 dark:text-slate-100">🛒 تسجيل عملية شراء</h3>
+              <button onClick={() => setShowPurchaseForm(false)} className="bg-gray-100 dark:bg-slate-700 text-gray-500 px-3 py-2 rounded-xl text-sm font-bold active:scale-95">إلغاء</button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5">
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">فلترة حسب الفئة</p>
               <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
                 <button onClick={() => selectPurchaseCatFilter(null)}
@@ -1010,12 +1015,7 @@ export default function InventoryPage() {
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">ملاحظة (اختياري)</p>
               <input value={purchaseNotes} onChange={e => setPurchaseNotes(e.target.value)} placeholder="مثال: فاتورة المورد رقم..." dir="rtl"
-                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316] mb-4" />
-
-              <button onClick={recordPurchase} disabled={purchaseSaving || !purchaseItemId || !purchaseQty || !purchasePrice}
-                className="w-full bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
-                {purchaseSaving ? 'جاري الحفظ...' : 'تسجيل الشراء'}
-              </button>
+                className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
             </div>
           </div>
         </div>
@@ -1024,10 +1024,15 @@ export default function InventoryPage() {
       {/* ═══ موديل إضافة/حذف فئة ═══ */}
       {showCatForm && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => { setShowCatForm(false); setEditingCat(null); }}>
-          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-6">
-              <p className="font-bold text-gray-900 dark:text-slate-100 text-right text-base mb-4">{editingCat ? 'تعديل الفئة' : 'فئة جديدة'}</p>
-
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
+              <button onClick={saveCategory} disabled={catSaving || !newCatName.trim()} className="bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
+                {catSaving ? '...' : editingCat ? 'حفظ' : 'إضافة'}
+              </button>
+              <h3 className="font-bold text-gray-900 dark:text-slate-100">{editingCat ? 'تعديل الفئة' : 'فئة جديدة'}</h3>
+              <button onClick={() => { setShowCatForm(false); setEditingCat(null); }} className="bg-gray-100 dark:bg-slate-700 text-gray-500 px-3 py-2 rounded-xl text-sm font-bold active:scale-95">إلغاء</button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5">
               <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="مثال: لحوم، خضار، مشروبات..." dir="rtl"
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316] mb-3" />
 
@@ -1057,11 +1062,6 @@ export default function InventoryPage() {
                   <span className="text-sm font-bold text-gray-700 dark:text-slate-200">{newCatActive ? 'الفئة مفعّلة' : 'الفئة معطّلة'}</span>
                 </div>
               )}
-
-              <button onClick={saveCategory} disabled={catSaving || !newCatName.trim()}
-                className="w-full bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
-                {catSaving ? 'جاري الحفظ...' : editingCat ? 'حفظ التعديلات' : 'إضافة الفئة'}
-              </button>
             </div>
           </div>
         </div>

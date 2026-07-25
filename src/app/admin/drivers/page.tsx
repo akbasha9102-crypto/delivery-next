@@ -90,14 +90,15 @@ export default function DriversPage() {
     else fetchDrivers();
   };
 
-  const deleteDriver = async (id: string) => {
+  const deleteDriver = async (driver: Driver) => {
+    if (!confirm(`هل أنت متأكد من حذف السائق "${driver.name}"؟`)) return;
     const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch(`/api/driver/${id}`, {
+    const res = await fetch(`/api/driver/${driver.id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
     });
     if (!res.ok) { alert('تعذّر حذف السائق'); return; }
-    setDrivers(prev => prev.filter(x => x.id !== id));
+    setDrivers(prev => prev.filter(x => x.id !== driver.id));
   };
 
   const copyLink = (d: Driver) => {
@@ -164,7 +165,7 @@ export default function DriversPage() {
                 <div key={d.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => deleteDriver(d.id)}
+                      <button onClick={() => deleteDriver(d)}
                         className="p-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-400 active:scale-90 transition-all">
                         <Trash2 size={16} />
                       </button>
