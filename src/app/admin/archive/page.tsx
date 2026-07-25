@@ -351,7 +351,7 @@ export default function ArchivePage() {
               const labels = { feedback: '💡 ملاحظات', complaint: '⚠️ شكاوى' };
               return (
                 <button key={t} onClick={() => setFilterType(filterType === t ? null : t)}
-                  className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-all active:scale-95 ${filterType === t ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+                  className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-all active:scale-95 ${filterType === t ? 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
                   {labels[t]}
                 </button>
               );

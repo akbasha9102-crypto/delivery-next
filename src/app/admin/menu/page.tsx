@@ -923,7 +923,7 @@ export default function MenuPage() {
               <div className="flex gap-2 overflow-x-auto pb-1">
                 <button
                   onClick={() => setSelectedCat(null)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${!selectedCat ? 'bg-[#9C391B] border-[#9C391B] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${!selectedCat ? 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                   الكل ({items.length})
                 </button>
                 {categories.map(cat => {
@@ -933,7 +933,7 @@ export default function MenuPage() {
                     <div key={cat.id} className="flex-shrink-0 flex items-center gap-1">
                       <button
                         onClick={() => setSelectedCat(active ? null : cat.id)}
-                        className={`px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-[#9C391B] border-[#9C391B] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                        className={`px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${active ? 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                         {cat.name} ({count})
                       </button>
                       <button
