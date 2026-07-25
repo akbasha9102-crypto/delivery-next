@@ -71,11 +71,11 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg pb-6 max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+          <div className="w-9" />
+          <p className="font-bold text-gray-900 dark:text-slate-100 text-lg">جدولة الدوام</p>
           <button onClick={onClose} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
             <X size={18} />
           </button>
-          <p className="font-bold text-gray-900 dark:text-slate-100 text-lg">جدولة الدوام</p>
-          <div className="w-9" />
         </div>
         <div className="overflow-y-auto flex-1 px-5 pt-4">
           <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 rounded-2xl px-4 py-3 mb-5">
@@ -98,7 +98,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
                 className="flex-1 text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
             </div>
             <button onClick={applyToAllDays}
-              className="w-full py-2.5 rounded-xl bg-green-300 text-white font-bold text-sm active:scale-95 transition-all">
+              className="w-full py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all">
               تطبيق على الكل
             </button>
           </div>
@@ -653,7 +653,7 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
         <button onClick={saveAllDiscounts} disabled={savingAll}
           className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold text-sm rounded-xl active:scale-95 transition-all disabled:opacity-50">
           {savingAll ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          {savedAll ? '✓ تم' : 'حفظ الكل'}
+          {savedAll ? '✓ تم' : 'حفظ'}
         </button>
       }
     >

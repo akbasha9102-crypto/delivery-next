@@ -317,16 +317,16 @@ export default function ArchivePage() {
       {/* التابات الرئيسية */}
       <div className="flex gap-2 px-3 pt-3 pb-2">
         <button onClick={() => setSection('feedback')}
-          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'feedback' ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'feedback' ? 'bg-[#f97316] border-[#f97316] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
           💬 ملاحظة/شكوى{feedbacks.length > 0 ? ` (${feedbacks.length})` : ''}
         </button>
         <button onClick={() => setSection('drivers')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'drivers' ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'drivers' ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
           <span aria-hidden="true">🏍️</span>
           <span>السائقين{totalDriverTrips > 0 ? ` (${totalDriverTrips})` : ''}</span>
         </button>
         <button onClick={() => setSection('rejected')}
-          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'rejected' ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'rejected' ? 'bg-[#EF4444] border-[#EF4444] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
           ✕ مرفوضة{rejected.length > 0 ? ` (${rejected.length})` : ''}
         </button>
       </div>
