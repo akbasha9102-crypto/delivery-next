@@ -135,7 +135,7 @@ export function BrandingModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
               <button 
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full py-5 bg-black text-white rounded-[1.5rem] font-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all disabled:opacity-50 mt-4"
+                className="w-full py-5 bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white rounded-[1.5rem] font-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all disabled:opacity-50 mt-4"
               >
                 {saving ? <Loader2 className="animate-spin" /> : <Save size={20}/>}
                 حفظ التعديلات

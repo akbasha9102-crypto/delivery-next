@@ -190,7 +190,7 @@ export default function DriversPage() {
                     {editPw === d.id ? (
                       <div className="flex gap-2 flex-1">
                         <button onClick={() => savePassword(d.id)} disabled={savingPw}
-                          className="px-3 py-1.5 bg-[#D96846] text-white text-sm font-bold rounded-lg active:scale-95 transition-all disabled:opacity-50">
+                          className="px-3 py-1.5 bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white text-sm font-bold rounded-lg active:scale-95 transition-all disabled:opacity-50">
                           {savingPw ? '...' : 'حفظ'}
                         </button>
                         <input value={newPw} onChange={e => setNewPw(e.target.value)}

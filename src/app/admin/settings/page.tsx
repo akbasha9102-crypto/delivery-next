@@ -134,7 +134,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
             <p className="text-red-500 text-xs text-center mb-2 font-bold">{saveError}</p>
           )}
           <button onClick={handleSave} disabled={saving}
-            className="w-full py-4 rounded-2xl bg-[#D96846] text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60">
+            className="w-full py-4 rounded-2xl bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60">
             {saving ? 'جاري الحفظ...' : 'حفظ الجدولة'}
           </button>
         </div>
@@ -266,7 +266,7 @@ function RestaurantInfoSheet({ onClose, settingsId, refreshSettings }: {
           <div className="w-10 h-1 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4" />
           <div className="flex items-center justify-between">
             <button onClick={handleSave} disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold text-sm rounded-xl active:scale-95 transition-all disabled:opacity-50">
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold text-sm rounded-xl active:scale-95 transition-all disabled:opacity-50">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               {saved ? '✓ تم' : 'حفظ'}
             </button>
@@ -409,7 +409,7 @@ function ChangePasswordSheet({ onClose, username }: { onClose: () => void; usern
           <button
             onClick={handleSave}
             disabled={saving || !newPass || !confirm}
-            className="w-full py-4 rounded-2xl bg-[#D96846] text-white font-bold text-base active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+            className="w-full py-4 rounded-2xl bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold text-base active:scale-95 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
           >
             {saving ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
             {saving ? 'جاري الحفظ...' : 'حفظ كلمة المرور'}
@@ -464,7 +464,7 @@ function DiscountRow({ name, value, onChange, onSave, saving, saved, previewPric
         className="w-16 flex-shrink-0 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-center text-sm text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
       <span className="text-[10px] text-gray-400 flex-shrink-0">%</span>
       <button onClick={onSave} disabled={saving}
-        className="h-8 px-3 rounded-lg bg-[#D96846] text-white flex items-center justify-center gap-1 active:scale-90 transition-all disabled:opacity-50 flex-shrink-0">
+        className="h-8 px-3 rounded-lg bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white flex items-center justify-center gap-1 active:scale-90 transition-all disabled:opacity-50 flex-shrink-0">
         {saving ? (
           <Loader2 size={13} className="animate-spin" />
         ) : saved ? (
@@ -1237,7 +1237,7 @@ export default function SettingsPage() {
             <span className="text-xs text-gray-400 flex-shrink-0">د.ع</span>
           </div>
           <button onClick={saveDeliveryFee} disabled={feeSaving}
-            className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+            className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
             {feeSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {feeSaved ? '✓ تم' : 'حفظ'}
           </button>
@@ -1255,7 +1255,7 @@ export default function SettingsPage() {
             <span className="text-xs text-gray-400 flex-shrink-0">د.ع</span>
           </div>
           <button onClick={saveMinOrderAmount} disabled={minOrderSaving}
-            className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+            className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
             {minOrderSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {minOrderSaved ? '✓ تم' : 'حفظ'}
           </button>
@@ -1293,7 +1293,7 @@ export default function SettingsPage() {
             <span className="text-xs text-gray-400 flex-shrink-0">%</span>
           </div>
           <button onClick={saveCoupon} disabled={couponSaving}
-            className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
+            className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50">
             {couponSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {couponSaved ? '✓ تم' : 'حفظ'}
           </button>

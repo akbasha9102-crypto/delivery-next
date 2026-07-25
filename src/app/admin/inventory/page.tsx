@@ -836,7 +836,7 @@ export default function InventoryPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[96dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveItem} disabled={saving || !form.name.trim()} className="bg-[#D96846] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
+              <button onClick={saveItem} disabled={saving || !form.name.trim()} className="bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
                 {saving ? '...' : editItem ? 'حفظ' : 'إضافة'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100">{editItem ? '✏️ تعديل مادة' : '➕ مادة جديدة'}</h3>
@@ -1059,7 +1059,7 @@ export default function InventoryPage() {
               )}
 
               <button onClick={saveCategory} disabled={catSaving || !newCatName.trim()}
-                className="w-full bg-[#D96846] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
+                className="w-full bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all mb-6">
                 {catSaving ? 'جاري الحفظ...' : editingCat ? 'حفظ التعديلات' : 'إضافة الفئة'}
               </button>
             </div>
@@ -1072,7 +1072,7 @@ export default function InventoryPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowCatReorder(false)}>
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveCatReorder} disabled={catReorderSaving} className="bg-[#D96846] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={saveCatReorder} disabled={catReorderSaving} className="bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {catReorderSaving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">ترتيب الفئات</h3>

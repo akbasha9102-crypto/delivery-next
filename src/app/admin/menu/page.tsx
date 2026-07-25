@@ -532,7 +532,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={addCategory} disabled={saving || !newCat.trim()} className="bg-[#D96846] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={addCategory} disabled={saving || !newCat.trim()} className="bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">➕ قسم جديد</h3>
@@ -556,7 +556,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={addItem} disabled={saving} className="bg-[#D96846] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={addItem} disabled={saving} className="bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">🍽️ طبق جديد</h3>
@@ -689,7 +689,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center pb-10">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveEdit} disabled={saving} className="bg-[#D96846] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={saveEdit} disabled={saving} className="bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">✏️ تعديل الطبق</h3>
@@ -820,7 +820,7 @@ export default function MenuPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[88vh] flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={saveReorder} disabled={saving} className="bg-[#D96846] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
+              <button onClick={saveReorder} disabled={saving} className="bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all disabled:opacity-60">
                 {saving ? '...' : 'حفظ'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100 text-lg">ترتيب الأقسام</h3>
@@ -1077,7 +1077,7 @@ export default function MenuPage() {
                 <button
                   onClick={saveCatName}
                   disabled={saving || !editCatName.trim()}
-                  className="px-4 py-3 bg-[#D96846] disabled:opacity-40 text-white font-bold rounded-xl active:scale-95 transition-all text-sm flex-shrink-0">
+                  className="px-4 py-3 bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold rounded-xl active:scale-95 transition-all text-sm flex-shrink-0">
                   {saving ? '...' : 'حفظ'}
                 </button>
                 <input
@@ -1111,7 +1111,7 @@ export default function MenuPage() {
               <button
                 onClick={saveCatColors}
                 disabled={saving}
-                className="w-full py-3 mb-5 bg-[#D96846] disabled:opacity-40 text-white font-bold rounded-xl active:scale-95 transition-all">
+                className="w-full py-3 mb-5 bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold rounded-xl active:scale-95 transition-all">
                 {saving ? '...' : 'حفظ الألوان'}
               </button>
 

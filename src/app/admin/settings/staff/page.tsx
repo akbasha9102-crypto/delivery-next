@@ -189,7 +189,7 @@ export default function StaffManagementPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setShowForm(false)}>
           <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-3xl max-h-[90dvh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-slate-700">
-              <button onClick={submit} disabled={saving || !form.display_name.trim()} className="bg-[#D96846] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
+              <button onClick={submit} disabled={saving || !form.display_name.trim()} className="bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all text-sm">
                 {saving ? '...' : editTarget ? 'حفظ' : 'إضافة'}
               </button>
               <h3 className="font-bold text-gray-900 dark:text-slate-100">{editTarget ? 'تعديل موظف' : 'موظف جديد'}</h3>
