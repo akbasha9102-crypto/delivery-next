@@ -144,7 +144,7 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
 }
 
 /* ─── نافذة عامة متمركزة بمنتصف الشاشة (تُستخدم لرسوم التوصيل / الحد الأدنى / الكوبون / خصومات الأقسام والوجبات) ─── */
-function BottomSheet({ title, onClose, children, maxHeight = '65vh' }: { title: string; onClose: () => void; children: React.ReactNode; maxHeight?: string }) {
+function BottomSheet({ title, onClose, children, maxHeight = '65vh', headerAction }: { title: string; onClose: () => void; children: React.ReactNode; maxHeight?: string; headerAction?: React.ReactNode }) {
   const [animateIn, setAnimateIn] = useState(false);
 
   useEffect(() => {
@@ -177,7 +177,7 @@ function BottomSheet({ title, onClose, children, maxHeight = '65vh' }: { title: 
       >
         <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-800">
           <div className="flex items-center justify-between">
-            <div className="w-9" />
+            {headerAction ?? <div className="w-9" />}
             <p className="font-bold text-gray-900 dark:text-slate-100">{title}</p>
             <button onClick={close} className="p-1.5 rounded-xl text-gray-400 active:scale-90 transition-all">
               <X size={20} />
@@ -427,27 +427,29 @@ type DiscItem = { id: string; name: string; category_id: string | null; discount
 // معرّف وهمي لتجميع الوجبات التي لا تتبع أي قسم
 const NO_CATEGORY_ID = '__none__';
 
-function DiscountRow({ name, value, onChange, onSave, saving, saved, previewPrice, tone = 'item' }: {
+function DiscountRow({ name, value, onChange, saving, saved, previewPrice, tone = 'item', leading }: {
   name: string;
   value: string;
   onChange: (v: string) => void;
-  onSave: () => void;
-  saving: boolean;
-  saved: boolean;
+  saving?: boolean;
+  saved?: boolean;
   previewPrice?: number;
   /** يميّز صرياً صف "القسم" عن صفوف "الوجبات" بداخله، حتى لا يبدوا بنفس اللون */
   tone?: 'category' | 'item';
+  /** عنصر اختياري يُعرض بداخل نفس صندوق الصف (مثلاً سهم الطي/الفتح لصف القسم) بدل أن يكون خارجه */
+  leading?: React.ReactNode;
 }) {
   const pct = parseFloat(value);
   const active = !isNaN(pct) && pct > 0;
   const toneClasses = tone === 'category'
-    ? 'bg-gray-100/70 dark:bg-slate-800/40 border border-gray-200/70 dark:border-slate-700/60'
-    : 'bg-indigo-50/70 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30';
+    ? 'bg-gray-200/90 dark:bg-black/40 border border-gray-300/70 dark:border-slate-700/70'
+    : 'bg-gray-50/80 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-700/40';
   const nameClasses = tone === 'category'
     ? 'font-semibold text-sm text-gray-500 dark:text-slate-400 truncate'
     : 'font-bold text-sm text-gray-800 dark:text-slate-200 truncate';
   return (
     <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${toneClasses}`}>
+      {leading}
       <div className="flex-1 text-right min-w-0">
         <div className="flex items-center justify-end gap-1.5">
           {active && <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] flex-shrink-0" />}
@@ -460,19 +462,17 @@ function DiscountRow({ name, value, onChange, onSave, saving, saved, previewPric
         )}
       </div>
       <input type="number" min="0" max="100" step="0.5" inputMode="decimal" value={value}
+        placeholder="0"
         onChange={e => onChange(e.target.value)}
-        className="w-16 flex-shrink-0 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-center text-sm text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#f97316]" />
+        className="w-16 flex-shrink-0 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-center text-sm text-gray-900 dark:text-slate-100 placeholder-gray-300 dark:placeholder-slate-500 outline-none focus:ring-2 focus:ring-[#f97316]" />
       <span className="text-[10px] text-gray-400 flex-shrink-0">%</span>
-      <button onClick={onSave} disabled={saving}
-        className="h-8 px-3 rounded-lg bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white flex items-center justify-center gap-1 active:scale-90 transition-all disabled:opacity-50 flex-shrink-0">
+      <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
         {saving ? (
-          <Loader2 size={13} className="animate-spin" />
+          <Loader2 size={13} className="animate-spin text-gray-400" />
         ) : saved ? (
-          <><Check size={13} /><span className="text-xs font-bold">تم</span></>
-        ) : (
-          <span className="text-xs font-bold">حفظ</span>
-        )}
-      </button>
+          <Check size={13} className="text-green-500" />
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -489,14 +489,9 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
   const [itemSaved,  setItemSaved]  = useState<Record<string, boolean>>({});
   const [itemSearch, setItemSearch] = useState('');
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-  const [pendingSave, setPendingSave] = useState<{
-    type: 'category' | 'item';
-    id: string;
-    name: string;
-    pct: number;
-    oldPct: number;
-    previewPrice?: number;
-  } | null>(null);
+  const [savingAll,  setSavingAll]  = useState(false);
+  const [savedAll,   setSavedAll]   = useState(false);
+  const [saveAllError, setSaveAllError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!restaurantId) { setLoading(false); return; }
@@ -510,8 +505,8 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
       const itemList = (itms ?? []) as DiscItem[];
       setCategories(catList);
       setItems(itemList);
-      setCatInputs(Object.fromEntries(catList.map(c => [c.id, String(c.discount_pct ?? 0)])));
-      setItemInputs(Object.fromEntries(itemList.map(i => [i.id, String(i.discount_pct ?? 0)])));
+      setCatInputs(Object.fromEntries(catList.map(c => [c.id, c.discount_pct ? String(c.discount_pct) : ''])));
+      setItemInputs(Object.fromEntries(itemList.map(i => [i.id, i.discount_pct ? String(i.discount_pct) : ''])));
       setLoading(false);
     })();
   }, [restaurantId]);
@@ -557,69 +552,111 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
     return Math.round(pool.reduce((s, i) => s + i.price, 0) / pool.length);
   };
 
-  // يفتح نافذة تأكيد الخصم بدلاً من الحفظ الفوري — التحقق من صحة الإدخال يبقى هنا قبل فتح النافذة
-  const requestCategoryDiscount = (id: string) => {
-    const pct = parseFloat(catInputs[id]);
-    if (isNaN(pct) || pct < 0 || pct > 100) { alert('النسبة يجب أن تكون رقم بين 0 و 100'); return; }
-    const cat = categories.find(c => c.id === id);
-    const group = groups.find(g => g.id === id);
-    setPendingSave({
-      type: 'category', id, name: cat?.name ?? '', pct,
-      oldPct: cat?.discount_pct ?? 0,
-      previewPrice: group ? categoryPreviewPrice(group.allItems) : undefined,
-    });
+  // يحوّل قيمة الحقل النصية إلى نسبة رقمية — حقل فارغ يُعامل كـ 0
+  const parseInput = (raw: string | undefined) => {
+    if (raw === undefined || raw.trim() === '') return 0;
+    const n = parseFloat(raw);
+    return isNaN(n) ? 0 : n;
   };
 
-  const requestItemDiscount = (id: string) => {
-    const pct = parseFloat(itemInputs[id]);
-    if (isNaN(pct) || pct < 0 || pct > 100) { alert('النسبة يجب أن تكون رقم بين 0 و 100'); return; }
-    const item = items.find(i => i.id === id);
-    setPendingSave({
-      type: 'item', id, name: item?.name ?? '', pct,
-      oldPct: item?.discount_pct ?? 0,
-      previewPrice: item?.price,
-    });
-  };
+  // حفظ جماعي: يحسب فقط الصفوف (أقسام + وجبات) التي تغيّرت فعلاً عن قيمتها المخزّنة، يرسلها بالتوازي،
+  // ويحدّث الحالة المحلية فقط للصفوف التي نجحت — مع عرض خطأ واضح لو فشل جزء أو كانت نسبة غير صالحة
+  const saveAllDiscounts = async () => {
+    if (savingAll) return;
+    setSaveAllError(null);
 
-  // يُنفَّذ فعلياً فقط بعد تأكيد المستخدم داخل نافذة التأكيد
-  const confirmSave = async () => {
-    if (!pendingSave) return;
-    const { type, id, pct } = pendingSave;
-    if (type === 'category') {
-      setCatSaving(prev => ({ ...prev, [id]: true }));
-      const { error } = await supabase.from('categories').update({ discount_pct: pct }).eq('id', id);
-      setCatSaving(prev => ({ ...prev, [id]: false }));
-      if (error) { alert('فشل الحفظ: ' + error.message); return; }
-      setCategories(prev => prev.map(c => c.id === id ? { ...c, discount_pct: pct } : c));
-      setCatSaved(prev => ({ ...prev, [id]: true }));
-      setTimeout(() => setCatSaved(prev => ({ ...prev, [id]: false })), 2000);
-    } else {
-      setItemSaving(prev => ({ ...prev, [id]: true }));
-      const { error } = await supabase.from('items').update({ discount_pct: pct }).eq('id', id);
-      setItemSaving(prev => ({ ...prev, [id]: false }));
-      if (error) { alert('فشل الحفظ: ' + error.message); return; }
-      setItems(prev => prev.map(i => i.id === id ? { ...i, discount_pct: pct } : i));
-      setItemSaved(prev => ({ ...prev, [id]: true }));
-      setTimeout(() => setItemSaved(prev => ({ ...prev, [id]: false })), 2000);
+    const invalidNames: string[] = [];
+
+    const catChanges = categories
+      .map(c => ({ c, pct: parseInput(catInputs[c.id]) }))
+      .filter(({ c, pct }) => pct !== (c.discount_pct ?? 0))
+      .filter(({ c, pct }) => {
+        if (pct < 0 || pct > 100) { invalidNames.push(c.name); return false; }
+        return true;
+      });
+
+    const itemChanges = items
+      .map(i => ({ i, pct: parseInput(itemInputs[i.id]) }))
+      .filter(({ i, pct }) => pct !== (i.discount_pct ?? 0))
+      .filter(({ i, pct }) => {
+        if (pct < 0 || pct > 100) { invalidNames.push(i.name); return false; }
+        return true;
+      });
+
+    if (catChanges.length === 0 && itemChanges.length === 0) {
+      setSaveAllError(invalidNames.length > 0 ? 'نسبة غير صالحة: ' + invalidNames.join('، ') : null);
+      return;
     }
-    setPendingSave(null);
+
+    setSavingAll(true);
+    setCatSaving(prev => { const next = { ...prev }; catChanges.forEach(({ c }) => { next[c.id] = true; }); return next; });
+    setItemSaving(prev => { const next = { ...prev }; itemChanges.forEach(({ i }) => { next[i.id] = true; }); return next; });
+
+    const [catResults, itemResults] = await Promise.all([
+      Promise.all(catChanges.map(async ({ c, pct }) => {
+        const { error } = await supabase.from('categories').update({ discount_pct: pct }).eq('id', c.id);
+        return { id: c.id, name: c.name, pct, error };
+      })),
+      Promise.all(itemChanges.map(async ({ i, pct }) => {
+        const { error } = await supabase.from('items').update({ discount_pct: pct }).eq('id', i.id);
+        return { id: i.id, name: i.name, pct, error };
+      })),
+    ]);
+
+    setCatSaving(prev => { const next = { ...prev }; catChanges.forEach(({ c }) => { next[c.id] = false; }); return next; });
+    setItemSaving(prev => { const next = { ...prev }; itemChanges.forEach(({ i }) => { next[i.id] = false; }); return next; });
+
+    const catFailed = catResults.filter(r => r.error);
+    const itemFailed = itemResults.filter(r => r.error);
+    const catOk = catResults.filter(r => !r.error);
+    const itemOk = itemResults.filter(r => !r.error);
+
+    if (catOk.length > 0) {
+      setCategories(prev => prev.map(c => {
+        const found = catOk.find(r => r.id === c.id);
+        return found ? { ...c, discount_pct: found.pct } : c;
+      }));
+      const ids = catOk.map(r => r.id);
+      setCatSaved(prev => { const next = { ...prev }; ids.forEach(id => { next[id] = true; }); return next; });
+      setTimeout(() => setCatSaved(prev => { const next = { ...prev }; ids.forEach(id => { next[id] = false; }); return next; }), 2000);
+    }
+    if (itemOk.length > 0) {
+      setItems(prev => prev.map(i => {
+        const found = itemOk.find(r => r.id === i.id);
+        return found ? { ...i, discount_pct: found.pct } : i;
+      }));
+      const ids = itemOk.map(r => r.id);
+      setItemSaved(prev => { const next = { ...prev }; ids.forEach(id => { next[id] = true; }); return next; });
+      setTimeout(() => setItemSaved(prev => { const next = { ...prev }; ids.forEach(id => { next[id] = false; }); return next; }), 2000);
+    }
+
+    setSavingAll(false);
+
+    const errorParts: string[] = [];
+    if (catFailed.length > 0 || itemFailed.length > 0) {
+      errorParts.push('فشل حفظ: ' + [...catFailed, ...itemFailed].map(r => r.name).join('، '));
+    }
+    if (invalidNames.length > 0) errorParts.push('نسبة غير صالحة: ' + invalidNames.join('، '));
+
+    if (errorParts.length > 0) { setSaveAllError(errorParts.join(' | ')); return; }
+
+    setSavedAll(true);
+    setTimeout(() => setSavedAll(false), 2000);
   };
-
-  // إغلاق نافذة التأكيد بمفتاح Escape
-  useEffect(() => {
-    if (!pendingSave) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPendingSave(null); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [pendingSave]);
-
-  const pendingSaving = pendingSave
-    ? (pendingSave.type === 'category' ? !!catSaving[pendingSave.id] : !!itemSaving[pendingSave.id])
-    : false;
 
   return (
-    <>
-    <BottomSheet title="خصومات الأقسام والوجبات" onClose={onClose} maxHeight="90vh">
+    <BottomSheet
+      title="خصومات الأقسام والوجبات"
+      onClose={onClose}
+      maxHeight="90vh"
+      headerAction={
+        <button onClick={saveAllDiscounts} disabled={savingAll}
+          className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold text-sm rounded-xl active:scale-95 transition-all disabled:opacity-50">
+          {savingAll ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          {savedAll ? '✓ تم' : 'حفظ الكل'}
+        </button>
+      }
+    >
       {loading ? (
         <div className="flex items-center justify-center py-10">
           <Loader2 className="animate-spin text-gray-400" size={26} />
@@ -633,6 +670,10 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
               className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl py-2.5 pr-9 pl-3 text-right text-sm text-gray-900 dark:text-slate-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#f97316]" />
           </div>
 
+          {saveAllError && (
+            <p className="text-red-500 text-xs text-center font-bold">{saveAllError}</p>
+          )}
+
           {visibleGroups.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-4">
               {query ? 'لا توجد نتائج' : 'لا توجد أقسام'}
@@ -644,25 +685,22 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
                 return (
                   <div key={g.id} className="rounded-xl bg-gray-50/60 dark:bg-slate-800/30 overflow-hidden">
                     {g.category ? (
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => toggleGroup(g.id)}
-                          className="p-2 text-gray-400 dark:text-slate-500 flex-shrink-0"
-                          aria-label={open ? 'طي القسم' : 'توسيع القسم'}>
-                          <ChevronDown size={16} className={`transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <DiscountRow name={g.name} tone="category"
-                            value={catInputs[g.id] ?? '0'}
-                            onChange={v => setCatInputs(prev => ({ ...prev, [g.id]: v }))}
-                            onSave={() => requestCategoryDiscount(g.id)}
-                            saving={!!catSaving[g.id]} saved={!!catSaved[g.id]}
-                            previewPrice={categoryPreviewPrice(g.allItems)} />
-                        </div>
-                      </div>
+                      <DiscountRow name={g.name} tone="category"
+                        value={catInputs[g.id] ?? ''}
+                        onChange={v => setCatInputs(prev => ({ ...prev, [g.id]: v }))}
+                        saving={!!catSaving[g.id]} saved={!!catSaved[g.id]}
+                        previewPrice={categoryPreviewPrice(g.allItems)}
+                        leading={
+                          <button onClick={() => toggleGroup(g.id)}
+                            className="p-1 -m-1 text-gray-500 dark:text-slate-400 flex-shrink-0"
+                            aria-label={open ? 'طي القسم' : 'توسيع القسم'}>
+                            <ChevronDown size={16} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+                          </button>
+                        } />
                     ) : (
                       <button onClick={() => toggleGroup(g.id)}
                         className="w-full flex items-center gap-1.5 px-2 py-2">
-                        <ChevronDown size={16} className={`text-gray-400 dark:text-slate-500 flex-shrink-0 transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
+                        <ChevronDown size={16} className={`text-gray-400 dark:text-slate-500 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
                         <p className="text-xs font-bold text-gray-400 dark:text-slate-500 flex-1 text-right">{g.name}</p>
                       </button>
                     )}
@@ -671,14 +709,19 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
                       g.displayItems.length === 0 ? (
                         <p className="text-[10px] text-gray-400 text-center py-2">لا توجد وجبات</p>
                       ) : (
-                        <div className="space-y-2 pr-5 pl-1 pb-2 pt-1">
+                        <div className="relative pr-6 pl-1 pb-2 pt-1 space-y-2">
+                          {/* الخط العمودي: ينزل من القسم على طول قائمة وجباته */}
+                          <div className="absolute top-0 bottom-3 right-3 w-px bg-gray-300 dark:bg-slate-600" />
                           {g.displayItems.map(i => (
-                            <DiscountRow key={i.id} name={i.name} tone="item"
-                              value={itemInputs[i.id] ?? '0'}
-                              onChange={v => setItemInputs(prev => ({ ...prev, [i.id]: v }))}
-                              onSave={() => requestItemDiscount(i.id)}
-                              saving={!!itemSaving[i.id]} saved={!!itemSaved[i.id]}
-                              previewPrice={i.price} />
+                            <div key={i.id} className="relative">
+                              {/* خط أفقي قصير يصل الوجبة بالخط العمودي */}
+                              <span className="absolute top-1/2 right-3 -translate-y-1/2 w-3 h-px bg-gray-300 dark:bg-slate-600" />
+                              <DiscountRow name={i.name} tone="item"
+                                value={itemInputs[i.id] ?? ''}
+                                onChange={v => setItemInputs(prev => ({ ...prev, [i.id]: v }))}
+                                saving={!!itemSaving[i.id]} saved={!!itemSaved[i.id]}
+                                previewPrice={i.price} />
+                            </div>
                           ))}
                         </div>
                       )
@@ -691,52 +734,6 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
         </>
       )}
     </BottomSheet>
-
-    {pendingSave && (
-      <div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4"
-        onClick={() => { if (!pendingSaving) setPendingSave(null); }}
-      >
-        <div
-          dir="rtl"
-          className="relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 text-right"
-          onClick={e => e.stopPropagation()}
-        >
-          <h3 className="font-black text-gray-900 dark:text-slate-100 text-base leading-snug mb-1">
-            تأكيد {pendingSave.type === 'category' ? 'خصم القسم' : 'خصم الوجبة'}
-          </h3>
-          <p className="text-xs text-gray-400 dark:text-slate-500 mb-4 truncate">{pendingSave.name}</p>
-
-          <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-4 space-y-3 mb-5">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400 dark:text-slate-500 text-sm">النسبة</span>
-              <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">
-                {pendingSave.oldPct}% ← {pendingSave.pct}%
-              </span>
-            </div>
-            {pendingSave.previewPrice !== undefined && (
-              <div className="flex justify-between items-center border-t border-gray-100 dark:border-slate-600 pt-3">
-                <span className="text-gray-400 dark:text-slate-500 text-sm">السعر</span>
-                <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">
-                  {pendingSave.previewPrice.toLocaleString()} ← {applyDiscountPct(pendingSave.previewPrice, pendingSave.pct).toLocaleString()}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <button onClick={confirmSave} disabled={pendingSaving}
-            className="w-full py-3.5 rounded-xl mb-3 font-bold text-base bg-[#D96846] text-white active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
-            {pendingSaving ? <Loader2 size={16} className="animate-spin" /> : null}
-            {pendingSaving ? 'جاري الحفظ...' : 'تأكيد'}
-          </button>
-          <button onClick={() => setPendingSave(null)} disabled={pendingSaving}
-            className="w-full border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 font-semibold py-3 rounded-xl active:scale-95 transition-all disabled:opacity-60">
-            إلغاء
-          </button>
-        </div>
-      </div>
-    )}
-    </>
   );
 }
 
@@ -1132,10 +1129,13 @@ export default function SettingsPage() {
               <p className="font-bold text-gray-800 dark:text-slate-200 text-sm">المظهر</p>
             </div>
           </div>
-          <button onClick={toggleDark} dir="ltr"
-            className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${dark ? 'bg-[#f97316]' : 'bg-gray-300 dark:bg-slate-500'}`}>
-            <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${dark ? 'translate-x-6' : ''}`} />
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className={`text-xs font-bold ${dark ? 'text-white' : 'text-black'}`}>{dark ? 'داكن' : 'فاتح'}</span>
+            <button onClick={toggleDark} dir="ltr"
+              className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${dark ? 'bg-[#f97316]' : 'bg-gray-300 dark:bg-slate-500'}`}>
+              <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${dark ? 'translate-x-6' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {/* ─ تسجيل الخروج ─ */}
