@@ -91,7 +91,7 @@ export default function AuditLogPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[#212121] pb-10" dir="rtl">
       <AdminHeader
         title="سجل التدقيق"
-        icon={<History size={18} className="text-[#2563eb]" />}
+        icon={<History size={18} className="text-gray-500 dark:text-slate-400" />}
         right={
           isOwner ? (
             <button onClick={() => setShowFilters(true)} className="relative w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 active:scale-90 transition-all">
@@ -178,10 +178,10 @@ export default function AuditLogPage() {
                 className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-center text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb] mb-4" />
 
               <div className="flex gap-2 mb-6">
-                <button onClick={clearFilters} className="flex-1 bg-[var(--admin-accent-light-bg)] border border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)] font-bold py-3.5 rounded-2xl text-sm active:scale-95 transition-all">
+                <button onClick={clearFilters} className="flex-1 bg-[#EF4444] text-white font-bold py-3.5 rounded-2xl text-sm active:scale-95 transition-all">
                   مسح الفلاتر
                 </button>
-                <button onClick={applyFilters} className="flex-1 bg-[var(--admin-accent-light-bg)] text-white dark:bg-[var(--admin-accent-dark)] font-bold py-3.5 rounded-2xl text-sm active:scale-95 transition-all">
+                <button onClick={applyFilters} className="flex-1 bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] text-white font-bold py-3.5 rounded-2xl text-sm active:scale-95 transition-all">
                   تطبيق
                 </button>
               </div>

@@ -203,7 +203,7 @@ export default function StaffManagementPage() {
               <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
                 {(['cashier', 'manager'] as StaffRole[]).map(r => (
                   <button key={r} onClick={() => setForm(p => ({ ...p, role: r }))}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${form.role === r ? 'bg-[#2563eb] border-[#2563eb] text-white' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${form.role === r ? 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                     {ROLE_LABEL[r]}
                   </button>
                 ))}
@@ -288,7 +288,7 @@ export default function StaffManagementPage() {
               <div className="w-9" />
             </div>
             <input value={resetPassword} onChange={e => setResetPassword(e.target.value)} placeholder="كلمة مرور جديدة (4 أحرف/أرقام على الأقل)" dir="ltr" className={input} />
-            <button onClick={submitResetPassword} disabled={resetPassword.trim().length < 4} className="w-full bg-[#D96846] disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all">
+            <button onClick={submitResetPassword} disabled={resetPassword.trim().length < 4} className="w-full bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all">
               تأكيد
             </button>
           </div>
