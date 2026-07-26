@@ -90,12 +90,18 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
           </div>
           <div className="bg-gray-50 dark:bg-slate-700/50 rounded-2xl px-4 py-3 mb-5">
             <p className="font-bold text-sm text-gray-800 dark:text-slate-200 mb-2">تطبيق على كل الأيام</p>
-            <div className="flex items-center gap-2 mb-3">
-              <input type="time" value={globalClose} onChange={e => setGlobalClose(e.target.value)}
-                className="flex-1 text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
-              <span className="text-gray-300 dark:text-slate-500 text-sm font-bold">—</span>
-              <input type="time" value={globalOpen} onChange={e => setGlobalOpen(e.target.value)}
-                className="flex-1 text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
+            <div className="flex items-start gap-2 mb-3">
+              <div className="flex-1">
+                <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 mb-1 text-center">يغلق</p>
+                <input type="time" value={globalClose} onChange={e => setGlobalClose(e.target.value)}
+                  className="w-full text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
+              </div>
+              <span className="text-gray-300 dark:text-slate-500 text-sm font-bold mt-5">—</span>
+              <div className="flex-1">
+                <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 mb-1 text-center">يفتح</p>
+                <input type="time" value={globalOpen} onChange={e => setGlobalOpen(e.target.value)}
+                  className="w-full text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
+              </div>
             </div>
             <button onClick={applyToAllDays}
               className="w-full py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm active:scale-95 transition-all">
@@ -116,12 +122,18 @@ function ScheduleModal({ schedule: initSchedule, settingsId, onSaved, onClose, r
                     <p className="font-bold text-sm text-gray-800 dark:text-slate-200">{DAY_NAMES[d]}</p>
                   </div>
                   {day.enabled && (
-                    <div className="flex items-center gap-2">
-                      <input type="time" value={day.close} onChange={e => updateDay(key, 'close', e.target.value)}
-                        className="flex-1 text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
-                      <span className="text-gray-300 dark:text-slate-500 text-sm font-bold">—</span>
-                      <input type="time" value={day.open} onChange={e => updateDay(key, 'open', e.target.value)}
-                        className="flex-1 text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 mb-1 text-center">يغلق</p>
+                        <input type="time" value={day.close} onChange={e => updateDay(key, 'close', e.target.value)}
+                          className="w-full text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
+                      </div>
+                      <span className="text-gray-300 dark:text-slate-500 text-sm font-bold mt-5">—</span>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-bold text-gray-400 dark:text-slate-500 mb-1 text-center">يفتح</p>
+                        <input type="time" value={day.open} onChange={e => updateDay(key, 'open', e.target.value)}
+                          className="w-full text-sm text-center bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-500 rounded-xl py-2 outline-none text-gray-700 dark:text-slate-200" />
+                      </div>
                     </div>
                   )}
                 </div>
