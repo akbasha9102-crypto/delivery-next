@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useSettings } from '@/context/SettingsContext';
+import { FullScreenSpinner } from '@/components/shared/FullScreenSpinner';
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -66,11 +67,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     }
   }, [checking, restaurantId, settingsLoaded, liveIsSuspended]);
 
-  if (checking) return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-      <div className="w-10 h-10 border-4 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  if (checking) return <FullScreenSpinner />;
 
   if (suspended) return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center" dir="rtl">

@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStaff } from '@/context/StaffContext';
+import { FullScreenSpinner } from '@/components/shared/FullScreenSpinner';
 
 /**
  * حارس صفحات "المالك/المدير فقط" — يمنع الوصول البصري والملاحي معاً:
@@ -18,11 +19,7 @@ export function OwnerOnly({ children }: { children: React.ReactNode }) {
   }, [ready, isCashier, router]);
 
   if (!ready || isCashier) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <FullScreenSpinner />;
   }
 
   return <>{children}</>;
