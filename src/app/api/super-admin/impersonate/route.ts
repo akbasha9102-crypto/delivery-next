@@ -47,13 +47,21 @@ export async function POST(req: NextRequest) {
     return errRes('INVALID_REQUEST', 'restaurantId مطلوب', 400);
   }
 
+  // ملاحظة: is_suspended غير موجود على restaurants إطلاقاً — هو عمود على
+  // restaurant_settings فقط (راجع 20260620025929_super_admin.sql). لا داعي
+  // لفحص الحظر هنا أصلاً؛ يُطبَّق تلقائياً لاحقاً عبر resolveStaffIdentity()
+  // كما هو موثّق أعلاه — لا تُعِد إضافته هنا.
   const { data: restaurant, error: restaurantError } = await supabaseAdmin
     .from('restaurants')
-    .select('id, name, owner_id, is_suspended')
+    .select('id, name, owner_id')
     .eq('id', restaurantId)
-    .single();
+    .maybeSingle();
 
-  if (restaurantError || !restaurant) {
+  if (restaurantError) {
+    console.error('[impersonate] restaurants query failed', { restaurantId, error: restaurantError });
+    return errRes('RESTAURANT_QUERY_FAILED', 'فشل الاستعلام عن بيانات المطعم', 500);
+  }
+  if (!restaurant) {
     return errRes('RESTAURANT_NOT_FOUND', 'المطعم غير موجود', 404);
   }
   if (!restaurant.owner_id) {
@@ -61,7 +69,14 @@ export async function POST(req: NextRequest) {
   }
 
   const { data: ownerData, error: ownerError } = await supabaseAdmin.auth.admin.getUserById(restaurant.owner_id);
-  if (ownerError || !ownerData?.user) {
+  if (ownerError) {
+    if (ownerError.code === 'user_not_found' || ownerError.status === 404) {
+      return errRes('OWNER_USER_NOT_FOUND', 'حساب المالك غير موجود بـ Auth', 404);
+    }
+    console.error('[impersonate] getUserById failed', { ownerId: restaurant.owner_id, error: ownerError });
+    return errRes('OWNER_QUERY_FAILED', 'فشل الاستعلام عن حساب المالك', 500);
+  }
+  if (!ownerData?.user) {
     return errRes('OWNER_USER_NOT_FOUND', 'حساب المالك غير موجود بـ Auth', 404);
   }
 
