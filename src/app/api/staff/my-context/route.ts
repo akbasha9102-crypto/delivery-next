@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { findStaffContextByUserId } from '@/lib/auth/staff-auth';
+import { findStaffContextByUserId, isRestaurantSuspended } from '@/lib/auth/staff-auth';
 import { verifyRequestClaims } from '@/lib/auth/verify-session';
 
 // GET /api/staff/my-context — Authorization: Bearer <supabase access_token>
@@ -19,6 +19,9 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
 
   if (restaurant) {
+    if (await isRestaurantSuspended(restaurant.id)) {
+      return NextResponse.json({ error: 'الحساب موقوف — تواصل مع الإدارة' }, { status: 403 });
+    }
     return NextResponse.json({
       staff_id: claims.userId,
       restaurant_id: restaurant.id,
@@ -31,6 +34,10 @@ export async function GET(req: NextRequest) {
 
   const staff = await findStaffContextByUserId(claims.userId);
   if (!staff) return NextResponse.json({ error: 'لا يوجد دور معروف لهذه الجلسة' }, { status: 404 });
+
+  if (await isRestaurantSuspended(staff.restaurant_id)) {
+    return NextResponse.json({ error: 'الحساب موقوف — تواصل مع الإدارة' }, { status: 403 });
+  }
 
   return NextResponse.json({
     staff_id: claims.userId,

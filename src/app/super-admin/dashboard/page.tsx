@@ -11,6 +11,7 @@ type Restaurant = {
   subscription_start?: string | null; is_suspended?: boolean | null;
   restaurant_id?: string | null; slug?: string | null; owner_id?: string | null;
   owner_name?: string | null; owner_phone?: string | null;
+  is_deleted?: boolean | null; deleted_at?: string | null;
 };
 type AuthUser = { id: string; email: string | null; created_at: string };
 type Driver   = { id: string; name: string; phone: string; status: string };
@@ -368,6 +369,115 @@ function SendMessageSheet({ title, restaurantId, onClose }: {
   );
 }
 
+// ─── Delete Restaurant Modal ──────────────────────────────────────────────────
+// حذف منطقي (أرشفة) كامل لمطعم — لا حذف فيزيائي لأي بيانات. خطوتان: تحذير
+// مفصّل بعواقب الإجراء، ثم تأكيد نصي بكتابة الـ slug بالضبط قبل التنفيذ.
+function DeleteRestaurantModal({ restaurant, onClose, onDeleted }: {
+  restaurant: Restaurant;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const [step, setStep] = useState<'warn' | 'confirm'>('warn');
+  const [typedSlug, setTypedSlug] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const restaurantDbId = restaurant.restaurant_id ?? restaurant.id;
+  const slug = restaurant.slug ?? '';
+  const canDelete = typedSlug.trim().toLowerCase() === slug.toLowerCase() && !!slug;
+
+  const handleDelete = async () => {
+    if (!canDelete) return;
+    setDeleting(true); setError(null);
+    const res = await fetch('/api/super-admin/restaurants', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurantDbId, confirmSlug: typedSlug.trim() }),
+    }).catch(() => null);
+    const json = await res?.json().catch(() => ({}));
+    setDeleting(false);
+    if (res?.ok) {
+      onDeleted();
+      onClose();
+    } else {
+      setError(json?.error || 'حدث خطأ أثناء الحذف');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={onClose}>
+      <div className="bg-[#13132b] rounded-3xl w-full max-w-md p-5 border border-red-900/40" onClick={e => e.stopPropagation()} dir="rtl">
+
+        {step === 'warn' ? (
+          <div className="space-y-4">
+            <p className="text-white font-black text-sm leading-relaxed">
+              ⚠️ حذف المطعم نهائياً — &quot;{restaurant.restaurant_name}&quot;
+            </p>
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-start gap-2 text-red-400">
+                <span>🔴</span><span>إنهاء الاشتراك فوراً بشكل دائم</span>
+              </li>
+              <li className="flex items-start gap-2 text-red-400">
+                <span>🔴</span><span>حذف موقع المنيو العام نهائياً (سيظهر «الصفحة غير موجودة» لأي زائر)</span>
+              </li>
+              <li className="flex items-start gap-2 text-red-400">
+                <span>🔴</span><span>تعطيل حساب المالك في لوحة التحكم بالكامل — لن يستطيع تسجيل الدخول إطلاقاً بعد الآن</span>
+              </li>
+              <li className="flex items-start gap-2 text-red-400">
+                <span>🔴</span><span>تعطيل حسابات كل الموظفين والسائقين المرتبطين بهذا المطعم</span>
+              </li>
+              <li className="flex items-start gap-2 text-slate-400">
+                <span>⚪</span><span>بيانات الطلبات والفواتير والسجلات تبقى محفوظة بقاعدة البيانات لأغراض الأرشفة والتدقيق فقط — لا تُحذف فيزيائياً</span>
+              </li>
+              <li className="flex items-start gap-2 text-amber-400 font-bold">
+                <span>⚠️</span><span>هذا الإجراء لا يوجد له تراجع من داخل هذه الواجهة إطلاقاً</span>
+              </li>
+            </ul>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-slate-700/50 text-slate-300 font-bold text-sm active:scale-95 transition-all">
+                إلغاء
+              </button>
+              <button onClick={() => setStep('confirm')} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm active:scale-95 transition-all">
+                متابعة الحذف ←
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-slate-300 text-sm leading-relaxed">
+              للتأكيد، اكتب اسم المستخدم (slug) الخاص بالمطعم بالضبط:{' '}
+              <span className="text-white font-mono font-bold" dir="ltr">{slug}</span>
+            </p>
+            <input
+              value={typedSlug}
+              onChange={e => setTypedSlug(e.target.value)}
+              type="text"
+              dir="ltr"
+              placeholder={slug}
+              className="w-full bg-[#0d0d20] text-slate-100 text-sm outline-none px-3 py-2.5 rounded-lg placeholder:text-slate-600 border border-slate-600/40 focus:border-red-500/50 transition-colors font-mono"
+            />
+            {error && (
+              <p className="text-red-400 text-xs font-bold text-center">{error}</p>
+            )}
+            <div className="flex gap-2">
+              <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-slate-700/50 text-slate-300 font-bold text-sm active:scale-95 transition-all">
+                إلغاء
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={!canDelete || deleting}
+                className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-40"
+              >
+                {deleting ? 'جاري الحذف...' : 'حذف نهائي'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Restaurant Card ──────────────────────────────────────────────────────────
 function RestaurantCard({
   r, toggling, matchedUser, onToggleSuspended, onRefresh,
@@ -380,6 +490,7 @@ function RestaurantCard({
 }) {
   const [open, setOpen] = useState(false);
   const [showMsg, setShowMsg] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
 
   return (
     <div className="bg-[#13132b] rounded-2xl border border-slate-700/50 overflow-hidden">
@@ -475,6 +586,21 @@ function RestaurantCard({
             </div>
             <ToggleSwitch on={!!r.is_suspended} onChange={onToggleSuspended} disabled={toggling} colorOn="#ef4444" />
           </div>
+
+          {/* ── Delete restaurant (حذف منطقي/أرشفة كامل) ── */}
+          <button
+            onClick={() => setShowDelete(true)}
+            className="w-full py-3 rounded-xl bg-red-950/40 text-red-400 border border-red-900 font-bold text-sm hover:bg-red-950/60 transition-all active:scale-95"
+          >
+            حذف المطعم نهائياً
+          </button>
+          {showDelete && (
+            <DeleteRestaurantModal
+              restaurant={r}
+              onClose={() => setShowDelete(false)}
+              onDeleted={onRefresh}
+            />
+          )}
 
           {/* ── Slug / Menu Link ── */}
           {r.slug && (
@@ -683,8 +809,8 @@ export default function SuperAdminDashboard() {
   };
 
   // ── Derived ──────────────────────────────────────────────────────────────
-  const activeRest    = restaurants.filter(r => !r.is_suspended).length;
-  const suspendedRest = restaurants.filter(r =>  r.is_suspended).length;
+  const activeRest    = restaurants.filter(r => !r.is_deleted && !r.is_suspended).length;
+  const suspendedRest = restaurants.filter(r => !r.is_deleted &&  r.is_suspended).length;
   const liveOrders    = orders.filter(o => !['completed','rejected'].includes(o.status));
   const todayRevenue  = orders.filter(o => o.status === 'completed').reduce((s,o) => s+o.total_amount, 0);
   const commission    = Math.round(todayRevenue * COMMISSION);
@@ -816,9 +942,9 @@ export default function SuperAdminDashboard() {
               className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white font-black text-sm active:scale-95 transition-all flex items-center justify-center gap-2">
               📢 إرسال رسالة لكل المطاعم
             </button>
-            {restaurants.length === 0 ? (
+            {restaurants.filter(r => !r.is_deleted).length === 0 ? (
               <div className="bg-[#13132b] rounded-2xl p-10 text-center text-slate-600 border border-white/5">لا توجد مطاعم</div>
-            ) : restaurants.map(r => {
+            ) : restaurants.filter(r => !r.is_deleted).map(r => {
               const matchedUser = authUsers.find(u => u.id === r.owner_id) ?? null;
               return (
                 <RestaurantCard

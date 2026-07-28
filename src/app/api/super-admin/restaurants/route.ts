@@ -354,3 +354,99 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
+
+// DELETE — حذف منطقي (أرشفة) كامل لمطعم: يحظر (ban) حسابات Auth لكل
+// المرتبطين (مالك + موظفون + سائقون)، يعطّل user_roles، ثم يعلّم
+// restaurant_settings.is_deleted = true. لا يُنفَّذ أي DELETE FROM فعلي
+// على أي جدول بيانات — البيانات (طلبات، فواتير، سجلات) تبقى محفوظة
+// بالكامل بالقاعدة لأغراض الأرشفة والتدقيق.
+export async function DELETE(req: NextRequest) {
+  if (!await isAuthed()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { restaurantDbId, confirmSlug } = await req.json();
+
+  if (typeof restaurantDbId !== 'string' || !restaurantDbId.trim()) {
+    return NextResponse.json({ error: 'restaurantDbId مطلوب' }, { status: 400 });
+  }
+  if (typeof confirmSlug !== 'string' || !confirmSlug.trim()) {
+    return NextResponse.json({ error: 'confirmSlug مطلوب' }, { status: 400 });
+  }
+
+  // جلب المطعم
+  const { data: restaurant, error: fetchError } = await supabaseAdmin
+    .from('restaurants')
+    .select('id, slug, owner_id')
+    .eq('id', restaurantDbId)
+    .maybeSingle();
+
+  if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 });
+  if (!restaurant) return NextResponse.json({ error: 'المطعم غير موجود' }, { status: 404 });
+
+  // دفاع في العمق: تأكيد نصي مطابق للـ slug قبل أي شيء آخر — يحمي من
+  // استدعاء مباشر للـ API متجاوزاً واجهة التأكيد.
+  if (confirmSlug.trim().toLowerCase() !== restaurant.slug.toLowerCase()) {
+    return NextResponse.json({ error: 'نص التأكيد غير مطابق' }, { status: 400 });
+  }
+
+  // فحص idempotency — لو محذوف بالفعل، لا داعي لأي خطوة إضافية.
+  const { data: existingSettings } = await supabaseAdmin
+    .from('restaurant_settings')
+    .select('is_deleted')
+    .eq('restaurant_id', restaurantDbId)
+    .maybeSingle();
+
+  if (existingSettings?.is_deleted === true) {
+    return NextResponse.json({ ok: true, alreadyDeleted: true });
+  }
+
+  // جمع كل الحسابات المرتبطة: مالك + موظفون (user_roles) + سائقون (drivers)
+  const ownerId: string = restaurant.owner_id;
+
+  const { data: staffRows, error: staffFetchError } = await supabaseAdmin
+    .from('user_roles')
+    .select('id, user_id')
+    .eq('restaurant_id', restaurantDbId);
+  if (staffFetchError) return NextResponse.json({ error: staffFetchError.message }, { status: 500 });
+
+  const { data: driverRows, error: driverFetchError } = await supabaseAdmin
+    .from('drivers')
+    .select('id, user_id')
+    .eq('restaurant_id', restaurantDbId);
+  if (driverFetchError) return NextResponse.json({ error: driverFetchError.message }, { status: 500 });
+
+  const staffUserIds  = (staffRows  ?? []).map(s => s.user_id).filter((id): id is string => !!id);
+  const driverUserIds = (driverRows ?? []).map(d => d.user_id).filter((id): id is string => !!id);
+
+  const allUserIds = [ownerId, ...staffUserIds, ...driverUserIds].filter((id): id is string => !!id);
+
+  // حظر Auth لكل الحسابات بالتتابع — أي فشل واحد يوقف العملية فوراً قبل
+  // أي تعديل على user_roles أو restaurant_settings. عملية idempotent
+  // (إعادة حظر حساب محظور أصلاً غير ضارة).
+  for (const userId of allUserIds) {
+    const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      ban_duration: '876000h',
+    });
+    if (banError) return NextResponse.json({ error: banError.message }, { status: 500 });
+  }
+
+  // تعطيل كل صفوف user_roles دفعة واحدة
+  const { error: deactivateError } = await supabaseAdmin
+    .from('user_roles')
+    .update({ is_active: false })
+    .eq('restaurant_id', restaurantDbId);
+  if (deactivateError) return NextResponse.json({ error: deactivateError.message }, { status: 500 });
+
+  // أخيراً: تعليم المطعم كمحذوف منطقياً (أرشفة) — إيقاف كامل + إخفاء نهائي
+  const { error: deleteFlagError } = await supabaseAdmin
+    .from('restaurant_settings')
+    .update({
+      is_deleted: true,
+      is_suspended: true,
+      is_closed: true,
+      deleted_at: new Date().toISOString(),
+    })
+    .eq('restaurant_id', restaurantDbId);
+  if (deleteFlagError) return NextResponse.json({ error: deleteFlagError.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true });
+}

@@ -72,7 +72,17 @@ export default async function MenuPage({ params }: Props) {
   }
   if (!restaurant) notFound();
 
-  const [{ data: categories }, { data: items }, { data: settings }] = await Promise.all([
+  // مطعم محذوف منطقياً (أرشفة من super-admin) — يُخفى نهائياً من الرابط
+  // العام، نفس سلوك مطعم غير موجود إطلاقاً.
+  const { data: settingsRow } = await supabaseAdmin
+    .from('restaurant_settings')
+    .select('show_best_sellers, is_deleted')
+    .eq('restaurant_id', restaurant.id)
+    .maybeSingle();
+
+  if (settingsRow?.is_deleted) notFound();
+
+  const [{ data: categories }, { data: items }] = await Promise.all([
     anonClient
       .from('categories')
       .select('*')
@@ -83,14 +93,9 @@ export default async function MenuPage({ params }: Props) {
       .select('*')
       .eq('restaurant_id', restaurant.id)
       .order('name'),
-    supabaseAdmin
-      .from('restaurant_settings')
-      .select('show_best_sellers')
-      .eq('restaurant_id', restaurant.id)
-      .maybeSingle(),
   ]);
 
-  const showBestSellers = settings?.show_best_sellers ?? true;
+  const showBestSellers = settingsRow?.show_best_sellers ?? true;
   const bestSellerItemIds = showBestSellers
     ? await getBestSellerItemIds(restaurant.id)
     : [];

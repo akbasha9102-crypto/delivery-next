@@ -105,7 +105,7 @@ export function isPrivilegedRole(role: StaffRole): boolean {
  * فحص تعليق المطعم (إيقاف الاشتراك من super-admin) — مصدر الحقيقة
  * الوحيد restaurant_settings.is_suspended، حيّ من القاعدة في كل طلب.
  */
-async function isRestaurantSuspended(restaurantId: string): Promise<boolean> {
+export async function isRestaurantSuspended(restaurantId: string): Promise<boolean> {
   const { data } = await supabaseAdmin
     .from('restaurant_settings')
     .select('is_suspended')
