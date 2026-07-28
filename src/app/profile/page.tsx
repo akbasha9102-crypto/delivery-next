@@ -605,7 +605,7 @@ export default function ProfilePage() {
 
       <p
         dir="ltr"
-        className="text-center text-[9px] text-gray-400/40 dark:text-slate-600/40 pt-1 pb-1 select-none pointer-events-none"
+        className="text-center text-[9px] text-gray-400/60 dark:text-slate-600/60 pt-1 pb-1 select-none pointer-events-none"
       >
         Powered by mashee.net
       </p>
