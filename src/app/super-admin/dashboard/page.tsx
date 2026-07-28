@@ -811,6 +811,7 @@ export default function SuperAdminDashboard() {
   // ── Derived ──────────────────────────────────────────────────────────────
   const activeRest    = restaurants.filter(r => !r.is_deleted && !r.is_suspended).length;
   const suspendedRest = restaurants.filter(r => !r.is_deleted &&  r.is_suspended).length;
+  const deletedRestaurants = restaurants.filter(r => r.is_deleted);
   const liveOrders    = orders.filter(o => !['completed','rejected'].includes(o.status));
   const todayRevenue  = orders.filter(o => o.status === 'completed').reduce((s,o) => s+o.total_amount, 0);
   const commission    = Math.round(todayRevenue * COMMISSION);
@@ -912,9 +913,9 @@ export default function SuperAdminDashboard() {
             <div className="px-4 py-3 border-b border-white/5">
               <p className="text-white text-sm font-bold">ملخص المطاعم</p>
             </div>
-            {restaurants.length === 0 ? (
+            {restaurants.filter(r => !r.is_deleted).length === 0 ? (
               <div className="py-10 text-center text-slate-600 text-sm">لا توجد مطاعم</div>
-            ) : restaurants.map(r => (
+            ) : restaurants.filter(r => !r.is_deleted).map(r => (
               <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-white/5 last:border-0">
                 <div className="flex items-center gap-3 min-w-0">
                   {r.logo_url
@@ -1007,9 +1008,35 @@ export default function SuperAdminDashboard() {
           </div>
         )}
 
-        {/* ══ Tab: الأرشيف (approved + rejected، للقراءة فقط) ══ */}
+        {/* ══ Tab: الأرشيف (approved + rejected، للقراءة فقط + المطاعم المحذوفة) ══ */}
         {tab === 'archive' && (
           <div className="space-y-3">
+            {deletedRestaurants.length > 0 && (
+              <div className="bg-[#13132b] rounded-2xl border border-red-900/30 overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/5">
+                  <p className="text-white text-sm font-bold">🗑️ المطاعم المحذوفة ({deletedRestaurants.length})</p>
+                </div>
+                {deletedRestaurants.map(r => (
+                  <div key={r.id} className="flex items-start justify-between gap-2 px-4 py-3 border-b border-white/5 last:border-0">
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm text-white leading-tight truncate">{r.restaurant_name}</p>
+                      {r.slug && <p className="text-slate-500 text-[10px] mt-0.5 font-mono" dir="ltr">/{r.slug}</p>}
+                      {(r.owner_name || r.owner_phone) && (
+                        <p className="text-slate-400 text-xs mt-0.5 truncate">
+                          {r.owner_name ?? ''}{r.owner_name && r.owner_phone ? ' · ' : ''}{r.owner_phone ?? ''}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 text-left">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-600/30 text-slate-400">محذوف</span>
+                      {r.deleted_at && (
+                        <p className="text-slate-500 text-[10px] mt-1">{fmtDate(r.deleted_at)} · {fmtTime(r.deleted_at)}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex gap-2">
               <input
                 value={archiveSearch}
@@ -1061,12 +1088,23 @@ export default function SuperAdminDashboard() {
                     <p className="text-slate-500 text-[10px]">{fmtDate(r.created_at)} · {fmtTime(r.created_at)}</p>
                   </div>
                   {canResume && (
-                    <button
-                      onClick={() => openLinkedAddForm(r)}
-                      className="w-full py-2.5 rounded-xl bg-amber-600/20 border border-amber-500/30 text-amber-300 font-bold text-xs hover:bg-amber-600/30 transition-all active:scale-95"
-                    >
-                      استئناف الربط
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (window.confirm('إلغاء هذا الطلب؟ لن يمكن التراجع.')) rejectSignupRequest(r);
+                        }}
+                        disabled={actingRequestId === r.id}
+                        className="flex-1 py-2.5 rounded-xl bg-red-600/20 border border-red-500/30 text-red-300 font-bold text-xs hover:bg-red-600/30 transition-all active:scale-95 disabled:opacity-40"
+                      >
+                        رفض / إلغاء الطلب
+                      </button>
+                      <button
+                        onClick={() => openLinkedAddForm(r)}
+                        className="flex-1 py-2.5 rounded-xl bg-amber-600/20 border border-amber-500/30 text-amber-300 font-bold text-xs hover:bg-amber-600/30 transition-all active:scale-95"
+                      >
+                        استئناف الربط
+                      </button>
+                    </div>
                   )}
                 </div>
               );

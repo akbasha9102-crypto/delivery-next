@@ -37,13 +37,20 @@ export async function PATCH(req: NextRequest) {
 
   const { data: request, error: fetchError } = await supabaseAdmin
     .from('account_creation_requests')
-    .select('id, status, auth_user_id')
+    .select('id, status, auth_user_id, linked_restaurant_id')
     .eq('id', id)
     .maybeSingle();
 
   if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 });
   if (!request)   return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
-  if (request.status !== 'pending') {
+
+  const isPending = request.status === 'pending';
+  const isStuckApproved = request.status === 'approved' && !request.linked_restaurant_id;
+
+  if (action === 'approve' && !isPending) {
+    return NextResponse.json({ error: 'تم التعامل مع هذا الطلب مسبقاً' }, { status: 409 });
+  }
+  if (action === 'reject' && !isPending && !isStuckApproved) {
     return NextResponse.json({ error: 'تم التعامل مع هذا الطلب مسبقاً' }, { status: 409 });
   }
 
