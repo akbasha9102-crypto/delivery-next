@@ -480,10 +480,10 @@ function RestaurantCard({
           {r.slug && (
             <div className="bg-[#0d0d20] rounded-xl px-3 py-2.5 border border-slate-700/40 flex items-center justify-between">
               <button
-                onClick={() => window.open(`/menu/${r.slug}`, '_blank')}
+                onClick={() => window.open(`/${r.slug}/menu`, '_blank')}
                 className="text-violet-400 text-xs font-mono hover:underline"
               >
-                /menu/{r.slug}
+                {r.slug}/menu
               </button>
               <p className="text-slate-500 text-[10px]">رابط المنيو</p>
             </div>
@@ -989,7 +989,6 @@ export default function SuperAdminDashboard() {
                 الـ Slug — <span className="text-amber-400">اكتبه بالإنجليزي *</span>
               </p>
               <div className={`flex items-center bg-[#0d0d20] border rounded-xl overflow-hidden focus-within:border-violet-500/50 ${!addSlug.trim() ? 'border-amber-500/60' : 'border-slate-700/50'}`}>
-                <span className="px-3 text-slate-600 text-xs border-r border-slate-700/50 py-3 select-none">menu/</span>
                 <input
                   value={addSlug}
                   onChange={e => setAddSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/\s+/g, '-'))}
@@ -997,6 +996,7 @@ export default function SuperAdminDashboard() {
                   dir="ltr"
                   className="flex-1 bg-transparent px-3 py-3 text-violet-300 text-sm outline-none font-mono"
                 />
+                <span className="px-3 text-slate-600 text-xs border-l border-slate-700/50 py-3 select-none">/menu</span>
               </div>
               {!addSlug.trim() && addName.trim() && (
                 <p className="text-amber-400 text-[10px] mt-1 text-right">اكتب الـ slug بالإنجليزي مثل: milano</p>
@@ -1054,7 +1054,7 @@ export default function SuperAdminDashboard() {
                 <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> جاري الإنشاء...</>
               ) : '➕ إنشاء المطعم'}
             </button>
-            <p className="text-slate-600 text-[10px] text-center">الـ slug يظهر في رابط المنيو: menu/<span className="text-violet-400">{addSlug || 'slug'}</span></p>
+            <p className="text-slate-600 text-[10px] text-center">الـ slug يظهر في رابط المنيو: <span className="text-violet-400">{addSlug || 'slug'}</span>/menu</p>
           </div>
         )}
 

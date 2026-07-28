@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { RESERVED_RESTAURANT_SLUGS } from '@/lib/auth/staff-auth';
 
 async function isAuthed() {
   const jar = await cookies();
@@ -91,6 +92,12 @@ export async function POST(req: NextRequest) {
 
   const slug  = (customSlug?.trim() || generateSlug(name.trim())).toLowerCase().replace(/\s+/g, '-');
   const email = slugToEmail(slug);
+
+  // slug يصبح أول segment بالرابط العام (mashee.net/<slug>/menu) — يجب ألا
+  // يصطدم بأسماء مجلدات ثابتة على مستوى جذر src/app (مثل admin, api, menu...).
+  if (RESERVED_RESTAURANT_SLUGS.has(slug)) {
+    return NextResponse.json({ error: `الـ slug "${slug}" محجوز ولا يمكن استخدامه` }, { status: 409 });
+  }
 
   // ── وضع الربط: signupRequestId موجود ──────────────────────────────────
   if (signupRequestId) {
@@ -267,6 +274,10 @@ export async function PATCH(req: NextRequest) {
 
   // تحديث الـ slug إذا كان مختلفاً
   if (newSlug && newSlug !== restaurant.slug) {
+    if (RESERVED_RESTAURANT_SLUGS.has(newSlug)) {
+      return NextResponse.json({ error: `الـ slug "${newSlug}" محجوز ولا يمكن استخدامه` }, { status: 409 });
+    }
+
     const { data: existing } = await supabaseAdmin
       .from('restaurants')
       .select('id')

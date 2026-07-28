@@ -11,7 +11,7 @@ export default function HomePage() {
   useEffect(() => {
     const slug = localStorage.getItem('currentRestaurantSlug');
     if (slug) {
-      router.replace(`/menu/${slug}`);
+      router.replace(`/${slug}/menu`);
       return;
     }
     if (getPendingSignup()) {

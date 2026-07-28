@@ -38,6 +38,16 @@ export const RESERVED_STAFF_USERNAMES = new Set([
   'superadmin', 'cashier', 'manager', 'driver', 'auth', 'anonymous',
 ]);
 
+// أسماء كل المجلدات الثابتة على مستوى جذر src/app — الآن أن slug المطعم بات
+// أول segment بالرابط العام (mashee.net/<slug>/menu)، أي slug يطابق أحد هذه
+// الأسماء سيصطدم بتوجيه Next.js الثابت (مثلاً /admin أو /api) بدل الوصول
+// لمطعم فعلي. تُستخدم عند إنشاء/تعديل slug المطعم (لا علاقة لها بأسماء
+// مستخدمي الموظفين أعلاه).
+export const RESERVED_RESTAURANT_SLUGS = new Set([
+  'admin', 'api', 'cart', 'delivery', 'driver', 'features', 'home', 'login',
+  'menu', 'orders', 'profile', 'signup', 'super-admin', 'track', 'track-signup',
+]);
+
 /** ينظّف اسم المستخدم المُدخَل من المالك (فراغات + أحرف كبيرة) قبل التحقق/الحفظ. */
 export function normalizeStaffUsername(raw: string): string {
   return raw.trim().toLowerCase();

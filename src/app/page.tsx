@@ -14,7 +14,7 @@ export default function RootPage() {
         if (email.endsWith('@c.delivery')) {
           // زبون سجّل بالهاتف → نرجعه للمنيو
           const slug = localStorage.getItem('currentRestaurantSlug');
-          if (slug) router.replace(`/menu/${slug}`);
+          if (slug) router.replace(`/${slug}/menu`);
           else router.replace('/home');
         } else {
           // أدمن → لوحة التحكم

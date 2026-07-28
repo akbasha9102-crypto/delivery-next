@@ -14,7 +14,7 @@ function daysAgoISO(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ restaurantSlug: string }> };
 
 // "الأكثر مبيعاً" مفصول بكاش مستقل بمهلة أطول (10 دقائق): هو الجزء الثقيل حسابياً
 // (استعلامان متتاليان + تجميع بالذاكرة)، ولا يحتاج دقة أعلى من دقائق قليلة.
@@ -57,18 +57,18 @@ const getBestSellerItemIds = unstable_cache(
 );
 
 export default async function MenuPage({ params }: Props) {
-  const { slug } = await params;
+  const { restaurantSlug } = await params;
 
   const { data: restaurant, error: restaurantError } = await supabaseAdmin
     .from('restaurants')
     .select('id, name, slug')
-    .eq('slug', slug)
+    .eq('slug', restaurantSlug)
     .maybeSingle();
 
   if (restaurantError) {
     // خطأ حقيقي (مفتاح خاطئ، مشكلة اتصال...) يجب أن يظهر كخطأ سيرفر
     // وليس صفحة 404 مضلِّلة تخفي المشكلة الحقيقية
-    throw new Error(`Failed to fetch restaurant "${slug}": ${restaurantError.message}`);
+    throw new Error(`Failed to fetch restaurant "${restaurantSlug}": ${restaurantError.message}`);
   }
   if (!restaurant) notFound();
 
@@ -100,7 +100,7 @@ export default async function MenuPage({ params }: Props) {
       initialCategories={categories || []}
       initialItems={items || []}
       restaurantId={restaurant.id}
-      restaurantSlug={slug}
+      restaurantSlug={restaurantSlug}
       showBestSellers={showBestSellers}
       bestSellerItemIds={bestSellerItemIds}
     />

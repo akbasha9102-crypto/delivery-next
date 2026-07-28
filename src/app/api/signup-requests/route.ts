@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { RESERVED_STAFF_USERNAMES } from '@/lib/auth/staff-auth';
+import { RESERVED_STAFF_USERNAMES, RESERVED_RESTAURANT_SLUGS } from '@/lib/auth/staff-auth';
 
 const PHONE_REGEX    = /^[0-9+\-\s]+$/;
 const USERNAME_REGEX = /^[a-z0-9_]{3,24}$/;
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   if (!normalizedUsername || !USERNAME_REGEX.test(normalizedUsername)) {
     return NextResponse.json({ error: 'اسم المستخدم يجب أن يكون 3-24 حرفاً إنجليزياً صغيراً أو رقماً أو "_" فقط' }, { status: 400 });
   }
-  if (RESERVED_STAFF_USERNAMES.has(normalizedUsername)) {
+  if (RESERVED_STAFF_USERNAMES.has(normalizedUsername) || RESERVED_RESTAURANT_SLUGS.has(normalizedUsername)) {
     return NextResponse.json({ error: 'اسم المستخدم هذا محجوز، الرجاء اختيار اسم آخر' }, { status: 400 });
   }
   if (!rawPassword || rawPassword.length < 8) {
