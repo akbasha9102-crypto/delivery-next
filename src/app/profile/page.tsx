@@ -603,6 +603,13 @@ export default function ProfilePage() {
         )}
       </motion.div>
 
+      <p
+        dir="ltr"
+        className="text-center text-[9px] text-gray-400/40 dark:text-slate-600/40 pt-1 pb-1 select-none pointer-events-none"
+      >
+        Powered by mashee.net
+      </p>
+
       <ClientBottomNav />
     </div>
 
