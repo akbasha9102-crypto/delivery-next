@@ -8,6 +8,7 @@ import { StaffProvider } from '@/context/StaffContext';
 import { StaffGate } from '@/components/guards/StaffGate';
 import { SuperAdminNotificationsProvider } from '@/context/SuperAdminNotificationsContext';
 import { SuperAdminMessageOverlay } from '@/components/staff/SuperAdminMessageOverlay';
+import { ImpersonationBanner } from '@/components/impersonation/ImpersonationBanner';
 
 function makeBellWavUrl(): string | null {
   if (typeof window === 'undefined') return null;
@@ -60,6 +61,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <StaffGate>
           <NewOrdersProvider>
             <SuperAdminNotificationsProvider>
+              <ImpersonationBanner />
               {children}
               <SuperAdminMessageOverlay />
             </SuperAdminNotificationsProvider>

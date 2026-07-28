@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { startImpersonation } from '@/lib/impersonation/start-impersonation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Restaurant = {
@@ -491,6 +492,21 @@ function RestaurantCard({
   const [open, setOpen] = useState(false);
   const [showMsg, setShowMsg] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [impersonating, setImpersonating] = useState(false);
+
+  const handleImpersonate = async () => {
+    const confirmed = window.confirm(
+      `سيتم تسجيل دخولك بصلاحيات صاحب مطعم ${r.restaurant_name} الكاملة. سيتم توثيق هذا الإجراء. هل تريد المتابعة؟`
+    );
+    if (!confirmed) return;
+    setImpersonating(true);
+    try {
+      await startImpersonation(r.restaurant_id ?? r.id, r.restaurant_name);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'فشل الدخول كصاحب المطعم');
+      setImpersonating(false);
+    }
+  };
 
   return (
     <div className="bg-[#13132b] rounded-2xl border border-slate-700/50 overflow-hidden">
@@ -624,6 +640,18 @@ function RestaurantCard({
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
             </svg>
             معاينة داشبورد المطعم
+          </button>
+
+          {/* ── Impersonate (الدخول كصاحب المطعم بدون كلمة سر) ── */}
+          <button
+            onClick={handleImpersonate}
+            disabled={impersonating}
+            className="w-full py-3 rounded-xl bg-amber-600/20 border border-amber-500/30 text-amber-300 font-bold text-sm hover:bg-amber-600/30 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-40"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l3 3m0 0l-3 3m3-3H3"/>
+            </svg>
+            {impersonating ? 'جاري الدخول...' : 'الدخول كصاحب المطعم'}
           </button>
 
           {/* ── Send message button ── */}
