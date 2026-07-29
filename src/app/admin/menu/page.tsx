@@ -4,8 +4,9 @@ import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { AdminHeader } from '@/components/layout/AdminHeader';
-import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, FolderPlus, UtensilsCrossed } from 'lucide-react';
+import { X, Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal, FolderPlus, UtensilsCrossed, Lock } from 'lucide-react';
 import { useRestaurant } from '@/context/RestaurantContext';
+import { useSettings } from '@/context/SettingsContext';
 import { HexColorPicker } from 'react-colorful';
 import { compatibleUnits } from '@/lib/utils/unitConversion';
 
@@ -76,6 +77,8 @@ const getTextColor = (hex: string): string => {
 export default function MenuPage() {
   const { dark } = useDarkMode();
   const { restaurantId } = useRestaurant();
+  const { subscription_tier } = useSettings();
+  const isPro = subscription_tier === 'professional';
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -629,55 +632,66 @@ export default function MenuPage() {
 
               <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
                 <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧾 إدارة المكونات</h4>
-                {newItemRecipes.length === 0 && (
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">لا توجد مكونات مرتبطة بعد — عند إضافة مكوّن، سيُخصم من المخزون تلقائياً مع كل طلب.</p>
-                )}
-                {newItemRecipes.map(r => {
-                  const inv = inventoryItems.find(i => i.id === r.inventory_item_id);
-                  return (
-                    <div key={r.tempId} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
-                      <button onClick={() => setNewItemRecipes(prev => prev.filter(x => x.tempId !== r.tempId))} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
-                      <div className="text-right flex-1 mr-3">
-                        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{inv?.name || '—'}</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {r.unit || inv?.unit || ''} لكل وجبة</p>
-                      </div>
-                    </div>
-                  );
-                })}
-                {inventoryItems.length === 0 ? (
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right">أضف مواد في المخزون أولاً حتى تقدر تربطها بالوجبة.</p>
-                ) : (
-                  <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
-                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة مكوّن</p>
-                    <select value={newRecipeInvId} onChange={e => {
-                      setNewRecipeInvId(e.target.value);
-                      setNewRecipeUnit(inventoryItems.find(i => i.id === e.target.value)?.unit || '');
-                    }} dir="rtl" className={`${input} mb-2`}>
-                      <option value="">اختر مادة من المخزون</option>
-                      {inventoryItems.map(i => (
-                        <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
-                      ))}
-                    </select>
-                    <div className="flex gap-2">
-                      <input value={newRecipeQty} onChange={e => setNewRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
-                      <button onClick={addNewItemRecipe} disabled={!newRecipeInvId} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
-                    </div>
-                    {(() => {
-                      const inv = inventoryItems.find(i => i.id === newRecipeInvId);
-                      if (!inv) return null;
-                      const opts = compatibleUnits(inv.unit);
-                      if (opts.length <= 1) return null;
+                {isPro ? (
+                  <>
+                    {newItemRecipes.length === 0 && (
+                      <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">لا توجد مكونات مرتبطة بعد — عند إضافة مكوّن، سيُخصم من المخزون تلقائياً مع كل طلب.</p>
+                    )}
+                    {newItemRecipes.map(r => {
+                      const inv = inventoryItems.find(i => i.id === r.inventory_item_id);
                       return (
-                        <div className="flex gap-1.5 flex-wrap justify-end mt-2">
-                          {opts.map(u => (
-                            <button key={u} type="button" onClick={() => setNewRecipeUnit(u)}
-                              className={`px-3 py-1 rounded-full text-xs font-bold border active:scale-95 transition-all ${newRecipeUnit === u ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
-                              {u}
-                            </button>
-                          ))}
+                        <div key={r.tempId} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
+                          <button onClick={() => setNewItemRecipes(prev => prev.filter(x => x.tempId !== r.tempId))} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
+                          <div className="text-right flex-1 mr-3">
+                            <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{inv?.name || '—'}</p>
+                            <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {r.unit || inv?.unit || ''} لكل وجبة</p>
+                          </div>
                         </div>
                       );
-                    })()}
+                    })}
+                    {inventoryItems.length === 0 ? (
+                      <p className="text-xs text-gray-400 dark:text-slate-500 text-right">أضف مواد في المخزون أولاً حتى تقدر تربطها بالوجبة.</p>
+                    ) : (
+                      <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
+                        <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة مكوّن</p>
+                        <select value={newRecipeInvId} onChange={e => {
+                          setNewRecipeInvId(e.target.value);
+                          setNewRecipeUnit(inventoryItems.find(i => i.id === e.target.value)?.unit || '');
+                        }} dir="rtl" className={`${input} mb-2`}>
+                          <option value="">اختر مادة من المخزون</option>
+                          {inventoryItems.map(i => (
+                            <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
+                          ))}
+                        </select>
+                        <div className="flex gap-2">
+                          <input value={newRecipeQty} onChange={e => setNewRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
+                          <button onClick={addNewItemRecipe} disabled={!newRecipeInvId} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                        </div>
+                        {(() => {
+                          const inv = inventoryItems.find(i => i.id === newRecipeInvId);
+                          if (!inv) return null;
+                          const opts = compatibleUnits(inv.unit);
+                          if (opts.length <= 1) return null;
+                          return (
+                            <div className="flex gap-1.5 flex-wrap justify-end mt-2">
+                              {opts.map(u => (
+                                <button key={u} type="button" onClick={() => setNewRecipeUnit(u)}
+                                  className={`px-3 py-1 rounded-full text-xs font-bold border active:scale-95 transition-all ${newRecipeUnit === u ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                                  {u}
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 border border-gray-200 dark:border-slate-600">
+                    <Lock size={16} className="text-gray-400 dark:text-slate-500 flex-shrink-0" />
+                    <p className="text-xs text-gray-500 dark:text-slate-400 text-right flex-1">
+                      إدارة المكونات وربط المخزون متاحة فقط بالباقة المحترفين.
+                    </p>
                   </div>
                 )}
               </div>
@@ -760,55 +774,66 @@ export default function MenuPage() {
 
               <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-2">
                 <h4 className="font-bold text-gray-900 dark:text-slate-100 text-right mb-3">🧾 إدارة المكونات</h4>
-                {recipes.length === 0 && (
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">لا توجد مكونات مرتبطة بعد — عند إضافة مكوّن، سيُخصم من المخزون تلقائياً مع كل طلب.</p>
-                )}
-                {recipes.map(r => {
-                  const inv = inventoryItems.find(i => i.id === r.inventory_item_id);
-                  return (
-                    <div key={r.id} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
-                      <button onClick={() => removeRecipe(r.id)} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
-                      <div className="text-right flex-1 mr-3">
-                        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{inv?.name || '—'}</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {r.unit || inv?.unit || ''} لكل وجبة</p>
-                      </div>
-                    </div>
-                  );
-                })}
-                {inventoryItems.length === 0 ? (
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right">أضف مواد في المخزون أولاً حتى تقدر تربطها بالوجبة.</p>
-                ) : (
-                  <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
-                    <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة مكوّن</p>
-                    <select value={recipeInvId} onChange={e => {
-                      setRecipeInvId(e.target.value);
-                      setRecipeUnit(inventoryItems.find(i => i.id === e.target.value)?.unit || '');
-                    }} dir="rtl" className={`${input} mb-2`}>
-                      <option value="">اختر مادة من المخزون</option>
-                      {inventoryItems.map(i => (
-                        <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
-                      ))}
-                    </select>
-                    <div className="flex gap-2">
-                      <input value={recipeQty} onChange={e => setRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
-                      <button onClick={addRecipe} disabled={!recipeInvId} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
-                    </div>
-                    {(() => {
-                      const inv = inventoryItems.find(i => i.id === recipeInvId);
-                      if (!inv) return null;
-                      const opts = compatibleUnits(inv.unit);
-                      if (opts.length <= 1) return null;
+                {isPro ? (
+                  <>
+                    {recipes.length === 0 && (
+                      <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">لا توجد مكونات مرتبطة بعد — عند إضافة مكوّن، سيُخصم من المخزون تلقائياً مع كل طلب.</p>
+                    )}
+                    {recipes.map(r => {
+                      const inv = inventoryItems.find(i => i.id === r.inventory_item_id);
                       return (
-                        <div className="flex gap-1.5 flex-wrap justify-end mt-2">
-                          {opts.map(u => (
-                            <button key={u} type="button" onClick={() => setRecipeUnit(u)}
-                              className={`px-3 py-1 rounded-full text-xs font-bold border active:scale-95 transition-all ${recipeUnit === u ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
-                              {u}
-                            </button>
-                          ))}
+                        <div key={r.id} className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 mb-2 border border-gray-200 dark:border-slate-600">
+                          <button onClick={() => removeRecipe(r.id)} className="text-red-400 active:scale-90"><Trash2 size={14} /></button>
+                          <div className="text-right flex-1 mr-3">
+                            <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{inv?.name || '—'}</p>
+                            <p className="text-xs text-gray-400 dark:text-slate-500">{r.quantity_required} {r.unit || inv?.unit || ''} لكل وجبة</p>
+                          </div>
                         </div>
                       );
-                    })()}
+                    })}
+                    {inventoryItems.length === 0 ? (
+                      <p className="text-xs text-gray-400 dark:text-slate-500 text-right">أضف مواد في المخزون أولاً حتى تقدر تربطها بالوجبة.</p>
+                    ) : (
+                      <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 border border-dashed border-gray-300 dark:border-slate-600">
+                        <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-2">إضافة مكوّن</p>
+                        <select value={recipeInvId} onChange={e => {
+                          setRecipeInvId(e.target.value);
+                          setRecipeUnit(inventoryItems.find(i => i.id === e.target.value)?.unit || '');
+                        }} dir="rtl" className={`${input} mb-2`}>
+                          <option value="">اختر مادة من المخزون</option>
+                          {inventoryItems.map(i => (
+                            <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
+                          ))}
+                        </select>
+                        <div className="flex gap-2">
+                          <input value={recipeQty} onChange={e => setRecipeQty(e.target.value)} placeholder="الكمية لكل وجبة" type="number" className={`${input} flex-1 mb-0`} />
+                          <button onClick={addRecipe} disabled={!recipeInvId} className="bg-[var(--admin-accent-light-bg)] dark:bg-[var(--admin-accent-dark)] disabled:opacity-40 text-white font-bold px-4 rounded-xl active:scale-95 transition-all"><Plus size={18} /></button>
+                        </div>
+                        {(() => {
+                          const inv = inventoryItems.find(i => i.id === recipeInvId);
+                          if (!inv) return null;
+                          const opts = compatibleUnits(inv.unit);
+                          if (opts.length <= 1) return null;
+                          return (
+                            <div className="flex gap-1.5 flex-wrap justify-end mt-2">
+                              {opts.map(u => (
+                                <button key={u} type="button" onClick={() => setRecipeUnit(u)}
+                                  className={`px-3 py-1 rounded-full text-xs font-bold border active:scale-95 transition-all ${recipeUnit === u ? 'bg-[var(--admin-accent-light-bg)] border-[var(--admin-accent-light-border)] text-white dark:bg-[var(--admin-accent-dark)] dark:border-[var(--admin-accent-dark)]' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
+                                  {u}
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 border border-gray-200 dark:border-slate-600">
+                    <Lock size={16} className="text-gray-400 dark:text-slate-500 flex-shrink-0" />
+                    <p className="text-xs text-gray-500 dark:text-slate-400 text-right flex-1">
+                      إدارة المكونات وربط المخزون متاحة فقط بالباقة المحترفين.
+                    </p>
                   </div>
                 )}
               </div>
