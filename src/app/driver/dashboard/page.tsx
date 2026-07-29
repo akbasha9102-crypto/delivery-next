@@ -75,8 +75,6 @@ export default function DriverDashboard() {
     if (isIOS && !isStandalone && !dismissed) setShowIOSBanner(true);
   }, []);
 
-  useEffect(() => { setInterval(() => {}, 60_000); }, []);
-
   useEffect(() => {
     let cancelled = false;
     (async () => {

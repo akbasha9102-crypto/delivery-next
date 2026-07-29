@@ -37,6 +37,7 @@ export default function StaffManagementPage() {
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [resetTarget, setResetTarget] = useState<StaffMember | null>(null);
   const [resetPassword, setResetPassword] = useState('');
+  const [resettingPw, setResettingPw] = useState(false);
   // بعد إنشاء موظف جديد بنجاح نعرض له اسم المستخدم+كلمة المرور بشكل واضح (فرصة أخيرة
   // للمالك ينسخهم قبل إغلاق النافذة — الموظف يحتاجهم بالضبط ليدخل بـ/login).
   const [createdCreds, setCreatedCreds] = useState<{ name: string; code: string; password: string } | null>(null);
@@ -122,8 +123,10 @@ export default function StaffManagementPage() {
   };
 
   const submitResetPassword = async () => {
-    if (!resetTarget || resetPassword.trim().length < 4) return;
+    if (!resetTarget || resetPassword.trim().length < 4 || resettingPw) return;
+    setResettingPw(true);
     const res = await updateStaff(resetTarget.id, { password: resetPassword.trim() }, await getAccessToken());
+    setResettingPw(false);
     if (!res.ok) { showToast('error' in res ? res.error : 'تعذّر إعادة تعيين كلمة المرور', false); return; }
     showToast('✓ تم إعادة تعيين كلمة المرور');
     setResetTarget(null);
@@ -288,8 +291,8 @@ export default function StaffManagementPage() {
               <div className="w-9" />
             </div>
             <input value={resetPassword} onChange={e => setResetPassword(e.target.value)} placeholder="كلمة مرور جديدة (4 أحرف/أرقام على الأقل)" dir="ltr" className={input} />
-            <button onClick={submitResetPassword} disabled={resetPassword.trim().length < 4} className="w-full bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all">
-              تأكيد
+            <button onClick={submitResetPassword} disabled={resetPassword.trim().length < 4 || resettingPw} className="w-full bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all">
+              {resettingPw ? 'جاري الحفظ...' : 'تأكيد'}
             </button>
           </div>
         </div>

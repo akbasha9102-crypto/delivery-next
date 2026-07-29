@@ -86,7 +86,7 @@ export async function notifyOwnerPush(restaurantId: string, payload: NotifyOwner
           );
         } catch (err: unknown) {
           const statusCode = (err as { statusCode?: number })?.statusCode;
-          if (statusCode === 410) {
+          if (statusCode === 410 || statusCode === 404) {
             await supabaseAdmin.from(r.table).update({ [r.column]: null }).eq('id', r.id);
           }
         }

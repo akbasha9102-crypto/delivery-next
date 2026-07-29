@@ -13,7 +13,10 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   const signIn = async () => {
-    if (!identifier.trim() || !password.trim()) return;
+    if (!identifier.trim() || !password.trim()) {
+      setError('يرجى تعبئة اسم المستخدم وكلمة المرور');
+      return;
+    }
     setLoading(true);
     setError('');
 

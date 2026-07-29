@@ -35,7 +35,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const unlock = () => { bellRef.current?.play().then(() => { bellRef.current!.pause(); bellRef.current!.currentTime = 0; }).catch(() => {}); };
     document.addEventListener('click', unlock, { once: true });
     document.addEventListener('touchstart', unlock, { once: true });
-    return () => { document.removeEventListener('click', unlock); document.removeEventListener('touchstart', unlock); };
+    return () => {
+      document.removeEventListener('click', unlock);
+      document.removeEventListener('touchstart', unlock);
+      URL.revokeObjectURL(url);
+    };
   }, []);
 
   useEffect(() => {

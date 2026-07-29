@@ -142,6 +142,7 @@ export default function StatisticsPage() {
     return matchSearch && matchCat;
   }), [orders, search, selectedCat, catMap]);
 
+  const allOrdersRevenue = useMemo(() => orders.reduce((s, o) => s + o.total_amount, 0), [orders]);
   const totalRevenue   = filtered.reduce((s, o) => s + o.total_amount, 0);
   const avgOrder       = filtered.length ? Math.round(totalRevenue / filtered.length) : 0;
   const localOrders     = filtered.filter(o => o.order_type === 'local');
@@ -541,7 +542,7 @@ export default function StatisticsPage() {
             <h3 className="font-bold text-right mb-4" style={{ color: s.text }}>الإيراد حسب القسم</h3>
             <div className="space-y-3">
               {catBreakdown.map(cat => {
-                const pct = totalRevenue > 0 ? (cat.revenue / orders.reduce((sum,o)=>sum+o.total_amount,0)) * 100 : 0;
+                const pct = allOrdersRevenue > 0 ? (cat.revenue / allOrdersRevenue) * 100 : 0;
                 return (
                   <div key={cat.name}>
                     <div className="flex justify-between items-center mb-1.5">
