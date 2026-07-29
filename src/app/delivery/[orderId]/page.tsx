@@ -61,7 +61,46 @@ function calculateBearing(lat1: number, lng1: number, lat2: number, lng2: number
   return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
 }
 
+// Shortest signed angular delta from `from` to `to`, in degrees (-180..180]
+function shortestAngleDelta(from: number, to: number): number {
+  return ((to - from + 540) % 360) - 180;
+}
+
+// Bearing from (lat,lng) toward a point ~lookaheadMeters ahead along routeCoords,
+// starting from the nearest route point to the driver. Avoids the "cutting corners"
+// look of aiming straight at the destination when the road curves.
+function bearingFromRoute(
+  lat: number,
+  lng: number,
+  routeCoords: [number, number][],
+  lookaheadMeters: number
+): number | null {
+  if (routeCoords.length < 2) return null;
+  let nearestIdx = 0;
+  let nearestDist = Infinity;
+  for (let i = 0; i < routeCoords.length; i++) {
+    const d = getDistanceMeters(lat, lng, routeCoords[i][0], routeCoords[i][1]);
+    if (d < nearestDist) { nearestDist = d; nearestIdx = i; }
+  }
+  let accumulated = 0;
+  let prevLat = lat, prevLng = lng;
+  for (let i = nearestIdx; i < routeCoords.length; i++) {
+    const [pLat, pLng] = routeCoords[i];
+    accumulated += getDistanceMeters(prevLat, prevLng, pLat, pLng);
+    prevLat = pLat; prevLng = pLng;
+    if (accumulated >= lookaheadMeters || i === routeCoords.length - 1) {
+      if (pLat === lat && pLng === lng) return null;
+      return calculateBearing(lat, lng, pLat, pLng);
+    }
+  }
+  return null;
+}
+
 const OFF_ROUTE_THRESHOLD_M = 60;
+const HEADING_DEADBAND_DEG  = 5;   // ignore rotation updates smaller than this
+const LOOKAHEAD_METERS      = 30;  // how far ahead on the route to aim the heading
+const MIN_SPEED_MPS         = 1;   // below this, GPS speed is considered "stopped"
+const MIN_MOVEMENT_M        = 3;   // below this movement between fixes, treat as stationary
 
 // Returns true if driver is more than OFF_ROUTE_THRESHOLD_M meters from every sampled point on the route
 function isOffRoute(lat: number, lng: number, routeCoords: [number, number][]): boolean {
@@ -75,13 +114,16 @@ function isOffRoute(lat: number, lng: number, routeCoords: [number, number][]): 
   return getDistanceMeters(lat, lng, last[0], last[1]) >= OFF_ROUTE_THRESHOLD_M;
 }
 
-function makeDriverArrow(deg: number): string {
-  return `<div style="width:46px;height:46px;display:flex;align-items:center;justify-content:center;transform:rotate(${Math.round(deg)}deg);filter:drop-shadow(0 3px 10px rgba(37,99,235,0.65));transition:transform 0.4s ease">
+// The map itself rotates (heading-up navigation), so the driver arrow stays
+// visually fixed pointing "up" — it no longer rotates by GPS heading.
+function makeDriverArrow(): string {
+  return `<div style="width:46px;height:46px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 3px 10px rgba(37,99,235,0.65))">
     <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
       <polygon points="20,3 33,34 20,27 7,34" fill="#2563eb" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
     </svg>
   </div>`;
 }
+const DRIVER_ARROW_HTML = makeDriverArrow();
 
 export default function DeliveryPage() {
   const params  = useParams<{ orderId: string }>();
@@ -89,6 +131,8 @@ export default function DeliveryPage() {
   const router  = useRouter();
 
   const mapContainerRef    = useRef<HTMLDivElement>(null);
+  const frameRef           = useRef<HTMLDivElement>(null);
+  const rotatorRef         = useRef<HTMLDivElement>(null);
   const mapInstanceRef     = useRef<any>(null);
   const driverMarkerRef    = useRef<any>(null);
   const customerMarkersRef = useRef<any[]>([]);
@@ -99,7 +143,11 @@ export default function DeliveryPage() {
   const routeCoordsRef     = useRef<[number, number][]>([]);
   const lastRouteFetchRef  = useRef<number>(0);
   const leafletLinkRef     = useRef<HTMLLinkElement | null>(null);
-  const driverIconHtmlRef  = useRef<string>(makeDriverArrow(0));
+  const invalidateSizeTimeoutRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // heading-up navigation state
+  const lastPositionRef       = useRef<{ lat: number; lng: number } | null>(null);
+  const lastMovementTsRef     = useRef<number>(0);
+  const headingAccumulatorRef = useRef<number>(0); // unbounded — can exceed ±360, smooths spins
 
   const [order,          setOrder]          = useState<Order | null>(null);
   const orderRef = useRef<Order | null>(null);
@@ -199,9 +247,15 @@ export default function DeliveryPage() {
         const num = idx + 1;
         const isCurrent = o.id === orderId;
         const color = isCurrent ? '#ef4444' : '#f97316';
+        // Outer anchor stays unrotated (Leaflet positions it); the inner layer carries
+        // a counter-rotation (--heading-counter, kept in sync with the map's rotation
+        // on the rotator ancestor) so the pin + number stay visually upright while the
+        // map itself spins under heading-up navigation.
         const iconHtml = `<div style="position:relative;width:38px;height:44px">
-          <div style="width:38px;height:38px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3)"></div>
-          <span style="position:absolute;top:3px;left:0;width:38px;text-align:center;font-weight:900;font-size:15px;color:white;line-height:1.2">${num}</span>
+          <div style="position:relative;width:38px;height:44px;transform:rotate(var(--heading-counter,0deg))">
+            <div style="width:38px;height:38px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3)"></div>
+            <span style="position:absolute;top:3px;left:0;width:38px;text-align:center;font-weight:900;font-size:15px;color:white;line-height:1.2">${num}</span>
+          </div>
         </div>`;
         const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [38, 44], iconAnchor: [19, 44] });
         const marker = L.marker([o.client_lat, o.client_lng], { icon })
@@ -210,7 +264,9 @@ export default function DeliveryPage() {
             `<div dir="rtl" style="font-family:sans-serif;min-width:120px"><b>${o.client_name}</b>${o.delivery_address ? `<br><small style="color:#6b7280">${o.delivery_address}</small>` : ''}</div>`,
             { offset: [0, -20] }
           );
-        if (isCurrent) marker.openPopup();
+        // Popups don't play well visually on a rotated (CSS-transform) map, and the
+        // bottom control panel already surfaces the current customer's name/address —
+        // so no auto-open here anymore (previously: `if (isCurrent) marker.openPopup()`).
         customerMarkersRef.current.push(marker);
       });
     });
@@ -228,6 +284,10 @@ export default function DeliveryPage() {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
       }
+      if (invalidateSizeTimeoutRef.current !== null) {
+        clearTimeout(invalidateSizeTimeoutRef.current);
+        invalidateSizeTimeoutRef.current = null;
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -235,6 +295,13 @@ export default function DeliveryPage() {
         routeLineRef.current = null;
         routeCoordsRef.current = [];
         customerMarkersRef.current = [];
+      }
+      lastPositionRef.current = null;
+      lastMovementTsRef.current = 0;
+      headingAccumulatorRef.current = 0;
+      if (rotatorRef.current) {
+        rotatorRef.current.style.transform = 'translate(-50%,-50%) rotate(0deg)';
+        rotatorRef.current.style.setProperty('--heading-counter', '0deg');
       }
       setMapReady(false);
     };
@@ -264,11 +331,18 @@ export default function DeliveryPage() {
         if (cancelled || !mapContainerRef.current || mapInstanceRef.current) return;
         const L = (mod as any).default ?? mod;
         try {
-          const map = L.map(mapContainerRef.current, { attributionControl: false, zoomControl: false })
-            .setView([clientLat, clientLng], 15);
+          // dragging: false — the map rotates under heading-up navigation, so manual
+          // panning would fight the rotation; "خرائط Google" button covers manual explore.
+          const map = L.map(mapContainerRef.current, {
+            attributionControl: false, zoomControl: false, dragging: false,
+          }).setView([clientLat, clientLng], 15);
           mapInstanceRef.current = map;
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
           setMapReady(true);
+          invalidateSizeTimeoutRef.current = setTimeout(() => {
+            mapInstanceRef.current?.invalidateSize();
+            invalidateSizeTimeoutRef.current = null;
+          }, 100);
         } catch (e) {
           console.error('[map] init failed:', e);
         }
@@ -278,19 +352,47 @@ export default function DeliveryPage() {
     setLocationStatus('tracking');
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude, longitude, heading: gpsHeading } = pos.coords;
+        const { latitude, longitude, heading: gpsHeading, speed } = pos.coords;
         setLocationStatus('tracking');
-
-        // Compute arrow rotation: GPS heading first, then bearing to customer
         const o = orderRef.current;
-        let rotation = 0;
-        if (gpsHeading != null && !isNaN(gpsHeading)) {
-          rotation = gpsHeading;
-        } else if (o?.client_lat && o?.client_lng) {
-          rotation = calculateBearing(latitude, longitude, o.client_lat, o.client_lng);
+
+        // ── Heading-up rotation: figure out which way the map should turn ──
+        const lastPos = lastPositionRef.current;
+        const movedSinceLast = lastPos
+          ? getDistanceMeters(lastPos.lat, lastPos.lng, latitude, longitude)
+          : Infinity;
+        // Safety valve: near-zero speed + near-zero movement (e.g. stopped at a light)
+        // → freeze the last known heading instead of letting GPS jitter spin the map.
+        const isStopped = (speed == null || speed < MIN_SPEED_MPS) && movedSinceLast < MIN_MOVEMENT_M;
+
+        if (!isStopped) {
+          const candidate =
+            bearingFromRoute(latitude, longitude, routeCoordsRef.current, LOOKAHEAD_METERS) ??
+            (lastPos && movedSinceLast >= MIN_MOVEMENT_M
+              ? calculateBearing(lastPos.lat, lastPos.lng, latitude, longitude)
+              : null) ??
+            (gpsHeading != null && !isNaN(gpsHeading) && speed != null && speed >= MIN_SPEED_MPS
+              ? gpsHeading
+              : null) ??
+            (routeCoordsRef.current.length < 2 && o?.client_lat && o?.client_lng
+              ? calculateBearing(latitude, longitude, o.client_lat, o.client_lng)
+              : null);
+
+          if (candidate != null) {
+            const currentNormalized = ((headingAccumulatorRef.current % 360) + 360) % 360;
+            const delta = shortestAngleDelta(currentNormalized, candidate);
+            if (Math.abs(delta) >= HEADING_DEADBAND_DEG) {
+              headingAccumulatorRef.current += delta;
+              lastMovementTsRef.current = Date.now();
+              if (rotatorRef.current) {
+                rotatorRef.current.style.transform =
+                  `translate(-50%,-50%) rotate(${-headingAccumulatorRef.current}deg)`;
+                rotatorRef.current.style.setProperty('--heading-counter', `${headingAccumulatorRef.current}deg`);
+              }
+            }
+          }
         }
-        const iconHtml = makeDriverArrow(rotation);
-        driverIconHtmlRef.current = iconHtml;
+        lastPositionRef.current = { lat: latitude, lng: longitude };
 
         const now = Date.now();
         if (now - lastSaveRef.current > 5000) {
@@ -307,17 +409,19 @@ export default function DeliveryPage() {
         initMapOnce();
 
         if (mapInstanceRef.current) {
-          import('leaflet').then((mod) => {
-            const L = (mod as any).default ?? mod;
-            if (!mapInstanceRef.current) return;
-            const icon = L.divIcon({
-              html: iconHtml,
-              className: '', iconSize: [46, 46], iconAnchor: [23, 23],
-            });
-            if (driverMarkerRef.current) {
-              driverMarkerRef.current.setLatLng([latitude, longitude]);
-              driverMarkerRef.current.setIcon(icon);
-            } else if (o?.client_lat && o?.client_lng) {
+          if (driverMarkerRef.current) {
+            driverMarkerRef.current.setLatLng([latitude, longitude]);
+            // Follow mode: keep the driver centered under heading-up navigation.
+            const zoom = mapInstanceRef.current.getZoom();
+            mapInstanceRef.current.setView([latitude, longitude], zoom, { animate: false });
+          } else if (o?.client_lat && o?.client_lng) {
+            import('leaflet').then((mod) => {
+              const L = (mod as any).default ?? mod;
+              if (!mapInstanceRef.current || driverMarkerRef.current) return;
+              const icon = L.divIcon({
+                html: DRIVER_ARROW_HTML,
+                className: '', iconSize: [46, 46], iconAnchor: [23, 23],
+              });
               driverMarkerRef.current = L.marker([latitude, longitude], { icon })
                 .addTo(mapInstanceRef.current)
                 .bindPopup('<div dir="rtl">موقعك الحالي</div>');
@@ -325,8 +429,8 @@ export default function DeliveryPage() {
                 L.latLngBounds([o.client_lat, o.client_lng], [latitude, longitude]),
                 { padding: [60, 60] }
               );
-            }
-          });
+            });
+          }
         }
 
         if (o?.client_lat && o?.client_lng && mapInstanceRef.current) {
@@ -387,6 +491,33 @@ export default function DeliveryPage() {
 
     return doCleanup;
   }, [orderId, started]);
+
+  // Keep the rotator layer sized to cover the visible frame at any rotation angle,
+  // and re-measure the map whenever the frame's on-screen size changes — e.g. the
+  // "arrived" banner appearing/disappearing resizes the map area without the window
+  // itself resizing, so `window.resize` alone would miss it.
+  useEffect(() => {
+    if (!started) return;
+    const frameEl = frameRef.current;
+    if (!frameEl) return;
+
+    const applySize = () => {
+      const w = frameEl.clientWidth;
+      const h = frameEl.clientHeight;
+      if (w > 0 && h > 0 && rotatorRef.current) {
+        const diameter = Math.sqrt(w * w + h * h) * 1.05;
+        rotatorRef.current.style.width  = `${diameter}px`;
+        rotatorRef.current.style.height = `${diameter}px`;
+      }
+      mapInstanceRef.current?.invalidateSize();
+    };
+
+    applySize();
+    const observer = new ResizeObserver(applySize);
+    observer.observe(frameEl);
+
+    return () => observer.disconnect();
+  }, [started]);
 
   const handleStart = async () => {
     setStarting(true);
@@ -559,7 +690,7 @@ export default function DeliveryPage() {
 
   // ── شاشة التوصيل (بعد البدء) ──
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col">
+    <div className="h-[100dvh] overflow-hidden bg-slate-900 flex flex-col">
 
       {/* هيدر */}
       <div className="flex items-center justify-between px-5 pt-10 pb-4">
@@ -601,9 +732,24 @@ export default function DeliveryPage() {
       )}
 
       {/* الخريطة أو تنبيه لا موقع */}
-      <div className="mx-4 rounded-3xl overflow-hidden flex-1 min-h-0" style={{ minHeight: 300 }}>
+      <div ref={frameRef} className="relative mx-4 rounded-3xl overflow-hidden flex-1 min-h-0" style={{ minHeight: 300 }}>
         {order.client_lat && order.client_lng ? (
-          <div ref={mapContainerRef} style={{ height: 340 }} className="w-full" />
+          // Heading-up navigation: the map (rotator) spins via CSS transform inside this
+          // static, overflow-hidden frame so the driver's direction of travel stays "up".
+          <div
+            ref={rotatorRef}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%,-50%) rotate(0deg)',
+              transformOrigin: 'center',
+              transition: 'transform 0.35s linear',
+              willChange: 'transform',
+            }}
+          >
+            <div ref={mapContainerRef} className="w-full h-full" />
+          </div>
         ) : (
           <div className="h-full bg-slate-800 flex flex-col items-center justify-center p-6 text-center rounded-3xl border border-slate-700" style={{ minHeight: 220 }}>
             <AlertCircle size={36} className="text-amber-400 mb-3" />
