@@ -4,10 +4,11 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
+import { useSettings } from '@/context/SettingsContext';
 import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { AdminHeader } from '@/components/layout/AdminHeader';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
-import { Search, X, ChevronLeft, ChevronRight, Flame, Car, Package, LayoutGrid, ClipboardList, Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Flame, Car, Package, LayoutGrid, ClipboardList, Download, FileSpreadsheet, FileText, Lock } from 'lucide-react';
 import { exportStatisticsToExcel, exportStatisticsToWord, type StatsExportData } from '@/lib/export/exportStatistics';
 import { SalesChart } from '@/components/shared/SalesChart';
 
@@ -31,6 +32,8 @@ export default function StatisticsPage() {
   const router = useRouter();
   const { dark } = useDarkMode();
   const { restaurantId } = useRestaurant();
+  const { subscription_tier } = useSettings();
+  const isPro = subscription_tier === 'professional';
   const today = localDate();
 
   const [orders,     setOrders]     = useState<Order[]>([]);
@@ -89,6 +92,7 @@ export default function StatisticsPage() {
   }, [fromDate, toDate, restaurantId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (!isPro && activeTab === 'orders') setActiveTab('overview'); }, [isPro, activeTab]);
 
   const fetchCostMap = useCallback(async () => {
     if (!restaurantId) return;
@@ -273,6 +277,8 @@ export default function StatisticsPage() {
     }
   };
 
+  const showOverview = !isPro || activeTab === 'overview';
+
   const s = {
     bg:      dark ? '#212121' : '#f8fafc',
     surface: dark ? '#1e293b' : '#fff',
@@ -295,7 +301,7 @@ export default function StatisticsPage() {
             <ChevronRight size={20} style={{ color: s.sub }} />
           </button>
         }
-        left={
+        left={isPro ? (
           <div className="relative">
             <button onClick={() => setExportOpen(o => !o)} disabled={exporting}
               className="w-9 h-9 flex items-center justify-center rounded-xl active:scale-90 transition-all disabled:opacity-50"
@@ -326,7 +332,7 @@ export default function StatisticsPage() {
               </>
             )}
           </div>
-        }
+        ) : undefined}
       />
 
       {/* روابط إحصائيات السائقين والمخزون */}
@@ -339,11 +345,11 @@ export default function StatisticsPage() {
           </div>
           <span className="font-bold text-xs" style={{ color: s.text }}>إحصائيات السائقين</span>
         </button>
-        <button onClick={() => router.push('/admin/statistics/inventory')}
-          className="flex flex-col items-center gap-1.5 px-2 py-3 rounded-2xl border transition-all active:scale-95"
+        <button onClick={() => isPro && router.push('/admin/statistics/inventory')}
+          className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-2xl border transition-all ${isPro ? 'active:scale-95' : 'opacity-50 cursor-not-allowed'}`}
           style={{ backgroundColor: s.surface, borderColor: s.border }}>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>
-            <Package size={16} style={{ color: '#f97316' }} />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: isPro ? 'rgba(249,115,22,0.1)' : s.muted }}>
+            {isPro ? <Package size={16} style={{ color: '#f97316' }} /> : <Lock size={16} style={{ color: s.sub }} />}
           </div>
           <span className="font-bold text-xs" style={{ color: s.text }}>إحصائيات المخزون</span>
         </button>
@@ -402,6 +408,7 @@ export default function StatisticsPage() {
       )}
 
       {/* Tabs */}
+      {isPro && (
       <div className="flex gap-2 px-4 pb-3">
         <button onClick={() => setActiveTab('overview')}
           className="flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95 flex items-center justify-center gap-1.5"
@@ -416,10 +423,11 @@ export default function StatisticsPage() {
           الطلبات {filtered.length > 0 ? `(${filtered.length})` : ''}
         </button>
       </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center mt-20"><div className="w-10 h-10 border-4 border-[#f97316] border-t-transparent rounded-full animate-spin" /></div>
-      ) : activeTab === 'overview' ? (<>
+      ) : showOverview ? (<>
 
         {/* Financial summary — صافي الأرباح / إجمالي المبيعات / التكلفة */}
         <div className="grid grid-cols-3 gap-2 px-4 pt-3 pb-2">
@@ -471,7 +479,7 @@ export default function StatisticsPage() {
         <SalesChart data={chartData} dark={dark} />
 
         {/* Local vs Delivery vs Internal revenue breakdown */}
-        {(localOrders.length > 0 || deliveryOrders.length > 0 || internalOrders.length > 0) && (
+        {isPro && (localOrders.length > 0 || deliveryOrders.length > 0 || internalOrders.length > 0) && (
           <div className="mx-4 mb-3 rounded-2xl border p-4" style={{ backgroundColor: s.surface, borderColor: s.border }}>
             <h3 className="font-bold text-right mb-4" style={{ color: s.text }}>الإيراد حسب نوع الطلب</h3>
             <div className="space-y-4">
@@ -528,7 +536,7 @@ export default function StatisticsPage() {
         )}
 
         {/* Category breakdown */}
-        {catBreakdown.length > 0 && (
+        {isPro && catBreakdown.length > 0 && (
           <div className="mx-4 mb-3 rounded-2xl border p-4" style={{ backgroundColor: s.surface, borderColor: s.border }}>
             <h3 className="font-bold text-right mb-4" style={{ color: s.text }}>الإيراد حسب القسم</h3>
             <div className="space-y-3">
@@ -554,7 +562,7 @@ export default function StatisticsPage() {
         )}
 
         {/* الأصناف الأكثر مبيعاً */}
-        {topItemsStats.length > 0 && (
+        {isPro && topItemsStats.length > 0 && (
           <div className="mx-4 mb-3 rounded-2xl border p-4" style={{ backgroundColor: s.surface, borderColor: s.border }}>
             <div className="flex items-center gap-2 mb-4 justify-end">
               <h3 className="font-bold text-right" style={{ color: s.text }}>الأصناف الأكثر مبيعاً</h3>
