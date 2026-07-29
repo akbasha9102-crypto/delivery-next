@@ -115,6 +115,21 @@ export async function isRestaurantSuspended(restaurantId: string): Promise<boole
 }
 
 /**
+ * فحص باقة الاشتراك (standard/professional) — مصدر الحقيقة الوحيد
+ * restaurant_settings.subscription_tier، حيّ من القاعدة في كل طلب. يُستخدم
+ * لحجب الأقسام المحصورة بالباقة المحترفين (الموظفين، سجل التدقيق، المخزون).
+ * fallback آمن غير حاجب: صف بلا subscription_tier يُعامَل كـ professional.
+ */
+export async function isProfessionalPackage(restaurantId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('restaurant_settings')
+    .select('subscription_tier')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  return (data?.subscription_tier ?? 'professional') === 'professional';
+}
+
+/**
  * تحقق جلسة Supabase الحقيقية لمالك المطعم (Authorization: Bearer <access_token>)
  * — نفس نمط src/app/api/admin/my-restaurant/route.ts الموجود فعلاً.
  * يُستخدم فقط للنقاط "مالك فقط" (إدارة الموظفين، الموافقات).

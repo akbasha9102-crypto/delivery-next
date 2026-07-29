@@ -45,6 +45,7 @@ export const AUDIT_FIELD_LABELS: Record<string, string> = {
   whatsapp_number: 'رقم الواتساب',
   location_url: 'رابط الموقع على الخرائط',
   is_suspended: 'إيقاف الحساب (من إدارة المنصة)',
+  subscription_tier: 'باقة الاشتراك (من إدارة المنصة)',
   delivery_fee: 'رسوم التوصيل',
   min_order_amount: 'الحد الأدنى لقيمة الطلب',
   coupon_code: 'كود كوبون الخصم',

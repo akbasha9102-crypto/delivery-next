@@ -73,6 +73,7 @@ export function AdminBottomNav() {
   const path = usePathname();
   const { newCount } = useNewOrders();
   const { unreadCount: saUnread } = useSuperAdminNotifications();
+  const { subscription_tier } = useSettings();
 
   // الكاشير له نفس صلاحيات وواجهة المالك بالكامل — نفس شريط adminTabs للجميع.
   const tabs = adminTabs;
@@ -85,6 +86,17 @@ export function AdminBottomNav() {
         // ظاهراً حتى يفتح فعلياً قائمة الإشعارات ويُستدعى markAllRead (لا علاقة بمجرد فتح الصفحة).
         const badgeCount = href === '/admin/dashboard' ? newCount : href === '/admin/settings' ? saUnread : 0;
         const showBadge = href === '/admin/dashboard' ? (path !== '/admin/dashboard' && newCount > 0) : href === '/admin/settings' ? saUnread > 0 : false;
+        // المخزون فقط مقيَّد بالباقة المحترفين — بقية التبويبات تبقى فعّالة
+        // دائماً بصرف النظر عن الباقة.
+        const disabled = href === '/admin/inventory' && subscription_tier !== 'professional';
+        if (disabled) {
+          return (
+            <div key={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 opacity-35 md:flex-none md:w-full md:py-5">
+              <Icon size={22} className="text-gray-400 dark:text-gray-500" />
+              <span className="text-xs font-medium text-gray-400 dark:text-gray-500">{label}</span>
+            </div>
+          );
+        }
         return (
           <Link key={href} href={href} className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all active:scale-90 relative md:flex-none md:w-full md:py-5">
             <Icon size={22} className={active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-slate-500'} />

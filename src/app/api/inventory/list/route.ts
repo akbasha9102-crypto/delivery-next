@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
+import { resolveStaffIdentity, isProfessionalPackage } from '@/lib/auth/staff-auth';
 
 // GET|POST /api/inventory/list?restaurant_id= + ترويسة x-staff-token اختيارية
 // نقطة جديدة (لا تعدّل أي شيء بصفحة المخزون الحالية) تُرجع المخزون بدون
@@ -12,6 +12,13 @@ import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
 // الآن الهوية تُستخرَج فقط من توكن موقَّع بترويسة x-staff-token.
 async function handle(restaurantId: string, req: NextRequest) {
   if (!restaurantId) return NextResponse.json({ error: 'restaurant_id مطلوب' }, { status: 400 });
+
+  // فحص باقة الاشتراك يسبق أي محاولة مصادقة — هذه النقطة تُرجع بيانات
+  // المخزون حتى لطلب بلا هوية موثَّقة (راجع التعليق أعلى الملف)، فيجب أن
+  // يُطبَّق القيد على كل الطلبات بلا استثناء، لا فقط على الطلبات الموثَّقة.
+  if (!(await isProfessionalPackage(restaurantId))) {
+    return NextResponse.json({ error: 'هذه الميزة تتطلب الباقة المحترفين' }, { status: 403 });
+  }
 
   let showCost = false;
   const identityRes = await resolveStaffIdentity(req, restaurantId);

@@ -17,6 +17,7 @@ export type Settings = {
   whatsapp_number: string | null;
   location_url: string | null;
   is_suspended?: boolean | null;
+  subscription_tier?: 'standard' | 'professional' | null;
   delivery_fee: number;
   min_order_amount: number;
   coupon_code: string | null;
@@ -37,6 +38,7 @@ const DEFAULTS: Settings = {
   whatsapp_number: null,
   location_url: null,
   is_suspended: false,
+  subscription_tier: 'professional',
   delivery_fee: 0,
   min_order_amount: 0,
   coupon_code: null,

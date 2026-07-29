@@ -20,7 +20,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       if (previewRes?.ok) {
         const { ok, restaurant } = await previewRes.json().catch(() => ({ ok: false, restaurant: null }));
         if (ok && restaurant?.id) {
-          setRestaurant(restaurant.id, restaurant.name ?? null);
+          setRestaurant(restaurant.id, restaurant.name ?? null, { isSuperAdminPreview: true });
           setChecking(false);
           return;
         }
@@ -38,11 +38,11 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 
       if (!res?.ok) { router.replace('/login'); return; }
 
-      const { restaurant, is_suspended } = await res.json().catch(() => ({}));
+      const { restaurant, is_suspended, subscription_tier } = await res.json().catch(() => ({}));
 
       if (!restaurant?.id) { router.replace('/login'); return; }
 
-      setRestaurant(restaurant.id, restaurant.name ?? null);
+      setRestaurant(restaurant.id, restaurant.name ?? null, { subscriptionTier: subscription_tier ?? null, isSuperAdminPreview: false });
 
       if (is_suspended) { setSuspended(true); setChecking(false); return; }
 

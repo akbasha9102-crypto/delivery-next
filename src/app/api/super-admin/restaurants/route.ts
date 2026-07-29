@@ -248,15 +248,19 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   if (!await isAuthed()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { restaurantDbId, newSlug, newPassword, ownerName, ownerPhone, suspend } = await req.json();
+  const { restaurantDbId, newSlug, newPassword, ownerName, ownerPhone, suspend, subscriptionTier } = await req.json();
 
   if (!restaurantDbId) {
     return NextResponse.json({ error: 'restaurantDbId مطلوب' }, { status: 400 });
   }
   const hasOwnerContactFields = ownerName !== undefined || ownerPhone !== undefined;
   const hasSuspendField = typeof suspend === 'boolean';
-  if (!newSlug && !newPassword && !hasOwnerContactFields && !hasSuspendField) {
-    return NextResponse.json({ error: 'يجب تقديم newSlug أو newPassword أو ownerName/ownerPhone أو suspend على الأقل' }, { status: 400 });
+  const hasTierField = typeof subscriptionTier === 'string';
+  if (!newSlug && !newPassword && !hasOwnerContactFields && !hasSuspendField && !hasTierField) {
+    return NextResponse.json({ error: 'يجب تقديم newSlug أو newPassword أو ownerName/ownerPhone أو suspend أو subscriptionTier على الأقل' }, { status: 400 });
+  }
+  if (hasTierField && !['standard', 'professional'].includes(subscriptionTier)) {
+    return NextResponse.json({ error: 'قيمة subscriptionTier غير صالحة' }, { status: 400 });
   }
 
   // جلب المطعم الحالي
@@ -350,6 +354,18 @@ export async function PATCH(req: NextRequest) {
       .eq('restaurant_id', restaurantDbId);
 
     if (suspendError) return NextResponse.json({ error: suspendError.message }, { status: 500 });
+  }
+
+  // تبديل باقة الاشتراك (subscription_tier) — نفس مسار is_suspended أعلاه:
+  // service role يتجاوز trg_restaurant_settings_suspend_guard الموسَّع
+  // ليشمل subscription_tier (راجع migration 20260729100000).
+  if (hasTierField) {
+    const { error: tierError } = await supabaseAdmin
+      .from('restaurant_settings')
+      .update({ subscription_tier: subscriptionTier })
+      .eq('restaurant_id', restaurantDbId);
+
+    if (tierError) return NextResponse.json({ error: tierError.message }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
+import { resolveStaffIdentity, isProfessionalPackage } from '@/lib/auth/staff-auth';
 import { logStaffAction } from '@/lib/utils/staff-actions-log';
 
 // POST /api/inventory/waste — { item_id, quantity, reason } + ترويسة x-staff-token
@@ -37,6 +37,10 @@ export async function POST(req: NextRequest) {
   // تسجيل الهدر عملية كاشير/owner/manager فقط — سائق لا علاقة له بالمخزون إطلاقاً.
   if (staff.role === 'driver') {
     return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
+  }
+
+  if (!(await isProfessionalPackage(staff.restaurant_id))) {
+    return NextResponse.json({ error: 'هذه الميزة تتطلب الباقة المحترفين' }, { status: 403 });
   }
 
   const { data: movement, error: movementError } = await supabaseAdmin

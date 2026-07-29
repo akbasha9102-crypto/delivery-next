@@ -10,6 +10,7 @@ type Restaurant = {
   updated_at?: string;
   admin_email?: string | null; admin_password?: string | null;
   subscription_start?: string | null; is_suspended?: boolean | null;
+  subscription_tier?: 'standard' | 'professional' | null;
   restaurant_id?: string | null; slug?: string | null; owner_id?: string | null;
   owner_name?: string | null; owner_phone?: string | null;
   is_deleted?: boolean | null; deleted_at?: string | null;
@@ -481,12 +482,14 @@ function DeleteRestaurantModal({ restaurant, onClose, onDeleted }: {
 
 // ─── Restaurant Card ──────────────────────────────────────────────────────────
 function RestaurantCard({
-  r, toggling, matchedUser, onToggleSuspended, onRefresh,
+  r, toggling, togglingPackage, matchedUser, onToggleSuspended, onTogglePackage, onRefresh,
 }: {
   r: Restaurant;
   toggling: boolean;
+  togglingPackage: boolean;
   matchedUser: AuthUser | null;
   onToggleSuspended: () => void;
+  onTogglePackage: () => void;
   onRefresh: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -594,6 +597,15 @@ function RestaurantCard({
             </p>
           </div>
 
+          {/* ── Package toggle ── */}
+          <div className="flex items-center justify-between bg-violet-950/30 border border-violet-900/30 rounded-xl px-3 py-3">
+            <div>
+              <p className="text-violet-300 text-sm font-semibold">الباقة: {r.subscription_tier === 'professional' ? 'المحترفين' : 'العادية'}</p>
+              <p className="text-violet-500/70 text-[10px] mt-0.5">تتحكم بالوصول لأقسام الموظفين وسجل التدقيق والمخزون</p>
+            </div>
+            <ToggleSwitch on={r.subscription_tier === 'professional'} onChange={onTogglePackage} disabled={togglingPackage} />
+          </div>
+
           {/* ── Suspend toggle ── */}
           <div className="flex items-center justify-between bg-red-950/30 border border-red-900/30 rounded-xl px-3 py-3">
             <div>
@@ -677,6 +689,7 @@ export default function SuperAdminDashboard() {
   const [loading,     setLoading]     = useState(true);
   const [tab,         setTab]         = useState<'overview'|'restaurants'|'requests'|'archive'|'add'>('overview');
   const [toggling,    setToggling]    = useState<string|null>(null);
+  const [togglingPackage, setTogglingPackage] = useState<string|null>(null);
   const [showBroadcast, setShowBroadcast] = useState(false);
 
   // ── طلبات إنشاء حساب ──
@@ -759,6 +772,18 @@ export default function SuperAdminDashboard() {
       body: JSON.stringify({ restaurantDbId: r.restaurant_id ?? r.id, suspend: next }),
     }).catch(() => null);
     await loadAll(); setToggling(null);
+  };
+
+  const togglePackage = async (r: Restaurant) => {
+    setTogglingPackage(r.id);
+    const next = r.subscription_tier === 'professional' ? 'standard' : 'professional';
+    await fetch('/api/super-admin/restaurants', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurantDbId: r.restaurant_id ?? r.id, subscriptionTier: next }),
+    }).catch(() => null);
+    await loadAll();
+    setTogglingPackage(null);
   };
 
   const signOut = async () => {
@@ -980,8 +1005,10 @@ export default function SuperAdminDashboard() {
                   key={r.id}
                   r={r}
                   toggling={toggling === r.id}
+                  togglingPackage={togglingPackage === r.id}
                   matchedUser={matchedUser}
                   onToggleSuspended={() => toggleSuspended(r)}
+                  onTogglePackage={() => togglePackage(r)}
                   onRefresh={() => { loadAll(); loadAuthUsers(); }}
                 />
               );

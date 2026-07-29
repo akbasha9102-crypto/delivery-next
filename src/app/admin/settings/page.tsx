@@ -752,10 +752,14 @@ function DiscountsSheet({ onClose, restaurantId }: { onClose: () => void; restau
 /* ─── الصفحة الرئيسية ─── */
 export default function SettingsPage() {
   const router = useRouter();
-  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled, coupon_allow_retroactive, show_best_sellers } = useSettings();
+  const { is_closed, opens_at, id: settingsId, schedule: ctxSchedule, refreshSettings, loaded, delivery_fee, min_order_amount, coupon_code, coupon_discount_pct, coupon_enabled, coupon_allow_retroactive, show_best_sellers, subscription_tier } = useSettings();
   const { restaurantId } = useRestaurant();
   const { dark, toggleDark } = useDarkMode();
   const { isCashier } = useStaff();
+  // زرّا "الموظفين" و"سجل التدقيق" فقط: مقفلان أيضاً لباقة standard، بجانب
+  // قفلهما القديم للكاشير — لا علاقة لهذا بأي زر آخر بالصفحة.
+  const packageLocked = subscription_tier !== 'professional';
+  const staffAuditLocked = isCashier || packageLocked;
   const { notifications, notifLoading, unreadCount, markAllRead } = useSuperAdminNotifications();
 
   const [scheduleLocal,    setScheduleLocal]    = useState<WeekSchedule | null>(null);
@@ -1086,27 +1090,27 @@ export default function SettingsPage() {
 
         {/* ─ إدارة الموظفين والصلاحيات (RBAC) — للكاشير: تظهر مقفلة بعلامة قفل بدل الاختفاء التام ─ */}
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={() => !isCashier && router.push('/admin/settings/staff')}
-            disabled={isCashier}
-            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
+          <button onClick={() => !staffAuditLocked && router.push('/admin/settings/staff')}
+            disabled={staffAuditLocked}
+            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${staffAuditLocked ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
                 <User size={16} className="text-gray-600 dark:text-slate-400" />
               </div>
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">الموظفين</span>
             </div>
-            {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
+            {staffAuditLocked ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
           </button>
-          <button onClick={() => !isCashier && router.push('/admin/audit')}
-            disabled={isCashier}
-            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${isCashier ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
+          <button onClick={() => !staffAuditLocked && router.push('/admin/audit')}
+            disabled={staffAuditLocked}
+            className={`flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 transition-all ${staffAuditLocked ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}>
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
                 <KeyRound size={16} className="text-gray-600 dark:text-slate-400" />
               </div>
               <span className="font-bold text-gray-800 dark:text-slate-200 text-sm">سجل التدقيق</span>
             </div>
-            {isCashier ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
+            {staffAuditLocked ? <Lock size={16} className="text-gray-300 dark:text-slate-600" /> : <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />}
           </button>
         </div>
 

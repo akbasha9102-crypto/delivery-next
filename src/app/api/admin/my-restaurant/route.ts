@@ -51,12 +51,13 @@ export async function GET(req: NextRequest) {
 
   const { data: settings } = await supabaseAdmin
     .from('restaurant_settings')
-    .select('is_suspended')
+    .select('is_suspended, subscription_tier')
     .eq('restaurant_id', restaurant?.id ?? '')
     .maybeSingle();
 
   return NextResponse.json({
     restaurant: restaurant ?? null,
     is_suspended: settings?.is_suspended ?? false,
+    subscription_tier: settings?.subscription_tier ?? 'professional',
   });
 }
