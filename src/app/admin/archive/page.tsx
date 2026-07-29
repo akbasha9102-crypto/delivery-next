@@ -217,12 +217,15 @@ export default function ArchivePage() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   useEffect(() => {
+    if (!restaurantId) return;
+    // فلترة بمعرّف المطعم إلزامية — بدونها يُعاد جلب كامل الأرشيف عند أي تغيير
+    // بطلب أو تقييم لأي مطعم آخر بالمنصة بأكملها (خطأ #25 بتقرير الفحص)
     const ch = supabase.channel('archive-live')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_feedback' }, fetchAll)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, fetchAll)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_feedback', filter: `restaurant_id=eq.${restaurantId}` }, fetchAll)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` }, fetchAll)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [fetchAll]);
+  }, [fetchAll, restaurantId]);
 
   const q = searchTerm.trim();
   const filtered = feedbacks.filter(f =>

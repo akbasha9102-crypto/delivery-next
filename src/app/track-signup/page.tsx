@@ -38,6 +38,9 @@ export default function TrackSignupPage() {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [status, setStatus]     = useState<Status | null>(null);
+  // approved لا تعني وحدها أن الحساب جاهز فعلياً — ربط المطعم (linked_restaurant_id)
+  // خطوة ثانية منفصلة يدوية قد لا تكتمل فوراً (خطأ #20 بتقرير الفحص)
+  const [linked, setLinked]     = useState(false);
   const [hasMarker, setHasMarker] = useState(true);
 
   const lookup = async (p: string, u: string) => {
@@ -51,7 +54,10 @@ export default function TrackSignupPage() {
 
     if (res?.status === 200 && json?.status) {
       setStatus(json.status);
-      if (json.status === 'pending') {
+      setLinked(!!json.linked);
+      // نُبقي متابعة الطلب مفعّلة طالما لم يكتمل الربط فعلياً بعد الموافقة —
+      // حتى تُظهر الصفحة "جاهز" فقط عند اكتمال الربط الحقيقي
+      if (json.status === 'pending' || (json.status === 'approved' && !json.linked)) {
         setPendingSignup({ phone: p, username: u });
       } else {
         clearPendingSignup();
@@ -73,6 +79,15 @@ export default function TrackSignupPage() {
     setUsername(pending.username);
     lookup(pending.phone, pending.username);
   }, []);
+
+  // إعادة الفحص تلقائياً كل 20 ثانية أثناء انتظار اكتمال ربط المطعم بعد
+  // الموافقة المبدئية — بدل إجبار الزبون على تحديث الصفحة يدوياً
+  useEffect(() => {
+    if (status !== 'approved' || linked) return;
+    const t = setInterval(() => lookup(phone, username), 20000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, linked]);
 
   const submitManualLookup = (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,7 +220,30 @@ export default function TrackSignupPage() {
             </motion.div>
           )}
 
-          {status === 'approved' && (
+          {status === 'approved' && !linked && (
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="mt-8 bg-white border border-black/5 shadow-[0_2px_30px_rgba(0,0,0,0.06)] rounded-3xl p-8 flex flex-col items-center text-center gap-4"
+            >
+              <PulsingHourglass reduceMotion={reduceMotion} />
+              <p className="text-lg font-extrabold text-[#1d1d1f]" style={MASHI_FONT}>
+                تمت الموافقة على طلبك 🎉
+              </p>
+              <p className="text-sm text-[#6e6e73] leading-relaxed">
+                جاري تجهيز حسابك الآن — هذي الخطوة الأخيرة تستغرق وقتاً قصيراً. لا تحاول تسجيل الدخول قبل ما تظهر لك رسالة "جاهز".
+              </p>
+              <Link
+                href="/"
+                className="mt-2 w-full py-3.5 rounded-2xl border border-black/10 text-[#1d1d1f] font-bold text-sm text-center active:scale-95 transition-all"
+              >
+                الرجوع للرئيسية
+              </Link>
+            </motion.div>
+          )}
+
+          {status === 'approved' && linked && (
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}

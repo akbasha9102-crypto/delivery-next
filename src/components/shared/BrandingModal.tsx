@@ -2,11 +2,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useSettings } from '@/context/SettingsContext';
+import { useRestaurant } from '@/context/RestaurantContext';
 import { Loader2, Save, Type, Palette, Image as ImageIcon, Moon, ShoppingBag, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function BrandingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { restaurant_name, primary_color, logo_url, refreshSettings, loaded } = useSettings();
+  const { restaurantId } = useRestaurant();
   const [form, setForm] = useState({
     name: '',
     color: '#000000',
@@ -26,11 +28,16 @@ export function BrandingModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
   }, [loaded, restaurant_name, primary_color, logo_url]);
 
   const handleSave = async () => {
+    if (!restaurantId) {
+      setMsg({ text: 'تعذّر تحديد المطعم الحالي', error: true });
+      return;
+    }
     setSaving(true);
     setMsg({ text: '', error: false });
 
-    // Get the first setting row ID
-    const { data: settings } = await supabase.from('restaurant_settings').select('id').limit(1);
+    // معرّف صف الإعدادات لهذا المطعم تحديداً — لا يجوز جلب أي صف بلا فلترة
+    // بمعرّف المطعم، وإلا قد يُحفظ التعديل على مطعم آخر بالكامل (خطأ #5 بتقرير الفحص).
+    const { data: settings } = await supabase.from('restaurant_settings').select('id').eq('restaurant_id', restaurantId).limit(1);
     const settingsId = settings?.[0]?.id;
 
     if (!settingsId) {

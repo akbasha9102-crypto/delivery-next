@@ -226,10 +226,11 @@ function DeliveryModal({ order: init, onClose }: { order: Order; onClose: () => 
   const [driverOrders, setDriverOrders] = useState<Array<{id:string; client_name:string; client_lat:number|null; client_lng:number|null; delivery_address:string|null}>>([]);
 
   useEffect(() => {
+    // فلترة بمعرّف الطلب نفسه بدل استقبال تحديثات كل طلبات كل المطاعم ثم
+    // تجاهلها محلياً (خطأ #25 بتقرير الفحص)
     const ch = supabase.channel(`admin-modal-${init.id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' },
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${init.id}` },
         ({ new: row }: any) => {
-          if (row.id !== init.id) return;
           setOrder(o => ({ ...o, ...row }));
         })
       .subscribe();
@@ -488,8 +489,10 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
   const addToCart = (item: MenuItem, unitPrice: number, extraNames: string[] = []) =>
     setCart(prev => {
       const found = prev.find(e => e.item.id === item.id);
+      // نحدّث السعر/الإضافات لآخر اختيار عند إعادة إضافة نفس الصنف — بدل تجاهله
+      // بصمت (خطأ #3 بتقرير الفحص، نفس نمط CartContext.addItem بالخطأ #1).
       return found
-        ? prev.map(e => e.item.id === item.id ? { ...e, qty: e.qty + 1 } : e)
+        ? prev.map(e => e.item.id === item.id ? { ...e, qty: e.qty + 1, unitPrice, extraNames } : e)
         : [...prev, { item, qty: 1, unitPrice, extraNames }];
     });
 
@@ -824,6 +827,9 @@ export default function DashboardPage() {
   const [locationOrder, setLocationOrder] = useState<Order | null>(null);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const toggleExpand = (id: string) => setExpandedOrders(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  // يمنع تكرار تنفيذ الإجراء لنفس الطلب عند ضغط مزدوج سريع — بدونه يتكرر خصم
+  // المخزون وإشعارات السائق/الزبون لطلب واحد فقط (خطأ #15 بتقرير الفحص)
+  const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
   const [newOrderFlash, setNewOrderFlash] = useState(false);
   const [islandExpanded, setIslandExpanded] = useState(false);
   const islandControls = useAnimation();
@@ -872,8 +878,11 @@ export default function DashboardPage() {
   useEffect(() => { setLoading(true); fetchOrders(); }, [fetchOrders]);
 
   useEffect(() => {
+    if (!restaurantId) return;
+    // فلترة بمعرّف المطعم إلزامية — بدونها تعيد كل شاشة طلبات (بكل المطاعم على
+    // المنصة) جلب بياناتها عند أي تحديث بأي مطعم آخر (خطأ #25 بتقرير الفحص)
     const ch = supabase.channel('dash-live')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, ({ new: row }: any) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` }, ({ new: row }: any) => {
         // طلبات الكاشير المحلي (local) لا تظهر في هذه الشاشة إطلاقاً — لا داعي لتنبيه "طلب جديد" بشأنها
         if (initialLoadDone.current && row?.order_type !== 'local') {
           setNewOrderFlash(true);
@@ -883,10 +892,10 @@ export default function DashboardPage() {
         }
         fetchOrders();
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, fetchOrders)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` }, fetchOrders)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [fetchOrders]);
+  }, [fetchOrders, restaurantId]);
 
   const updateStatus = async (id: string, status: string) => {
     await supabase.from('orders').update({ status }).eq('id', id);
@@ -894,16 +903,25 @@ export default function DashboardPage() {
   };
 
   const rejectOrder = async (id: string) => {
-    await supabase.from('orders').update({ status: 'rejected' }).eq('id', id);
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'rejected' } : o));
-    fetch('/api/push/notify-customer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
-      body: JSON.stringify({ order_id: id, title: '❌ نأسف', body: 'تعذّر قبول طلبك حالياً، تواصل مع المطعم لمزيد من التفاصيل', tag: 'order-rejected' }),
-    }).catch(() => {});
+    if (processingOrderId === id) return;
+    setProcessingOrderId(id);
+    try {
+      await supabase.from('orders').update({ status: 'rejected' }).eq('id', id);
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'rejected' } : o));
+      fetch('/api/push/notify-customer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+        body: JSON.stringify({ order_id: id, title: '❌ نأسف', body: 'تعذّر قبول طلبك حالياً، تواصل مع المطعم لمزيد من التفاصيل', tag: 'order-rejected' }),
+      }).catch(() => {});
+    } finally {
+      setProcessingOrderId(null);
+    }
   };
 
   const handleAction = async (order: Order) => {
+    if (processingOrderId === order.id) return;
+    setProcessingOrderId(order.id);
+    try {
     const next = getNextStatus(order);
     if (!next) return;
     await updateStatus(order.id, next);
@@ -956,6 +974,9 @@ export default function DashboardPage() {
           tag: `ready-${order.id}`,
         }),
       }).catch(() => {});
+    }
+    } finally {
+      setProcessingOrderId(null);
     }
   };
 
@@ -1254,8 +1275,8 @@ export default function DashboardPage() {
 
                   {/* زر تسليم الطلب — فقط للطلب الداخلي/السفري بمرحلة "جاهز" (ما إلها سائق يكمّلها) */}
                   {isInternalOrder(order) && (
-                    <button onClick={() => handleAction(order)}
-                      className="w-full py-2 text-white font-bold text-sm active:opacity-80 bg-green-600">
+                    <button onClick={() => handleAction(order)} disabled={processingOrderId === order.id}
+                      className="w-full py-2 text-white font-bold text-sm active:opacity-80 bg-green-600 disabled:opacity-60">
                       تسليم الطلب ✓
                     </button>
                   )}
@@ -1427,8 +1448,8 @@ export default function DashboardPage() {
 
                   {/* أزرار الإجراءات — دائماً ظاهرة */}
                   <div className="flex">
-                    <button onClick={() => rejectOrder(order.id)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-white font-bold text-sm active:opacity-80 bg-red-500">
+                    <button onClick={() => rejectOrder(order.id)} disabled={processingOrderId === order.id}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-white font-bold text-sm active:opacity-80 bg-red-500 disabled:opacity-60">
                       <X size={15} strokeWidth={2.5} />
                       إلغاء الطلب
                     </button>
@@ -1440,8 +1461,8 @@ export default function DashboardPage() {
                         بانتظار قبول سائق
                       </button>
                     ) : (
-                      <button onClick={() => handleAction(order)}
-                        className={`flex-[2] py-2 text-white font-bold text-sm active:opacity-80 ${isInternalOrder(order) ? 'bg-green-600' : 'bg-orange-500'}`}>
+                      <button onClick={() => handleAction(order)} disabled={processingOrderId === order.id}
+                        className={`flex-[2] py-2 text-white font-bold text-sm active:opacity-80 disabled:opacity-60 ${isInternalOrder(order) ? 'bg-green-600' : 'bg-orange-500'}`}>
                         {isInternalOrder(order) ? 'الطلب جاهز ✓' : 'جاهز للتسليم ✓'}
                       </button>
                     )}
@@ -1633,8 +1654,8 @@ export default function DashboardPage() {
                   </AnimatePresence>
 
                   {/* زر إلغاء الطلب — دائماً ظاهر، لا يوجد إجراء "تالي" يدوي بهذا التاب */}
-                  <button onClick={() => rejectOrder(order.id)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 text-white font-bold text-sm active:opacity-80 bg-red-500">
+                  <button onClick={() => rejectOrder(order.id)} disabled={processingOrderId === order.id}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 text-white font-bold text-sm active:opacity-80 bg-red-500 disabled:opacity-60">
                     <X size={15} strokeWidth={2.5} />
                     إلغاء الطلب
                   </button>
@@ -1779,14 +1800,16 @@ export default function DashboardPage() {
                     <div className="flex gap-3 px-4 pb-4">
                       <button
                         onClick={() => rejectOrder(order.id)}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-500 text-white font-bold rounded-xl text-sm transition-all active:scale-95"
+                        disabled={processingOrderId === order.id}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-500 text-white font-bold rounded-xl text-sm transition-all active:scale-95 disabled:opacity-60"
                       >
                         <X size={16} strokeWidth={2.5} />
                         <span>رفض</span>
                       </button>
                       <button
                         onClick={() => handleAction(order)}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-600 text-white font-bold rounded-xl text-sm transition-all active:scale-95"
+                        disabled={processingOrderId === order.id}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-600 text-white font-bold rounded-xl text-sm transition-all active:scale-95 disabled:opacity-60"
                       >
                         <Check size={16} strokeWidth={2.5} />
                         <span>قبول</span>
@@ -1932,8 +1955,8 @@ export default function DashboardPage() {
 
                   {/* زر الأرشفة أو الإجراء */}
                   {cfg.next ? (
-                    <button onClick={() => handleAction(order)}
-                      className="w-full py-2 text-white font-bold text-sm transition-all active:opacity-80"
+                    <button onClick={() => handleAction(order)} disabled={processingOrderId === order.id}
+                      className="w-full py-2 text-white font-bold text-sm transition-all active:opacity-80 disabled:opacity-60"
                       style={{ backgroundColor: cfg.btnColor }}>
                       {cfg.nextLabel}
                     </button>

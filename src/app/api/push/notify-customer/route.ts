@@ -12,11 +12,13 @@ export async function POST(request: Request) {
     return Response.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT!,
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!
-  );
+  // بدون هذا التحقق، غياب أي متغير من الثلاثة يُسقط webpush.setVapidDetails
+  // بخطأ throw فوري ينهار به المسار بالكامل بخطأ 500 غير معالج (خطأ #19 بتقرير الفحص).
+  const { VAPID_SUBJECT, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY } = process.env;
+  if (!VAPID_SUBJECT || !NEXT_PUBLIC_VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    return Response.json({ ok: true, skipped: true, warning: 'VAPID env vars missing' });
+  }
+  webpush.setVapidDetails(VAPID_SUBJECT, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
   const { order_id, title, body, tag } = await request.json() as {
     order_id: string;

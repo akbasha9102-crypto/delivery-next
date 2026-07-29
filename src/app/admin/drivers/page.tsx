@@ -41,14 +41,17 @@ export default function DriversPage() {
   }, [restaurantId]);
 
   useEffect(() => {
+    if (!restaurantId) return;
     fetchDrivers();
+    // فلترة بمعرّف المطعم إلزامية — بدونها يُعاد جلب/رسم هذه الشاشة عند أي تحديث
+    // على سائق بأي مطعم آخر بالمنصة بأكملها (خطأ #25 بتقرير الفحص)
     const ch = supabase.channel('admin-drivers-live')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'drivers' }, ({ new: row }: any) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'drivers', filter: `restaurant_id=eq.${restaurantId}` }, ({ new: row }: any) => {
         setDrivers(prev => prev.map(d => d.id === row.id ? { ...d, status: row.status } : d));
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [fetchDrivers]);
+  }, [fetchDrivers, restaurantId]);
 
   const openAdd = () => {
     setShowAdd(true);

@@ -109,7 +109,8 @@ function QuickOrderSheet({ restaurantId, onClose, onCreated }: { restaurantId: s
   const addToCart = (item: MenuItem, unitPrice: number, extraNames: string[] = []) =>
     setCart(prev => {
       const found = prev.find(e => e.item.id === item.id);
-      return found ? prev.map(e => e.item.id === item.id ? { ...e, qty: e.qty + 1 } : e) : [...prev, { item, qty: 1, unitPrice, extraNames }];
+      // نحدّث السعر/الإضافات لآخر اختيار عند إعادة إضافة نفس الصنف — بدل تجاهله بصمت
+      return found ? prev.map(e => e.item.id === item.id ? { ...e, qty: e.qty + 1, unitPrice, extraNames } : e) : [...prev, { item, qty: 1, unitPrice, extraNames }];
     });
 
   const handleTapAdd = (item: MenuItem) => {

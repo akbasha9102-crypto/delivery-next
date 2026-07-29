@@ -89,6 +89,33 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 });
     if (!order) return NextResponse.json({ error: 'الطلب المرتبط بالموافقة غير موجود' }, { status: 404 });
 
+    // الطلب قد تكون تغيّرت حالته لملغى/مسترجع بطريقة أخرى أثناء انتظار هذه الموافقة —
+    // نفس الحارس الموجود بمساري void/refund المباشرين، لمنع تطبيق إجراء فوق حالة
+    // نهائية أصلاً (خطأ #14 بتقرير الفحص). نرفض طلب الموافقة تلقائياً بدل تطبيقه بصمت.
+    if (order.status === 'voided' || order.status === 'refunded') {
+      const { data: updated, error: updateError } = await supabaseAdmin
+        .from('approval_requests')
+        .update({ status: 'rejected', resolved_at: resolvedAt })
+        .eq('id', approvalId)
+        .select('*')
+        .single();
+
+      if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+      await logStaffAction({
+        restaurant_id: approval.restaurant_id,
+        performed_by_auth_id: auth.userId,
+        performed_by_label: 'المالك',
+        action_type: 'approval_rejected',
+        entity_type: 'approval_request',
+        entity_id: approvalId,
+        before_data: { status: 'pending' },
+        after_data: { status: 'rejected', reason: 'order_status_changed_meanwhile' },
+      });
+
+      return NextResponse.json({ error: 'حالة الطلب تغيّرت (ملغى/مسترجع مسبقاً) — تم رفض طلب الموافقة تلقائياً', approval: updated }, { status: 409 });
+    }
+
     if (approval.request_type === 'void_order') {
       await supabaseAdmin.from('orders').update({ status: 'voided' }).eq('id', order.id);
       await returnStockForOrder(approval.restaurant_id, order.id, 'إلغاء طلب (عبر موافقة)');

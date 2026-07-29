@@ -17,7 +17,7 @@ type Order = {
   created_at: string;
 };
 
-type Session = { id: string; name: string; phone: string };
+type Session = { id: string; name: string; phone: string; restaurantId: string };
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
@@ -87,14 +87,14 @@ export default function DriverDashboard() {
       // يسمح للسائق برؤية صفّه هو فقط، وليس أي سائق آخر.
       const { data: driver } = await supabase
         .from('drivers')
-        .select('id, name, phone')
+        .select('id, name, phone, restaurant_id')
         .eq('user_id', authSession.user.id)
         .maybeSingle();
 
       if (cancelled) return;
       if (!driver) { await supabase.auth.signOut(); router.replace('/driver'); return; }
 
-      const s: Session = { id: driver.id, name: driver.name, phone: driver.phone };
+      const s: Session = { id: driver.id, name: driver.name, phone: driver.phone, restaurantId: driver.restaurant_id };
       setSession(s);
       sessionRef.current = s;
     })();
@@ -162,9 +162,11 @@ export default function DriverDashboard() {
     fetchActive(session.id);
     fetchCompleted(session.id);
 
-    // real-time: طلبات جديدة (pending بلا سائق)
+    // real-time: طلبات جديدة (pending بلا سائق) — فلترة بمعرّف المطعم إلزامية،
+    // بدونها يعيد كل سائق بكل مطاعم المنصة جلب طلباته عند أي تحديث بأي مطعم آخر
+    // (خطأ #25 بتقرير الفحص)
     const chIncoming = supabase.channel('driver-incoming')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${session.restaurantId}` }, () => {
         const s = sessionRef.current;
         if (s) { fetchIncoming(s.id); fetchActive(s.id); fetchCompleted(s.id); }
       })

@@ -235,6 +235,16 @@ export default function TrackPage() {
   })();
 
   const [order, setOrder] = useState<Order | null>(null);
+  // ثلاثة مصادر مستقلة تُحدّث حالة الطلب (البث اللحظي، الاستطلاع كل 3 ثواني،
+  // وإعادة الجلب عند فتح التبويب) بلا أي تنسيق بينها — قد يصل رد قديم بعد رد
+  // أحدث فيستبدله برجوع لحالة قديمة لحظياً (خطأ #26 بتقرير الفحص). عدّاد تسلسلي
+  // يضمن أن الرد المطبَّق هو دائماً أحدث طلب صدر، بغض النظر عن ترتيب وصول الردود.
+  const orderUpdateSeqRef = useRef(0);
+  const fetchAndApplyOrder = useCallback(async (orderId: string) => {
+    const seq = ++orderUpdateSeqRef.current;
+    const { data } = await supabase.from('orders').select('*').eq('id', orderId).single();
+    if (data && seq === orderUpdateSeqRef.current) setOrder(data as Order);
+  }, []);
   const [notFound, setNotFound] = useState(false);
   const [inputPhone, setInputPhone] = useState('');
   const [loading, setLoading] = useState(true);
@@ -397,13 +407,10 @@ export default function TrackPage() {
     if (!order) return;
     const channel = supabase.channel(`track-order-${order.id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${order.id}` },
-        async () => {
-          const { data } = await supabase.from('orders').select('*').eq('id', order.id).single();
-          if (data) setOrder(data as Order);
-        })
+        () => fetchAndApplyOrder(order.id))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [order?.id]);
+  }, [order?.id, fetchAndApplyOrder]);
 
   // keep a stable ref to the current order id so polling closures don't go stale
   orderIdRef.current = order?.id ?? null;
@@ -537,23 +544,21 @@ export default function TrackPage() {
   // Polling fallback every 3s
   useEffect(() => {
     if (!order?.id || order.status === 'completed' || order.status === 'rejected') return;
-    const id = setInterval(async () => {
+    const id = setInterval(() => {
       const currentId = orderIdRef.current;
       if (!currentId) return;
-      const { data } = await supabase.from('orders').select('*').eq('id', currentId).single();
-      if (data) setOrder(data as Order);
+      fetchAndApplyOrder(currentId);
     }, 3000);
     return () => clearInterval(id);
-  }, [order?.id, order?.status]);
+  }, [order?.id, order?.status, fetchAndApplyOrder]);
 
   // Re-fetch on tab visible
   useEffect(() => {
-    const onVisible = async () => {
+    const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
       const currentId = orderIdRef.current;
       if (!currentId) return;
-      const { data } = await supabase.from('orders').select('*').eq('id', currentId).single();
-      if (data) setOrder(data as Order);
+      fetchAndApplyOrder(currentId);
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);

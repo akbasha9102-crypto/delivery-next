@@ -805,7 +805,12 @@ export default function SuperAdminDashboard() {
     }).catch(() => null);
     const json = await res?.json().catch(() => ({}));
     if (res?.ok) {
-      setAddResult({ ok: true, msg: `✓ تم إنشاء مطعم "${addName.trim()}" — اسم المستخدم: ${slug}` });
+      setAddResult({
+        ok: !json?.warning,
+        msg: json?.warning
+          ? `✓ تم إنشاء مطعم "${addName.trim()}" — اسم المستخدم: ${slug} ⚠️ ${json.warning}`
+          : `✓ تم إنشاء مطعم "${addName.trim()}" — اسم المستخدم: ${slug}`,
+      });
       setAddName(''); setAddSlug(''); setAddPass('');
       setLinkedRequest(null);
       loadAll(); loadAuthUsers(); loadSignupRequests();

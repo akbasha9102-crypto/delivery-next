@@ -26,16 +26,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'opening_cash غير صالح' }, { status: 400 });
   }
 
-  // لا يفتح نفس الموظف أكثر من وردية مفتوحة بنفس الوقت
+  // لا تُفتح أكثر من وردية مفتوحة بنفس الوقت لنفس المطعم إطلاقاً — لا لنفس
+  // الموظف فقط، بل حتى لموظف آخر. العقد الحالي لا يربط أي طلب بوردية/كاشير
+  // محدد، فلو تداخلت ورديتان زمنياً يُحتسب "الكاش المتوقع" لكل واحدة منهما
+  // من كل طلبات المطعم بالفترة — أي مضاعفة وهمية (خطأ #16 بتقرير الفحص).
   const { data: existingOpen } = await supabaseAdmin
     .from('cashier_shifts')
-    .select('id')
-    .eq('staff_user_id', staff.user_id)
+    .select('id, staff_user_id')
+    .eq('restaurant_id', staff.restaurant_id)
     .eq('status', 'open')
     .maybeSingle();
 
   if (existingOpen) {
-    return NextResponse.json({ error: 'يوجد لديك وردية مفتوحة بالفعل', shift_id: existingOpen.id }, { status: 409 });
+    const sameStaff = existingOpen.staff_user_id === staff.user_id;
+    return NextResponse.json({
+      error: sameStaff ? 'يوجد لديك وردية مفتوحة بالفعل' : 'يوجد وردية أخرى مفتوحة حالياً بهذا المطعم — يجب إغلاقها أولاً',
+      shift_id: existingOpen.id,
+    }, { status: 409 });
   }
 
   const { data: shift, error } = await supabaseAdmin

@@ -50,18 +50,20 @@ export async function GET() {
 }
 
 // زرع restaurant_settings + inventory_categories الافتراضية لمطعم جديد —
-// مشتركة بين مسار الإنشاء المستقل ومسار الربط (signupRequestId).
-async function seedNewRestaurant(restaurantId: string, name: string) {
-  await supabaseAdmin.from('restaurant_settings').insert({
+// مشتركة بين مسار الإنشاء المستقل ومسار الربط (signupRequestId). ترجع رسالة
+// خطأ واضحة إن فشل أي إدراج بدل الفشل الصامت (خطأ #10 بتقرير الفحص).
+async function seedNewRestaurant(restaurantId: string, name: string): Promise<string | null> {
+  const { error: settingsError } = await supabaseAdmin.from('restaurant_settings').insert({
     restaurant_name: name,
     restaurant_id: restaurantId,
     subscription_start: new Date().toISOString(),
     is_suspended: false,
   });
+  if (settingsError) return `تعذّر إنشاء إعدادات المطعم: ${settingsError.message}`;
 
   // زرع فئات المخزون الافتراضية للمطعم الجديد (نفس الفئات المزروعة
   // للمطاعم الموجودة بـ migration 20260715090000_inventory_categories_system_seed)
-  await supabaseAdmin.from('inventory_categories').insert([
+  const { error: categoriesError } = await supabaseAdmin.from('inventory_categories').insert([
     { restaurant_id: restaurantId, name: 'عام',      color: '#64748b', is_active: true, is_system: true, sort_order: 0 },
     { restaurant_id: restaurantId, name: 'مشروبات',  color: '#3b82f6', is_active: true, is_system: true, sort_order: 1 },
     { restaurant_id: restaurantId, name: 'لحوم',     color: '#ef4444', is_active: true, is_system: true, sort_order: 2 },
@@ -71,6 +73,9 @@ async function seedNewRestaurant(restaurantId: string, name: string) {
     { restaurant_id: restaurantId, name: 'زيوت',     color: '#a855f7', is_active: true, is_system: true, sort_order: 6 },
     { restaurant_id: restaurantId, name: 'تغليف',    color: '#14b8a6', is_active: true, is_system: true, sort_order: 7 },
   ]);
+  if (categoriesError) return `تعذّر إنشاء فئات المخزون الافتراضية: ${categoriesError.message}`;
+
+  return null;
 }
 
 // POST — إنشاء مطعم جديد، بوضعين:
@@ -167,7 +172,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: restError.message }, { status: 500 });
     }
 
-    await seedNewRestaurant(restaurant.id, name.trim());
+    const seedError = await seedNewRestaurant(restaurant.id, name.trim());
 
     // حفظ بيانات تواصل صاحب المطعم التي التُقطت أصلاً عند التسجيل —
     // يوفر على الأدمن إعادة كتابتها يدوياً (نفس جدول/نمط PATCH بهذا الملف).
@@ -176,15 +181,26 @@ export async function POST(req: NextRequest) {
       { onConflict: 'restaurant_id' },
     );
 
-    await supabaseAdmin
+    // هذا التحديث هو ما يمنع تكرار الربط لاحقاً (الحارس بالسطر 120 أعلاه) —
+    // إن فشل هذا التحديث تحديداً بعد نجاح إنشاء المطعم، الحارس لن يعمل بالمحاولة
+    // التالية وقد يُنشأ مطعم مكرر لنفس الحساب لو أعاد الأدمن المحاولة ظناً منه
+    // أنها فشلت بالكامل (خطأ #21 بتقرير الفحص). نُرجع خطأ صريحاً بدل الاستمرار بصمت.
+    const { error: linkError } = await supabaseAdmin
       .from('account_creation_requests')
       .update({ linked_restaurant_id: restaurant.id, linked_at: new Date().toISOString() })
       .eq('id', signupRequestId);
+
+    if (linkError) {
+      return NextResponse.json({
+        error: `المطعم "${restaurant.name}" (${slug}) أُنشئ بنجاح فعلياً، لكن تعذّر تسجيل ربطه بطلب التسجيل: ${linkError.message} — لا تُعِد المحاولة (سيُنشئ مطعماً مكرراً)، بل حدّث linked_restaurant_id يدوياً لهذا الطلب بمعرّف المطعم ${restaurant.id}`,
+      }, { status: 500 });
+    }
 
     return NextResponse.json({
       ok: true,
       restaurant: { id: restaurant.id, name: restaurant.name, slug: restaurant.slug },
       username: slug,
+      ...(seedError ? { warning: `المطعم أُنشئ بنجاح لكن: ${seedError} — راجع إعدادات/مخزون المطعم يدوياً` } : {}),
     });
   }
 
@@ -235,12 +251,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: restError.message }, { status: 500 });
   }
 
-  await seedNewRestaurant(restaurant.id, name.trim());
+  const seedError = await seedNewRestaurant(restaurant.id, name.trim());
 
   return NextResponse.json({
     ok: true,
     restaurant: { id: restaurant.id, name: restaurant.name, slug: restaurant.slug },
     username: slug,
+    ...(seedError ? { warning: `المطعم أُنشئ بنجاح لكن: ${seedError} — راجع إعدادات/مخزون المطعم يدوياً` } : {}),
   });
 }
 
@@ -348,9 +365,12 @@ export async function PATCH(req: NextRequest) {
   // trg_restaurant_settings_suspend_guard). restaurant_settings.restaurant_id
   // هو الـ FK الصحيح لـ restaurants.id (وليس id الخاص بجدول الإعدادات نفسه).
   if (hasSuspendField) {
+    // عند إلغاء التعليق يجب إعادة فتح المطعم فعلياً (is_closed:false) وإلا يبقى
+    // مخفياً عن الزبائن رغم إلغاء التعليق، حتى يلاحظ المالك ويفتحه يدوياً بنفسه
+    // من الإعدادات (خطأ #9 بتقرير الفحص).
     const { error: suspendError } = await supabaseAdmin
       .from('restaurant_settings')
-      .update({ is_suspended: suspend, ...(suspend ? { is_closed: true } : {}) })
+      .update({ is_suspended: suspend, is_closed: suspend })
       .eq('restaurant_id', restaurantDbId);
 
     if (suspendError) return NextResponse.json({ error: suspendError.message }, { status: 500 });

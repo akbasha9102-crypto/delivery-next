@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const { data } = await supabaseAdmin
     .from('account_creation_requests')
-    .select('status, created_at')
+    .select('status, created_at, linked_restaurant_id')
     .eq('phone', phone)
     .ilike('username', username)
     .maybeSingle();
@@ -24,5 +24,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'لم يتم العثور على طلب مطابق' }, { status: 404 });
   }
 
-  return NextResponse.json({ status: data.status, created_at: data.created_at });
+  // "approved" تعني فقط أن السوبر أدمن وافق مبدئياً — ربط المطعم الفعلي
+  // (linked_restaurant_id) خطوة ثانية منفصلة يدوية قد لا تكتمل فوراً. بدون
+  // تمييزهما يرى الزبون "حسابك جاهز، سجّل دخولك" قبل أن يكون فعلاً جاهزاً
+  // فتفشل محاولة الدخول برسالة غامضة (خطأ #20 بتقرير الفحص).
+  return NextResponse.json({ status: data.status, created_at: data.created_at, linked: !!data.linked_restaurant_id });
 }

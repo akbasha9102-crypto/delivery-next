@@ -221,9 +221,12 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
 
   useEffect(() => {
     fetchData(restaurantId);
-    const ch = supabase.channel(`menu-live-${restaurantId ?? 'none'}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' },      () => fetchData(restaurantId))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => fetchData(restaurantId))
+    if (!restaurantId) return;
+    // فلترة بمعرّف المطعم إلزامية — بدونها يعيد كل زائر لأي قائمة طعام عامة على
+    // كامل المنصة جلب بياناته عند أي تعديل بمنيو أي مطعم آخر (خطأ #25 بتقرير الفحص)
+    const ch = supabase.channel(`menu-live-${restaurantId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items', filter: `restaurant_id=eq.${restaurantId}` },      () => fetchData(restaurantId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `restaurant_id=eq.${restaurantId}` }, () => fetchData(restaurantId))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   // eslint-disable-next-line react-hooks/exhaustive-deps

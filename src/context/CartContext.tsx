@@ -113,7 +113,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = (item: Omit<CartItem, 'quantity'>) =>
     setItems(prev => {
       const ex = prev.find(i => i.id === item.id);
-      if (ex) return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+      // عند إضافة نفس الصنف مرة أخرى، نحدّث السعر/الإضافات لآخر اختيار بدل تجاهله
+      // بصمت — كان هذا يُفقد أي إضافة جديدة يختارها الزبون (خطأ #1 بتقرير الفحص).
+      if (ex) return prev.map(i => i.id === item.id
+        ? { ...i, quantity: i.quantity + 1, price: item.price, extras_json: item.extras_json, selected_extras_names: item.selected_extras_names }
+        : i);
       return [...prev, { ...item, quantity: 1 }];
     });
 
