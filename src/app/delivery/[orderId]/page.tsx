@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { MessageCircle, Navigation, MapPin, AlertCircle, Loader2, CheckCircle2, Play, Bell, Home } from 'lucide-react';
+import { MessageCircle, Navigation, MapPin, AlertCircle, Loader2, CheckCircle2, Play, Bell, Home, Compass } from 'lucide-react';
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
@@ -101,6 +101,37 @@ const HEADING_DEADBAND_DEG  = 5;   // ignore rotation updates smaller than this
 const LOOKAHEAD_METERS      = 30;  // how far ahead on the route to aim the heading
 const MIN_SPEED_MPS         = 1;   // below this, GPS speed is considered "stopped"
 const MIN_MOVEMENT_M        = 3;   // below this movement between fixes, treat as stationary
+const MANUAL_ROTATE_ACTIVATE_DEG      = 4;   // two-finger rotate: cumulative angle needed to enter manual mode
+const MANUAL_ROTATE_TICK_DEADBAND_DEG = 1.2; // two-finger rotate: dead zone per touchmove tick once active
+
+// Pure heading candidate calculation, mirrors the priority chain previously inline in
+// watchPosition: route bearing → movement bearing → GPS heading → straight-line fallback
+// to the customer. Always computed (even while stopped / in manual mode) so the caller
+// can decide independently whether to actually apply it.
+function computeAutoHeadingCandidate(
+  lat: number,
+  lng: number,
+  gpsHeading: number | null,
+  speed: number | null,
+  lastPos: { lat: number; lng: number } | null,
+  movedSinceLast: number,
+  routeCoords: [number, number][],
+  clientLat: number | null | undefined,
+  clientLng: number | null | undefined
+): number | null {
+  return (
+    bearingFromRoute(lat, lng, routeCoords, LOOKAHEAD_METERS) ??
+    (lastPos && movedSinceLast >= MIN_MOVEMENT_M
+      ? calculateBearing(lastPos.lat, lastPos.lng, lat, lng)
+      : null) ??
+    (gpsHeading != null && !isNaN(gpsHeading) && speed != null && speed >= MIN_SPEED_MPS
+      ? gpsHeading
+      : null) ??
+    (routeCoords.length < 2 && clientLat && clientLng
+      ? calculateBearing(lat, lng, clientLat, clientLng)
+      : null)
+  );
+}
 
 // Returns true if driver is more than OFF_ROUTE_THRESHOLD_M meters from every sampled point on the route
 function isOffRoute(lat: number, lng: number, routeCoords: [number, number][]): boolean {
@@ -148,6 +179,11 @@ export default function DeliveryPage() {
   const lastPositionRef       = useRef<{ lat: number; lng: number } | null>(null);
   const lastMovementTsRef     = useRef<number>(0);
   const headingAccumulatorRef = useRef<number>(0); // unbounded — can exceed ±360, smooths spins
+  // manual two-finger rotation state
+  const navModeRef               = useRef<'auto' | 'manual'>('auto');
+  const autoHeadingCandidateRef  = useRef<number | null>(null);
+  const manualGestureRef         = useRef<{ id1: number; id2: number; prevAngleDeg: number; confirmed: boolean; accumulatedDeg: number } | null>(null);
+  const compassIconRef           = useRef<HTMLDivElement>(null);
 
   const [order,          setOrder]          = useState<Order | null>(null);
   const orderRef = useRef<Order | null>(null);
@@ -161,6 +197,20 @@ export default function DeliveryPage() {
   const [started,        setStarted]        = useState(false);
   const [starting,       setStarting]       = useState(false);
   const [notifStatus,    setNotifStatus]    = useState<'idle' | 'granted' | 'denied'>('idle');
+  const [navMode,        setNavMode]        = useState<'auto' | 'manual'>('auto'); // display-only — not read on the hot GPS path
+
+  // Central heading-application helper: writes the map rotation + compass-icon rotation
+  // in one place so the GPS loop and the manual two-finger gesture don't duplicate it.
+  const applyHeading = (angle: number) => {
+    headingAccumulatorRef.current = angle;
+    if (rotatorRef.current) {
+      rotatorRef.current.style.transform = `translate(-50%,-50%) rotate(${-angle}deg)`;
+      rotatorRef.current.style.setProperty('--heading-counter', `${angle}deg`);
+    }
+    if (compassIconRef.current) {
+      compassIconRef.current.style.transform = `rotate(${-angle}deg)`;
+    }
+  };
 
   useEffect(() => {
     if (!orderId) return;
@@ -303,6 +353,13 @@ export default function DeliveryPage() {
         rotatorRef.current.style.transform = 'translate(-50%,-50%) rotate(0deg)';
         rotatorRef.current.style.setProperty('--heading-counter', '0deg');
       }
+      if (compassIconRef.current) {
+        compassIconRef.current.style.transform = 'rotate(0deg)';
+      }
+      navModeRef.current = 'auto';
+      setNavMode('auto');
+      manualGestureRef.current = null;
+      autoHeadingCandidateRef.current = null;
       setMapReady(false);
     };
 
@@ -365,31 +422,23 @@ export default function DeliveryPage() {
         // → freeze the last known heading instead of letting GPS jitter spin the map.
         const isStopped = (speed == null || speed < MIN_SPEED_MPS) && movedSinceLast < MIN_MOVEMENT_M;
 
-        if (!isStopped) {
-          const candidate =
-            bearingFromRoute(latitude, longitude, routeCoordsRef.current, LOOKAHEAD_METERS) ??
-            (lastPos && movedSinceLast >= MIN_MOVEMENT_M
-              ? calculateBearing(lastPos.lat, lastPos.lng, latitude, longitude)
-              : null) ??
-            (gpsHeading != null && !isNaN(gpsHeading) && speed != null && speed >= MIN_SPEED_MPS
-              ? gpsHeading
-              : null) ??
-            (routeCoordsRef.current.length < 2 && o?.client_lat && o?.client_lng
-              ? calculateBearing(latitude, longitude, o.client_lat, o.client_lng)
-              : null);
+        // Always compute + store the candidate, regardless of navMode/isStopped, so the
+        // compass "recenter" button always has a fresh auto-heading target to snap back to.
+        const candidate = computeAutoHeadingCandidate(
+          latitude, longitude, gpsHeading, speed, lastPos, movedSinceLast,
+          routeCoordsRef.current, o?.client_lat, o?.client_lng
+        );
+        autoHeadingCandidateRef.current = candidate;
 
-          if (candidate != null) {
-            const currentNormalized = ((headingAccumulatorRef.current % 360) + 360) % 360;
-            const delta = shortestAngleDelta(currentNormalized, candidate);
-            if (Math.abs(delta) >= HEADING_DEADBAND_DEG) {
-              headingAccumulatorRef.current += delta;
-              lastMovementTsRef.current = Date.now();
-              if (rotatorRef.current) {
-                rotatorRef.current.style.transform =
-                  `translate(-50%,-50%) rotate(${-headingAccumulatorRef.current}deg)`;
-                rotatorRef.current.style.setProperty('--heading-counter', `${headingAccumulatorRef.current}deg`);
-              }
-            }
+        // Only actually rotate the map while in auto mode — while the driver is manually
+        // rotating (or has left it rotated), the GPS loop keeps computing silently but
+        // must not fight the manual gesture.
+        if (!isStopped && navModeRef.current === 'auto' && candidate != null) {
+          const currentNormalized = ((headingAccumulatorRef.current % 360) + 360) % 360;
+          const delta = shortestAngleDelta(currentNormalized, candidate);
+          if (Math.abs(delta) >= HEADING_DEADBAND_DEG) {
+            lastMovementTsRef.current = Date.now();
+            applyHeading(headingAccumulatorRef.current + delta);
           }
         }
         lastPositionRef.current = { lat: latitude, lng: longitude };
@@ -519,6 +568,92 @@ export default function DeliveryPage() {
     return () => observer.disconnect();
   }, [started]);
 
+  // Two-finger manual rotation: overrides the auto heading-up rotation until the driver
+  // taps the compass button to snap back to auto. Coexists with Leaflet's own touch
+  // handling (pinch-zoom) — we never disable or intercept that, only read touch points.
+  useEffect(() => {
+    if (!started) return;
+    const frameEl = frameRef.current;
+    if (!frameEl) return;
+
+    const getTouchAngleDeg = (t1: Touch, t2: Touch): number =>
+      (Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180) / Math.PI;
+
+    // Match touches by identifier, not array index — the browser doesn't guarantee
+    // e.touches keeps the same order across events.
+    const findTouches = (touches: TouchList, id1: number, id2: number): [Touch, Touch] | null => {
+      let touch1: Touch | null = null;
+      let touch2: Touch | null = null;
+      for (let i = 0; i < touches.length; i++) {
+        const t = touches[i];
+        if (t.identifier === id1) touch1 = t;
+        else if (t.identifier === id2) touch2 = t;
+      }
+      return touch1 && touch2 ? [touch1, touch2] : null;
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const t1 = e.touches[0], t2 = e.touches[1];
+        manualGestureRef.current = {
+          id1: t1.identifier,
+          id2: t2.identifier,
+          prevAngleDeg: getTouchAngleDeg(t1, t2),
+          confirmed: false,
+          accumulatedDeg: 0,
+        };
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const gesture = manualGestureRef.current;
+      if (!gesture || e.touches.length < 2) return;
+      e.preventDefault();
+
+      const pair = findTouches(e.touches, gesture.id1, gesture.id2);
+      if (!pair) return;
+      const [t1, t2] = pair;
+      const newAngleDeg = getTouchAngleDeg(t1, t2);
+      const delta = shortestAngleDelta(gesture.prevAngleDeg, newAngleDeg);
+
+      if (!gesture.confirmed) {
+        gesture.accumulatedDeg += delta;
+        if (Math.abs(gesture.accumulatedDeg) >= MANUAL_ROTATE_ACTIVATE_DEG) {
+          navModeRef.current = 'manual';
+          setNavMode('manual');
+          if (rotatorRef.current) rotatorRef.current.style.transition = 'none';
+          if (compassIconRef.current) compassIconRef.current.style.transition = 'none';
+          gesture.confirmed = true;
+          applyHeading(headingAccumulatorRef.current - gesture.accumulatedDeg);
+        }
+      } else if (Math.abs(delta) >= MANUAL_ROTATE_TICK_DEADBAND_DEG) {
+        applyHeading(headingAccumulatorRef.current - delta);
+      }
+
+      gesture.prevAngleDeg = newAngleDeg;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length === 0) {
+        manualGestureRef.current = null;
+        if (rotatorRef.current) rotatorRef.current.style.transition = 'transform 0.35s linear';
+        if (compassIconRef.current) compassIconRef.current.style.transition = 'transform 0.35s linear';
+      }
+    };
+
+    frameEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+    frameEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+    frameEl.addEventListener('touchend', handleTouchEnd, { passive: false });
+    frameEl.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+    return () => {
+      frameEl.removeEventListener('touchstart', handleTouchStart);
+      frameEl.removeEventListener('touchmove', handleTouchMove);
+      frameEl.removeEventListener('touchend', handleTouchEnd);
+      frameEl.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [started]);
+
   const handleStart = async () => {
     setStarting(true);
     await supabase.from('orders').update({ status: 'ready' }).eq('id', orderId);
@@ -549,6 +684,19 @@ export default function DeliveryPage() {
   const openGoogleMaps = () => {
     if (!order?.client_lat || !order?.client_lng) return;
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${order.client_lat},${order.client_lng}&travelmode=driving`, '_blank');
+  };
+
+  // Compass button: leave manual mode and snap back to the last computed auto heading
+  // (or hold still if none is available yet), taking the shortest angular path.
+  const handleRecenter = () => {
+    const target = autoHeadingCandidateRef.current ?? headingAccumulatorRef.current;
+    const currentNormalized = ((headingAccumulatorRef.current % 360) + 360) % 360;
+    const delta = shortestAngleDelta(currentNormalized, target);
+    if (rotatorRef.current) rotatorRef.current.style.transition = 'transform 0.35s linear';
+    if (compassIconRef.current) compassIconRef.current.style.transition = 'transform 0.35s linear';
+    applyHeading(headingAccumulatorRef.current + delta);
+    navModeRef.current = 'auto';
+    setNavMode('auto');
   };
 
   // ── تحميل ──
@@ -732,24 +880,42 @@ export default function DeliveryPage() {
       )}
 
       {/* الخريطة أو تنبيه لا موقع */}
-      <div ref={frameRef} className="relative mx-4 rounded-3xl overflow-hidden flex-1 min-h-0" style={{ minHeight: 300 }}>
+      <div ref={frameRef} className="relative mx-4 rounded-3xl overflow-hidden flex-1 min-h-0" style={{ minHeight: 300, touchAction: 'none' }}>
         {order.client_lat && order.client_lng ? (
-          // Heading-up navigation: the map (rotator) spins via CSS transform inside this
-          // static, overflow-hidden frame so the driver's direction of travel stays "up".
-          <div
-            ref={rotatorRef}
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%,-50%) rotate(0deg)',
-              transformOrigin: 'center',
-              transition: 'transform 0.35s linear',
-              willChange: 'transform',
-            }}
-          >
-            <div ref={mapContainerRef} className="w-full h-full" />
-          </div>
+          <>
+            {/* Heading-up navigation: the map (rotator) spins via CSS transform inside this
+                static, overflow-hidden frame so the driver's direction of travel stays "up". */}
+            <div
+              ref={rotatorRef}
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%,-50%) rotate(0deg)',
+                transformOrigin: 'center',
+                transition: 'transform 0.35s linear',
+                willChange: 'transform',
+              }}
+            >
+              <div ref={mapContainerRef} className="w-full h-full" />
+            </div>
+
+            {/* Compass button: sibling of the rotator (not inside it) so its own position
+                stays fixed on screen while the map rotates under it. Tap to leave manual
+                two-finger rotation and snap back to auto heading-up. */}
+            <button
+              type="button"
+              onClick={handleRecenter}
+              aria-label="إعادة التوجيه التلقائي للخريطة"
+              className={`absolute top-4 left-4 z-[1000] w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-colors ${
+                navMode === 'manual' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/90 text-gray-600 shadow'
+              }`}
+            >
+              <div ref={compassIconRef} style={{ transform: 'rotate(0deg)', transition: 'transform 0.35s linear' }}>
+                <Compass size={22} />
+              </div>
+            </button>
+          </>
         ) : (
           <div className="h-full bg-slate-800 flex flex-col items-center justify-center p-6 text-center rounded-3xl border border-slate-700" style={{ minHeight: 220 }}>
             <AlertCircle size={36} className="text-amber-400 mb-3" />
