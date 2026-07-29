@@ -180,6 +180,31 @@ export default function CartPage() {
     try { return JSON.parse(extrasJson || '[]'); } catch { return []; }
   };
 
+  // itemSelectedExtras هو مصدر الحقيقة الوحيد لأي إضافات مختارة — item.price دائماً
+  // سعر أساسي بلا إضافات (راجع HomeClient.tsx). نهيّئ الحالة من selected_extras_names
+  // المحفوظة بالسلة أول ما تظهر (اختيرت من نافذة الصنف بصفحة المنيو) حتى لا تبدو
+  // كأنها غير مختارة هنا فتضيع من تذكرة المطبخ أو تُحتسب مرتين لو أعاد الزبون تحديدها
+  // يدوياً هنا (كان هذا الخطأ #2 بتقرير الفحص).
+  useEffect(() => {
+    setItemSelectedExtras(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const item of items) {
+        if (next[item.id]) continue;
+        const names = item.selected_extras_names;
+        if (!names || names.length === 0) continue;
+        const extras = getExtras(item.extras_json);
+        const ids = extras.filter(e => names.includes(e.name)).map(e => e.id);
+        if (ids.length > 0) {
+          next[item.id] = new Set(ids);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
   const extrasTotal = items.reduce((sum, item) => {
     const extras  = getExtras(item.extras_json);
     const selected = itemSelectedExtras[item.id] || new Set<string>();
@@ -730,7 +755,7 @@ const proceedFromReview = () => {
           item_id: i.id,
           item_name: extraNames ? `${i.name} (${extraNames})` : i.name,
           quantity: i.quantity,
-          price: i.price + extraCost,
+          price: i.price + extraCost, // i.price سعر أساسي بلا إضافات — راجع تعليق itemSelectedExtras أعلاه
         };
       })
     );

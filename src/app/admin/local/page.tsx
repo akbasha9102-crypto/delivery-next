@@ -16,6 +16,7 @@ import {
 } from '@/lib/api/staffApi';
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
+import { deductStockForOrder } from '@/lib/utils/deduct-stock';
 
 type MenuCategory = { id: string; name: string };
 type MenuItem = { id: string; category_id: string; name: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
@@ -167,6 +168,9 @@ function QuickOrderSheet({ restaurantId, onClose, onCreated }: { restaurantId: s
       setSubmitting(false);
       return;
     }
+
+    deductStockForOrder(restaurantId, order.id, name, cart.map(e => ({ id: e.item.id, item_id: e.item.id, item_name: e.item.name, quantity: e.qty, price: e.unitPrice })))
+      .catch(err => console.error('تعذّر خصم المخزون:', err));
 
     setSubmitting(false);
     onCreated();

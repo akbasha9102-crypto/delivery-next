@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { verifyOwnerRequest } from '@/lib/auth/staff-auth';
 import { logStaffAction } from '@/lib/utils/staff-actions-log';
+import { returnStockForOrder } from '@/lib/utils/return-stock';
 
 // POST /api/approvals/:id/resolve — { action: 'approve'|'reject' }
 // مالك فقط (جلسة Supabase). عند approve: ينفّذ العملية المعلّقة فعلياً
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     if (approval.request_type === 'void_order') {
       await supabaseAdmin.from('orders').update({ status: 'voided' }).eq('id', order.id);
+      await returnStockForOrder(approval.restaurant_id, order.id, 'إلغاء طلب (عبر موافقة)');
       await logStaffAction({
         restaurant_id: approval.restaurant_id,
         performed_by_auth_id: approval.requested_by_user_id,
@@ -102,6 +104,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       });
     } else if (approval.request_type === 'refund') {
       await supabaseAdmin.from('orders').update({ status: 'refunded' }).eq('id', order.id);
+      await returnStockForOrder(approval.restaurant_id, order.id, 'استرجاع طلب (عبر موافقة)');
       await logStaffAction({
         restaurant_id: approval.restaurant_id,
         performed_by_auth_id: approval.requested_by_user_id,
@@ -114,9 +117,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       });
     } else if (approval.request_type === 'discount_override') {
       const pct = Number(approval.amount) || 0;
-      const originalTotal = Number(order.total_amount) || 0;
+      const currentTotal = Number(order.total_amount) || 0;
+      const originalTotal = Number(order.pre_discount_total ?? order.total_amount) || 0;
       const newTotal = Math.round(originalTotal * (1 - pct / 100) * 100) / 100;
-      await supabaseAdmin.from('orders').update({ total_amount: newTotal }).eq('id', order.id);
+      await supabaseAdmin.from('orders').update({ total_amount: newTotal, pre_discount_total: originalTotal }).eq('id', order.id);
       await logStaffAction({
         restaurant_id: approval.restaurant_id,
         performed_by_auth_id: approval.requested_by_user_id,
@@ -124,7 +128,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         action_type: 'discount_applied',
         entity_type: 'order',
         entity_id: order.id,
-        before_data: { total_amount: originalTotal },
+        before_data: { total_amount: currentTotal },
         after_data: { total_amount: newTotal, discount_pct: pct, via_approval: approvalId },
       });
     } else if (approval.request_type === 'coupon_override') {

@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
 import { logStaffAction } from '@/lib/utils/staff-actions-log';
 import { notifyOwnerPush } from '@/lib/api/notify-owner-push';
+import { returnStockForOrder } from '@/lib/utils/return-stock';
 
 // POST /api/orders/:id/refund — { reason } + ترويسة x-staff-token
 // الهوية تُستخرَج حصراً من توكن موقَّع (راجع resolveStaffIdentity) — لا يُثَق
@@ -87,6 +88,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     .single();
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+  await returnStockForOrder(staff.restaurant_id, orderId, 'استرجاع طلب');
 
   await logStaffAction({
     restaurant_id: staff.restaurant_id,

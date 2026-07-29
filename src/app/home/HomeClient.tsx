@@ -53,16 +53,28 @@ const BEST_SELLERS_ID = '__best_sellers__';
 export default function HomeClient({ initialCategories, initialItems, restaurantId, restaurantSlug, showBestSellers, bestSellerItemIds }: Props) {
   const { dark } = useDarkMode();
   const { items: cartItems, addItem, decrementItem, removeItem, clearCart, total, orderType, setOrderType, ensureRestaurant } = useCart();
+
+  // سعر عنصر السلة (item.price) أساسي دائماً بلا إضافات — تكلفة أي إضافات مختارة
+  // تُحسب هنا من selected_extras_names + extras_json المحفوظين مع العنصر نفسه،
+  // وتُضاف فوق total (من CartContext) لعرض إجمالي صحيح بدرج السلة (راجع خطأ #2 بتقرير الفحص).
+  const cartItemExtrasCost = (item: { extras_json?: string; selected_extras_names?: string[] }): number => {
+    if (!item.selected_extras_names || item.selected_extras_names.length === 0) return 0;
+    let extras: Extra[] = [];
+    try { extras = JSON.parse(item.extras_json || '[]'); } catch { extras = []; }
+    return extras.filter(e => item.selected_extras_names!.includes(e.name)).reduce((s, e) => s + e.price, 0);
+  };
+  const cartGrandTotal = total + cartItems.reduce((s, item) => s + cartItemExtrasCost(item) * item.quantity, 0);
+
   const [priceFlash, setPriceFlash] = useState(false);
-  const prevTotal = useRef(total);
+  const prevTotal = useRef(cartGrandTotal);
   useEffect(() => {
-    if (total > prevTotal.current) {
+    if (cartGrandTotal > prevTotal.current) {
       setPriceFlash(true);
       const t = setTimeout(() => setPriceFlash(false), 600);
       return () => clearTimeout(t);
     }
-    prevTotal.current = total;
-  }, [total]);
+    prevTotal.current = cartGrandTotal;
+  }, [cartGrandTotal]);
 
   const [modalPriceFlash, setModalPriceFlash] = useState(false);
   const prevModalPrice = useRef(0);
@@ -349,9 +361,11 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
     prevModalPrice.current = dp;
   }, [selectedModalExtras, selectedItem, cartItems, categories]);
 
-  const handleAdd = (item: Item, selectedExtrasNames?: string[], extrasPrice = 0) => {
+  const handleAdd = (item: Item, selectedExtrasNames?: string[]) => {
     if (getStatus(item) !== 'available') return;
-    addItem({ id: item.id, name: item.name, price: getDiscountedPrice(item, categories) + extrasPrice, image_url: item.image_url, extras_json: item.extras_json, selected_extras_names: selectedExtrasNames });
+    // السعر المخزَّن بالسلة سعر أساسي دائماً بلا إضافات — صفحة السلة (cart/page.tsx)
+    // هي المصدر الوحيد لحساب تكلفة الإضافات من selected_extras_names (راجع خطأ #2 بتقرير الفحص).
+    addItem({ id: item.id, name: item.name, price: getDiscountedPrice(item, categories), image_url: item.image_url, extras_json: item.extras_json, selected_extras_names: selectedExtrasNames });
   };
 
   const qty = (id: string) => cartItems.find(i => i.id === id)?.quantity || 0;
@@ -743,7 +757,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                     className="font-black text-xl"
                     animate={priceFlash ? { color: ['#dc2626', '#dc2626', dark ? '#ffffff' : '#000000'], scale: [1, 1.15, 1, 1.1, 1] } : {}}
                     transition={{ duration: 0.7, ease: 'easeOut' }}
-                  >{total.toLocaleString()} د.ع</motion.p>
+                  >{cartGrandTotal.toLocaleString()} د.ع</motion.p>
                 </div>
                 <motion.button
                   whileTap={{ scale: 0.88 }}
@@ -859,7 +873,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                       <div className="flex-1 text-right min-w-0">
                         <p className="font-black text-sm truncate text-gray-900 dark:text-white">{item.name}</p>
                         <p className="text-xs text-gray-400 dark:text-slate-500 font-bold mt-0.5">
-                          {(item.price * item.quantity).toLocaleString()} د.ع
+                          {((item.price + cartItemExtrasCost(item)) * item.quantity).toLocaleString()} د.ع
                         </p>
                         {item.selected_extras_names && item.selected_extras_names.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5 justify-end">
@@ -908,7 +922,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                     className="font-black text-xl"
                     animate={priceFlash ? { color: ['#dc2626', '#dc2626', dark ? '#ffffff' : '#111827'], scale: [1, 1.18, 1, 1.08, 1] } : {}}
                     transition={{ duration: 0.7, ease: 'easeOut' }}
-                  >{total.toLocaleString()} د.ع</motion.span>
+                  >{cartGrandTotal.toLocaleString()} د.ع</motion.span>
                 </div>
                 <Link
                   href="/cart"
@@ -1078,7 +1092,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                               >
                                 <motion.button
                                   whileTap={{ scale: 0.8 }}
-                                  onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const sel = extras.filter(ex => selectedModalExtras.has(ex.id)); const selectedNames = sel.map(ex => ex.name); const extrasPrice = sel.reduce((s, ex) => s + ex.price, 0); addItem({ id: selectedItem.id, name: selectedItem.name, price: getDiscountedPrice(selectedItem, categories) + extrasPrice, image_url: selectedItem.image_url, extras_json: selectedItem.extras_json, selected_extras_names: selectedNames.length > 0 ? selectedNames : undefined }); }}
+                                  onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const sel = extras.filter(ex => selectedModalExtras.has(ex.id)); const selectedNames = sel.map(ex => ex.name); addItem({ id: selectedItem.id, name: selectedItem.name, price: getDiscountedPrice(selectedItem, categories), image_url: selectedItem.image_url, extras_json: selectedItem.extras_json, selected_extras_names: selectedNames.length > 0 ? selectedNames : undefined }); }}
                                   className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center"
                                 >
                                   <Plus size={16} strokeWidth={3}/>
@@ -1109,7 +1123,7 @@ export default function HomeClient({ initialCategories, initialItems, restaurant
                                 exit={{ opacity: 0, scale: 0.8 }}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const sel = extras.filter(ex => selectedModalExtras.has(ex.id)); const selectedNames = sel.map(ex => ex.name); const extrasPrice = sel.reduce((s, ex) => s + ex.price, 0); handleAdd(selectedItem, selectedNames.length > 0 ? selectedNames : undefined, extrasPrice); }}
+                                onClick={(e) => { e.stopPropagation(); const extras = getExtras(selectedItem); const sel = extras.filter(ex => selectedModalExtras.has(ex.id)); const selectedNames = sel.map(ex => ex.name); handleAdd(selectedItem, selectedNames.length > 0 ? selectedNames : undefined); }}
                                 className="flex items-center gap-2 px-6 py-3 rounded-full font-black text-sm shadow-2xl"
                                 style={{ backgroundColor: modalColor, color: modalTextColor }}
                               >

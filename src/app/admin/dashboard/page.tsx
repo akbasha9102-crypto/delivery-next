@@ -9,7 +9,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { LowStockAlert } from '@/components/shared/LowStockAlert';
-import { convertToInventoryUnit } from '@/lib/utils/unitConversion';
+import { deductStockForOrder } from '@/lib/utils/deduct-stock';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 type OrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };
@@ -36,34 +36,6 @@ function getNextStatus(order: Order): Order['status'] | null {
     if (order.status === 'ready')     return 'completed';
   }
   return STATUS[order.status as keyof typeof STATUS]?.next ?? null;
-}
-
-// خصم مكونات الوجبات (menu_recipes) من المخزون تلقائياً عند بدء تجهيز الطلب
-async function deductStockForOrder(restaurantId: string, orderId: string, clientName: string, items: OrderItem[]) {
-  const itemIds = [...new Set(items.filter(i => i.item_id).map(i => i.item_id as string))];
-  if (itemIds.length === 0) return;
-
-  const { data: recipes } = await supabase.from('menu_recipes').select('*, inventory_items(unit)').in('menu_item_id', itemIds);
-  if (!recipes || recipes.length === 0) return;
-
-  const movements = items.flatMap(oi => {
-    if (!oi.item_id) return [];
-    return recipes
-      .filter(r => r.menu_item_id === oi.item_id)
-      .map(r => ({
-        inventory_item_id: r.inventory_item_id,
-        restaurant_id: restaurantId,
-        movement_type: 'OUT_ORDER',
-        quantity_changed: convertToInventoryUnit(r.quantity_required, r.unit, r.inventory_items?.unit) * oi.quantity,
-        reference_id: orderId,
-        reference_type: 'order',
-        notes: `خصم تلقائي — طلب ${clientName}`,
-      }));
-  });
-  if (movements.length === 0) return;
-
-  const { error } = await supabase.from('stock_movements').insert(movements);
-  if (error) console.error('تعذّر خصم المخزون تلقائياً للطلب', orderId, error.message);
 }
 
 function orderTypeLabel(order: Order): string {
@@ -924,6 +896,11 @@ export default function DashboardPage() {
   const rejectOrder = async (id: string) => {
     await supabase.from('orders').update({ status: 'rejected' }).eq('id', id);
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'rejected' } : o));
+    fetch('/api/push/notify-customer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+      body: JSON.stringify({ order_id: id, title: '❌ نأسف', body: 'تعذّر قبول طلبك حالياً، تواصل مع المطعم لمزيد من التفاصيل', tag: 'order-rejected' }),
+    }).catch(() => {});
   };
 
   const handleAction = async (order: Order) => {
@@ -938,6 +915,16 @@ export default function DashboardPage() {
     if (order.status === 'pending' && restaurantId) {
       deductStockForOrder(restaurantId, order.id, order.client_name, order.items || [])
         .catch(err => console.error('تعذّر خصم المخزون:', err));
+    }
+
+    // إشعار الزبون بقبول طلبه — كانت هذه الميزة مبنية بالكامل (واجهة + مسار API)
+    // لكن معطّلة فعلياً لعدم استدعائها من أي نقطة (خطأ #17 بتقرير الفحص)
+    if (order.status === 'pending') {
+      fetch('/api/push/notify-customer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+        body: JSON.stringify({ order_id: order.id, title: '✅ تم قبول طلبك', body: 'جاري تحضير طلبك الآن', tag: 'order-accepted' }),
+      }).catch(() => {});
     }
 
     // طلبات داخلي/سفري ليس لها سائق — لا إشعارات سائقين إطلاقاً
@@ -1445,10 +1432,19 @@ export default function DashboardPage() {
                       <X size={15} strokeWidth={2.5} />
                       إلغاء الطلب
                     </button>
-                    <button onClick={() => handleAction(order)}
-                      className={`flex-[2] py-2 text-white font-bold text-sm active:opacity-80 ${isInternalOrder(order) ? 'bg-green-600' : 'bg-orange-500'}`}>
-                      {isInternalOrder(order) ? 'الطلب جاهز ✓' : 'جاهز للتسليم ✓'}
-                    </button>
+                    {/* طلبات التوصيل لا يجوز نقلها لـ"قيد التوصيل" قبل قبول سائق فعلياً —
+                        وإلا يختفي الطلب من كل الشاشات بلا سائق يقدر يستلمه (خطأ #11 بتقرير الفحص) */}
+                    {!isInternalOrder(order) && !order.driver_id ? (
+                      <button disabled
+                        className="flex-[2] py-2 text-white font-bold text-sm bg-gray-300 dark:bg-slate-600 cursor-not-allowed">
+                        بانتظار قبول سائق
+                      </button>
+                    ) : (
+                      <button onClick={() => handleAction(order)}
+                        className={`flex-[2] py-2 text-white font-bold text-sm active:opacity-80 ${isInternalOrder(order) ? 'bg-green-600' : 'bg-orange-500'}`}>
+                        {isInternalOrder(order) ? 'الطلب جاهز ✓' : 'جاهز للتسليم ✓'}
+                      </button>
+                    )}
                   </div>
                 </div>
               );

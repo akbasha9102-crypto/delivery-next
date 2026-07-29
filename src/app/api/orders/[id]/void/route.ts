@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
 import { logStaffAction } from '@/lib/utils/staff-actions-log';
 import { notifyOwnerPush } from '@/lib/api/notify-owner-push';
+import { returnStockForOrder } from '@/lib/utils/return-stock';
 
 // حد أعلى تراكمي للإلغاءات بنفس الوردية (مضروب في max_void_amount) — يمنع
 // تفادي السقف الفردي بتقسيم الإلغاءات لعدة طلبات صغيرة (ثغرة H2 بالمراجعة
@@ -121,6 +122,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     .single();
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+  await returnStockForOrder(staff.restaurant_id, orderId, 'إلغاء طلب');
 
   await logStaffAction({
     restaurant_id: staff.restaurant_id,

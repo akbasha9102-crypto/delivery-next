@@ -374,7 +374,10 @@ export default function DeliveryPage() {
           if (dist <= 100 && !arrivedSentRef.current) {
             arrivedSentRef.current = true;
             setNearCustomer(true);
-            supabase.from('orders').update({ driver_arrived: true }).eq('id', orderId);
+            supabase.from('orders').update({ driver_arrived: true }).eq('id', orderId)
+              .then(({ error }) => {
+                if (error) { arrivedSentRef.current = false; console.error('[driver-arrived] فشل تحديث الحالة:', error.message); }
+              });
           }
         }
       },
@@ -390,6 +393,11 @@ export default function DeliveryPage() {
     await supabase.from('orders').update({ status: 'ready' }).eq('id', orderId);
     setStarting(false);
     setStarted(true);
+    fetch('/api/push/notify-customer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+      body: JSON.stringify({ order_id: orderId, title: '🛵 طلبك بالطريق', body: 'السائق انطلق إليك الآن', tag: 'order-ready' }),
+    }).catch(() => {});
   };
 
   const completeDelivery = async () => {
@@ -400,6 +408,11 @@ export default function DeliveryPage() {
     }
     setDelivered(true);
     setDelivering(false);
+    fetch('/api/push/notify-customer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+      body: JSON.stringify({ order_id: orderId, title: '✅ تم التوصيل', body: 'بالهنا والشفا! نتمنى لك وجبة شهية', tag: 'order-completed' }),
+    }).catch(() => {});
   };
 
   const openGoogleMaps = () => {
