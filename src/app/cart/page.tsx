@@ -727,7 +727,14 @@ const proceedFromReview = () => {
 
     const restaurantId = localStorage.getItem('currentRestaurantId') || null;
 
-    const { data: order, error } = await supabase.from('orders').insert([{
+    // معرّف الطلب يُولَّد بجهة العميل مسبقاً (بدل .select().single() بعد
+    // الإدراج) — بعد تضييق RLS على orders (كانت USING(true) تسمح بتفريغ كل
+    // طلبات كل الزبائن، ثغرة حرجة #2 بالمراجعة الأمنية)، لم يعد anon يملك أي
+    // صلاحية SELECT مباشرة على الجدول، فقراءة الصف المُدرَج فوراً بعد الإدراج
+    // لم تعد ممكنة — لا حاجة لها أصلاً ما دام المعرّف معروفاً سلفاً.
+    const newOrderId = crypto.randomUUID();
+    const { error } = await supabase.from('orders').insert([{
+      id: newOrderId,
       client_name: nickname.trim() ? `${name.trim()} (${nickname.trim()})` : name.trim(), client_phone: phone.trim() || null,
       delivery_address: orderType === 'delivery' ? (addressDetails.trim() || null) : null,
       client_note: note || null,
@@ -739,9 +746,9 @@ const proceedFromReview = () => {
       ...(session?.user?.id ? { user_id: session.user.id } : {}),
       ...(clientLat !== null && clientLng !== null && orderType === 'delivery' ? { client_lat: clientLat, client_lng: clientLng } : {}),
       ...(restaurantId ? { restaurant_id: restaurantId } : {}),
-    }]).select().single();
+    }]);
 
-    if (error || !order) { alert('حدث خطأ، حاول مجدداً'); setLoading(false); return; }
+    if (error) { alert('حدث خطأ، حاول مجدداً'); setLoading(false); return; }
 
     const { error: itemsError } = await supabase.from('order_items').insert(
       items.map(i => {
@@ -751,7 +758,7 @@ const proceedFromReview = () => {
         const extraCost = selectedArr.reduce((s, e) => s + e.price, 0);
         const extraNames = selectedArr.map(e => e.name).join('، ');
         return {
-          order_id: order.id,
+          order_id: newOrderId,
           item_id: i.id,
           item_name: extraNames ? `${i.name} (${extraNames})` : i.name,
           quantity: i.quantity,
@@ -761,13 +768,13 @@ const proceedFromReview = () => {
     );
 
     if (itemsError) {
-      await supabase.from('orders').delete().eq('id', order.id);
+      await supabase.from('orders').delete().eq('id', newOrderId);
       alert('حدث خطأ في حفظ الطلب، حاول مجدداً');
       setLoading(false);
       return;
     }
 
-    localStorage.setItem('lastOrderId', order.id);
+    localStorage.setItem('lastOrderId', newOrderId);
     clearCart();
     setLoading(false);
     setShowConfirmModal(false);

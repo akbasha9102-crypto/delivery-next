@@ -242,7 +242,8 @@ export default function TrackPage() {
   const orderUpdateSeqRef = useRef(0);
   const fetchAndApplyOrder = useCallback(async (orderId: string) => {
     const seq = ++orderUpdateSeqRef.current;
-    const { data } = await supabase.from('orders').select('*').eq('id', orderId).single();
+    const res = await fetch(`/api/track?id=${encodeURIComponent(orderId)}`);
+    const { order: data } = await res.json();
     if (data && seq === orderUpdateSeqRef.current) setOrder(data as Order);
   }, []);
   const [notFound, setNotFound] = useState(false);
@@ -354,30 +355,13 @@ export default function TrackPage() {
   const fetchOrder = useCallback(async (phone: string) => {
     if (!phone) { setLoading(false); setNotFound(true); return; }
     setLoading(true);
-    const { data: active } = await supabase
-      .from('orders').select('*')
-      .eq('client_phone', phone)
-      .neq('status', 'completed')
-      .order('created_at', { ascending: false })
-      .limit(1).maybeSingle();
-    if (active) {
-      setOrder(active); setNotFound(false);
-      setAlreadySentFeedback(false);
+    const res = await fetch(`/api/track?phone=${encodeURIComponent(phone)}`);
+    const { order: found } = await res.json();
+    if (found) {
+      setOrder(found); setNotFound(false);
+      setAlreadySentFeedback(found.status === 'completed' ? !!localStorage.getItem(`fb_sent_${found.id}`) : false);
     } else {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data: completed } = await supabase
-        .from('orders').select('*')
-        .eq('client_phone', phone)
-        .eq('status', 'completed')
-        .gte('created_at', since)
-        .order('created_at', { ascending: false })
-        .limit(1).maybeSingle();
-      if (completed) {
-        setOrder(completed); setNotFound(false);
-        setAlreadySentFeedback(!!localStorage.getItem(`fb_sent_${completed.id}`));
-      } else {
-        setOrder(null); setNotFound(true);
-      }
+      setOrder(null); setNotFound(true);
     }
     setLoading(false);
   }, []);
@@ -403,14 +387,12 @@ export default function TrackPage() {
     run();
   }, [fetchOrder]);
 
-  useEffect(() => {
-    if (!order) return;
-    const channel = supabase.channel(`track-order-${order.id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${order.id}` },
-        () => fetchAndApplyOrder(order.id))
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [order?.id, fetchAndApplyOrder]);
+  // لا بث لحظي (Realtime) هنا بعد الآن — كان يعتمد على سياسة RLS العامة
+  // المزالة (USING(true)، ثغرة حرجة #2 بالمراجعة الأمنية)؛ Supabase Realtime
+  // يُخضِع postgres_changes لنفس RLS، فبثّ كل تغييرات orders لأي مشترك anon
+  // كان بحد ذاته جزءاً من التسريب. الاستطلاع كل 3 ثوانٍ أدناه (كان أصلاً
+  // موجوداً كخط احتياطي) هو الآن المصدر الوحيد للتحديث — فرق زمني أقصاه ~3
+  // ثوانٍ، غير محسوس عملياً على شاشة تتبع طلب.
 
   // keep a stable ref to the current order id so polling closures don't go stale
   orderIdRef.current = order?.id ?? null;

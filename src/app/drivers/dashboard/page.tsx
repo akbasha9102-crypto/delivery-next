@@ -174,9 +174,10 @@ export default function DriverDashboard() {
   }, [session, fetchIncoming, fetchActive, fetchCompleted]);
 
   async function saveSubscription(driverId: string, sub: PushSubscription) {
+    const { data: { session: authSession } } = await supabase.auth.getSession();
     await fetch('/api/push/subscribe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token ?? ''}` },
       body: JSON.stringify({ driver_id: driverId, subscription: sub.toJSON() }),
     });
   }

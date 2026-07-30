@@ -155,20 +155,14 @@ export default function OrdersPage() {
 
   const fetchOrders = async (ph: string) => {
     setLoading(true);
-    const { data: rows } = await supabase
-      .from('orders').select('*')
-      .eq('client_phone', ph)
-      .order('created_at', { ascending: false })
-      .limit(30);
+    const res = await fetch(`/api/orders/by-phone?phone=${encodeURIComponent(ph)}`);
+    const { orders: rows, items } = await res.json() as { orders: Order[]; items: OrderItem[] };
 
     if (rows && rows.length > 0) {
       setOrders(rows);
-      const ids = rows.map((o: Order) => o.id);
-      const { data: items } = await supabase
-        .from('order_items').select('*').in('order_id', ids);
       if (items) {
         const grouped: Record<string, OrderItem[]> = {};
-        for (const item of items as OrderItem[]) {
+        for (const item of items) {
           if (!grouped[item.order_id]) grouped[item.order_id] = [];
           grouped[item.order_id].push(item);
         }
@@ -332,7 +326,12 @@ export default function OrdersPage() {
     const lat   = latRef.current;
     const lng   = lngRef.current;
 
-    const { data: order, error } = await supabase.from('orders').insert([{
+    // معرّف الطلب يُولَّد بجهة العميل مسبقاً بدل .select().single() بعد
+    // الإدراج — anon لم يعد يملك صلاحية SELECT مباشرة على orders بعد تضييق
+    // RLS (ثغرة حرجة #2 بالمراجعة الأمنية)، والمعرّف معروف سلفاً فلا داعي لقراءته.
+    const newOrderId = crypto.randomUUID();
+    const { error } = await supabase.from('orders').insert([{
+      id: newOrderId,
       restaurant_id:     reorderTarget.restaurant_id,
       client_name:      clientName,
       client_phone:     ph,
@@ -342,10 +341,10 @@ export default function OrdersPage() {
       order_type:       orderType,
       delivery_fee:     fee,
       ...(!isInternal && lat && lng ? { client_lat: lat, client_lng: lng } : {}),
-    }]).select().single();
+    }]);
 
-    if (error || !order) {
-      const msg = error?.message?.toLowerCase() || '';
+    if (error) {
+      const msg = error.message?.toLowerCase() || '';
       const isPolicyRejection = msg.includes('policy') || msg.includes('rls') || msg.includes('permission');
       alert(isPolicyRejection
         ? 'تعذر إرسال الطلب، قد يكون المطعم موقوفاً مؤقتاً عن استقبال الطلبات'
@@ -356,7 +355,7 @@ export default function OrdersPage() {
 
     const { error: itemsError } = await supabase.from('order_items').insert(
       reorderItems.map(i => ({
-        order_id:  order.id,
+        order_id:  newOrderId,
         item_id:   i.item_id ?? null,
         item_name: i.item_name,
         quantity:  i.quantity,
@@ -365,13 +364,13 @@ export default function OrdersPage() {
     );
 
     if (itemsError) {
-      await supabase.from('orders').delete().eq('id', order.id);
+      await supabase.from('orders').delete().eq('id', newOrderId);
       alert('حدث خطأ في حفظ الطلب، حاول مجدداً');
       setSubmitting(false);
       return;
     }
 
-    localStorage.setItem('lastOrderId', order.id);
+    localStorage.setItem('lastOrderId', newOrderId);
     setSubmitting(false);
     setReorderTarget(null);
     router.push('/track');

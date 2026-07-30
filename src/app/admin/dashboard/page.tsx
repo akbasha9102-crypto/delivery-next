@@ -24,6 +24,14 @@ const STATUS = {
   rejected:  { label: 'مرفوضة',      next: null,                 nextLabel: '',              color: '#ef4444', dot: 'bg-red-400',     btnColor: '#ef4444' },
 } as const;
 
+// رؤوس تحقق مسارات /api/push/* — جلسة Supabase الحقيقية للمستخدم الحالي
+// بدل السر الثابت x-api-secret السابق (كان مسرَّباً عبر NEXT_PUBLIC_API_SECRET
+// لكل زائر، ثغرة حرجة #1 بالمراجعة الأمنية).
+async function pushAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+}
+
 // طلبات "استلام الطلب" ليس لها سائق إطلاقاً — تمشي بنفس مسار التوصيل
 // لكن بدون مرحلة "انتظار السائق": pending → preparing → ready(جاهز) → completed
 function isInternalOrder(order: Pick<Order, 'order_type'>): boolean {
@@ -910,7 +918,7 @@ export default function DashboardPage() {
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'rejected' } : o));
       fetch('/api/push/notify-customer', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+        headers: { 'Content-Type': 'application/json', ...(await pushAuthHeaders()) },
         body: JSON.stringify({ order_id: id, title: '❌ نأسف', body: 'تعذّر قبول طلبك حالياً، تواصل مع المطعم لمزيد من التفاصيل', tag: 'order-rejected' }),
       }).catch(() => {});
     } finally {
@@ -940,7 +948,7 @@ export default function DashboardPage() {
     if (order.status === 'pending') {
       fetch('/api/push/notify-customer', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+        headers: { 'Content-Type': 'application/json', ...(await pushAuthHeaders()) },
         body: JSON.stringify({ order_id: order.id, title: '✅ تم قبول طلبك', body: 'جاري تحضير طلبك الآن', tag: 'order-accepted' }),
       }).catch(() => {});
     }
@@ -951,7 +959,7 @@ export default function DashboardPage() {
     if (order.status === 'pending') {
       fetch('/api/push/broadcast', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+        headers: { 'Content-Type': 'application/json', ...(await pushAuthHeaders()) },
         body: JSON.stringify({
           restaurant_id: restaurantId,
           title: '🔔 طلب جديد',
@@ -965,7 +973,7 @@ export default function DashboardPage() {
     if (order.status === 'preparing' && order.driver_id) {
       fetch('/api/push/notify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+        headers: { 'Content-Type': 'application/json', ...(await pushAuthHeaders()) },
         body: JSON.stringify({
           driver_id: order.driver_id,
           title: '🍔 الطلب جاهز!',
@@ -1322,12 +1330,12 @@ export default function DashboardPage() {
                     ) : (
                       <>
                         <button
-                          onClick={e => {
+                          onClick={async e => {
                             e.stopPropagation();
                             if (isInternalOrder(order)) return;
                             fetch('/api/push/broadcast', {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+                              headers: { 'Content-Type': 'application/json', ...(await pushAuthHeaders()) },
                               body: JSON.stringify({
                                 restaurant_id: restaurantId,
                                 title: '🔔 طلب جديد بانتظارك',
@@ -1499,12 +1507,12 @@ export default function DashboardPage() {
                     {order.driver_id ? (
                       <>
                         <button
-                          onClick={e => {
+                          onClick={async e => {
                             e.stopPropagation();
                             if (isInternalOrder(order)) return;
                             fetch('/api/push/notify', {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+                              headers: { 'Content-Type': 'application/json', ...(await pushAuthHeaders()) },
                               body: JSON.stringify({
                                 driver_id: order.driver_id,
                                 title: '📦 تعال استلم الطلب',
@@ -1529,12 +1537,12 @@ export default function DashboardPage() {
                     ) : (
                       <>
                         <button
-                          onClick={e => {
+                          onClick={async e => {
                             e.stopPropagation();
                             if (isInternalOrder(order)) return;
                             fetch('/api/push/broadcast', {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.NEXT_PUBLIC_API_SECRET! },
+                              headers: { 'Content-Type': 'application/json', ...(await pushAuthHeaders()) },
                               body: JSON.stringify({
                                 restaurant_id: restaurantId,
                                 title: '🔔 طلب جديد بانتظارك',

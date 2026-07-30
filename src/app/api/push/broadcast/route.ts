@@ -1,15 +1,23 @@
 import webpush from 'web-push';
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { resolveStaffIdentity } from '@/lib/auth/staff-auth';
 
-export async function POST(request: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-  const secret = request.headers.get('x-api-secret');
-  if (!secret || secret !== process.env.API_SECRET) {
-    return Response.json({ error: 'unauthorized' }, { status: 401 });
+// POST /api/push/broadcast — يرسل إشعار لكل سائقي مطعم معيّن (طلب جديد).
+// كان محمياً سابقاً بسر ثابت (x-api-secret) يُرسَل عبر NEXT_PUBLIC_API_SECRET —
+// أي متغيّر NEXT_PUBLIC_ يُضمَّن حرفياً بحزمة JS العامة، فكان أي زائر يقدر
+// يستخرجه ويبث إشعارات لسائقي أي مطعم (ثغرة حرجة #1 بالمراجعة الأمنية).
+// الآن الهوية تُستخرَج من جلسة الموظف/المالك الحقيقية، ومقيّدة بمطعمه فقط.
+export async function POST(request: NextRequest) {
+  const supabase = supabaseAdmin;
+
+  const { title, body, url, tag, restaurant_id } = await request.json();
+  if (!restaurant_id) {
+    return Response.json({ error: 'restaurant_id مطلوب' }, { status: 400 });
   }
+
+  const identityRes = await resolveStaffIdentity(request, restaurant_id);
+  if (!identityRes.ok) return Response.json({ error: identityRes.error }, { status: identityRes.status });
 
   // بدون هذا التحقق، غياب أي متغير من الثلاثة يُسقط webpush.setVapidDetails
   // بخطأ throw فوري ينهار به المسار بالكامل بخطأ 500 غير معالج (خطأ #19 بتقرير الفحص).
@@ -18,12 +26,6 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, sent: 0, warning: 'VAPID env vars missing' });
   }
   webpush.setVapidDetails(VAPID_SUBJECT, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-
-  const { title, body, url, tag, restaurant_id } = await request.json();
-
-  if (!restaurant_id) {
-    return Response.json({ error: 'restaurant_id مطلوب' }, { status: 400 });
-  }
 
   const { data: drivers } = await supabase
     .from('drivers')
