@@ -956,7 +956,7 @@ export default function DashboardPage() {
           restaurant_id: restaurantId,
           title: '🔔 طلب جديد',
           body: `طلب من ${order.client_name} — ${order.total_amount.toLocaleString()} د.ع`,
-          url: '/driver/dashboard',
+          url: '/drivers/dashboard',
           tag: `order-${order.id}`,
         }),
       }).catch(() => {});
@@ -1332,7 +1332,7 @@ export default function DashboardPage() {
                                 restaurant_id: restaurantId,
                                 title: '🔔 طلب جديد بانتظارك',
                                 body: `طلب من ${order.client_name} — ${order.total_amount.toLocaleString()} د.ع`,
-                                url: '/driver/dashboard',
+                                url: '/drivers/dashboard',
                                 tag: `remind-${order.id}`,
                               }),
                             }).catch(() => {});
@@ -1539,7 +1539,7 @@ export default function DashboardPage() {
                                 restaurant_id: restaurantId,
                                 title: '🔔 طلب جديد بانتظارك',
                                 body: `طلب من ${order.client_name} — ${order.total_amount.toLocaleString()} د.ع`,
-                                url: '/driver/dashboard',
+                                url: '/drivers/dashboard',
                                 tag: `remind-${order.id}`,
                               }),
                             }).catch(() => {});

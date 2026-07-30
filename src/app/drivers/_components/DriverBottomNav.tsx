@@ -4,14 +4,14 @@ import { usePathname } from 'next/navigation';
 import { Home, History } from 'lucide-react';
 
 const tabs = [
-  { href: '/driver/dashboard', icon: Home,    label: 'الرئيسية' },
-  { href: '/driver/archive',   icon: History, label: 'السجل' },
+  { href: '/drivers/dashboard', icon: Home,    label: 'الرئيسية' },
+  { href: '/drivers/archive',   icon: History, label: 'السجل' },
 ];
 
 export default function DriverBottomNav() {
   const path = usePathname();
 
-  if (path === '/driver') return null;
+  if (path === '/drivers') return null;
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-slate-900/95 backdrop-blur border-t border-white/5 flex pb-[env(safe-area-inset-bottom)]">

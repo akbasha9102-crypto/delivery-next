@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       try {
         await webpush.sendNotification(
           driver.push_subscription,
-          JSON.stringify({ title, body, url: url || '/driver/dashboard', tag: tag || 'new-order' })
+          JSON.stringify({ title, body, url: url || '/drivers/dashboard', tag: tag || 'new-order' })
         );
       } catch (err: any) {
         if (err.statusCode === 410 || err.statusCode === 404) {

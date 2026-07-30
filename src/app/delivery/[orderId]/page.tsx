@@ -733,7 +733,7 @@ export default function DeliveryPage() {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center relative px-6">
         <button
-          onClick={() => router.push('/driver/dashboard')}
+          onClick={() => router.push('/drivers/dashboard')}
           className="absolute top-5 right-5 flex items-center gap-2 bg-slate-800 text-slate-300 font-bold text-sm px-4 py-2.5 rounded-2xl border border-slate-700 active:scale-95 transition-all">
           <Home size={16} /> الرئيسية
         </button>
@@ -744,7 +744,7 @@ export default function DeliveryPage() {
           <h2 className="text-3xl font-black text-white mb-2">تم التوصيل!</h2>
           <p className="text-slate-400 text-lg">أحسنت، تم إغلاق الطلب بنجاح</p>
           <button
-            onClick={() => router.push('/driver/dashboard')}
+            onClick={() => router.push('/drivers/dashboard')}
             className="mt-10 w-full py-4 bg-blue-600 text-white font-black text-lg rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2">
             <Home size={20} /> العودة للرئيسية
           </button>

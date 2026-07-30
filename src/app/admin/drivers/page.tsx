@@ -105,7 +105,7 @@ export default function DriversPage() {
   };
 
   const copyLink = (d: Driver) => {
-    const link = `${window.location.origin}/driver`;
+    const link = `${window.location.origin}/drivers`;
     const pw = knownPasswords[d.id];
     const text = pw
       ? `🏍️ بوابة السائق\n${link}\n\nرقم الهاتف: ${d.phone}\nكلمة المرور: ${pw}`

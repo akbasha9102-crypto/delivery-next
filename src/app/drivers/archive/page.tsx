@@ -62,7 +62,7 @@ export default function DriverArchive() {
     let cancelled = false;
     (async () => {
       const { data: { session: authSession } } = await supabase.auth.getSession();
-      if (!authSession) { router.replace('/driver'); return; }
+      if (!authSession) { router.replace('/drivers'); return; }
 
       const { data: driver } = await supabase
         .from('drivers')
@@ -71,7 +71,7 @@ export default function DriverArchive() {
         .maybeSingle();
 
       if (cancelled) return;
-      if (!driver) { await supabase.auth.signOut(); router.replace('/driver'); return; }
+      if (!driver) { await supabase.auth.signOut(); router.replace('/drivers'); return; }
 
       setSession({ id: driver.id, name: driver.name, phone: driver.phone });
     })();
@@ -147,7 +147,7 @@ export default function DriverArchive() {
       {/* هيدر */}
       <DriverHeader
         right={
-          <button onClick={() => router.push('/driver/dashboard')}
+          <button onClick={() => router.push('/drivers/dashboard')}
             className="p-2.5 rounded-xl bg-slate-800 active:scale-90 transition-all">
             <ChevronRight size={20} className="text-slate-300" />
           </button>

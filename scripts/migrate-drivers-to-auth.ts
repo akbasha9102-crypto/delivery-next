@@ -89,7 +89,7 @@ async function main() {
     console.log(`✅ ${d.name} (${d.id}) → ${driverEmail(d.id)}`);
   }
 
-  console.log('\nانتهى. تحقق من تسجيل دخول سائق واحد فعلياً عبر /driver قبل حذف عمود password.');
+  console.log('\nانتهى. تحقق من تسجيل دخول سائق واحد فعلياً عبر /drivers قبل حذف عمود password.');
 }
 
 main()

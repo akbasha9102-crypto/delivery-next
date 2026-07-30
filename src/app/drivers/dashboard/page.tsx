@@ -79,7 +79,7 @@ export default function DriverDashboard() {
     let cancelled = false;
     (async () => {
       const { data: { session: authSession } } = await supabase.auth.getSession();
-      if (!authSession) { router.replace('/driver'); return; }
+      if (!authSession) { router.replace('/drivers'); return; }
 
       // بحث السائق المرتبط بهذه الجلسة عبر user_id — RLS (is_own_driver_row)
       // يسمح للسائق برؤية صفّه هو فقط، وليس أي سائق آخر.
@@ -90,7 +90,7 @@ export default function DriverDashboard() {
         .maybeSingle();
 
       if (cancelled) return;
-      if (!driver) { await supabase.auth.signOut(); router.replace('/driver'); return; }
+      if (!driver) { await supabase.auth.signOut(); router.replace('/drivers'); return; }
 
       const s: Session = { id: driver.id, name: driver.name, phone: driver.phone, restaurantId: driver.restaurant_id };
       setSession(s);
@@ -253,7 +253,7 @@ export default function DriverDashboard() {
   };
 
   const logout = () => {
-    supabase.auth.signOut().finally(() => router.replace('/driver'));
+    supabase.auth.signOut().finally(() => router.replace('/drivers'));
   };
 
   if (!session) return null;

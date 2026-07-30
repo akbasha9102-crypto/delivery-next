@@ -16,7 +16,7 @@ export default function DriverLoginPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.replace('/driver/dashboard');
+      if (session) router.replace('/drivers/dashboard');
     });
   }, [router]);
 
@@ -47,7 +47,7 @@ export default function DriverLoginPage() {
     });
     setLoading(false);
     if (signInError) { setError('رقم الهاتف أو كلمة المرور غير صحيحة'); return; }
-    router.replace('/driver/dashboard');
+    router.replace('/drivers/dashboard');
   };
 
   return (
