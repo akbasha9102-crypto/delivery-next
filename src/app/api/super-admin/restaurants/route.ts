@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { RESERVED_RESTAURANT_SLUGS } from '@/lib/auth/staff-auth';
+import { RESERVED_RESTAURANT_SLUGS, MIN_STAFF_PASSWORD_LENGTH } from '@/lib/auth/staff-auth';
+import { getClientIp } from '@/lib/utils/rate-limit';
+import { logSuperAdminAction } from '@/lib/utils/super-admin-audit-log';
 
 async function isAuthed() {
   const jar = await cookies();
@@ -317,8 +319,12 @@ export async function PATCH(req: NextRequest) {
     authUpdates.email = slugToEmail(newSlug);
   }
 
-  // تحديث كلمة المرور
+  // تحديث كلمة المرور — كانت هذه أول نقطة بلا أي حد أدنى لطول كلمة المرور
+  // بكامل الكودبيس (ثغرة حقيقية وليست مجرد محاذاة، راجع تقرير الفحص الأمني).
   if (newPassword) {
+    if (String(newPassword).trim().length < MIN_STAFF_PASSWORD_LENGTH) {
+      return NextResponse.json({ error: `كلمة المرور يجب أن تكون ${MIN_STAFF_PASSWORD_LENGTH} أحرف/أرقام على الأقل` }, { status: 400 });
+    }
     authUpdates.password = newPassword.trim();
   }
 
@@ -326,6 +332,18 @@ export async function PATCH(req: NextRequest) {
   if (Object.keys(authUpdates).length > 0) {
     const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(ownerId, authUpdates);
     if (authError) return NextResponse.json({ error: authError.message }, { status: 500 });
+
+    // سجل تدقيق: تغيير سوبر أدمن لبيانات دخول مالك مطعم (إيميل و/أو كلمة
+    // مرور) — لا نُدرج قيمة كلمة المرور نفسها إطلاقاً هنا، فقط أسماء
+    // الحقول التي تغيّرت (راجع تعليق super-admin-audit-log.ts).
+    await logSuperAdminAction({
+      action: 'restaurant_owner_credentials_changed',
+      targetUserId: ownerId,
+      targetRestaurantId: restaurantDbId,
+      details: { fields_changed: Object.keys(authUpdates), new_email: authUpdates.email ?? null },
+      ipAddress: getClientIp(req),
+      userAgent: req.headers.get('user-agent') ?? undefined,
+    });
   }
 
   // بعد نجاح Auth نحدّث slug في الداتابيس

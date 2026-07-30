@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { verifyOwnerRequest } from '@/lib/auth/staff-auth';
+import { verifyOwnerRequest, MIN_STAFF_PASSWORD_LENGTH } from '@/lib/auth/staff-auth';
 
 // PATCH /api/driver/:id — { password } إعادة تعيين كلمة مرور السائق، مالك فقط
 // (يحدّث حساب Supabase Auth الحقيقي — لا عمود password نصياً بعد الآن).
@@ -26,8 +26,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   const auth = await verifyOwnerRequest(req, driver.restaurant_id);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  if (!body.password || body.password.trim().length < 4) {
-    return NextResponse.json({ error: 'كلمة المرور يجب أن تكون 4 أحرف/أرقام على الأقل' }, { status: 400 });
+  if (!body.password || body.password.trim().length < MIN_STAFF_PASSWORD_LENGTH) {
+    return NextResponse.json({ error: `كلمة المرور يجب أن تكون ${MIN_STAFF_PASSWORD_LENGTH} أحرف/أرقام على الأقل` }, { status: 400 });
   }
   if (!driver.user_id) {
     return NextResponse.json({ error: 'هذا السائق بلا حساب دخول (سجل قديم لم يُنقَل) — راجع npm run migrate-drivers-to-auth' }, { status: 409 });

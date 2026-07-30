@@ -15,6 +15,10 @@ import { verifyRequestClaims } from './verify-session';
 
 export type StaffRole = 'owner' | 'manager' | 'cashier' | 'driver';
 
+// نفس الحد الأدنى المفروض على تسجيل مالك مطعم جديد (src/app/api/signup-requests/route.ts)
+// — نوحّد الموظف/السائق/سوبر أدمن عليه بدل الحد الضعيف (4) القديم.
+export const MIN_STAFF_PASSWORD_LENGTH = 8;
+
 export type StaffContext = {
   id: string;
   restaurant_id: string;

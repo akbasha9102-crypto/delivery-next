@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { verifyOwnerRequest, normalizeStaffUsername, isValidStaffUsername, staffCodeToEmail, isProfessionalPackage, type StaffRole } from '@/lib/auth/staff-auth';
+import { verifyOwnerRequest, normalizeStaffUsername, isValidStaffUsername, staffCodeToEmail, isProfessionalPackage, MIN_STAFF_PASSWORD_LENGTH, type StaffRole } from '@/lib/auth/staff-auth';
 
 const STAFF_SELECT =
   'id, restaurant_id, display_name, role, is_active, user_id, code, max_discount_pct, max_void_amount, created_at, updated_at';
@@ -85,8 +85,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 
   if (body.password !== undefined) {
-    if (body.password.trim().length < 4) {
-      return NextResponse.json({ error: 'كلمة المرور يجب أن تكون 4 أحرف/أرقام على الأقل' }, { status: 400 });
+    if (body.password.trim().length < MIN_STAFF_PASSWORD_LENGTH) {
+      return NextResponse.json({ error: `كلمة المرور يجب أن تكون ${MIN_STAFF_PASSWORD_LENGTH} أحرف/أرقام على الأقل` }, { status: 400 });
     }
     const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(existing.user_id, {
       password: body.password.trim(),

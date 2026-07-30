@@ -97,7 +97,7 @@ export default function StaffManagementPage() {
       return;
     }
 
-    if (form.password.trim().length < 4) { setError('كلمة المرور يجب أن تكون 4 أحرف/أرقام على الأقل'); setSaving(false); return; }
+    if (form.password.trim().length < 8) { setError('كلمة المرور يجب أن تكون 8 أحرف/أرقام على الأقل'); setSaving(false); return; }
     const res = await createStaff({
       restaurant_id: restaurantId,
       display_name: form.display_name.trim(),
@@ -123,7 +123,7 @@ export default function StaffManagementPage() {
   };
 
   const submitResetPassword = async () => {
-    if (!resetTarget || resetPassword.trim().length < 4 || resettingPw) return;
+    if (!resetTarget || resetPassword.trim().length < 8 || resettingPw) return;
     setResettingPw(true);
     const res = await updateStaff(resetTarget.id, { password: resetPassword.trim() }, await getAccessToken());
     setResettingPw(false);
@@ -227,7 +227,7 @@ export default function StaffManagementPage() {
               {!editTarget && (
                 <>
                   <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">كلمة المرور (تحددها أنت)</p>
-                  <input value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="4 أحرف/أرقام على الأقل" dir="ltr" className={input} />
+                  <input value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="8 أحرف/أرقام على الأقل" dir="ltr" className={input} />
                 </>
               )}
 
@@ -290,8 +290,8 @@ export default function StaffManagementPage() {
               <p className="font-bold text-gray-900 dark:text-slate-100">إعادة تعيين كلمة المرور — {resetTarget.display_name}</p>
               <div className="w-9" />
             </div>
-            <input value={resetPassword} onChange={e => setResetPassword(e.target.value)} placeholder="كلمة مرور جديدة (4 أحرف/أرقام على الأقل)" dir="ltr" className={input} />
-            <button onClick={submitResetPassword} disabled={resetPassword.trim().length < 4 || resettingPw} className="w-full bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all">
+            <input value={resetPassword} onChange={e => setResetPassword(e.target.value)} placeholder="كلمة مرور جديدة (8 أحرف/أرقام على الأقل)" dir="ltr" className={input} />
+            <button onClick={submitResetPassword} disabled={resetPassword.trim().length < 8 || resettingPw} className="w-full bg-gradient-to-b from-[#22A066] to-[#186341] dark:bg-none dark:bg-[#10B981] disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl active:scale-95 transition-all">
               {resettingPw ? 'جاري الحفظ...' : 'تأكيد'}
             </button>
           </div>

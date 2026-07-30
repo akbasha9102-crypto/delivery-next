@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { verifyOwnerRequest } from '@/lib/auth/staff-auth';
+import { verifyOwnerRequest, MIN_STAFF_PASSWORD_LENGTH } from '@/lib/auth/staff-auth';
 
 // POST /api/driver — إضافة سائق جديد، مالك فقط.
 // ينشئ حساب Supabase Auth حقيقي (بريد صناعي driver-<id>@driver.dasha.app —
@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
   if (!name?.trim() || !phone?.trim()) {
     return NextResponse.json({ error: 'الاسم ورقم الهاتف مطلوبان' }, { status: 400 });
   }
-  if (!password || password.trim().length < 4) {
-    return NextResponse.json({ error: 'كلمة المرور يجب أن تكون 4 أحرف/أرقام على الأقل' }, { status: 400 });
+  if (!password || password.trim().length < MIN_STAFF_PASSWORD_LENGTH) {
+    return NextResponse.json({ error: `كلمة المرور يجب أن تكون ${MIN_STAFF_PASSWORD_LENGTH} أحرف/أرقام على الأقل` }, { status: 400 });
   }
 
   const { data: driver, error: driverError } = await supabaseAdmin

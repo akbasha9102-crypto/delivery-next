@@ -1,8 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
+import { safeCompare } from '@/lib/utils/safe-compare';
 
 export async function GET(request: Request) {
+  // حارس ضد بايباس صامت: لو CRON_SECRET غير مضبوط بمتغيرات البيئة، القيمة
+  // المتوقَّعة تصبح حرفياً "Bearer undefined" — أي طلب برأس
+  // Authorization: Bearer undefined كان يتجاوز التحقق بالكامل. نرفض بوضوح
+  // (500 = خطأ إعداد سيرفر) بدل مقارنة قيمة لا معنى لها.
+  if (!process.env.CRON_SECRET) {
+    return Response.json({ error: 'server misconfigured' }, { status: 500 });
+  }
+
   const auth = request.headers.get('authorization');
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!auth || !safeCompare(auth, `Bearer ${process.env.CRON_SECRET}`)) {
     return Response.json({ error: 'unauthorized' }, { status: 401 });
   }
 

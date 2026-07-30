@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { normalizeStaffUsername, isValidStaffUsername, staffCodeToEmail, verifyOwnerRequest, isProfessionalPackage, type StaffRole } from '@/lib/auth/staff-auth';
+import { normalizeStaffUsername, isValidStaffUsername, staffCodeToEmail, verifyOwnerRequest, isProfessionalPackage, MIN_STAFF_PASSWORD_LENGTH, type StaffRole } from '@/lib/auth/staff-auth';
 
 const STAFF_SELECT =
   'id, restaurant_id, display_name, role, is_active, user_id, code, max_discount_pct, max_void_amount, created_at, updated_at';
@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
   if (!role || !['manager', 'cashier'].includes(role)) {
     return NextResponse.json({ error: 'role غير صالح' }, { status: 400 });
   }
-  if (!password || password.trim().length < 4) {
-    return NextResponse.json({ error: 'كلمة المرور يجب أن تكون 4 أحرف/أرقام على الأقل' }, { status: 400 });
+  if (!password || password.trim().length < MIN_STAFF_PASSWORD_LENGTH) {
+    return NextResponse.json({ error: `كلمة المرور يجب أن تكون ${MIN_STAFF_PASSWORD_LENGTH} أحرف/أرقام على الأقل` }, { status: 400 });
   }
 
   if (!body.code?.trim()) {

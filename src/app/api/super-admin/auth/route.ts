@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createHash, timingSafeEqual } from 'crypto';
-
-// مقارنة نصّين بأمان زمني — نحسب sha256 hash لكل منهما أولاً لضمان أن كلا
-// المُدخلين لهما نفس الطول دائماً (timingSafeEqual يرمي خطأ إن اختلف الطول)،
-// ما يمنع استنتاج المحتوى الصحيح تدريجياً عبر قياس زمن الاستجابة.
-function safeCompare(a: string, b: string): boolean {
-  const hashA = createHash('sha256').update(a).digest();
-  const hashB = createHash('sha256').update(b).digest();
-  return timingSafeEqual(hashA, hashB);
-}
+import { safeCompare } from '@/lib/utils/safe-compare';
+import { getClientIp, isRateLimited, recordAttempt } from '@/lib/utils/rate-limit';
 
 export async function POST(req: Request) {
   const { username, password } = await req.json();
@@ -21,7 +13,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'server misconfigured' }, { status: 500 });
   }
 
+  // حد المحاولات قبل أي مقارنة — يحمي لوحة سوبر أدمن (صلاحيات كاملة على كل
+  // مطاعم النظام) من هجوم قوة غاشمة على كلمة المرور.
+  const ip = getClientIp(req);
+  if (await isRateLimited('super_admin_login', ip, 5, 15 * 60 * 1000)) {
+    return NextResponse.json({ ok: false, error: 'too many attempts' }, { status: 429 });
+  }
+
   if (!safeCompare(String(username ?? ''), validUser) || !safeCompare(String(password ?? ''), validPass)) {
+    // نسجّل المحاولة هنا فقط (بيانات دخول خاطئة فعلاً) — حتى لا تُحتسَب
+    // تسجيلات دخول سوبر أدمن الناجحة نفسها ضد حد المحاولات لاحقاً.
+    await recordAttempt('super_admin_login', ip);
     return NextResponse.json({ ok: false, error: 'invalid credentials' }, { status: 401 });
   }
 
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
     httpOnly: true,
     sameSite: 'strict',
     path: '/',
-    maxAge: 60 * 60 * 24 * 30, // 30 يوم
+    maxAge: 60 * 60 * 24 * 7, // 7 أيام (قُلّصت من 30 — جلسة أقصر تحدّ نافذة تعرّض أي جلسة مسروقة)
   });
   return res;
 }

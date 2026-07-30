@@ -72,6 +72,32 @@ export async function verifySessionClaims(accessToken: string): Promise<SessionC
   const valid = cryptoVerify('sha256', signedData, { key, dsaEncoding: 'ieee-p1363' }, signature);
   if (!valid) return null;
 
+  // فحص aud/iss — مراقبة فقط (log-only)، بلا رفض إطلاقاً حالياً: لم نتحقق
+  // بعد من القيمة الحرفية الفعلية لـ aud/iss بمشروع Supabase هذا (يتطلب
+  // فك توكن حقيقي من devtools المتصفح للتأكد)، فتفعيل الرفض بقيمة متوقَّعة
+  // خاطئة يعني انقطاع تسجيل الدخول لكل مستخدمي التطبيق دفعة واحدة. أي
+  // تفعيل للرفض مستقبلاً يجب أن يسبقه تأكيد يدوي من مطوّر لتلك القيم أولاً.
+  try {
+    const payload = JSON.parse(base64UrlToBuffer(payloadB64).toString('utf8')) as {
+      aud?: string | string[];
+      iss?: string;
+    };
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const expectedIss = supabaseUrl ? `${supabaseUrl.replace(/\/$/, '')}/auth/v1` : null;
+    const audOk = Array.isArray(payload.aud) ? payload.aud.includes('authenticated') : payload.aud === 'authenticated';
+    const issOk = expectedIss ? payload.iss === expectedIss : true;
+    if (!audOk || !issOk) {
+      console.warn('[verify-session] aud/iss mismatch (log-only, session still accepted):', {
+        expectedAud: 'authenticated',
+        actualAud: payload.aud,
+        expectedIss,
+        actualIss: payload.iss,
+      });
+    }
+  } catch (err) {
+    console.warn('[verify-session] تعذّر فحص aud/iss (log-only, لا يؤثر على قبول الجلسة):', err);
+  }
+
   const claims = decodeSessionClaims(accessToken);
   if (!claims) return null;
 
