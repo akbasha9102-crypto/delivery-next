@@ -101,9 +101,6 @@ const HEADING_DEADBAND_DEG  = 5;   // ignore rotation updates smaller than this
 const LOOKAHEAD_METERS      = 30;  // how far ahead on the route to aim the heading
 const MIN_SPEED_MPS         = 1;   // below this, GPS speed is considered "stopped"
 const MIN_MOVEMENT_M        = 3;   // below this movement between fixes, treat as stationary
-const MANUAL_ROTATE_ACTIVATE_DEG      = 6;   // one-finger rotate: cumulative angle needed to enter manual mode
-const MANUAL_ROTATE_TICK_DEADBAND_DEG = 1.5; // one-finger rotate: dead zone per touchmove tick once active
-const MIN_ROTATE_RADIUS_PX            = 48;  // one-finger rotate: minimum distance from frame center before angle deltas count
 
 // Pure heading candidate calculation, mirrors the priority chain previously inline in
 // watchPosition: route bearing → movement bearing → GPS heading → straight-line fallback
@@ -164,7 +161,6 @@ export default function DeliveryPage() {
 
   const mapContainerRef    = useRef<HTMLDivElement>(null);
   const frameRef           = useRef<HTMLDivElement>(null);
-  const rotatorRef         = useRef<HTMLDivElement>(null);
   const mapInstanceRef     = useRef<any>(null);
   const driverMarkerRef    = useRef<any>(null);
   const customerMarkersRef = useRef<any[]>([]);
@@ -174,24 +170,15 @@ export default function DeliveryPage() {
   const routeLineRef       = useRef<any>(null);
   const routeCoordsRef     = useRef<[number, number][]>([]);
   const lastRouteFetchRef  = useRef<number>(0);
-  const leafletLinkRef     = useRef<HTMLLinkElement | null>(null);
+  const mapLibreLinkRef    = useRef<HTMLLinkElement | null>(null);
   const invalidateSizeTimeoutRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   // heading-up navigation state
   const lastPositionRef       = useRef<{ lat: number; lng: number } | null>(null);
   const lastMovementTsRef     = useRef<number>(0);
   const headingAccumulatorRef = useRef<number>(0); // unbounded — can exceed ±360, smooths spins
-  // manual one-finger rotation state
+  // auto/manual navigation mode — manual entered via native MapLibre drag/rotate gestures
   const navModeRef               = useRef<'auto' | 'manual'>('auto');
   const autoHeadingCandidateRef  = useRef<number | null>(null);
-  const manualGestureRef         = useRef<{
-    id: number;
-    centerX: number;
-    centerY: number;
-    prevAngleDeg: number;
-    confirmed: boolean;
-    accumulatedDeg: number;
-    inDeadZone: boolean;
-  } | null>(null);
   const compassIconRef           = useRef<HTMLDivElement>(null);
 
   const [order,          setOrder]          = useState<Order | null>(null);
@@ -208,14 +195,11 @@ export default function DeliveryPage() {
   const [notifStatus,    setNotifStatus]    = useState<'idle' | 'granted' | 'denied'>('idle');
   const [navMode,        setNavMode]        = useState<'auto' | 'manual'>('auto'); // display-only — not read on the hot GPS path
 
-  // Central heading-application helper: writes the map rotation + compass-icon rotation
-  // in one place so the GPS loop and the manual one-finger gesture don't duplicate it.
+  // Central heading-application helper: writes the map bearing + compass-icon rotation
+  // in one place so every auto-mode heading update goes through the same code path.
   const applyHeading = (angle: number) => {
     headingAccumulatorRef.current = angle;
-    if (rotatorRef.current) {
-      rotatorRef.current.style.transform = `translate(-50%,-50%) rotate(${-angle}deg)`;
-      rotatorRef.current.style.setProperty('--heading-counter', `${angle}deg`);
-    }
+    mapInstanceRef.current?.easeTo({ bearing: angle, duration: 300 });
     if (compassIconRef.current) {
       compassIconRef.current.style.transform = `rotate(${-angle}deg)`;
     }
@@ -298,34 +282,33 @@ export default function DeliveryPage() {
 
     if (!driverOrders.length) return;
 
-    import('leaflet').then(mod => {
-      const L = (mod as any).default ?? mod;
+    import('maplibre-gl').then(mod => {
+      const maplibregl = (mod as any).default ?? mod;
       if (!mapInstanceRef.current) return;
       driverOrders.forEach((o, idx) => {
         if (!o.client_lat || !o.client_lng) return;
         const num = idx + 1;
         const isCurrent = o.id === orderId;
         const color = isCurrent ? '#ef4444' : '#f97316';
-        // Outer anchor stays unrotated (Leaflet positions it); the inner layer carries
-        // a counter-rotation (--heading-counter, kept in sync with the map's rotation
-        // on the rotator ancestor) so the pin + number stay visually upright while the
-        // map itself spins under heading-up navigation.
         const iconHtml = `<div style="position:relative;width:38px;height:44px">
-          <div style="position:relative;width:38px;height:44px;transform:rotate(var(--heading-counter,0deg))">
-            <div style="width:38px;height:38px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3)"></div>
-            <span style="position:absolute;top:3px;left:0;width:38px;text-align:center;font-weight:900;font-size:15px;color:white;line-height:1.2">${num}</span>
-          </div>
+          <div style="width:38px;height:38px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3)"></div>
+          <span style="position:absolute;top:3px;left:0;width:38px;text-align:center;font-weight:900;font-size:15px;color:white;line-height:1.2">${num}</span>
         </div>`;
-        const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [38, 44], iconAnchor: [19, 44] });
-        const marker = L.marker([o.client_lat, o.client_lng], { icon })
-          .addTo(mapInstanceRef.current)
-          .bindPopup(
-            `<div dir="rtl" style="font-family:sans-serif;min-width:120px"><b>${o.client_name}</b>${o.delivery_address ? `<br><small style="color:#6b7280">${o.delivery_address}</small>` : ''}</div>`,
-            { offset: [0, -20] }
-          );
-        // Popups don't play well visually on a rotated (CSS-transform) map, and the
-        // bottom control panel already surfaces the current customer's name/address —
-        // so no auto-open here anymore (previously: `if (isCurrent) marker.openPopup()`).
+        const el = document.createElement('div');
+        el.innerHTML = iconHtml;
+        const marker = new maplibregl.Marker({
+          element: el,
+          anchor: 'bottom',
+          rotationAlignment: 'map',
+        })
+          .setLngLat([o.client_lng, o.client_lat])
+          .addTo(mapInstanceRef.current);
+        const popup = new maplibregl.Popup({ offset: 20 }).setHTML(
+          `<div dir="rtl" style="font-family:sans-serif;min-width:120px"><b>${o.client_name}</b>${o.delivery_address ? `<br><small style="color:#6b7280">${o.delivery_address}</small>` : ''}</div>`
+        );
+        marker.setPopup(popup);
+        // Auto-open stays disabled — the bottom control panel already surfaces the
+        // current customer's name/address (previously: `if (isCurrent) marker.openPopup()`).
         customerMarkersRef.current.push(marker);
       });
     });
@@ -348,6 +331,8 @@ export default function DeliveryPage() {
         invalidateSizeTimeoutRef.current = null;
       }
       if (mapInstanceRef.current) {
+        driverMarkerRef.current?.remove();
+        customerMarkersRef.current.forEach(m => m.remove());
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
         driverMarkerRef.current = null;
@@ -358,16 +343,11 @@ export default function DeliveryPage() {
       lastPositionRef.current = null;
       lastMovementTsRef.current = 0;
       headingAccumulatorRef.current = 0;
-      if (rotatorRef.current) {
-        rotatorRef.current.style.transform = 'translate(-50%,-50%) rotate(0deg)';
-        rotatorRef.current.style.setProperty('--heading-counter', '0deg');
-      }
       if (compassIconRef.current) {
         compassIconRef.current.style.transform = 'rotate(0deg)';
       }
       navModeRef.current = 'auto';
       setNavMode('auto');
-      manualGestureRef.current = null;
       autoHeadingCandidateRef.current = null;
       setMapReady(false);
     };
@@ -377,7 +357,7 @@ export default function DeliveryPage() {
       return doCleanup;
     }
 
-    // Initialize map only after first GPS fix — prevents simultaneous GPS dialog + Leaflet load on iOS
+    // Initialize map only after first GPS fix — prevents simultaneous GPS dialog + MapLibre load on iOS
     const initMapOnce = () => {
       if (mapInitDone || mapInstanceRef.current || !mapContainerRef.current) return;
       const clientLat = orderRef.current?.client_lat;
@@ -385,30 +365,74 @@ export default function DeliveryPage() {
       if (!clientLat || !clientLng) return;
       mapInitDone = true;
 
-      if (!leafletLinkRef.current) {
+      if (!mapLibreLinkRef.current) {
         const link = document.createElement('link');
         link.rel  = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        link.href = 'https://unpkg.com/maplibre-gl@6.0.0/dist/maplibre-gl.css';
         document.head.appendChild(link);
-        leafletLinkRef.current = link;
+        mapLibreLinkRef.current = link;
       }
 
-      import('leaflet').then((mod) => {
+      import('maplibre-gl').then((mod) => {
         if (cancelled || !mapContainerRef.current || mapInstanceRef.current) return;
-        const L = (mod as any).default ?? mod;
+        const maplibregl = (mod as any).default ?? mod;
         try {
-          // dragging: false — the map rotates under heading-up navigation, so manual
-          // panning would fight the rotation; "خرائط Google" button covers manual explore.
-          const map = L.map(mapContainerRef.current, {
-            attributionControl: false, zoomControl: false, dragging: false,
-          }).setView([clientLat, clientLng], 15);
+          // dragPan/dragRotate/touchZoomRotate: true — native single-finger pan and
+          // two-finger rotate/zoom, replacing the old CSS-transform heading-up hack.
+          const map = new maplibregl.Map({
+            container: mapContainerRef.current,
+            style: 'https://tiles.openfreemap.org/styles/liberty',
+            center: [clientLng, clientLat],
+            zoom: 15,
+            bearing: 0,
+            pitch: 0,
+            maxPitch: 0,
+            minPitch: 0,
+            maxZoom: 19,
+            attributionControl: { compact: true },
+            dragPan: true,
+            dragRotate: true,
+            touchZoomRotate: true,
+            pitchWithRotate: false,
+          });
           mapInstanceRef.current = map;
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-          setMapReady(true);
-          invalidateSizeTimeoutRef.current = setTimeout(() => {
-            mapInstanceRef.current?.invalidateSize();
-            invalidateSizeTimeoutRef.current = null;
-          }, 100);
+
+          map.on('load', () => {
+            if (cancelled || !mapInstanceRef.current) return;
+            setMapReady(true);
+            invalidateSizeTimeoutRef.current = setTimeout(() => {
+              mapInstanceRef.current?.resize();
+              invalidateSizeTimeoutRef.current = null;
+            }, 100);
+
+            map.addSource('driver-route', {
+              type: 'geojson',
+              data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
+            });
+            map.addLayer({
+              id: 'driver-route-line',
+              type: 'line',
+              source: 'driver-route',
+              layout: { 'line-cap': 'round', 'line-join': 'round' },
+              paint: { 'line-color': '#2563eb', 'line-width': 5, 'line-opacity': 0.85 },
+            });
+            routeLineRef.current = 'driver-route';
+
+            // dragstart/rotatestart also fire for our own programmatic easeTo() calls —
+            // e.originalEvent is only set for genuine user gestures (undefined when
+            // fired programmatically), so gate on it to avoid the very first GPS-driven
+            // heading easeTo() immediately kicking us out of auto mode.
+            map.on('dragstart', (e: any) => {
+              if (!e.originalEvent) return;
+              navModeRef.current = 'manual';
+              setNavMode('manual');
+            });
+            map.on('rotatestart', (e: any) => {
+              if (!e.originalEvent) return;
+              navModeRef.current = 'manual';
+              setNavMode('manual');
+            });
+          });
         } catch (e) {
           console.error('[map] init failed:', e);
         }
@@ -441,13 +465,18 @@ export default function DeliveryPage() {
 
         // Only actually rotate the map while in auto mode — while the driver is manually
         // rotating (or has left it rotated), the GPS loop keeps computing silently but
-        // must not fight the manual gesture.
+        // must not fight the manual gesture. The actual applyHeading() call is deferred
+        // until after the follow-mode camera move below: MapLibre only runs one camera
+        // animation at a time, so calling easeTo() here and then jumpTo()/fitBounds() a
+        // few lines later in the same tick would cancel this rotation before it ever
+        // renders a frame. Firing it last guarantees it's the one that "wins" the tick.
+        let pendingHeadingAngle: number | null = null;
         if (!isStopped && navModeRef.current === 'auto' && candidate != null) {
           const currentNormalized = ((headingAccumulatorRef.current % 360) + 360) % 360;
           const delta = shortestAngleDelta(currentNormalized, candidate);
           if (Math.abs(delta) >= HEADING_DEADBAND_DEG) {
             lastMovementTsRef.current = Date.now();
-            applyHeading(headingAccumulatorRef.current + delta);
+            pendingHeadingAngle = headingAccumulatorRef.current + delta;
           }
         }
         lastPositionRef.current = { lat: latitude, lng: longitude };
@@ -468,35 +497,45 @@ export default function DeliveryPage() {
 
         if (mapInstanceRef.current) {
           if (driverMarkerRef.current) {
-            driverMarkerRef.current.setLatLng([latitude, longitude]);
-            // Follow mode: keep the driver centered under heading-up navigation.
-            const zoom = mapInstanceRef.current.getZoom();
-            mapInstanceRef.current.setView([latitude, longitude], zoom, { animate: false });
+            driverMarkerRef.current.setLngLat([longitude, latitude]);
+            // Follow mode: keep the driver centered — only while in auto mode, so a
+            // manual drag/rotate isn't fought by the next GPS fix.
+            if (navModeRef.current === 'auto') {
+              mapInstanceRef.current.jumpTo({ center: [longitude, latitude] });
+            }
           } else if (o?.client_lat && o?.client_lng) {
-            import('leaflet').then((mod) => {
-              const L = (mod as any).default ?? mod;
+            import('maplibre-gl').then((mod) => {
+              const maplibregl = (mod as any).default ?? mod;
               if (!mapInstanceRef.current || driverMarkerRef.current) return;
-              const icon = L.divIcon({
-                html: DRIVER_ARROW_HTML,
-                className: '', iconSize: [46, 46], iconAnchor: [23, 23],
-              });
-              driverMarkerRef.current = L.marker([latitude, longitude], { icon })
-                .addTo(mapInstanceRef.current)
-                .bindPopup('<div dir="rtl">موقعك الحالي</div>');
-              mapInstanceRef.current.fitBounds(
-                L.latLngBounds([o.client_lat, o.client_lng], [latitude, longitude]),
-                { padding: [60, 60] }
-              );
+              const el = document.createElement('div');
+              el.innerHTML = DRIVER_ARROW_HTML;
+              driverMarkerRef.current = new maplibregl.Marker({
+                element: el,
+                anchor: 'center',
+                rotationAlignment: 'viewport',
+                pitchAlignment: 'viewport',
+              })
+                .setLngLat([longitude, latitude])
+                .addTo(mapInstanceRef.current);
+              const bounds = new maplibregl.LngLatBounds();
+              bounds.extend([o.client_lng, o.client_lat]);
+              bounds.extend([longitude, latitude]);
+              mapInstanceRef.current.fitBounds(bounds, { padding: 60 });
             });
           }
+        }
+
+        // Apply the deferred heading rotation last — see comment above.
+        if (pendingHeadingAngle != null) {
+          applyHeading(pendingHeadingAngle);
         }
 
         if (o?.client_lat && o?.client_lng && mapInstanceRef.current) {
           const timeSinceLast = Date.now() - lastRouteFetchRef.current;
           const deviated = routeCoordsRef.current.length > 0
             && isOffRoute(latitude, longitude, routeCoordsRef.current);
-          // Re-fetch if: first time, or 30s passed, or driver deviated (min 8s cooldown)
-          const shouldFetch = !routeLineRef.current
+          // Re-fetch if: first time (no coords yet), or 30s passed, or driver deviated (min 8s cooldown)
+          const shouldFetch = !routeCoordsRef.current.length
             || timeSinceLast > 30_000
             || (deviated && timeSinceLast > 8_000);
 
@@ -511,18 +550,17 @@ export default function DeliveryPage() {
                   .map(([lng, lat]: [number, number]) => [lat, lng]);
                 if (!coords.length || !mapInstanceRef.current) return;
                 routeCoordsRef.current = coords;
-                import('leaflet').then(mod => {
-                  const L = (mod as any).default ?? mod;
-                  if (!mapInstanceRef.current) return;
-                  if (routeLineRef.current) {
-                    routeLineRef.current.setLatLngs(coords);
-                  } else {
-                    routeLineRef.current = L.polyline(coords, {
-                      color: '#2563eb', weight: 5, opacity: 0.85,
-                    }).addTo(mapInstanceRef.current);
-                    routeLineRef.current.bringToBack();
-                  }
-                });
+                const source = mapInstanceRef.current.getSource?.('driver-route');
+                if (source) {
+                  source.setData({
+                    type: 'Feature',
+                    properties: {},
+                    geometry: {
+                      type: 'LineString',
+                      coordinates: coords.map(([lat, lng]) => [lng, lat]),
+                    },
+                  });
+                }
               })
               .catch(() => {
                 // reset timer so we retry sooner on network failure
@@ -550,24 +588,16 @@ export default function DeliveryPage() {
     return doCleanup;
   }, [orderId, started]);
 
-  // Keep the rotator layer sized to cover the visible frame at any rotation angle,
-  // and re-measure the map whenever the frame's on-screen size changes — e.g. the
-  // "arrived" banner appearing/disappearing resizes the map area without the window
-  // itself resizing, so `window.resize` alone would miss it.
+  // Re-measure the map whenever the frame's on-screen size changes — e.g. the "arrived"
+  // banner appearing/disappearing resizes the map area without the window itself
+  // resizing, so `window.resize` alone would miss it.
   useEffect(() => {
     if (!started) return;
     const frameEl = frameRef.current;
     if (!frameEl) return;
 
     const applySize = () => {
-      const w = frameEl.clientWidth;
-      const h = frameEl.clientHeight;
-      if (w > 0 && h > 0 && rotatorRef.current) {
-        const diameter = Math.sqrt(w * w + h * h) * 1.05;
-        rotatorRef.current.style.width  = `${diameter}px`;
-        rotatorRef.current.style.height = `${diameter}px`;
-      }
-      mapInstanceRef.current?.invalidateSize();
+      mapInstanceRef.current?.resize();
     };
 
     applySize();
@@ -577,128 +607,11 @@ export default function DeliveryPage() {
     return () => observer.disconnect();
   }, [started]);
 
-  // One-finger manual rotation: overrides the auto heading-up rotation until the driver
-  // taps the compass button to snap back to auto. We switched from the previous two-finger
-  // rotate gesture to one finger because the two-finger twist felt "غريب" (awkward) to
-  // drivers in practice. Since the map has dragging:false (it's always in an automatic
-  // "follow" mode — see the map init above), a single finger on the frame wasn't doing
-  // anything else already, so repurposing it for rotation gives a natural single-finger
-  // feel without colliding with any existing behavior. Note this deliberately diverges
-  // from real Google Maps, where one finger pans/drags and two fingers rotate — here a
-  // single finger can't pan (dragging is off), so there's no conflict to avoid, and this
-  // gesture happily steps aside the moment a second finger lands: Leaflet's own touchZoom
-  // pinch-to-zoom handling takes over untouched (see handleTouchStart below).
-  useEffect(() => {
-    if (!started) return;
-    const frameEl = frameRef.current;
-    if (!frameEl) return;
-
-    const getTouchAngleFromCenterDeg = (touch: Touch, centerX: number, centerY: number): number =>
-      (Math.atan2(touch.clientY - centerY, touch.clientX - centerX) * 180) / Math.PI;
-
-    // Match the tracked touch by identifier, not array index — the browser doesn't
-    // guarantee e.touches keeps the same order across events.
-    const findTouch = (touches: TouchList, id: number): Touch | null => {
-      for (let i = 0; i < touches.length; i++) {
-        if (touches[i].identifier === id) return touches[i];
-      }
-      return null;
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      // Ignore touches starting on interactive controls inside the frame (e.g. the compass
-      // button) — a single-finger tap there must not be mistaken for a rotate gesture.
-      if ((e.target as HTMLElement)?.closest('button')) return;
-
-      if (e.touches.length === 1) {
-        const t = e.touches[0];
-        const rect = frameRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const radius = Math.hypot(t.clientX - centerX, t.clientY - centerY);
-        manualGestureRef.current = {
-          id: t.identifier,
-          centerX,
-          centerY,
-          prevAngleDeg: getTouchAngleFromCenterDeg(t, centerX, centerY),
-          confirmed: false,
-          accumulatedDeg: 0,
-          inDeadZone: radius < MIN_ROTATE_RADIUS_PX,
-        };
-      } else if (e.touches.length >= 2 && manualGestureRef.current) {
-        // A second finger landed mid-gesture — hand off to Leaflet's pinch-zoom, don't
-        // fight it. Freeze rotation at its current angle instead of resetting to auto.
-        manualGestureRef.current = null;
-        if (rotatorRef.current) rotatorRef.current.style.transition = 'transform 0.35s linear';
-        if (compassIconRef.current) compassIconRef.current.style.transition = 'transform 0.35s linear';
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      const gesture = manualGestureRef.current;
-      if (!gesture || e.touches.length !== 1) {
-        // A second finger appeared (pinch-zoom) or the tracked finger is gone — bail out
-        // so Leaflet's own touchZoom handler has sole control.
-        if (gesture) manualGestureRef.current = null;
-        return;
-      }
-
-      const t = findTouch(e.touches, gesture.id);
-      if (!t) return;
-      e.preventDefault();
-
-      const radius = Math.hypot(t.clientX - gesture.centerX, t.clientY - gesture.centerY);
-
-      if (gesture.inDeadZone) {
-        if (radius < MIN_ROTATE_RADIUS_PX) return; // still inside the dead zone — frozen
-        // Just exited the dead zone: rebase the angle here so the next tick's delta is
-        // meaningful, without applying a jump for this tick.
-        gesture.inDeadZone = false;
-        gesture.prevAngleDeg = getTouchAngleFromCenterDeg(t, gesture.centerX, gesture.centerY);
-        return;
-      }
-
-      const newAngleDeg = getTouchAngleFromCenterDeg(t, gesture.centerX, gesture.centerY);
-      const delta = shortestAngleDelta(gesture.prevAngleDeg, newAngleDeg);
-
-      if (!gesture.confirmed) {
-        gesture.accumulatedDeg += delta;
-        if (Math.abs(gesture.accumulatedDeg) >= MANUAL_ROTATE_ACTIVATE_DEG) {
-          navModeRef.current = 'manual';
-          setNavMode('manual');
-          if (rotatorRef.current) rotatorRef.current.style.transition = 'none';
-          if (compassIconRef.current) compassIconRef.current.style.transition = 'none';
-          gesture.confirmed = true;
-          applyHeading(headingAccumulatorRef.current - gesture.accumulatedDeg);
-        }
-      } else if (Math.abs(delta) >= MANUAL_ROTATE_TICK_DEADBAND_DEG) {
-        applyHeading(headingAccumulatorRef.current - delta);
-      }
-
-      gesture.prevAngleDeg = newAngleDeg;
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length === 0) {
-        manualGestureRef.current = null;
-        if (rotatorRef.current) rotatorRef.current.style.transition = 'transform 0.35s linear';
-        if (compassIconRef.current) compassIconRef.current.style.transition = 'transform 0.35s linear';
-      }
-    };
-
-    frameEl.addEventListener('touchstart', handleTouchStart, { passive: false });
-    frameEl.addEventListener('touchmove', handleTouchMove, { passive: false });
-    frameEl.addEventListener('touchend', handleTouchEnd, { passive: false });
-    frameEl.addEventListener('touchcancel', handleTouchEnd, { passive: false });
-
-    return () => {
-      frameEl.removeEventListener('touchstart', handleTouchStart);
-      frameEl.removeEventListener('touchmove', handleTouchMove);
-      frameEl.removeEventListener('touchend', handleTouchEnd);
-      frameEl.removeEventListener('touchcancel', handleTouchEnd);
-    };
-  }, [started]);
+  // Manual rotation/pan is now handled natively by MapLibre (dragPan + dragRotate +
+  // touchZoomRotate, configured at map init) — one finger pans, two fingers rotate/zoom,
+  // exactly like Google Maps. The 'dragstart'/'rotatestart' listeners registered inside
+  // initMapOnce()'s map.on('load', ...) switch navMode to 'manual' when a real user
+  // gesture triggers them.
 
   const handleStart = async () => {
     setStarting(true);
@@ -733,14 +646,23 @@ export default function DeliveryPage() {
   };
 
   // Compass button: leave manual mode and snap back to the last computed auto heading
-  // (or hold still if none is available yet), taking the shortest angular path.
+  // (or hold still if none is available yet), re-centering on the driver at the same time —
+  // a single easeTo() call so the pan + rotation happen as one smooth composed motion
+  // instead of two separate camera commands competing with each other.
   const handleRecenter = () => {
+    const lastPos = lastPositionRef.current;
+    if (!lastPos || !mapInstanceRef.current) return;
     const target = autoHeadingCandidateRef.current ?? headingAccumulatorRef.current;
-    const currentNormalized = ((headingAccumulatorRef.current % 360) + 360) % 360;
-    const delta = shortestAngleDelta(currentNormalized, target);
-    if (rotatorRef.current) rotatorRef.current.style.transition = 'transform 0.35s linear';
-    if (compassIconRef.current) compassIconRef.current.style.transition = 'transform 0.35s linear';
-    applyHeading(headingAccumulatorRef.current + delta);
+    mapInstanceRef.current.easeTo({
+      center: [lastPos.lng, lastPos.lat],
+      bearing: target,
+      zoom: mapInstanceRef.current.getZoom(),
+      duration: 600,
+    });
+    headingAccumulatorRef.current = target;
+    if (compassIconRef.current) {
+      compassIconRef.current.style.transform = `rotate(${-target}deg)`;
+    }
     navModeRef.current = 'auto';
     setNavMode('auto');
   };
@@ -926,29 +848,14 @@ export default function DeliveryPage() {
       )}
 
       {/* الخريطة أو تنبيه لا موقع */}
-      <div ref={frameRef} className="relative mx-4 rounded-3xl overflow-hidden flex-1 min-h-0" style={{ minHeight: 300, touchAction: 'none' }}>
+      <div ref={frameRef} className="relative mx-4 rounded-3xl overflow-hidden flex-1 min-h-0" style={{ minHeight: 300 }}>
         {order.client_lat && order.client_lng ? (
           <>
-            {/* Heading-up navigation: the map (rotator) spins via CSS transform inside this
-                static, overflow-hidden frame so the driver's direction of travel stays "up". */}
-            <div
-              ref={rotatorRef}
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%,-50%) rotate(0deg)',
-                transformOrigin: 'center',
-                transition: 'transform 0.35s linear',
-                willChange: 'transform',
-              }}
-            >
-              <div ref={mapContainerRef} className="w-full h-full" />
-            </div>
+            {/* MapLibre GL: heading-up navigation now rotates the map's own camera
+                (bearing) natively — no CSS-transform rotator wrapper needed. */}
+            <div ref={mapContainerRef} className="w-full h-full" />
 
-            {/* Compass button: sibling of the rotator (not inside it) so its own position
-                stays fixed on screen while the map rotates under it. Tap to leave manual
-                one-finger rotation and snap back to auto heading-up. */}
+            {/* Compass button: tap to leave manual drag/rotate and snap back to auto heading-up. */}
             <button
               type="button"
               onClick={handleRecenter}
