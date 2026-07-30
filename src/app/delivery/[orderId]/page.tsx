@@ -154,6 +154,35 @@ function makeDriverArrow(): string {
 }
 const DRIVER_ARROW_HTML = makeDriverArrow();
 
+let mapLibreConfigured = false;
+const RTL_PLUGIN_URL = 'https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js';
+
+// Runs once per browser tab, regardless of how many times this effect re-mounts across
+// driver order switches. MapLibre throws if setRTLTextPlugin is called again after the
+// plugin has already finished loading, so the flag + getRTLTextPluginStatus() check are
+// both needed: the flag skips repeat calls on the happy path, the status check guards
+// any edge case (e.g. dev-mode Fast Refresh) where the flag itself got reset.
+function configureMapLibreOnce(maplibregl: any) {
+  if (mapLibreConfigured) return;
+  mapLibreConfigured = true;
+
+  // MapLibre locates its tile-parsing web worker via import.meta.url relative to its own
+  // bundled file. Next.js's bundler (Turbopack) doesn't preserve that path correctly in
+  // production, so the worker silently 404s and no tiles ever render. Pointing explicitly
+  // at a CDN copy of the worker matching the installed package version sidesteps it.
+  maplibregl.setWorkerUrl('https://unpkg.com/maplibre-gl@6.0.0/dist/maplibre-gl-worker.mjs');
+
+  // Arabic (and Hebrew) map labels need this plugin for correct contextual letter shaping
+  // and right-to-left ordering — without it, MapLibre renders isolated/mirrored glyphs.
+  // lazy=false: load it immediately rather than waiting for the first RTL glyph to be
+  // encountered, so there's no flash of malformed Arabic text on first paint.
+  if (maplibregl.getRTLTextPluginStatus() === 'unavailable') {
+    maplibregl.setRTLTextPlugin(RTL_PLUGIN_URL, false).catch((err: unknown) => {
+      console.error('[map] RTL text plugin failed to load:', err);
+    });
+  }
+}
+
 export default function DeliveryPage() {
   const params  = useParams<{ orderId: string }>();
   const orderId = params.orderId;
@@ -320,6 +349,25 @@ export default function DeliveryPage() {
     let cancelled = false;
     let mapInitDone = false;
 
+    // Applies the currently-known route (routeCoordsRef) to the 'driver-route' source,
+    // if both are ready. Called from two places — after the map style finishes loading,
+    // and after each OSRM fetch resolves — because either one can complete first, and
+    // whichever is second is the one that actually needs to push the data in.
+    const applyRouteToSource = () => {
+      const map = mapInstanceRef.current;
+      if (!map) return;
+      const source = map.getSource?.('driver-route');
+      if (!source || !routeCoordsRef.current.length) return;
+      source.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: routeCoordsRef.current.map(([lat, lng]) => [lng, lat]),
+        },
+      });
+    };
+
     const doCleanup = () => {
       cancelled = true;
       if (watchIdRef.current !== null) {
@@ -376,13 +424,7 @@ export default function DeliveryPage() {
       import('maplibre-gl').then((mod) => {
         if (cancelled || !mapContainerRef.current || mapInstanceRef.current) return;
         const maplibregl = (mod as any).default ?? mod;
-        // MapLibre locates its tile-parsing web worker via import.meta.url relative to
-        // its own bundled file. Next.js's bundler (Turbopack) doesn't preserve that path
-        // correctly in production, so the worker silently 404s and no tiles ever render
-        // (map stays blank — only the background color + attribution control show, since
-        // those are synchronous main-thread work). Pointing explicitly at a CDN copy of
-        // the worker matching the installed package version sidesteps the bundler issue.
-        maplibregl.setWorkerUrl('https://unpkg.com/maplibre-gl@6.0.0/dist/maplibre-gl-worker.mjs');
+        configureMapLibreOnce(maplibregl);
         try {
           // dragPan/dragRotate/touchZoomRotate: true — native single-finger pan and
           // two-finger rotate/zoom, replacing the old CSS-transform heading-up hack.
@@ -424,6 +466,7 @@ export default function DeliveryPage() {
               paint: { 'line-color': '#2563eb', 'line-width': 5, 'line-opacity': 0.85 },
             });
             routeLineRef.current = 'driver-route';
+            applyRouteToSource();
 
             // dragstart/rotatestart also fire for our own programmatic easeTo() calls —
             // e.originalEvent is only set for genuine user gestures (undefined when
@@ -557,17 +600,7 @@ export default function DeliveryPage() {
                   .map(([lng, lat]: [number, number]) => [lat, lng]);
                 if (!coords.length || !mapInstanceRef.current) return;
                 routeCoordsRef.current = coords;
-                const source = mapInstanceRef.current.getSource?.('driver-route');
-                if (source) {
-                  source.setData({
-                    type: 'Feature',
-                    properties: {},
-                    geometry: {
-                      type: 'LineString',
-                      coordinates: coords.map(([lat, lng]) => [lng, lat]),
-                    },
-                  });
-                }
+                applyRouteToSource();
               })
               .catch(() => {
                 // reset timer so we retry sooner on network failure
