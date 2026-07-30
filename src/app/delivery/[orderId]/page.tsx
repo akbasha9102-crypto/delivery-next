@@ -376,6 +376,13 @@ export default function DeliveryPage() {
       import('maplibre-gl').then((mod) => {
         if (cancelled || !mapContainerRef.current || mapInstanceRef.current) return;
         const maplibregl = (mod as any).default ?? mod;
+        // MapLibre locates its tile-parsing web worker via import.meta.url relative to
+        // its own bundled file. Next.js's bundler (Turbopack) doesn't preserve that path
+        // correctly in production, so the worker silently 404s and no tiles ever render
+        // (map stays blank — only the background color + attribution control show, since
+        // those are synchronous main-thread work). Pointing explicitly at a CDN copy of
+        // the worker matching the installed package version sidesteps the bundler issue.
+        maplibregl.setWorkerUrl('https://unpkg.com/maplibre-gl@6.0.0/dist/maplibre-gl-worker.mjs');
         try {
           // dragPan/dragRotate/touchZoomRotate: true — native single-finger pan and
           // two-finger rotate/zoom, replacing the old CSS-transform heading-up hack.
