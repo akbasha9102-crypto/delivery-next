@@ -13,7 +13,7 @@ import { deductStockForOrder } from '@/lib/utils/deduct-stock';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 type OrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; discount_amount?: number | null; coupon_code?: string | null; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'pickup' | 'local' | null };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; discount_amount?: number | null; coupon_code?: string | null; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'pickup' | 'local' | null; archived_at?: string | null };
 
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز', color: '#f59e0b', dot: 'bg-yellow-400',  btnColor: '#3b82f6' },
@@ -844,6 +844,9 @@ export default function DashboardPage() {
   const [tick,          setTick]          = useState(0);
   const [driverPopup,   setDriverPopup]   = useState<string | null>(null);
   const [showQuickAdd,  setShowQuickAdd]  = useState(false);
+  // مستقل عن orders (الذي يستبعد المؤرشف) — وإلا ينقص رقم الإيراد خطأً بمجرد
+  // أرشفة طلب مكتمل، رغم أن البيع تحقق فعلاً والأرشفة مجرد تنظيم واجهة فقط.
+  const [todayRevenue,  setTodayRevenue]  = useState(0);
 
 
   const initialLoadDone = useRef(false);
@@ -861,14 +864,24 @@ export default function DashboardPage() {
     const end   = new Date(today + 'T23:59:59').toISOString();
 
     if (!restaurantId) { setLoading(false); return; }
-    const ordersQ = supabase.from('orders').select('*').eq('restaurant_id', restaurantId).gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }).limit(200);
+    // المؤرشف مستبعد من هذا الاستعلام — الطلبات المؤرشفة انتقلت لصفحة الأرشيف
+    // ولا يجوز أن يعيدها الجلب الأولي أو أي تحديث realtime لاحق لهذه الشاشة.
+    const ordersQ = supabase.from('orders').select('*').eq('restaurant_id', restaurantId).is('archived_at', null).gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }).limit(200);
     const itemsQ  = supabase.from('items').select('name, image_url').eq('restaurant_id', restaurantId);
+    // استعلام إيراد مستقل بلا شرط archived_at — بيع اليوم تحقق فعلياً بغض النظر
+    // عن أرشفة الطلب لاحقاً من عدمها (الأرشفة تنظيم واجهة فقط، ليست إلغاء بيع).
+    const revenueQ = supabase.from('orders').select('total_amount, status, order_type').eq('restaurant_id', restaurantId).gte('created_at', start).lte('created_at', end);
 
-    const [ordersRes, itemsRes] = await Promise.all([ordersQ, itemsQ]);
+    const [ordersRes, itemsRes, revenueRes] = await Promise.all([ordersQ, itemsQ, revenueQ]);
 
     const imgMap = new Map<string, string>();
     (itemsRes.data || []).forEach(i => imgMap.set(i.name, i.image_url));
     setImageMap(imgMap);
+
+    const revenue = (revenueRes.data || [])
+      .filter(o => o.status === 'completed' && o.order_type !== 'local')
+      .reduce((s, o) => s + o.total_amount, 0);
+    setTodayRevenue(revenue);
 
     // طلبات "local" (كاشير محلي / نقطة بيع) تُسدَّد وتُغلق مباشرة عند البيع
     // ولا تمر بخط أنابيب التجهيز/التوصيل — تُستبعد هنا كلياً عن هذه الشاشة.
@@ -921,6 +934,17 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json', ...(await pushAuthHeaders()) },
         body: JSON.stringify({ order_id: id, title: '❌ نأسف', body: 'تعذّر قبول طلبك حالياً، تواصل مع المطعم لمزيد من التفاصيل', tag: 'order-rejected' }),
       }).catch(() => {});
+    } finally {
+      setProcessingOrderId(null);
+    }
+  };
+
+  const archiveOrder = async (id: string) => {
+    if (processingOrderId === id) return;
+    setProcessingOrderId(id);
+    try {
+      await supabase.from('orders').update({ archived_at: new Date().toISOString() }).eq('id', id);
+      setOrders(prev => prev.filter(o => o.id !== id));
     } finally {
       setProcessingOrderId(null);
     }
@@ -1005,7 +1029,6 @@ export default function DashboardPage() {
     else if (o.status === 'ready')     counts.delivery++;
     else if (o.status === 'completed') counts.completed++;
   });
-  const todayRevenue = orders.filter(o => o.status === 'completed').reduce((s, o) => s + o.total_amount, 0);
   const filtered = scopedOrders.filter(o =>
     filter === 'delivery' ? o.status === 'ready' : o.status === filter
   );
@@ -1970,8 +1993,9 @@ export default function DashboardPage() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => setOrders(prev => prev.filter(o => o.id !== order.id))}
-                      className="w-full py-2 bg-green-700 text-center text-white font-bold text-sm active:bg-green-800 transition-colors"
+                      onClick={() => archiveOrder(order.id)}
+                      disabled={processingOrderId === order.id}
+                      className="w-full py-2 bg-green-700 text-center text-white font-bold text-sm active:bg-green-800 transition-colors disabled:opacity-60"
                     >
                       ✓ مكتمل — اضغط للأرشفة
                     </button>

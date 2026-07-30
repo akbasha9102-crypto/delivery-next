@@ -507,6 +507,19 @@ export default function LocalCashierPage() {
     setClosing(false);
     if (!res.ok) { showToast('error' in res ? res.error : 'تعذّر إغلاق الوردية', false); return; }
     const data = res.data as { expected_closing_cash: number; variance: number };
+
+    // أرشفة تلقائية لطلبات "المحل" (order_type='local') عند إغلاق الوردية —
+    // قرار المستخدم صراحة: بلا زر يدوي وبلا تركها كما هي. لا نعطّل إغلاق
+    // الوردية إن فشلت الأرشفة (الوردية أُغلقت فعلياً بالفعل عبر closeShift أعلاه).
+    if (restaurantId) {
+      await supabase.from('orders')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('restaurant_id', restaurantId)
+        .eq('order_type', 'local')
+        .is('archived_at', null)
+        .gte('created_at', shift.opened_at);
+    }
+
     setCloseResult({ expected: data.expected_closing_cash, variance: data.variance });
   };
 

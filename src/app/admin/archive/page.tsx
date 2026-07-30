@@ -56,6 +56,37 @@ type DriverGroup = {
   total: number;
 };
 
+type ArchivedOrder = {
+  id: string;
+  client_name: string;
+  client_phone: string;
+  delivery_address: string | null;
+  client_lat: number | null;
+  client_lng: number | null;
+  total_amount: number;
+  discount_amount: number | null;
+  coupon_code: string | null;
+  delivery_fee: number | null;
+  client_note: string | null;
+  created_at: string;
+  archived_at: string | null;
+  order_type: 'delivery' | 'pickup' | 'local' | null;
+  table_number: number | null;
+  driver_name: string | null;
+  driver_phone: string | null;
+  driver_id: string | null;
+  status: string;
+  items: TripItem[];
+};
+
+// أي نوع غير pickup/local يُصنَّف "توصيل" افتراضياً (يشمل delivery وdine_in
+// وnull) — تصميم متعمد لعدم فقدان أي سجل قديم من الأرشيف.
+function classifyOrderTab(o: Pick<ArchivedOrder, 'order_type'>): 'delivery' | 'pickup' | 'local' {
+  if (o.order_type === 'pickup') return 'pickup';
+  if (o.order_type === 'local')  return 'local';
+  return 'delivery';
+}
+
 function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
@@ -123,6 +154,95 @@ function RejectedOrderModal({ order, onClose }: { order: RejectedOrder; onClose:
   );
 }
 
+function ArchivedOrderModal({ order, onClose }: { order: ArchivedOrder; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="w-12 h-1.5 bg-gray-300 dark:bg-slate-600 rounded-full mx-auto mt-3 mb-3" />
+        <div className="flex items-center justify-between px-5 pb-3 border-b border-gray-100 dark:border-slate-700">
+          <button onClick={onClose} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
+          <div className="text-right">
+            <p className="font-bold text-gray-900 dark:text-white text-lg">{order.client_name}</p>
+            {order.client_phone && <p className="text-xs text-gray-400 dark:text-slate-500" dir="ltr">{order.client_phone}</p>}
+          </div>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          <div className="text-center py-2 rounded-xl text-sm font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
+            📦 مؤرشف — {new Date(order.archived_at ?? order.created_at).toLocaleString('ar-IQ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+          </div>
+
+          <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl px-3 py-2.5 space-y-1.5">
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-gray-400 dark:text-slate-500">
+                {new Date(order.created_at).toLocaleString('ar-IQ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              </p>
+              <p className="text-xs font-bold text-gray-600 dark:text-slate-300">تاريخ الطلب</p>
+            </div>
+            {order.table_number != null && (
+              <div className="flex justify-between items-center">
+                <p className="text-xs text-gray-400 dark:text-slate-500">{order.table_number}</p>
+                <p className="text-xs font-bold text-gray-600 dark:text-slate-300">رقم الطاولة</p>
+              </div>
+            )}
+            {order.driver_name && (
+              <div className="flex justify-between items-center">
+                <p className="text-xs text-gray-400 dark:text-slate-500" dir="ltr">{order.driver_phone}</p>
+                <p className="text-xs font-bold text-gray-600 dark:text-slate-300">السائق: {order.driver_name}</p>
+              </div>
+            )}
+            {order.delivery_address && (
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-xs text-gray-500 dark:text-slate-400 text-right flex-1">{order.delivery_address}</p>
+                <p className="text-xs font-bold text-gray-600 dark:text-slate-300 flex-shrink-0">العنوان</p>
+              </div>
+            )}
+            {order.client_lat && order.client_lng && (
+              <a
+                href={`https://www.google.com/maps?q=${order.client_lat},${order.client_lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-end gap-1.5 text-xs text-blue-500 font-bold active:opacity-70"
+              >
+                <MapPin size={12} /> عرض على الخريطة
+              </a>
+            )}
+          </div>
+
+          {order.items.length > 0 && (
+            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 space-y-2">
+              {order.items.map(item => (
+                <div key={item.id} className="flex justify-between items-center">
+                  <span className="text-[#f97316] font-bold text-sm">{(item.price * item.quantity).toLocaleString()} د.ع</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-700 dark:text-slate-300 text-sm">{item.item_name}</span>
+                    <span className="bg-white dark:bg-slate-600 text-gray-500 text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">{item.quantity}×</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-green-500 font-black text-2xl">{order.total_amount.toLocaleString()} <span className="text-sm text-gray-400 font-normal">د.ع</span></span>
+            {!!order.discount_amount && order.discount_amount > 0 && (
+              <span className="text-xs font-bold text-green-500 text-right">
+                خصم كوبون{order.coupon_code ? ` «${order.coupon_code}»` : ''}<br />-{order.discount_amount.toLocaleString()} د.ع
+              </span>
+            )}
+          </div>
+          {!!order.delivery_fee && order.delivery_fee > 0 && (
+            <p className="text-xs text-gray-400 text-right">🚗 رسوم التوصيل: {order.delivery_fee.toLocaleString()} د.ع</p>
+          )}
+          {order.client_note && (
+            <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2 text-right">📝 {order.client_note}</p>
+          )}
+        </div>
+        <div className="pb-6" />
+      </div>
+    </div>
+  );
+}
+
 export default function ArchivePage() {
   const router = useRouter();
   useDarkMode();
@@ -130,32 +250,36 @@ export default function ArchivePage() {
   const [feedbacks, setFeedbacks]     = useState<Feedback[]>([]);
   const [rejected,  setRejected]      = useState<RejectedOrder[]>([]);
   const [driverGroups, setDriverGroups] = useState<DriverGroup[]>([]);
+  const [archivedOrders, setArchivedOrders] = useState<ArchivedOrder[]>([]);
   const [loading,   setLoading]       = useState(true);
   const [filterType, setFilterType]   = useState<'feedback' | 'complaint' | null>(null);
-  const [section,   setSection]       = useState<'feedback' | 'rejected' | 'drivers'>('feedback');
+  const [section,   setSection]       = useState<'feedback' | 'rejected' | 'drivers' | 'orders'>('feedback');
+  const [orderTypeTab, setOrderTypeTab] = useState<'delivery' | 'pickup' | 'local'>('delivery');
   const [expandedDriver, setExpandedDriver] = useState<string | null>(null);
   const [expandedTrip,   setExpandedTrip]   = useState<string | null>(null);
   const [searchTerm, setSearchTerm]         = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate]     = useState('');
   const [selectedRejectedOrder, setSelectedRejectedOrder] = useState<RejectedOrder | null>(null);
+  const [selectedArchivedOrder, setSelectedArchivedOrder] = useState<ArchivedOrder | null>(null);
 
   const currentDate = selectedDate || localDate();
   const last14Days = useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(localDate(), -i)), []);
 
   const fetchAll = useCallback(async () => {
     if (!restaurantId) {
-      setFeedbacks([]); setRejected([]); setDriverGroups([]); setLoading(false);
+      setFeedbacks([]); setRejected([]); setDriverGroups([]); setArchivedOrders([]); setLoading(false);
       return;
     }
     const day   = selectedDate || localDate();
     const start = new Date(day + 'T00:00:00').toISOString();
     const end   = new Date(day + 'T23:59:59').toISOString();
 
-    const [fbRes, rejRes, tripsRes] = await Promise.all([
+    const [fbRes, rejRes, tripsRes, archRes] = await Promise.all([
       supabase.from('order_feedback').select('*, orders(total_amount, delivery_address)').eq('restaurant_id', restaurantId).gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }).limit(200),
       supabase.from('orders').select('id, client_name, client_phone, total_amount, delivery_address, created_at, client_note').eq('restaurant_id', restaurantId).eq('status', 'rejected').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
       supabase.from('orders').select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, created_at, driver_name, driver_phone, driver_id').eq('restaurant_id', restaurantId).eq('status', 'completed').not('driver_id', 'is', null).gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
+      supabase.from('orders').select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, discount_amount, coupon_code, delivery_fee, client_note, created_at, archived_at, order_type, table_number, driver_name, driver_phone, driver_id, status').eq('restaurant_id', restaurantId).not('archived_at', 'is', null).gte('created_at', start).lte('created_at', end).order('archived_at', { ascending: false }),
     ]);
 
     const enriched: Feedback[] = (fbRes.data || []).map((f: any) => ({
@@ -211,6 +335,21 @@ export default function ArchivePage() {
       g.total += trip.total_amount;
     });
     setDriverGroups(Array.from(map.values()));
+
+    // جلب عناصر كل طلب مؤرشف — batch واحد بدلاً من N+1، بنفس نمط الأقسام الأخرى
+    const rawArchived = (archRes.data || []) as Omit<ArchivedOrder, 'items'>[];
+    const archivedIds = rawArchived.map(o => o.id);
+    const allArchItems = archivedIds.length
+      ? ((await supabase.from('order_items').select('id, item_name, quantity, price, order_id').in('order_id', archivedIds)).data || []) as (TripItem & { order_id: string })[]
+      : [];
+    const itemsByArchOrder = new Map<string, TripItem[]>();
+    allArchItems.forEach(it => {
+      const arr = itemsByArchOrder.get(it.order_id) ?? [];
+      arr.push(it);
+      itemsByArchOrder.set(it.order_id, arr);
+    });
+    setArchivedOrders(rawArchived.map(o => ({ ...o, items: itemsByArchOrder.get(o.id) ?? [] })));
+
     setLoading(false);
   }, [restaurantId, selectedDate]);
 
@@ -251,6 +390,16 @@ export default function ArchivePage() {
   const notes      = feedbacks.filter(f => f.type === 'feedback').length;
   const totalDriverTrips = driverGroups.reduce((s, g) => s + g.trips.length, 0);
   const totalDriverRevenue = driverGroups.reduce((s, g) => s + g.total, 0);
+
+  const ordersByTab = {
+    delivery: archivedOrders.filter(o => classifyOrderTab(o) === 'delivery'),
+    pickup:   archivedOrders.filter(o => classifyOrderTab(o) === 'pickup'),
+    local:    archivedOrders.filter(o => classifyOrderTab(o) === 'local'),
+  };
+  const currentTabOrders = ordersByTab[orderTypeTab];
+  const visibleArchivedOrders = !q ? currentTabOrders : currentTabOrders.filter(o =>
+    o.client_name.includes(q) || o.client_phone.includes(q) || (o.delivery_address ?? '').includes(q)
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#212121] pb-28 md:pb-0 md:mr-[70px]">
@@ -331,6 +480,10 @@ export default function ArchivePage() {
         <button onClick={() => setSection('rejected')}
           className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'rejected' ? 'bg-[#EF4444] border-[#EF4444] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
           ✕ مرفوضة{rejected.length > 0 ? ` (${rejected.length})` : ''}
+        </button>
+        <button onClick={() => setSection('orders')}
+          className={`flex-1 py-2.5 rounded-2xl text-sm font-bold border transition-all ${section === 'orders' ? 'bg-[#8b5cf6] border-[#8b5cf6] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+          📦 الطلبات{archivedOrders.length > 0 ? ` (${archivedOrders.length})` : ''}
         </button>
       </div>
 
@@ -590,10 +743,71 @@ export default function ArchivePage() {
         </div>
       )}
 
+      {/* ═══ قسم أرشيف الطلبات ═══ */}
+      {section === 'orders' && (
+        <div className="px-3 pt-1">
+          {/* تابات فرعية: توصيل / استلام / محلي */}
+          <div className="flex gap-2 pb-3">
+            {([
+              { key: 'delivery' as const, label: 'توصيل' },
+              { key: 'pickup'   as const, label: 'استلام' },
+              { key: 'local'    as const, label: 'محلي' },
+            ]).map(t => (
+              <button key={t.key} onClick={() => setOrderTypeTab(t.key)}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${orderTypeTab === t.key ? 'bg-[#8b5cf6] border-[#8b5cf6] text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'}`}>
+                {t.label}{ordersByTab[t.key].length > 0 ? ` (${ordersByTab[t.key].length})` : ''}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center mt-20"><div className="w-10 h-10 border-4 border-[#8b5cf6] border-t-transparent rounded-full animate-spin" /></div>
+          ) : currentTabOrders.length === 0 ? (
+            <div className="text-center mt-24"><p className="text-5xl mb-3">📦</p><p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد طلبات مؤرشفة {periodLabel(currentDate)}</p></div>
+          ) : visibleArchivedOrders.length === 0 ? (
+            <div className="text-center mt-24"><p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد نتائج مطابقة للبحث</p></div>
+          ) : (
+            <div className="space-y-3 max-w-lg mx-auto">
+              {visibleArchivedOrders.map(order => (
+                <button key={order.id} onClick={() => setSelectedArchivedOrder(order)} className="w-full text-right active:scale-[0.98] transition-all bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
+                  <div className="h-1.5 bg-[#8b5cf6]" />
+                  <div className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-green-500 font-bold">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5" dir="ltr">{order.client_phone}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-900 dark:text-slate-100">{order.client_name}</p>
+                        {order.table_number != null && <p className="text-xs text-gray-400 mt-0.5">🍽️ طاولة {order.table_number}</p>}
+                        {order.delivery_address && <p className="text-xs text-gray-400 mt-0.5">📍 {order.delivery_address}</p>}
+                        {order.driver_name && (
+                          <p className="text-xs text-blue-500 font-bold mt-0.5 flex items-center justify-end gap-1">
+                            <Car size={11} /> {order.driver_name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-300 dark:text-slate-600 mt-2 pt-2 border-t border-gray-50 dark:border-slate-700/50">
+                      <span>أُرشف: {new Date(order.archived_at ?? order.created_at).toLocaleString('ar-IQ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>الطلب: {new Date(order.created_at).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <AdminBottomNav />
 
       {selectedRejectedOrder && (
         <RejectedOrderModal order={selectedRejectedOrder} onClose={() => setSelectedRejectedOrder(null)} />
+      )}
+
+      {selectedArchivedOrder && (
+        <ArchivedOrderModal order={selectedArchivedOrder} onClose={() => setSelectedArchivedOrder(null)} />
       )}
     </div>
   );
