@@ -101,8 +101,9 @@ const HEADING_DEADBAND_DEG  = 5;   // ignore rotation updates smaller than this
 const LOOKAHEAD_METERS      = 30;  // how far ahead on the route to aim the heading
 const MIN_SPEED_MPS         = 1;   // below this, GPS speed is considered "stopped"
 const MIN_MOVEMENT_M        = 3;   // below this movement between fixes, treat as stationary
-const MANUAL_ROTATE_ACTIVATE_DEG      = 4;   // two-finger rotate: cumulative angle needed to enter manual mode
-const MANUAL_ROTATE_TICK_DEADBAND_DEG = 1.2; // two-finger rotate: dead zone per touchmove tick once active
+const MANUAL_ROTATE_ACTIVATE_DEG      = 6;   // one-finger rotate: cumulative angle needed to enter manual mode
+const MANUAL_ROTATE_TICK_DEADBAND_DEG = 1.5; // one-finger rotate: dead zone per touchmove tick once active
+const MIN_ROTATE_RADIUS_PX            = 48;  // one-finger rotate: minimum distance from frame center before angle deltas count
 
 // Pure heading candidate calculation, mirrors the priority chain previously inline in
 // watchPosition: route bearing → movement bearing → GPS heading → straight-line fallback
@@ -179,10 +180,18 @@ export default function DeliveryPage() {
   const lastPositionRef       = useRef<{ lat: number; lng: number } | null>(null);
   const lastMovementTsRef     = useRef<number>(0);
   const headingAccumulatorRef = useRef<number>(0); // unbounded — can exceed ±360, smooths spins
-  // manual two-finger rotation state
+  // manual one-finger rotation state
   const navModeRef               = useRef<'auto' | 'manual'>('auto');
   const autoHeadingCandidateRef  = useRef<number | null>(null);
-  const manualGestureRef         = useRef<{ id1: number; id2: number; prevAngleDeg: number; confirmed: boolean; accumulatedDeg: number } | null>(null);
+  const manualGestureRef         = useRef<{
+    id: number;
+    centerX: number;
+    centerY: number;
+    prevAngleDeg: number;
+    confirmed: boolean;
+    accumulatedDeg: number;
+    inDeadZone: boolean;
+  } | null>(null);
   const compassIconRef           = useRef<HTMLDivElement>(null);
 
   const [order,          setOrder]          = useState<Order | null>(null);
@@ -200,7 +209,7 @@ export default function DeliveryPage() {
   const [navMode,        setNavMode]        = useState<'auto' | 'manual'>('auto'); // display-only — not read on the hot GPS path
 
   // Central heading-application helper: writes the map rotation + compass-icon rotation
-  // in one place so the GPS loop and the manual two-finger gesture don't duplicate it.
+  // in one place so the GPS loop and the manual one-finger gesture don't duplicate it.
   const applyHeading = (angle: number) => {
     headingAccumulatorRef.current = angle;
     if (rotatorRef.current) {
@@ -568,52 +577,89 @@ export default function DeliveryPage() {
     return () => observer.disconnect();
   }, [started]);
 
-  // Two-finger manual rotation: overrides the auto heading-up rotation until the driver
-  // taps the compass button to snap back to auto. Coexists with Leaflet's own touch
-  // handling (pinch-zoom) — we never disable or intercept that, only read touch points.
+  // One-finger manual rotation: overrides the auto heading-up rotation until the driver
+  // taps the compass button to snap back to auto. We switched from the previous two-finger
+  // rotate gesture to one finger because the two-finger twist felt "غريب" (awkward) to
+  // drivers in practice. Since the map has dragging:false (it's always in an automatic
+  // "follow" mode — see the map init above), a single finger on the frame wasn't doing
+  // anything else already, so repurposing it for rotation gives a natural single-finger
+  // feel without colliding with any existing behavior. Note this deliberately diverges
+  // from real Google Maps, where one finger pans/drags and two fingers rotate — here a
+  // single finger can't pan (dragging is off), so there's no conflict to avoid, and this
+  // gesture happily steps aside the moment a second finger lands: Leaflet's own touchZoom
+  // pinch-to-zoom handling takes over untouched (see handleTouchStart below).
   useEffect(() => {
     if (!started) return;
     const frameEl = frameRef.current;
     if (!frameEl) return;
 
-    const getTouchAngleDeg = (t1: Touch, t2: Touch): number =>
-      (Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180) / Math.PI;
+    const getTouchAngleFromCenterDeg = (touch: Touch, centerX: number, centerY: number): number =>
+      (Math.atan2(touch.clientY - centerY, touch.clientX - centerX) * 180) / Math.PI;
 
-    // Match touches by identifier, not array index — the browser doesn't guarantee
-    // e.touches keeps the same order across events.
-    const findTouches = (touches: TouchList, id1: number, id2: number): [Touch, Touch] | null => {
-      let touch1: Touch | null = null;
-      let touch2: Touch | null = null;
+    // Match the tracked touch by identifier, not array index — the browser doesn't
+    // guarantee e.touches keeps the same order across events.
+    const findTouch = (touches: TouchList, id: number): Touch | null => {
       for (let i = 0; i < touches.length; i++) {
-        const t = touches[i];
-        if (t.identifier === id1) touch1 = t;
-        else if (t.identifier === id2) touch2 = t;
+        if (touches[i].identifier === id) return touches[i];
       }
-      return touch1 && touch2 ? [touch1, touch2] : null;
+      return null;
     };
 
     const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        const t1 = e.touches[0], t2 = e.touches[1];
+      // Ignore touches starting on interactive controls inside the frame (e.g. the compass
+      // button) — a single-finger tap there must not be mistaken for a rotate gesture.
+      if ((e.target as HTMLElement)?.closest('button')) return;
+
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        const rect = frameRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const radius = Math.hypot(t.clientX - centerX, t.clientY - centerY);
         manualGestureRef.current = {
-          id1: t1.identifier,
-          id2: t2.identifier,
-          prevAngleDeg: getTouchAngleDeg(t1, t2),
+          id: t.identifier,
+          centerX,
+          centerY,
+          prevAngleDeg: getTouchAngleFromCenterDeg(t, centerX, centerY),
           confirmed: false,
           accumulatedDeg: 0,
+          inDeadZone: radius < MIN_ROTATE_RADIUS_PX,
         };
+      } else if (e.touches.length >= 2 && manualGestureRef.current) {
+        // A second finger landed mid-gesture — hand off to Leaflet's pinch-zoom, don't
+        // fight it. Freeze rotation at its current angle instead of resetting to auto.
+        manualGestureRef.current = null;
+        if (rotatorRef.current) rotatorRef.current.style.transition = 'transform 0.35s linear';
+        if (compassIconRef.current) compassIconRef.current.style.transition = 'transform 0.35s linear';
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       const gesture = manualGestureRef.current;
-      if (!gesture || e.touches.length < 2) return;
+      if (!gesture || e.touches.length !== 1) {
+        // A second finger appeared (pinch-zoom) or the tracked finger is gone — bail out
+        // so Leaflet's own touchZoom handler has sole control.
+        if (gesture) manualGestureRef.current = null;
+        return;
+      }
+
+      const t = findTouch(e.touches, gesture.id);
+      if (!t) return;
       e.preventDefault();
 
-      const pair = findTouches(e.touches, gesture.id1, gesture.id2);
-      if (!pair) return;
-      const [t1, t2] = pair;
-      const newAngleDeg = getTouchAngleDeg(t1, t2);
+      const radius = Math.hypot(t.clientX - gesture.centerX, t.clientY - gesture.centerY);
+
+      if (gesture.inDeadZone) {
+        if (radius < MIN_ROTATE_RADIUS_PX) return; // still inside the dead zone — frozen
+        // Just exited the dead zone: rebase the angle here so the next tick's delta is
+        // meaningful, without applying a jump for this tick.
+        gesture.inDeadZone = false;
+        gesture.prevAngleDeg = getTouchAngleFromCenterDeg(t, gesture.centerX, gesture.centerY);
+        return;
+      }
+
+      const newAngleDeg = getTouchAngleFromCenterDeg(t, gesture.centerX, gesture.centerY);
       const delta = shortestAngleDelta(gesture.prevAngleDeg, newAngleDeg);
 
       if (!gesture.confirmed) {
@@ -902,7 +948,7 @@ export default function DeliveryPage() {
 
             {/* Compass button: sibling of the rotator (not inside it) so its own position
                 stays fixed on screen while the map rotates under it. Tap to leave manual
-                two-finger rotation and snap back to auto heading-up. */}
+                one-finger rotation and snap back to auto heading-up. */}
             <button
               type="button"
               onClick={handleRecenter}
