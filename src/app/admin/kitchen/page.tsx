@@ -7,7 +7,14 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { makeKitchenAlertWavUrl } from '@/lib/utils/kitchenAlertSound';
 
 type KitchenOrderItem = { id: string; item_name: string; quantity: number; price: number };
-type KitchenOrder = { id: string; created_at: string; order_type: 'delivery' | 'pickup' | 'local' | null; order_items?: KitchenOrderItem[] };
+type KitchenOrder = { id: string; created_at: string; order_type: 'delivery' | 'pickup' | 'local' | null; driver_id: string | null; client_name: string; order_items?: KitchenOrderItem[] };
+
+// رؤوس تحقق مسارات /api/push/* — جلسة Supabase الحقيقية للمستخدم الحالي
+// (نفس النمط المستخدم بـ admin/dashboard/page.tsx)
+async function pushAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+}
 
 // نفس منطق waitInfo بـ admin/dashboard/page.tsx — يُستخدم هنا كحد علوي ملوّن بكل بطاقة
 function waitInfo(createdAt: string) {
@@ -77,7 +84,7 @@ export default function KitchenDisplayPage() {
     if (!restaurantId) return;
     const { data } = await supabase
       .from('orders')
-      .select('id, order_type, total_amount, created_at, order_items(id, item_name, quantity, price)')
+      .select('id, order_type, total_amount, created_at, driver_id, client_name, order_items(id, item_name, quantity, price)')
       .eq('restaurant_id', restaurantId)
       .eq('status', 'preparing')
       .is('kitchen_ready_at', null)
@@ -139,15 +146,44 @@ export default function KitchenDisplayPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const markReady = async (orderId: string) => {
-    setSavingIds(prev => new Set(prev).add(orderId));
-    await supabase.from('orders')
-      .update({ kitchen_ready_at: new Date().toISOString() })
-      .eq('id', orderId)
+  const markReady = async (order: KitchenOrder) => {
+    setSavingIds(prev => new Set(prev).add(order.id));
+    const update: { kitchen_ready_at: string; status?: 'completed' | 'pickup' } = {
+      kitchen_ready_at: new Date().toISOString(),
+    };
+
+    // صالة/محلي واستلام كاونتر: ما فيها أي خطوة بعد التجهيز — تكتمل فوراً.
+    // توصيل: تبقى قيد التجهيز لحد ما سائق يوافق (يظهر بقائمة السواق)، وإذا
+    // كان سائق موافق أصلاً تنتقل لـ"انتظار السائق" فوراً مع إشعاره.
+    if (order.order_type === 'local' || order.order_type === 'pickup') {
+      update.status = 'completed';
+    } else if (order.driver_id) {
+      update.status = 'pickup';
+    }
+
+    const { error } = await supabase.from('orders')
+      .update(update)
+      .eq('id', order.id)
+      .eq('status', 'preparing')
       .is('kitchen_ready_at', null);
+
+    if (!error && update.status === 'pickup' && order.driver_id) {
+      fetch('/api/push/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await pushAuthHeaders()) },
+        body: JSON.stringify({
+          driver_id: order.driver_id,
+          title: '🍔 الطلب جاهز!',
+          body: `طلب ${order.client_name} جاهز — تعال استلمه من المطعم`,
+          url: `/delivery/${order.id}`,
+          tag: `ready-${order.id}`,
+        }),
+      }).catch(() => {});
+    }
+
     // لا نُحدّث tickets يدوياً — قناة UPDATE الحية تُعيد fetchPendingOrders()
     // وهي مصدر الحقيقة الوحيد لضمان تزامن كل الشاشات المفتوحة بدون تعارض.
-    setSavingIds(prev => { const next = new Set(prev); next.delete(orderId); return next; });
+    setSavingIds(prev => { const next = new Set(prev); next.delete(order.id); return next; });
   };
 
   if (!unlocked) return <UnlockScreen dark={dark} onUnlock={() => setUnlocked(true)} />;
@@ -206,7 +242,7 @@ export default function KitchenDisplayPage() {
                   </ul>
 
                   <button
-                    onClick={() => markReady(order.id)}
+                    onClick={() => markReady(order)}
                     disabled={saving}
                     className="w-full py-6 rounded-2xl bg-green-500 text-white text-2xl md:text-3xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50"
                   >
