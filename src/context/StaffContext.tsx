@@ -27,6 +27,7 @@ type StaffCtxValue = {
   isOwner: boolean;
   isManager: boolean;
   isCashier: boolean;
+  isKitchen: boolean;
   isRestricted: boolean;
   switchUser: () => void;
   refreshStaffList: () => Promise<void>;
@@ -41,6 +42,7 @@ const StaffCtx = createContext<StaffCtxValue>({
   isOwner: false,
   isManager: false,
   isCashier: false,
+  isKitchen: false,
   isRestricted: false,
   switchUser: () => {},
   refreshStaffList: async () => {},
@@ -124,9 +126,11 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [restaurantId, refreshStaffList]);
 
-  // قفل تلقائي بعد خمول — للأدوار المقيَّدة فقط (manager/cashier/driver)، ليس المالك
+  // قفل تلقائي بعد خمول — للأدوار المقيَّدة فقط (manager/cashier/driver)، ليس المالك.
+  // دور "مطبخ" مستثنى أيضاً: شاشة عرض سلبية دائمة التشغيل (POS طرفية تفاعلية
+  // وليست) لا يوجد بها "خمول" فعلي ليُقفل بسببه.
   useEffect(() => {
-    if (!activeStaff || activeStaff.role === 'owner') {
+    if (!activeStaff || activeStaff.role === 'owner' || activeStaff.role === 'kitchen') {
       if (idleTimer.current) clearTimeout(idleTimer.current);
       return;
     }
@@ -146,6 +150,7 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
   const isOwner = activeStaff?.role === 'owner';
   const isManager = activeStaff?.role === 'manager';
   const isCashier = activeStaff?.role === 'cashier';
+  const isKitchen = activeStaff?.role === 'kitchen';
 
   return (
     <StaffCtx.Provider value={{
@@ -157,6 +162,7 @@ export function StaffProvider({ children }: { children: React.ReactNode }) {
       isOwner,
       isManager,
       isCashier,
+      isKitchen,
       isRestricted: isCashier,
       switchUser,
       refreshStaffList,

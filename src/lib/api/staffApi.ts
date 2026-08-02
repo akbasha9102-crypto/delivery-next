@@ -4,7 +4,7 @@
  * كل الدوال هنا تتعامل مع الفشل بلطف (لا تُسقط الواجهة) وتُرجع نتيجة موحّدة.
  */
 
-export type StaffRole = 'owner' | 'manager' | 'cashier' | 'driver';
+export type StaffRole = 'owner' | 'manager' | 'cashier' | 'driver' | 'kitchen';
 
 export type StaffMember = {
   id: string;

@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     .from('user_roles')
     .select(STAFF_SELECT)
     .eq('restaurant_id', restaurantId)
-    .in('role', ['manager', 'cashier'])
+    .in('role', ['manager', 'cashier', 'kitchen'])
     .order('created_at', { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   }
   // driver مستبعَد عمداً — للسائقين تدفّق إنشاء منفصل (/api/driver) يُنشئ
   // صف drivers المرتبط أيضاً، وإلا يبقى حساب driver بلا صف drivers مقابل.
-  if (!role || !['manager', 'cashier'].includes(role)) {
+  if (!role || !['manager', 'cashier', 'kitchen'].includes(role)) {
     return NextResponse.json({ error: 'role غير صالح' }, { status: 400 });
   }
   if (!password || password.trim().length < MIN_STAFF_PASSWORD_LENGTH) {

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useStaff } from '@/context/StaffContext';
 import { MyApprovalToast } from '@/components/staff/MyApprovalToast';
 import { FullScreenSpinner } from '@/components/shared/FullScreenSpinner';
@@ -7,12 +8,15 @@ import { FullScreenSpinner } from '@/components/shared/FullScreenSpinner';
 /**
  * الطبقة التي تُدرَج بعد AdminGuard مباشرة (تغلّف children داخل AdminLayout):
  * - أثناء تحديد الهوية (تحميل + تفعيل المالك تلقائياً في StaffContext) تعرض سبينر.
+ * - دور "مطبخ" مقصور حصراً على /admin/kitchen — أي صفحة admin أخرى تُعاد توجيهها.
  * - غير ذلك: تعرض محتوى الداشبورد كما هو + إشعار حالة الطلب (للكاشير).
  *   شاشة اختيار الهوية ("من أنت؟") أُزيلت نهائياً — الجلسة المشتركة تُفعَّل كمالك
  *   تلقائياً دائماً؛ الموظفون الحقيقيون (تسجيل دخول مستقل من /login) يحتفظون بدورهم كما هو.
  */
 export function StaffGate({ children }: { children: React.ReactNode }) {
-  const { ready, activeStaff, isCashier, switchUser } = useStaff();
+  const { ready, activeStaff, isCashier, isKitchen, switchUser } = useStaff();
+  const pathname = usePathname();
+  const router = useRouter();
 
   // ready===true مع activeStaff===null يعني جلسة صالحة (AdminGuard تحقق منها مسبقاً)
   // لكن بلا دور معروف بهذا المطعم — مثلاً حساب موظف أُلغي حديثاً. بدون هذا التحويل
@@ -22,6 +26,14 @@ export function StaffGate({ children }: { children: React.ReactNode }) {
     const t = setTimeout(() => switchUser(), 2000);
     return () => clearTimeout(t);
   }, [ready, activeStaff, switchUser]);
+
+  // دور "مطبخ" مقصور حصراً على /admin/kitchen — أي محاولة وصول لأي صفحة
+  // /admin/* أخرى (بما فيها /admin/dashboard) تُعاد توجيهها فوراً لشاشة المطبخ.
+  useEffect(() => {
+    if (ready && isKitchen && pathname !== '/admin/kitchen') {
+      router.replace('/admin/kitchen');
+    }
+  }, [ready, isKitchen, pathname, router]);
 
   if (!ready) return <FullScreenSpinner />;
 
@@ -34,6 +46,11 @@ export function StaffGate({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  // منع render لأي صفحة أخرى غير kitchen بينما التحويل يحصل (تفادي وميض المحتوى)
+  if (isKitchen && pathname !== '/admin/kitchen') {
+    return <FullScreenSpinner />;
   }
 
   return (

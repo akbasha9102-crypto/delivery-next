@@ -20,7 +20,7 @@ async function getAccessToken(): Promise<string | undefined> {
 // حزمة المتصفح (نفس السبب الموثَّق بـ src/app/login/page.tsx).
 const USERNAME_REGEX = /^[a-z0-9_-]{3,20}$/;
 
-const ROLE_LABEL: Record<StaffRole, string> = { owner: 'مالك', manager: 'مدير', cashier: 'كاشير', driver: 'سائق' };
+const ROLE_LABEL: Record<StaffRole, string> = { owner: 'مالك', manager: 'مدير', cashier: 'كاشير', driver: 'سائق', kitchen: 'مطبخ' };
 
 const emptyForm = { display_name: '', role: 'cashier' as StaffRole, username: '', password: '', max_discount_pct: '0', max_void_amount: '0' };
 
@@ -204,7 +204,7 @@ export default function StaffManagementPage() {
 
               <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">الدور</p>
               <div className="flex gap-1.5 flex-wrap mb-3 justify-end">
-                {(['cashier', 'manager'] as StaffRole[]).map(r => (
+                {(['cashier', 'manager', 'kitchen'] as StaffRole[]).map(r => (
                   <button key={r} onClick={() => setForm(p => ({ ...p, role: r }))}
                     className={`px-3 py-1.5 rounded-full text-xs font-bold border active:scale-95 transition-all ${form.role === r ? 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black' : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400'}`}>
                     {ROLE_LABEL[r]}
@@ -231,6 +231,7 @@ export default function StaffManagementPage() {
                 </>
               )}
 
+              {form.role !== 'kitchen' && (
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
                   <p className="text-xs text-gray-400 dark:text-slate-500 text-right mb-1">أقصى خصم بدون موافقة (%)</p>
@@ -243,6 +244,7 @@ export default function StaffManagementPage() {
                     className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-right text-gray-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#2563eb]" />
                 </div>
               </div>
+              )}
 
               {error && <p className="text-red-500 text-xs font-bold text-center mt-2">{error}</p>}
             </div>

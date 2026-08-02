@@ -13,7 +13,7 @@ import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { verifyRequestClaims } from './verify-session';
 
-export type StaffRole = 'owner' | 'manager' | 'cashier' | 'driver';
+export type StaffRole = 'owner' | 'manager' | 'cashier' | 'driver' | 'kitchen';
 
 // نفس الحد الأدنى المفروض على تسجيل مالك مطعم جديد (src/app/api/signup-requests/route.ts)
 // — نوحّد الموظف/السائق/سوبر أدمن عليه بدل الحد الضعيف (4) القديم.
@@ -39,7 +39,7 @@ export const STAFF_USERNAME_REGEX = /^[a-z0-9_-]{3,20}$/;
 export const RESERVED_STAFF_USERNAMES = new Set([
   'admin', 'api', 'owner', 'staff', 'login', 'logout', 'root', 'support',
   'system', 'test', 'null', 'undefined', 'settings', 'dashboard', 'super',
-  'superadmin', 'cashier', 'manager', 'driver', 'auth', 'anonymous',
+  'superadmin', 'cashier', 'manager', 'driver', 'kitchen', 'auth', 'anonymous',
 ]);
 
 // أسماء كل المجلدات الثابتة على مستوى جذر src/app — الآن أن slug المطعم بات

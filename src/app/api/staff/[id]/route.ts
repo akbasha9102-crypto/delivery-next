@@ -48,7 +48,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     update.display_name = body.display_name.trim();
   }
   if (body.role !== undefined) {
-    if (!['manager', 'cashier'].includes(body.role)) {
+    if (!['manager', 'cashier', 'kitchen'].includes(body.role)) {
       return NextResponse.json({ error: 'role غير صالح' }, { status: 400 });
     }
     update.role = body.role;

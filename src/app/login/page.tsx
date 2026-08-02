@@ -46,6 +46,19 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
+
+    // المطبخ يُحوَّل مباشرة لشاشته الخاصة بدل /admin/dashboard الافتراضية
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      const ctxRes = await fetch('/api/staff/my-context', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const ctx = await ctxRes.json().catch(() => ({}));
+      if (ctxRes.ok && ctx.role === 'kitchen') {
+        router.replace('/admin/kitchen');
+        return;
+      }
+    }
     router.replace('/admin/dashboard');
   };
 
