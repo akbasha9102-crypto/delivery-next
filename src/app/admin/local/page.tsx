@@ -140,14 +140,15 @@ function QuickOrderSheet({ restaurantId, onClose, onCreated }: { restaurantId: s
     setError(null);
     const name = customerName.trim() || 'زبون كاشير';
 
-    // طلبات الكاشير المحلي (order_type='local') تُسدَّد وتُغلق مباشرة عند البيع —
-    // نفس المفهوم الموثّق فعلاً في migration الأصلي وفي تعليقات admin/dashboard.tsx.
+    // طلبات الكاشير المحلي تُدفع فوراً لكن تمر بالمطبخ الآن (status='preparing')
+    // وتكتمل فعلياً لما الشيف يضغط 'تم التجهيز' بشاشة المطبخ — راجع markReady
+    // بـ admin/kitchen/page.tsx.
     const { data: order, error: orderErr } = await supabase.from('orders').insert([{
       restaurant_id: restaurantId,
       client_name: name,
       client_phone: '0000000000',
       total_amount: total,
-      status: 'completed',
+      status: 'preparing',
       order_type: 'local',
     }]).select().single();
 
@@ -509,14 +510,19 @@ export default function LocalCashierPage() {
     const data = res.data as { expected_closing_cash: number; variance: number };
 
     // أرشفة تلقائية لطلبات "المحل" (order_type='local') عند إغلاق الوردية —
-    // قرار المستخدم صراحة: بلا زر يدوي وبلا تركها كما هي. لا نعطّل إغلاق
-    // الوردية إن فشلت الأرشفة (الوردية أُغلقت فعلياً بالفعل عبر closeShift أعلاه).
+    // قرار المستخدم صراحة: بلا زر يدوي وبلا تركها كما هي. لكن نؤرشف فقط
+    // الطلبات اللي وصلت لحالة نهائية فعلاً (completed/voided/refunded)؛ أي
+    // طلب لسه 'preparing' (المطبخ ما خلّص تجهيزه) يبقى ظاهر بشاشة المطبخ
+    // ولا يُؤرشف الآن — يُفترض يُؤرشف لاحقاً (مسح دوري/يدوي مستقبلاً إن
+    // احتجنا) بعد ما يكتمل فعلياً. لا نعطّل إغلاق الوردية إن فشلت الأرشفة
+    // (الوردية أُغلقت فعلياً بالفعل عبر closeShift أعلاه).
     if (restaurantId) {
       await supabase.from('orders')
         .update({ archived_at: new Date().toISOString() })
         .eq('restaurant_id', restaurantId)
         .eq('order_type', 'local')
         .is('archived_at', null)
+        .in('status', ['completed', 'voided', 'refunded'])
         .gte('created_at', shift.opened_at);
     }
 
@@ -608,7 +614,12 @@ export default function LocalCashierPage() {
                 className="w-full flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4 text-right active:scale-[0.98] transition-all">
                 <ChevronLeft size={16} className="text-gray-300 dark:text-slate-600" />
                 <div className="flex-1 px-2">
-                  <p className="font-bold text-sm text-gray-900 dark:text-slate-100">{o.client_name}</p>
+                  <p className="font-bold text-sm text-gray-900 dark:text-slate-100 flex items-center gap-1.5">
+                    {o.client_name}
+                    {o.status === 'preparing' && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">قيد التجهيز</span>
+                    )}
+                  </p>
                   <p className="text-xs text-gray-400 mt-0.5">{o.order_items?.length ?? 0} صنف · {new Date(o.created_at).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
                 <span className="font-bold text-sm text-[#f97316]">{o.total_amount.toLocaleString()} د.ع</span>

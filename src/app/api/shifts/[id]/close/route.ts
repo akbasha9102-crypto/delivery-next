@@ -56,17 +56,41 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   // الطلبات اليوم نقدية (COD) كما يبدو من غياب أي بديل بالكود الحالي. إذا
   // أُضيف لاحقاً دفع إلكتروني/عبر البطاقة، يجب تصفية هذا الاستعلام بعمود
   // payment_method جديد (migration إضافية) قبل الاعتماد عليه فعلياً.
+  //
+  // استثناء لطلبات الكاشير المحلي (order_type='local'): هذه تُدفع كاش عند
+  // الإنشاء مباشرة (وقت البيع بالكاونتر)، ثم تمر بالمطبخ وتصير status=
+  // 'completed' لاحقاً فقط لما الشيف يجهزها — عكس الدليفري/الاستلام اللي
+  // الدفع فيها COD عند completed فعلياً. فلحساب الكاش المتوقع بالصندوق،
+  // نحسب طلبات local حسب وقت الإنشاء بغض النظر عن preparing/completed (ما
+  // دام لم يُلغَ/يُرجَع)، ونحسب باقي الأنواع بنفس المنطق القديم (completed فقط).
+  // ملاحظة: order_type قد يكون NULL بسجلات قديمة جداً (migration قديمة
+  // عبّأت DEFAULT 'delivery' لسجلات موجودة وقتها)؛ نتعامل معها كـ"غير محلي"
+  // بأمان عبر .or(...) بدل .neq(...) لأن != بـ Postgres يستبعد NULL ضمنياً.
+  const { data: localOrders, error: localOrdersError } = await supabaseAdmin
+    .from('orders')
+    .select('total_amount')
+    .eq('restaurant_id', shift.restaurant_id)
+    .eq('order_type', 'local')
+    .not('status', 'in', '(voided,refunded)')
+    .gte('created_at', shift.opened_at)
+    .lte('created_at', closedAt.toISOString());
+
+  if (localOrdersError) return NextResponse.json({ error: localOrdersError.message }, { status: 500 });
+
   const { data: completedOrders, error: ordersError } = await supabaseAdmin
     .from('orders')
     .select('total_amount')
     .eq('restaurant_id', shift.restaurant_id)
+    .or('order_type.is.null,order_type.neq.local')
     .eq('status', 'completed')
     .gte('created_at', shift.opened_at)
     .lte('created_at', closedAt.toISOString());
 
   if (ordersError) return NextResponse.json({ error: ordersError.message }, { status: 500 });
 
-  const ordersTotal = (completedOrders ?? []).reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+  const ordersTotal =
+    (completedOrders ?? []).reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0) +
+    (localOrders ?? []).reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
   const expectedClosingCash = Number(shift.opening_cash) + ordersTotal;
   const variance = actualClosingCash - expectedClosingCash;
 
@@ -128,7 +152,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   const zReport = {
-    orders_count: completedOrders?.length ?? 0,
+    orders_count: (completedOrders?.length ?? 0) + (localOrders?.length ?? 0),
     orders_total: ordersTotal,
     opening_cash: Number(shift.opening_cash),
     expected_closing_cash: expectedClosingCash,
