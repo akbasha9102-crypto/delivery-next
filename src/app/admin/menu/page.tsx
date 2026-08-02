@@ -10,6 +10,8 @@ import { useSettings } from '@/context/SettingsContext';
 import { HexColorPicker } from 'react-colorful';
 import { compatibleUnits } from '@/lib/utils/unitConversion';
 
+
+
 type Category = { id: string; name: string; color?: string; card_color?: string; color_dark?: string; card_color_dark?: string; sort_order?: number | null };
 type Extra = { id: string; name: string; price: number };
 type Item = { id: string; category_id: string; name: string; description: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string; images_json?: string };

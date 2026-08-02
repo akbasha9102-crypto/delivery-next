@@ -7,6 +7,8 @@ import { ChevronRight, Hourglass, Loader2 } from 'lucide-react';
 import { mashiRoundedFont, MASHI_FONT } from '@/app/home/brand';
 import { setPendingSignup } from '@/lib/pendingSignup';
 
+
+
 const USERNAME_REGEX = /^[a-z0-9_]{3,24}$/;
 
 function Field({

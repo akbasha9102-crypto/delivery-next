@@ -14,13 +14,13 @@ const brandFont = Tajawal({
 });
 
 export const metadata: Metadata = {
-  title: 'CulinaShare',
-  description: 'طلب وجبات',
+  title: 'ماشي',
+  description: 'طلب وجباتك بسهولة',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'CulinaShare',
+    title: 'ماشي',
   },
 };
 

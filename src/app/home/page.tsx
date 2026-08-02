@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import LandingPage from './LandingPage';
 import { getPendingSignup } from '@/lib/pendingSignup';
 
+
+
 export default function HomePage() {
   const router = useRouter();
   const [noSlug, setNoSlug] = useState(false);

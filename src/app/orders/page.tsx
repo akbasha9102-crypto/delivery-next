@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
+
+
 const BASRA_CENTER: [number, number] = [30.5085, 47.7804];
 
 const MAP_CSS = `

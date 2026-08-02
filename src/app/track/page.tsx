@@ -8,6 +8,8 @@ import { useSettings } from '@/context/SettingsContext';
 import { CustomerGuard } from '@/components/guards/CustomerGuard';
 import { useDarkMode } from '@/context/ThemeContext';
 
+
+
 function isInternalOrder(orderType?: string | null) {
   return orderType === 'pickup';
 }

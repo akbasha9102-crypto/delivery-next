@@ -13,6 +13,8 @@ import { useSuperAdminNotifications } from '@/context/SuperAdminNotificationsCon
 import { applyDiscountPct } from '@/lib/utils/pricing';
 import { isRestaurantOpenNow, getNextOpenTime } from '@/lib/utils/schedule';
 
+
+
 /** ينسّق تاريخاً لصيغة "HH:mm" المطلوبة كقيمة لعنصر input[type=time] */
 const formatHHMM = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 

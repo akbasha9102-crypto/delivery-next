@@ -12,6 +12,8 @@ import { LowStockAlert } from '@/components/shared/LowStockAlert';
 import { deductStockForOrder } from '@/lib/utils/deduct-stock';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
+
+
 type OrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };
 type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; discount_amount?: number | null; coupon_code?: string | null; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'pickup' | 'local' | null; archived_at?: string | null };
 
