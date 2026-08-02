@@ -15,7 +15,7 @@ import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 
 type OrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; discount_amount?: number | null; coupon_code?: string | null; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'pickup' | 'local' | null; archived_at?: string | null };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; discount_amount?: number | null; coupon_code?: string | null; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'pickup' | 'local' | null; archived_at?: string | null; kitchen_ready_at?: string | null };
 
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز', color: '#f59e0b', dot: 'bg-yellow-400',  btnColor: '#3b82f6' },
@@ -1344,6 +1344,11 @@ export default function DashboardPage() {
                       </p>
                       <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{order.client_name}</p>
                     </div>
+                    {order.kitchen_ready_at && (
+                      <span className="flex-shrink-0 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-bold px-2.5 py-1.5 rounded-xl whitespace-nowrap">
+                        جاهز بالمطبخ ✓
+                      </span>
+                    )}
                     {scope === 'delivery' && (order.driver_id ? (
                       <button
                         onClick={e => { e.stopPropagation(); setDriverPopup(driverPopup === order.id ? null : order.id); }}

@@ -73,8 +73,9 @@ export default function KitchenDisplayPage() {
       .from('orders')
       .select('id, client_name, total_amount, created_at, order_items(id, item_name, quantity, price)')
       .eq('restaurant_id', restaurantId)
-      .eq('order_type', 'local')
+      .eq('status', 'preparing')
       .is('kitchen_ready_at', null)
+      .is('archived_at', null)
       .order('created_at', { ascending: true })
       .limit(100);
     setTickets((data as unknown as KitchenOrder[]) || []);
