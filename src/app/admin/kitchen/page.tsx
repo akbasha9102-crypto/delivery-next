@@ -7,7 +7,7 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { makeKitchenAlertWavUrl } from '@/lib/utils/kitchenAlertSound';
 
 type KitchenOrderItem = { id: string; item_name: string; quantity: number; price: number };
-type KitchenOrder = { id: string; client_name: string; created_at: string; order_items?: KitchenOrderItem[] };
+type KitchenOrder = { id: string; created_at: string; order_type: 'delivery' | 'pickup' | 'local' | null; order_items?: KitchenOrderItem[] };
 
 // نفس منطق waitInfo بـ admin/dashboard/page.tsx — يُستخدم هنا كحد علوي ملوّن بكل بطاقة
 function waitInfo(createdAt: string) {
@@ -20,6 +20,12 @@ function waitInfo(createdAt: string) {
 function fmtTime(iso: string) {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function orderTypeInfo(orderType: KitchenOrder['order_type']) {
+  return orderType === 'delivery'
+    ? { label: 'توصيل', color: '#f97316' }
+    : { label: 'طلب داخلي', color: '#64748b' };
 }
 
 /* ─────────────────────── شاشة "اضغط لبدء المراقبة" ─────────────────────── */
@@ -71,7 +77,7 @@ export default function KitchenDisplayPage() {
     if (!restaurantId) return;
     const { data } = await supabase
       .from('orders')
-      .select('id, client_name, total_amount, created_at, order_items(id, item_name, quantity, price)')
+      .select('id, order_type, total_amount, created_at, order_items(id, item_name, quantity, price)')
       .eq('restaurant_id', restaurantId)
       .eq('status', 'preparing')
       .is('kitchen_ready_at', null)
@@ -161,30 +167,39 @@ export default function KitchenDisplayPage() {
           <p className={`text-3xl font-bold ${dark ? 'text-slate-500' : 'text-gray-300'}`}>لا طلبات معلّقة حالياً</p>
         </div>
       ) : (
-        <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="p-4 md:p-6 flex flex-col gap-6 max-w-4xl mx-auto">
           {tickets.map(order => {
             const wait = waitInfo(order.created_at);
             const isLate = wait.color === '#ef4444';
             const saving = savingIds.has(order.id);
+            const typeInfo = orderTypeInfo(order.order_type);
             return (
               <div
                 key={order.id}
-                className={`rounded-2xl overflow-hidden shadow-md border-t-4 ${dark ? 'bg-[#2a2a2a]' : 'bg-white'} ${isLate ? 'animate-pulse' : ''}`}
+                className={`rounded-3xl overflow-hidden shadow-lg border-t-8 ${dark ? 'bg-[#2a2a2a]' : 'bg-white'} ${isLate ? 'animate-pulse' : ''}`}
                 style={{ borderTopColor: wait.color }}
               >
-                <div className="p-4">
+                <div className="p-6 md:p-8">
                   <div className="flex items-center justify-between mb-2">
-                    <h2 className={`text-xl font-bold ${dark ? 'text-white' : 'text-gray-800'}`}>{order.client_name || 'زبون'}</h2>
-                    <span className="text-sm font-bold px-2 py-1 rounded-lg" style={{ color: wait.color, backgroundColor: `${wait.color}20` }}>
+                    <span
+                      className="text-2xl md:text-3xl font-black px-4 py-1.5 rounded-xl"
+                      style={{ color: typeInfo.color, backgroundColor: `${typeInfo.color}20` }}
+                    >
+                      {typeInfo.label}
+                    </span>
+                    <span
+                      className="text-xl md:text-2xl font-bold px-3 py-1.5 rounded-lg"
+                      style={{ color: wait.color, backgroundColor: `${wait.color}20` }}
+                    >
                       {wait.text}
                     </span>
                   </div>
-                  <p className={`text-xs mb-3 ${dark ? 'text-slate-400' : 'text-gray-400'}`}>استُلم {fmtTime(order.created_at)}</p>
+                  <p className={`text-sm md:text-base mb-5 ${dark ? 'text-slate-400' : 'text-gray-400'}`}>استُلم {fmtTime(order.created_at)}</p>
 
-                  <ul className="space-y-1.5 mb-4">
+                  <ul className="space-y-3 mb-6">
                     {(order.order_items || []).map(it => (
-                      <li key={it.id} className={`text-lg flex items-center gap-2 ${dark ? 'text-slate-200' : 'text-gray-700'}`}>
-                        <span className="font-bold text-[#f97316]">×{it.quantity}</span>
+                      <li key={it.id} className={`text-3xl md:text-4xl font-bold flex items-center gap-3 ${dark ? 'text-slate-100' : 'text-gray-800'}`}>
+                        <span className="text-[#f97316]">×{it.quantity}</span>
                         <span>{it.item_name}</span>
                       </li>
                     ))}
@@ -193,9 +208,9 @@ export default function KitchenDisplayPage() {
                   <button
                     onClick={() => markReady(order.id)}
                     disabled={saving}
-                    className="w-full py-4 rounded-xl bg-green-500 text-white text-lg font-bold flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+                    className="w-full py-6 rounded-2xl bg-green-500 text-white text-2xl md:text-3xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50"
                   >
-                    <Check size={22} />
+                    <Check size={32} />
                     تم التجهيز
                   </button>
                 </div>
