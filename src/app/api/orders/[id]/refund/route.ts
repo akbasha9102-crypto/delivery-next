@@ -24,7 +24,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const { data: order, error: orderError } = await supabaseAdmin
     .from('orders')
-    .select('id, restaurant_id, status, total_amount')
+    .select('id, restaurant_id, status, total_amount, pending_edit_id')
     .eq('id', orderId)
     .maybeSingle();
 
@@ -90,6 +90,23 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
   await returnStockForOrder(staff.restaurant_id, orderId, 'استرجاع طلب');
+
+  // تنظيف إضافي best-effort: تعديل زبون معلّق على طلب اُسترجع للتو يجب ألا يبقى
+  // قابلاً للقبول لاحقاً (حراسة reviewEdit الوحيدة هي kitchen_ready_at IS NULL،
+  // وطلب مسترجَع لا يزال يحقق هذا الشرط) — لا تُفشل الاسترجاع الأساسي (نجح فعلاً)
+  // بسبب عطل بهذه الخطوة الثانوية، فقط سجّل الخطأ (نفس نمط returnStockForOrder أعلاه).
+  if (order.pending_edit_id) {
+    try {
+      await supabaseAdmin.from('order_edits')
+        .update({ status: 'rejected', rejected_at: new Date().toISOString() })
+        .eq('id', order.pending_edit_id);
+      await supabaseAdmin.from('orders')
+        .update({ pending_edit_id: null })
+        .eq('id', orderId);
+    } catch (err) {
+      console.error('تعذّر تنظيف pending_edit_id بعد استرجاع الطلب', orderId, err);
+    }
+  }
 
   await logStaffAction({
     restaurant_id: staff.restaurant_id,

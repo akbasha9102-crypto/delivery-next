@@ -1,12 +1,16 @@
 import { supabase } from '@/lib/supabase/client';
 import { convertToInventoryUnit } from '@/lib/utils/unitConversion';
 
-export type StockOrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };
+export type StockOrderItem = { id?: string; item_id?: string | null; item_name: string; quantity: number; price: number };
 
 // خصم مكونات الوجبات (menu_recipes) من المخزون تلقائياً عند بدء تجهيز/بيع طلب —
 // دالة مشتركة يستدعيها كل مسار ينشئ طلباً يخصم مخزوناً فعلياً (لوحة التحكم
 // الرئيسية وكاشير المحل المحلي)، لضمان ألا يفوت أي مسار خصم المخزون.
-export async function deductStockForOrder(restaurantId: string, orderId: string, clientName: string, items: StockOrderItem[]) {
+//
+// referenceType: افتراضياً 'order' (سلوك كل نقاط الاستدعاء الحالية بلا تغيير).
+// أضيف اختيارياً لإتاحة إعادة استخدام نفس منطق التوسع بالوصفات من
+// adjustStockForOrderEdit (خصم العناصر الجديدة بعد قبول تعديل طلب) بدل تكراره.
+export async function deductStockForOrder(restaurantId: string, orderId: string, clientName: string, items: StockOrderItem[], referenceType: string = 'order') {
   const itemIds = [...new Set(items.filter(i => i.item_id).map(i => i.item_id as string))];
   if (itemIds.length === 0) return;
 
@@ -23,7 +27,7 @@ export async function deductStockForOrder(restaurantId: string, orderId: string,
         movement_type: 'OUT_ORDER',
         quantity_changed: convertToInventoryUnit(r.quantity_required, r.unit, r.inventory_items?.unit) * oi.quantity,
         reference_id: orderId,
-        reference_type: 'order',
+        reference_type: referenceType,
         notes: `خصم تلقائي — طلب ${clientName}`,
       }));
   });

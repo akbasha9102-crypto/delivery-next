@@ -4,6 +4,25 @@ import { verifyOwnerRequest } from '@/lib/auth/staff-auth';
 import { logStaffAction } from '@/lib/utils/staff-actions-log';
 import { returnStockForOrder } from '@/lib/utils/return-stock';
 
+// تنظيف إضافي best-effort: تعديل زبون معلّق على طلب أُلغي/استُرجع للتو (عبر
+// موافقة المالك) يجب ألا يبقى قابلاً للقبول لاحقاً — نفس الحارس المُضاف
+// بمساري void/refund المباشرين (reviewEdit's only guard is kitchen_ready_at
+// IS NULL, وطلب ملغى/مسترجع لا يزال يحقق هذا الشرط). لا يُفشل الإجراء
+// الأساسي (نجح فعلاً) بسبب عطل بهذه الخطوة الثانوية، فقط يسجّل الخطأ.
+async function clearPendingEditIfAny(orderId: string, pendingEditId: string | null) {
+  if (!pendingEditId) return;
+  try {
+    await supabaseAdmin.from('order_edits')
+      .update({ status: 'rejected', rejected_at: new Date().toISOString() })
+      .eq('id', pendingEditId);
+    await supabaseAdmin.from('orders')
+      .update({ pending_edit_id: null })
+      .eq('id', orderId);
+  } catch (err) {
+    console.error('تعذّر تنظيف pending_edit_id بعد إلغاء/استرجاع الطلب عبر الموافقة', orderId, err);
+  }
+}
+
 // POST /api/approvals/:id/resolve — { action: 'approve'|'reject' }
 // مالك فقط (جلسة Supabase). عند approve: ينفّذ العملية المعلّقة فعلياً
 // (void/refund/discount_override)، ويحدّث approval_requests.status —
@@ -82,7 +101,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (approval.order_id) {
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .select('id, restaurant_id, status, total_amount, pre_discount_total, coupon_code')
+      .select('id, restaurant_id, status, total_amount, pre_discount_total, coupon_code, pending_edit_id')
       .eq('id', approval.order_id)
       .maybeSingle();
 
@@ -119,6 +138,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (approval.request_type === 'void_order') {
       await supabaseAdmin.from('orders').update({ status: 'voided' }).eq('id', order.id);
       await returnStockForOrder(approval.restaurant_id, order.id, 'إلغاء طلب (عبر موافقة)');
+      await clearPendingEditIfAny(order.id, order.pending_edit_id);
       await logStaffAction({
         restaurant_id: approval.restaurant_id,
         performed_by_auth_id: approval.requested_by_user_id,
@@ -132,6 +152,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     } else if (approval.request_type === 'refund') {
       await supabaseAdmin.from('orders').update({ status: 'refunded' }).eq('id', order.id);
       await returnStockForOrder(approval.restaurant_id, order.id, 'استرجاع طلب (عبر موافقة)');
+      await clearPendingEditIfAny(order.id, order.pending_edit_id);
       await logStaffAction({
         restaurant_id: approval.restaurant_id,
         performed_by_auth_id: approval.requested_by_user_id,

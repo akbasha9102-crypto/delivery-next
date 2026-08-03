@@ -10,12 +10,18 @@ import { useNewOrders } from '@/context/NewOrdersContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { LowStockAlert } from '@/components/shared/LowStockAlert';
 import { deductStockForOrder } from '@/lib/utils/deduct-stock';
+import { adjustStockForOrderEdit } from '@/lib/utils/edit-stock';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 
 
 type OrderItem = { id: string; item_id?: string | null; item_name: string; quantity: number; price: number };
-type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; discount_amount?: number | null; coupon_code?: string | null; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'pickup' | 'local' | null; archived_at?: string | null; kitchen_ready_at?: string | null };
+type Order = { id: string; client_name: string; client_phone: string; delivery_address: string | null; client_note: string | null; total_amount: number; discount_amount?: number | null; coupon_code?: string | null; status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed' | 'rejected'; created_at: string; items?: OrderItem[]; driver_name?: string | null; driver_phone?: string | null; driver_id?: string | null; client_lat?: number | null; client_lng?: number | null; driver_lat?: number | null; driver_lng?: number | null; order_type: 'delivery' | 'pickup' | 'local' | null; archived_at?: string | null; kitchen_ready_at?: string | null; pending_edit_id?: string | null; last_edit_id?: string | null };
+
+// لقطة عناصر تعديل طلب (previous_items/new_items بجدول order_edits) — نفس شكل
+// OrderItem تقريباً لكن بلا id (لقطة JSONB، ليست صفوف order_items فعلية).
+type OrderEditItem = { item_id?: string | null; item_name: string; quantity: number; price: number };
+type OrderEditRow = { id: string; order_id: string; previous_items: OrderEditItem[]; new_items: OrderEditItem[]; previous_total: number; new_total: number };
 
 const STATUS = {
   pending:   { label: 'واردة',        next: 'preparing' as const, nextLabel: 'ابدأ التجهيز', color: '#f59e0b', dot: 'bg-yellow-400',  btnColor: '#3b82f6' },
@@ -465,19 +471,22 @@ function getMenuExtras(item: MenuItem): MenuExtra[] {
   try { return JSON.parse(item.extras_json || '[]'); } catch { return []; }
 }
 
-function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId: string; onClose: () => void; onCreated: () => void }) {
+function QuickAddOrderModal({ restaurantId, editingOrder, onClose, onCreated }: { restaurantId: string; editingOrder?: Order; onClose: () => void; onCreated: () => void }) {
   const { dark } = useDarkMode();
   const [categories,  setCategories]  = useState<MenuCategory[]>([]);
   const [items,        setItems]      = useState<MenuItem[]>([]);
   const [loading,      setLoading]    = useState(true);
   const [selectedCat,  setSelectedCat] = useState<string | null>(null);
   const [cart,         setCart]       = useState<QuickCartEntry[]>([]);
-  const [customerName, setCustomerName] = useState('');
+  const [customerName, setCustomerName] = useState(editingOrder?.client_name && editingOrder.client_name !== 'زبون بدون جوال' ? editingOrder.client_name : '');
   const [submitting,   setSubmitting] = useState(false);
   const [extrasItem,   setExtrasItem] = useState<MenuItem | null>(null);
   const [pickedExtras, setPickedExtras] = useState<Set<string>>(new Set());
   const [showReview,   setShowReview] = useState(false);
   const [itemNotes,    setItemNotes]  = useState<Record<string, string>>({});
+  // يمنع إعادة تلقيم cart من editingOrder.items مرة أخرى إن أعاد المستخدم تعديل
+  // الكميات يدوياً بعد التلقيم الأول (يعمل التلقيم مرة واحدة فقط بعد تحميل items).
+  const seededEditRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -486,15 +495,40 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
         supabase.from('items').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false }),
       ]);
       setCategories(catsRes.data || []);
-      setItems(
-        (itemsRes.data || []).filter((i: MenuItem) => {
-          const st = i.item_status || (i.is_available ? 'available' : 'hidden');
-          return st === 'available';
-        })
-      );
+      const availableItems = (itemsRes.data || []).filter((i: MenuItem) => {
+        const st = i.item_status || (i.is_available ? 'available' : 'hidden');
+        return st === 'available';
+      });
+      setItems(availableItems);
+
+      // وضع التعديل: نُلقِّم cart من عناصر الطلب الحالي، مطابقة item_id بقائمة
+      // القائمة المُحمَّلة (availableItems وليس items المفلترة بالحالة القديمة
+      // — نستخدم قائمة الأصناف كاملة كي لا نُسقط صنفاً "غير متاح" حالياً كان
+      // ضمن الطلب أصلاً). إن لم نجد تطابقاً (مثلاً صنف حُذف لاحقاً)، نبني
+      // MenuItem مصطنعاً بأقل بيانات (الاسم/السعر المحفوظين بالطلب) كي يبقى
+      // السطر قابلاً للعرض وتعديل الكمية رغم أن الضغط على الشبكة لن "يجده".
+      if (editingOrder && !seededEditRef.current) {
+        seededEditRef.current = true;
+        const { data: allItemsRes } = await supabase.from('items').select('*').eq('restaurant_id', restaurantId);
+        const allItems: MenuItem[] = allItemsRes || availableItems;
+        const seeded: QuickCartEntry[] = (editingOrder.items || []).map(oi => {
+          const match = oi.item_id ? allItems.find(i => i.id === oi.item_id) : undefined;
+          const fallback: MenuItem = match || {
+            id: oi.item_id || `__missing_${oi.id}`,
+            category_id: '',
+            name: oi.item_name,
+            price: oi.price,
+            image_url: '',
+            is_available: true,
+          };
+          return { item: fallback, qty: oi.quantity, unitPrice: oi.price, extraNames: [] };
+        });
+        setCart(seeded);
+      }
+
       setLoading(false);
     })();
-  }, [restaurantId]);
+  }, [restaurantId, editingOrder]);
 
   const addToCart = (item: MenuItem, unitPrice: number, extraNames: string[] = []) =>
     setCart(prev => {
@@ -534,6 +568,11 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
   const total    = cart.reduce((s, e) => s + e.unitPrice * e.qty, 0);
   const filtered = selectedCat ? items.filter(i => i.category_id === selectedCat) : items;
 
+  // أصناف احتياطية مُصطنَعة لعناصر طلب قديمة حُذف صنفها الأصلي من القائمة —
+  // لها معرّف مصطنع (__missing_...) وليس UUID فعلي بجدول items، فلا يجوز
+  // إرسالها كـ item_id بـ order_items (ينكسر الـ FK). نُخزّنها كـ NULL بدلاً.
+  const realItemId = (item: MenuItem): string | null => item.id.startsWith('__missing_') ? null : item.id;
+
   const submitOrder = async () => {
     if (cart.length === 0 || submitting) return;
     setSubmitting(true);
@@ -545,6 +584,97 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
       if (n) noteParts.push(`${e.item.name}: ${n}`);
     }
 
+    const newItemsPayload = cart.map(e => ({
+      item_id:    realItemId(e.item),
+      item_name:  e.extraNames.length > 0 ? `${e.item.name} (${e.extraNames.join('، ')})` : e.item.name,
+      quantity:   e.qty,
+      price:      e.unitPrice,
+    }));
+
+    // ═══ وضع التعديل: طلب داخلي موجود يعدّله الكاشير مباشرة ═══
+    if (editingOrder) {
+      // نلتقط snapshot عناصر الطلب الحالية طازجة من القاعدة (وليس prop قد يكون
+      // قديماً) لضمان أن previous_items بجدول order_edits دقيقة فعلاً.
+      const { data: freshItems, error: freshErr } = await supabase
+        .from('order_items')
+        .select('item_id, item_name, quantity, price')
+        .eq('order_id', editingOrder.id);
+
+      if (freshErr) {
+        alert('تعذّر قراءة عناصر الطلب الحالية، حاول مجدداً');
+        setSubmitting(false);
+        return;
+      }
+
+      const previousItems = freshItems || [];
+
+      const { data: edit, error: editErr } = await supabase.from('order_edits').insert({
+        order_id: editingOrder.id,
+        restaurant_id: restaurantId,
+        edited_by: 'cashier',
+        status: 'accepted',
+        previous_items: previousItems,
+        new_items: newItemsPayload,
+        previous_total: editingOrder.total_amount,
+        new_total: total,
+        accepted_at: new Date().toISOString(),
+      }).select('id').single();
+
+      if (editErr || !edit) {
+        alert('حدث خطأ أثناء حفظ تعديل الطلب');
+        setSubmitting(false);
+        return;
+      }
+
+      // حراسة عرقية (race guard) أولاً — بنفس نمط reviewEdit بالضبط — قبل أي
+      // لمس لـ order_items. إن كان المطبخ قد أنهى تجهيز الطلب (kitchen_ready_at
+      // غير NULL) بلحظة حفظ الكاشير لهذا التعديل، يجب ألا نُطبِّق شيئاً على
+      // order_items إطلاقاً — التحديث المحروس هنا يسبق حذف/إدراج order_items.
+      const { data: updatedRows, error: updateErr } = await supabase.from('orders').update({
+        total_amount: total,
+        last_edit_id: edit.id,
+        pending_edit_id: null,
+        client_name: name,
+      }).eq('id', editingOrder.id)
+        .is('kitchen_ready_at', null)
+        .select('id');
+
+      if (updateErr) {
+        alert('حدث خطأ أثناء تحديث بيانات الطلب');
+        setSubmitting(false);
+        return;
+      }
+      if (!updatedRows || updatedRows.length === 0) {
+        alert('تم تجهيز الطلب بالفعل — لا يمكن تعديله الآن');
+        setSubmitting(false);
+        return;
+      }
+
+      const { error: deleteErr } = await supabase.from('order_items').delete().eq('order_id', editingOrder.id);
+      if (deleteErr) {
+        alert('حدث خطأ أثناء تحديث عناصر الطلب، حاول مجدداً');
+        setSubmitting(false);
+        return;
+      }
+
+      const { error: insertErr } = await supabase.from('order_items').insert(
+        newItemsPayload.map(i => ({ order_id: editingOrder.id, ...i }))
+      );
+      if (insertErr) {
+        alert('حدث خطأ أثناء حفظ عناصر الطلب الجديدة، حاول مجدداً — راجع الطلب يدوياً فوراً');
+        setSubmitting(false);
+        return;
+      }
+
+      adjustStockForOrderEdit(restaurantId, edit.id, previousItems, newItemsPayload, name)
+        .catch(err => console.error('تعذّر تسوية المخزون بعد تعديل الطلب:', err));
+
+      setSubmitting(false);
+      onCreated();
+      return;
+    }
+
+    // ═══ وضع الإنشاء: طلب داخلي جديد ═══
     const { data: order, error } = await supabase.from('orders').insert([{
       restaurant_id:     restaurantId,
       client_name:       name,
@@ -563,13 +693,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
     }
 
     const { error: itemsError } = await supabase.from('order_items').insert(
-      cart.map(e => ({
-        order_id:   order.id,
-        item_id:    e.item.id,
-        item_name:  e.extraNames.length > 0 ? `${e.item.name} (${e.extraNames.join('، ')})` : e.item.name,
-        quantity:   e.qty,
-        price:      e.unitPrice,
-      }))
+      newItemsPayload.map(i => ({ order_id: order.id, ...i }))
     );
 
     if (itemsError) {
@@ -579,7 +703,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
       return;
     }
 
-    deductStockForOrder(restaurantId, order.id, name, cart.map(e => ({ id: e.item.id, item_id: e.item.id, item_name: e.item.name, quantity: e.qty, price: e.unitPrice })))
+    deductStockForOrder(restaurantId, order.id, name, cart.map(e => ({ id: e.item.id, item_id: realItemId(e.item), item_name: e.item.name, quantity: e.qty, price: e.unitPrice })))
       .catch(err => console.error('تعذّر خصم المخزون:', err));
 
     setSubmitting(false);
@@ -592,7 +716,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
         <button onClick={onClose} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
           <X size={18} className="text-gray-600 dark:text-slate-300" />
         </button>
-        <p className="font-bold text-gray-900 dark:text-white">الطلب للزبون</p>
+        <p className="font-bold text-gray-900 dark:text-white">{editingOrder ? 'تعديل الطلب' : 'الطلب للزبون'}</p>
         <div className="w-9" />
       </header>
 
@@ -738,7 +862,7 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
                 {submitting ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <><Check size={18} /> إرسال</>
+                  <><Check size={18} /> {editingOrder ? 'تحديث الطلب' : 'إرسال'}</>
                 )}
               </button>
             </div>
@@ -842,6 +966,13 @@ export default function DashboardPage() {
   // مستقل عن orders (الذي يستبعد المؤرشف) — وإلا ينقص رقم الإيراد خطأً بمجرد
   // أرشفة طلب مكتمل، رغم أن البيع تحقق فعلاً والأرشفة مجرد تنظيم واجهة فقط.
   const [todayRevenue,  setTodayRevenue]  = useState(0);
+  // طلب "داخلي" (pickup) يعدّله الكاشير حالياً — يُمرَّر لنفس QuickAddOrderModal
+  // بدل مودال منفصل (خطة #5 بالمواصفة: مشاركة نفس الـ JSX بدل تكراره).
+  const [editingOrder,  setEditingOrder]  = useState<Order | null>(null);
+  // معرّف تعديل زبون (order_edits.id) تحت المراجعة حالياً بمودال "قبول/رفض" — يحمل
+  // أيضاً معرّف الطلب المرتبط لأن نفس الكارت يحتاجه عند الحفظ.
+  const [reviewingEdit, setReviewingEdit] = useState<{ order: Order; edit: OrderEditRow } | null>(null);
+  const [editReviewBusy, setEditReviewBusy] = useState(false);
 
 
   const initialLoadDone = useRef(false);
@@ -942,6 +1073,116 @@ export default function DashboardPage() {
       setOrders(prev => prev.filter(o => o.id !== id));
     } finally {
       setProcessingOrderId(null);
+    }
+  };
+
+  // فتح مودال "قبول/رفض" لتعديل زبون بانتظار المراجعة — يجلب صف order_edits
+  // كاملاً (previous/new items+totals) لعرض المقارنة قبل أي قرار.
+  const openEditReview = async (order: Order) => {
+    if (!order.pending_edit_id) return;
+    const { data, error } = await supabase
+      .from('order_edits')
+      .select('id, order_id, previous_items, new_items, previous_total, new_total')
+      .eq('id', order.pending_edit_id)
+      .maybeSingle();
+    if (error || !data) {
+      alert('تعذّر تحميل تفاصيل التعديل، حاول مجدداً');
+      return;
+    }
+    setReviewingEdit({ order, edit: data as OrderEditRow });
+  };
+
+  // قبول/رفض تعديل زبون معلّق (order_edits.status='pending', edited_by='customer').
+  const reviewEdit = async (order: Order, edit: OrderEditRow, action: 'accept' | 'reject') => {
+    if (editReviewBusy) return;
+    setEditReviewBusy(true);
+    try {
+      if (action === 'reject') {
+        const { error: editErr } = await supabase.from('order_edits')
+          .update({ status: 'rejected', rejected_at: new Date().toISOString() })
+          .eq('id', edit.id);
+        if (editErr) { alert('تعذّر رفض التعديل، حاول مجدداً'); return; }
+
+        const { error: orderErr } = await supabase.from('orders')
+          .update({ pending_edit_id: null })
+          .eq('id', order.id);
+        if (orderErr) { alert('تعذّر تحديث الطلب بعد رفض التعديل'); return; }
+
+        setReviewingEdit(null);
+        fetchOrders();
+        return;
+      }
+
+      // فحص خصم طازج قبل أي شيء: order (المُمرَّر كـ prop) قد يكون قديماً — لو
+      // طُبِّق خصم على الطلب بعد إرسال الزبون لتعديله وقبل قبول الكاشير له،
+      // فيجب ألا نستبدل total_amount بـ edit.new_total (يمحو الخصم بصمت).
+      const { data: freshOrder, error: freshOrderErr } = await supabase
+        .from('orders')
+        .select('discount_amount')
+        .eq('id', order.id)
+        .maybeSingle();
+      if (freshOrderErr) { alert('تعذّر التحقق من بيانات الطلب، حاول مجدداً'); return; }
+      if ((freshOrder?.discount_amount ?? 0) > 0) {
+        alert('لا يمكن قبول هذا التعديل — تم تطبيق خصم على الطلب، راجع الطلب يدوياً');
+        return;
+      }
+
+      // القبول: حراسة عرقية (race guard) أولاً — بنفس نمط markReady بشاشة
+      // المطبخ — قبل أي لمس لـ order_items. إن كان المطبخ قد أنهى تجهيز
+      // الطلب (kitchen_ready_at غير NULL) بلحظة قبول الكاشير للتعديل، يجب
+      // ألا نُطبِّق شيئاً إطلاقاً — لا على orders ولا على order_items —
+      // وإلا نستبدل عناصر طلب جُهِّز بالفعل بالمطبخ (خطأ فعلي، وليس مجرد
+      // خطأ تعارض توقيت). لذلك التحديث المحروس هنا يسبق حذف/إدراج
+      // order_items، وليس العكس.
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { data: updatedRows, error: updateErr } = await supabase.from('orders')
+        .update({ total_amount: edit.new_total, last_edit_id: edit.id, pending_edit_id: null })
+        .eq('id', order.id)
+        .is('kitchen_ready_at', null)
+        .select('id');
+
+      if (updateErr) { alert('تعذّر تحديث الطلب، حاول مجدداً'); return; }
+      if (!updatedRows || updatedRows.length === 0) {
+        alert('تم تجهيز الطلب بالفعل — لا يمكن تطبيق التعديل');
+        return;
+      }
+
+      const { error: deleteErr } = await supabase.from('order_items').delete().eq('order_id', order.id);
+      if (deleteErr) { alert('تم تحديث الطلب لكن تعذّر استبدال عناصره — راجع الطلب يدوياً فوراً'); return; }
+
+      const { error: insertErr } = await supabase.from('order_items').insert(
+        edit.new_items.map(i => ({
+          order_id: order.id,
+          item_id: i.item_id ?? null,
+          item_name: i.item_name,
+          quantity: i.quantity,
+          price: i.price,
+        }))
+      );
+      if (insertErr) { alert('تم تحديث الطلب لكن تعذّر حفظ عناصره الجديدة — راجع الطلب يدوياً فوراً'); return; }
+
+      const { error: acceptErr } = await supabase.from('order_edits')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString(), accepted_by: user?.id ?? null })
+        .eq('id', edit.id);
+      if (acceptErr) console.error('تعذّر تحديث حالة order_edits لـ accepted', acceptErr.message);
+
+      // تسوية المخزون هنا فقط إن كان الطلب قد خُصم مخزونه فعلاً من قبل
+      // (status === 'preparing' يعني handleAction خصم المخزون مرة عند القبول
+      // الأولي). لو كان الطلب لا يزال 'pending' فلم يُخصَم له أي مخزون بعد —
+      // handleAction وحدها هي مصدر الحقيقة لـ"هل خُصم مخزون هذا الطلب"
+      // (فحصها status === 'pending' عند الاستدعاء)، وستخصمه لاحقاً بشكل صحيح
+      // مرة واحدة فقط اعتماداً على order.items الحالية (بعد هذا التعديل).
+      // تخطي هذا الاستدعاء هنا يمنع خصم مزدوج لنفس العناصر.
+      if (restaurantId && order.status === 'preparing') {
+        adjustStockForOrderEdit(restaurantId, edit.id, edit.previous_items, edit.new_items, order.client_name)
+          .catch(err => console.error('تعذّر تسوية المخزون بعد قبول تعديل الطلب:', err));
+      }
+
+      setReviewingEdit(null);
+      fetchOrders();
+    } finally {
+      setEditReviewBusy(false);
     }
   };
 
@@ -1477,6 +1718,22 @@ export default function DashboardPage() {
                     )}
                   </AnimatePresence>
 
+                  {/* زر تعديل الطلب — فقط للطلب الداخلي (pickup)، ومُعطَّل إن كان فيه
+                      خصم مطبَّق مسبقاً (نفس منع تعديل طلب مخصوم بمسار الزبون بـ /api/track/edit،
+                      لأن حساب الإجمالي من العناصر فقط سيُسقِط الخصم صامتاً). */}
+                  {isInternalOrder(order) && (
+                    !!order.discount_amount && order.discount_amount > 0 ? (
+                      <div className="px-3 py-1.5 text-[11px] text-gray-400 dark:text-slate-500 text-center border-t border-gray-100 dark:border-slate-700">
+                        لا يمكن تعديل طلب فيه خصم مطبّق
+                      </div>
+                    ) : (
+                      <button onClick={() => setEditingOrder(order)}
+                        className="w-full py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-t border-gray-100 dark:border-slate-700 active:opacity-70">
+                        ✏️ تعديل الطلب
+                      </button>
+                    )
+                  )}
+
                   {/* أزرار الإجراءات — دائماً ظاهرة */}
                   <div className="flex">
                     <button onClick={() => rejectOrder(order.id)} disabled={processingOrderId === order.id}
@@ -1498,6 +1755,15 @@ export default function DashboardPage() {
                       </button>
                     )}
                   </div>
+
+                  {/* بانر تعديل زبون بانتظار قبول الكاشير — قد يصل تعديل طلب توصيل
+                      بينما الطلب لا يزال preparing (نفس الحقل يُعرَض أيضاً بتاب الواردة) */}
+                  {order.pending_edit_id && (
+                    <button onClick={() => openEditReview(order)}
+                      className="w-full py-2 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-100 dark:border-amber-900 active:opacity-70">
+                      ✏️ طلب معدّل من الزبون — يحتاج قبولك
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -1827,6 +2093,17 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
+                    {/* بانر تعديل زبون بانتظار قبول الكاشير — قد يصل تعديل طلب توصيل
+                        بينما الطلب لا يزال pending (نفس الحقل يُعرَض أيضاً بتاب التجهيز) */}
+                    {order.pending_edit_id && (
+                      <div className="mx-4 mb-3">
+                        <button onClick={() => openEditReview(order)}
+                          className="w-full py-2.5 rounded-xl text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900 active:opacity-70">
+                          ✏️ طلب معدّل من الزبون — يحتاج قبولك
+                        </button>
+                      </div>
+                    )}
+
                     {/* 6. أزرار الإجراءات */}
                     <div className="flex gap-3 px-4 pb-4">
                       <button
@@ -2018,17 +2295,78 @@ export default function DashboardPage() {
         <LocationModal order={locationOrder} onClose={() => setLocationOrder(null)} />
       )}
 
-      {showQuickAdd && restaurantId && (
+      {(showQuickAdd || editingOrder) && restaurantId && (
         <QuickAddOrderModal
           restaurantId={restaurantId}
-          onClose={() => setShowQuickAdd(false)}
+          editingOrder={editingOrder ?? undefined}
+          onClose={() => { setShowQuickAdd(false); setEditingOrder(null); }}
           onCreated={() => {
             setShowQuickAdd(false);
+            setEditingOrder(null);
             setScope('internal');
             setFilter('preparing');
             fetchOrders();
           }}
         />
+      )}
+
+      {/* مودال مراجعة تعديل زبون معلّق — مقارنة العناصر/الإجمالي قبل/بعد + قبول/رفض */}
+      {reviewingEdit && (
+        <div className="fixed inset-0 z-[80] bg-black/50 flex items-end md:items-center justify-center px-0 md:px-6" onClick={() => !editReviewBusy && setReviewingEdit(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-t-3xl md:rounded-3xl w-full max-w-md p-6 relative shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()} dir="rtl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-lg text-gray-900 dark:text-white">مراجعة تعديل الزبون</h3>
+              <button onClick={() => setReviewingEdit(null)} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
+                <X size={16} className="text-gray-600 dark:text-slate-300" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5">العناصر السابقة</p>
+                <div className="rounded-xl bg-gray-50 dark:bg-slate-700/40 p-3 space-y-1">
+                  {reviewingEdit.edit.previous_items.map((it, idx) => (
+                    <p key={idx} className="text-sm text-gray-500 dark:text-slate-400 line-through">{it.quantity}× {it.item_name}</p>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-1.5">العناصر الجديدة</p>
+                <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 p-3 space-y-1">
+                  {reviewingEdit.edit.new_items.map((it, idx) => (
+                    <p key={idx} className="text-sm font-bold text-gray-900 dark:text-white">{it.quantity}× {it.item_name}</p>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between px-1">
+                <span className="font-bold text-gray-900 dark:text-white">الإجمالي</span>
+                <span className="text-sm">
+                  <span className="text-gray-400 line-through ml-2">{reviewingEdit.edit.previous_total.toLocaleString()}</span>
+                  <span className="text-red-500 font-black">{reviewingEdit.edit.new_total.toLocaleString()} د.ع</span>
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => reviewEdit(reviewingEdit.order, reviewingEdit.edit, 'reject')}
+                disabled={editReviewBusy}
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-500 text-white font-bold rounded-xl text-sm active:scale-95 transition-all disabled:opacity-60"
+              >
+                <X size={16} strokeWidth={2.5} />
+                رفض
+              </button>
+              <button
+                onClick={() => reviewEdit(reviewingEdit.order, reviewingEdit.edit, 'accept')}
+                disabled={editReviewBusy}
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-600 text-white font-bold rounded-xl text-sm active:scale-95 transition-all disabled:opacity-60"
+              >
+                <Check size={16} strokeWidth={2.5} />
+                قبول
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* مودال معلومات السائق */}

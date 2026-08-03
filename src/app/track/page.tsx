@@ -194,6 +194,8 @@ const STATUS_ANIMATION: Record<string, React.ReactNode> = {
   rejected:  null,
 };
 
+type OrderItemRow = { item_id?: string | null; item_name: string; quantity: number; price: number };
+
 type Order = {
   id: string; client_name: string; client_phone: string;
   delivery_address: string | null; total_amount: number;
@@ -205,8 +207,183 @@ type Order = {
   client_lat?: number | null; client_lng?: number | null;
   order_type: 'delivery' | 'pickup' | null;
   restaurant_id?: string | null;
+  order_items?: OrderItemRow[];
+  pending_edit_id?: string | null;
+  discount_amount?: number | null;
 };
 
+
+type EditMenuCategory = { id: string; name: string };
+type EditMenuItem = { id: string; category_id: string; name: string; price: number; is_available?: boolean; item_status?: string };
+type EditCartLine = { key: string; item_id: string | null; item_name: string; price: number; quantity: number };
+
+// لوحة تعديل طلب توصيل من صفحة التتبع العامة — تُبنى بأصناف المطعم (نفس
+// نمط قراءة عامة/anon المستخدم بصفحة القائمة [restaurantSlug]/menu، وليس
+// نمط لوحة التحكم الذي يعتمد صلاحيات موظف)، مع تلقيم أولي من order_items
+// الحالية. الإرسال يذهب لـ /api/track/edit وينتظر قبول الكاشير — لا تعديل
+// مباشر هنا على order_items إطلاقاً.
+function OrderEditPanel({ order, brandColor, onClose, onSubmitted }: {
+  order: Order; brandColor: string; onClose: () => void; onSubmitted: () => void;
+}) {
+  const [categories, setCategories] = useState<EditMenuCategory[]>([]);
+  const [menuItems, setMenuItems] = useState<EditMenuItem[]>([]);
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState<EditCartLine[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!order.restaurant_id) { setLoading(false); return; }
+    (async () => {
+      const [catsRes, itemsRes] = await Promise.all([
+        supabase.from('categories').select('id, name').eq('restaurant_id', order.restaurant_id).order('created_at', { ascending: true }),
+        supabase.from('items').select('*').eq('restaurant_id', order.restaurant_id).order('name'),
+      ]);
+      setCategories(catsRes.data || []);
+      setMenuItems(
+        (itemsRes.data || []).filter((i: EditMenuItem) => {
+          const st = i.item_status || (i.is_available ? 'available' : 'hidden');
+          return st === 'available';
+        })
+      );
+      // تلقيم أولي من عناصر الطلب الحالية
+      setCart(
+        (order.order_items || []).map((oi, idx) => ({
+          key: oi.item_id || `existing_${idx}`,
+          item_id: oi.item_id ?? null,
+          item_name: oi.item_name,
+          price: oi.price,
+          quantity: oi.quantity,
+        }))
+      );
+      setLoading(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order.id, order.restaurant_id]);
+
+  const changeQty = (key: string, delta: number) =>
+    setCart(prev => prev.map(l => l.key === key ? { ...l, quantity: l.quantity + delta } : l).filter(l => l.quantity > 0));
+
+  const addItem = (item: EditMenuItem) =>
+    setCart(prev => {
+      const found = prev.find(l => l.item_id === item.id);
+      return found
+        ? prev.map(l => l.item_id === item.id ? { ...l, quantity: l.quantity + 1 } : l)
+        : [...prev, { key: item.id, item_id: item.id, item_name: item.name, price: item.price, quantity: 1 }];
+    });
+
+  const total = cart.reduce((s, l) => s + l.price * l.quantity, 0);
+  const filtered = selectedCat ? menuItems.filter(i => i.category_id === selectedCat) : menuItems;
+
+  const submit = async () => {
+    if (cart.length === 0 || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/track/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: order.id,
+          client_phone: order.client_phone,
+          items: cart.map(l => ({ item_id: l.item_id, item_name: l.item_name, quantity: l.quantity, price: l.price })),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || 'تعذّر إرسال طلب التعديل');
+        setSubmitting(false);
+        return;
+      }
+      onSubmitted();
+    } catch {
+      setError('تعذّر الاتصال بالخادم، حاول مجدداً');
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] bg-white dark:bg-slate-900 flex flex-col" dir="rtl">
+      <header className="sticky top-0 z-10 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 flex items-center justify-between flex-shrink-0">
+        <button onClick={onClose} className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 active:scale-90 transition-all">
+          <X size={18} className="text-gray-600 dark:text-slate-300" />
+        </button>
+        <p className="font-bold text-gray-900 dark:text-white">تعديل الطلب</p>
+        <div className="w-9" />
+      </header>
+
+      {loading ? (
+        <div className="flex justify-center mt-20">
+          <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: brandColor, borderTopColor: 'transparent' }} />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto pb-48 px-4 pt-4">
+          {/* سلة التعديل الحالية */}
+          {cart.length > 0 && (
+            <div className="space-y-2 mb-5">
+              {cart.map(l => (
+                <div key={l.key} className="flex items-center gap-3 p-2.5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                  <div className="flex-1 min-w-0 text-right">
+                    <p className="font-bold text-sm text-gray-900 dark:text-white truncate">{l.item_name}</p>
+                    <p className="text-xs mt-0.5" style={{ color: brandColor }}>{l.price.toLocaleString()} د.ع</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button onClick={() => changeQty(l.key, +1)} className="w-7 h-7 rounded-lg text-white flex items-center justify-center active:scale-90 transition-all" style={{ backgroundColor: brandColor }}>+</button>
+                    <span className="font-bold text-sm w-5 text-center text-gray-900 dark:text-white">{l.quantity}</span>
+                    <button onClick={() => changeQty(l.key, -1)} className="w-7 h-7 rounded-lg flex items-center justify-center active:scale-90 transition-all bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300">−</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* قائمة الأصناف لإضافة المزيد */}
+          <div className="flex gap-2 pb-3 overflow-x-auto">
+            <button onClick={() => setSelectedCat(null)}
+              className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold border"
+              style={{ backgroundColor: !selectedCat ? brandColor : '#fff', borderColor: !selectedCat ? brandColor : '#e2e8f0', color: !selectedCat ? '#fff' : '#64748b' }}>
+              الكل
+            </button>
+            {categories.map(cat => (
+              <button key={cat.id} onClick={() => setSelectedCat(selectedCat === cat.id ? null : cat.id)}
+                className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold border"
+                style={{ backgroundColor: selectedCat === cat.id ? brandColor : '#fff', borderColor: selectedCat === cat.id ? brandColor : '#e2e8f0', color: selectedCat === cat.id ? '#fff' : '#64748b' }}>
+                {cat.name}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2">
+            {filtered.map(item => (
+              <div key={item.id} className="flex items-center gap-3 p-2 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                <div className="flex-1 min-w-0 text-right">
+                  <p className="font-bold text-sm text-gray-900 dark:text-white truncate">{item.name}</p>
+                  <p className="text-xs mt-0.5" style={{ color: brandColor }}>{item.price.toLocaleString()} د.ع</p>
+                </div>
+                <button onClick={() => addItem(item)}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-xl text-white text-xs font-bold active:scale-95 transition-all" style={{ backgroundColor: brandColor }}>
+                  إضافة +
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 pt-3 pb-5 space-y-2">
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        <button
+          onClick={submit}
+          disabled={cart.length === 0 || submitting}
+          className="w-full py-3.5 rounded-2xl text-white font-bold text-base active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+          style={{ backgroundColor: brandColor }}
+        >
+          {submitting ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : `إرسال التعديل — ${total.toLocaleString()} د.ع`}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const MOTO_ICON_HTML = `<div style="width:46px;height:46px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 4px 16px rgba(37,99,235,0.45);display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;">🏍️</div>`;
 
@@ -257,6 +434,7 @@ export default function TrackPage() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showIOSModal, setShowIOSModal] = useState(false);
+  const [showEditPanel, setShowEditPanel] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
 
   // تحقق من البيئة وإذن الإشعارات عند التحميل
@@ -967,6 +1145,28 @@ export default function TrackPage() {
                       </div>
                     ))}
                   </div>
+
+                  {/* تعديل الطلب — طلبات التوصيل فقط، بمرحلة pending/preparing، وبلا
+                      تعديل سابق معلّق أو خصم مطبَّق (نفس شروط /api/track/edit تماماً) */}
+                  {order.order_type === 'delivery' && ['pending', 'preparing'].includes(order.status) && (
+                    order.pending_edit_id ? (
+                      <div className="rounded-2xl px-5 py-4 border-2 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-center">
+                        <p className="font-bold text-amber-800 dark:text-amber-300 text-sm">✏️ تم إرسال طلب التعديل، بانتظار موافقة المطعم</p>
+                      </div>
+                    ) : !(order.discount_amount && order.discount_amount > 0) ? (
+                      <button
+                        onClick={() => setShowEditPanel(true)}
+                        className="w-full py-3.5 rounded-2xl border-2 font-bold text-sm active:scale-95 transition-all"
+                        style={{ borderColor: brandColor, color: brandColor }}
+                      >
+                        ✏️ تعديل الطلب
+                      </button>
+                    ) : (
+                      <p className="text-center text-xs text-gray-400 dark:text-slate-500">
+                        لا يمكن تعديل هذا الطلب لوجود خصم مطبّق — تواصل مع المطعم مباشرة
+                      </p>
+                    )
+                  )}
                 </>
               );
             })()}
@@ -1117,6 +1317,18 @@ export default function TrackPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showEditPanel && order && (
+        <OrderEditPanel
+          order={order}
+          brandColor={brandColor}
+          onClose={() => setShowEditPanel(false)}
+          onSubmitted={() => {
+            setShowEditPanel(false);
+            fetchAndApplyOrder(order.id);
+          }}
+        />
+      )}
 
       <ClientBottomNav />
     </div>

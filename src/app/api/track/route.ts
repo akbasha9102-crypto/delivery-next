@@ -15,13 +15,13 @@ export async function GET(req: NextRequest) {
   const phone = req.nextUrl.searchParams.get('phone');
 
   if (id) {
-    const { data } = await supabaseAdmin.from('orders').select('*').eq('id', id).maybeSingle();
+    const { data } = await supabaseAdmin.from('orders').select('*, order_items(item_id, item_name, quantity, price)').eq('id', id).maybeSingle();
     return Response.json({ order: data ?? null });
   }
 
   if (phone) {
     const { data: active } = await supabaseAdmin
-      .from('orders').select('*')
+      .from('orders').select('*, order_items(item_id, item_name, quantity, price)')
       .eq('client_phone', phone)
       .neq('status', 'completed')
       .order('created_at', { ascending: false })
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: completed } = await supabaseAdmin
-      .from('orders').select('*')
+      .from('orders').select('*, order_items(item_id, item_name, quantity, price)')
       .eq('client_phone', phone)
       .eq('status', 'completed')
       .gte('created_at', since)

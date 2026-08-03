@@ -7,7 +7,11 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { makeKitchenAlertWavUrl } from '@/lib/utils/kitchenAlertSound';
 
 type KitchenOrderItem = { id: string; item_name: string; quantity: number; price: number };
-type KitchenOrder = { id: string; created_at: string; order_type: 'delivery' | 'pickup' | 'local' | null; driver_id: string | null; client_name: string; order_items?: KitchenOrderItem[] };
+type KitchenOrder = { id: string; created_at: string; order_type: 'delivery' | 'pickup' | 'local' | null; driver_id: string | null; client_name: string; order_items?: KitchenOrderItem[]; last_edit_id: string | null };
+
+// لقطة عنصر سابق بجدول order_edits (previous_items JSONB) — تُعرض مشطوبة
+// بأعلى التذكرة عند وجود last_edit_id، لتنبيه المطبخ بأن الطلب عُدِّل.
+type EditPreviousItem = { item_name: string; quantity: number };
 
 // رؤوس تحقق مسارات /api/push/* — جلسة Supabase الحقيقية للمستخدم الحالي
 // (نفس النمط المستخدم بـ admin/dashboard/page.tsx)
@@ -73,6 +77,9 @@ export default function KitchenDisplayPage() {
   const [tickets, setTickets] = useState<KitchenOrder[]>([]);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [, setTick] = useState(0);
+  // خريطة order_edits.id → previous_items، لتذاكر لها last_edit_id — تُعرض
+  // كعناصر قديمة مشطوبة فوق قائمة عناصر التذكرة الحالية.
+  const [editPreviousItems, setEditPreviousItems] = useState<Map<string, EditPreviousItem[]>>(new Map());
 
   const ticketsRef = useRef<KitchenOrder[]>([]);
   useEffect(() => { ticketsRef.current = tickets; }, [tickets]);
@@ -84,14 +91,30 @@ export default function KitchenDisplayPage() {
     if (!restaurantId) return;
     const { data } = await supabase
       .from('orders')
-      .select('id, order_type, total_amount, created_at, driver_id, client_name, order_items(id, item_name, quantity, price)')
+      .select('id, order_type, total_amount, created_at, driver_id, client_name, last_edit_id, order_items(id, item_name, quantity, price)')
       .eq('restaurant_id', restaurantId)
       .eq('status', 'preparing')
       .is('kitchen_ready_at', null)
       .is('archived_at', null)
       .order('created_at', { ascending: true })
       .limit(100);
-    setTickets((data as unknown as KitchenOrder[]) || []);
+    const rows = (data as unknown as KitchenOrder[]) || [];
+    setTickets(rows);
+
+    // جلب previous_items للتذاكر المعدَّلة فقط — استعلام ثانٍ IN(...) واحد
+    // بدل جلب order_edits لكل تذكرة على حدة.
+    const editIds = [...new Set(rows.map(r => r.last_edit_id).filter((id): id is string => !!id))];
+    if (editIds.length === 0) {
+      setEditPreviousItems(new Map());
+      return;
+    }
+    const { data: edits } = await supabase
+      .from('order_edits')
+      .select('id, previous_items')
+      .in('id', editIds);
+    const map = new Map<string, EditPreviousItem[]>();
+    (edits || []).forEach((e: { id: string; previous_items: EditPreviousItem[] }) => map.set(e.id, e.previous_items || []));
+    setEditPreviousItems(map);
   }, [restaurantId]);
 
   useEffect(() => {
@@ -230,7 +253,26 @@ export default function KitchenDisplayPage() {
                       {wait.text}
                     </span>
                   </div>
-                  <p className={`text-sm md:text-base mb-5 ${dark ? 'text-slate-400' : 'text-gray-400'}`}>استُلم {fmtTime(order.created_at)}</p>
+                  <div className="flex items-center gap-2 mb-5">
+                    <p className={`text-sm md:text-base ${dark ? 'text-slate-400' : 'text-gray-400'}`}>استُلم {fmtTime(order.created_at)}</p>
+                    {order.last_edit_id && editPreviousItems.has(order.last_edit_id) && (
+                      <span className="text-xs md:text-sm font-bold px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        ✏️ معدّل
+                      </span>
+                    )}
+                  </div>
+
+                  {/* العناصر القديمة قبل التعديل — مشطوبة وباهتة، تظهر فوق القائمة الحالية */}
+                  {order.last_edit_id && editPreviousItems.has(order.last_edit_id) && (
+                    <ul className="space-y-1.5 mb-3 opacity-50">
+                      {(editPreviousItems.get(order.last_edit_id) || []).map((it, idx) => (
+                        <li key={idx} className={`text-lg md:text-xl font-bold flex items-center gap-3 line-through ${dark ? 'text-slate-400' : 'text-gray-500'}`}>
+                          <span>×{it.quantity}</span>
+                          <span>{it.item_name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
                   <ul className="space-y-3 mb-6">
                     {(order.order_items || []).map(it => (
