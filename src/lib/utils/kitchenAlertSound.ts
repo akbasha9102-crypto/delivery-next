@@ -30,3 +30,69 @@ export function makeKitchenAlertWavUrl(): string | null {
     return null;
   }
 }
+
+// صوت "تعديل الطلب" — ثلاث نغمات متعرجة (صعود-هبوط-صعود) وسريعة الانطفاء
+// (اضمحلال ×6 بدل ×4) لتُعطي إحساساً متقطعاً/متذبذباً يختلف بوضوح عن صوت
+// الطلب الجديد المتصاعد وعن صوت الإلغاء الهابط الطويل.
+export function makeKitchenEditWavUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const sr = 22050;
+    const toneDur = 0.18;
+    const tones = [784, 523, 784];
+    const n = (sr * toneDur * tones.length) | 0;
+    const buf = new ArrayBuffer(44 + n * 2);
+    const v = new DataView(buf);
+    const ws = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); ws(8, 'WAVE'); ws(12, 'fmt '); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, n * 2, true);
+
+    const tone = (startT: number, endT: number, hz: number) => {
+      const from = (startT * sr) | 0, to = (endT * sr) | 0;
+      for (let i = from; i < to; i++) {
+        const t = i / sr - startT;
+        const env = Math.exp(-t * 6);
+        v.setInt16(44 + i * 2, (Math.sin(2 * Math.PI * hz * t) * env * 0.8 * 32767) | 0, true);
+      }
+    };
+    tones.forEach((hz, idx) => tone(idx * toneDur, (idx + 1) * toneDur, hz));
+
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  } catch {
+    return null;
+  }
+}
+
+// صوت "إلغاء الطلب" — نغمتان هابطتان بفارق أوكتاف كامل (440 ثم 220) واضمحلال
+// بطيء (×3) يجعل الصوت "يتلاشى ببطء"، فيوحي بانتهاء/سقوط الطلب بعكس نغمات
+// التنبيه الصاعدة أو التعديل المتذبذبة.
+export function makeKitchenCancelWavUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const sr = 22050;
+    const toneDur = 0.4;
+    const tones = [440, 220];
+    const n = (sr * toneDur * tones.length) | 0;
+    const buf = new ArrayBuffer(44 + n * 2);
+    const v = new DataView(buf);
+    const ws = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); ws(8, 'WAVE'); ws(12, 'fmt '); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, n * 2, true);
+
+    const tone = (startT: number, endT: number, hz: number) => {
+      const from = (startT * sr) | 0, to = (endT * sr) | 0;
+      for (let i = from; i < to; i++) {
+        const t = i / sr - startT;
+        const env = Math.exp(-t * 3);
+        v.setInt16(44 + i * 2, (Math.sin(2 * Math.PI * hz * t) * env * 0.95 * 32767) | 0, true);
+      }
+    };
+    tones.forEach((hz, idx) => tone(idx * toneDur, (idx + 1) * toneDur, hz));
+
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  } catch {
+    return null;
+  }
+}
