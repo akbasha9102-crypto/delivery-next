@@ -620,50 +620,43 @@ function QuickAddOrderModal({ restaurantId, onClose, onCreated }: { restaurantId
             ))}
           </div>
 
-          <div className="px-4 grid grid-cols-2 gap-3">
+          <div className="px-4 flex flex-col gap-2">
             {filtered.map(item => {
               const entry = cart.find(e => e.item.id === item.id);
               const hasExtras = getMenuExtras(item).length > 0;
               return (
-                <div key={item.id} className="rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                  <div className="relative">
-                    <img
-                      src={item.image_url}
-                      alt={item.name}
-                      className="w-full h-28 object-cover"
-                      onError={e => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200.png?text=Food'; }}
-                    />
-                    {entry && (
-                      <span className="absolute top-2 right-2 bg-[#f97316] text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-md">
-                        {entry.qty}
-                      </span>
-                    )}
+                <div key={item.id} className="flex items-center gap-3 p-2 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                  <img
+                    src={item.image_url}
+                    alt={item.name}
+                    className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+                    onError={e => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200.png?text=Food'; }}
+                  />
+                  <div className="flex-1 min-w-0 text-right">
+                    <p className="font-extrabold text-base leading-tight truncate text-gray-900 dark:text-white">{item.name}</p>
+                    <p className="font-bold text-xs mt-0.5" style={{ color: '#f97316' }}>{item.price.toLocaleString()} د.ع</p>
                   </div>
-                  <div className="p-3">
-                    <p className="font-bold text-sm text-right mb-1 leading-tight text-gray-900 dark:text-white">{item.name}</p>
-                    <p className="font-bold text-xs text-right mb-2" style={{ color: '#f97316' }}>{item.price.toLocaleString()} د.ع</p>
-                    {entry ? (
-                      <div className="flex items-center justify-between">
-                        <button
-                          onClick={() => changeQty(item.id, +1)}
-                          className="w-8 h-8 rounded-xl bg-[#f97316] text-white flex items-center justify-center active:scale-90 transition-all">
-                          <Plus size={15} />
-                        </button>
-                        <span className="font-bold text-base text-gray-900 dark:text-white">{entry.qty}</span>
-                        <button
-                          onClick={() => changeQty(item.id, -1)}
-                          className="w-8 h-8 rounded-xl flex items-center justify-center active:scale-90 transition-all bg-gray-100 dark:bg-slate-700">
-                          <Minus size={15} className="text-gray-500 dark:text-slate-300" />
-                        </button>
-                      </div>
-                    ) : (
+                  {entry ? (
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button
-                        onClick={() => handleTapAdd(item)}
-                        className="w-full py-2 rounded-xl bg-[#f97316] text-white text-xs font-bold active:scale-95 transition-all">
-                        {hasExtras ? 'اختر إضافات +' : 'إضافة +'}
+                        onClick={() => changeQty(item.id, +1)}
+                        className="w-7 h-7 rounded-lg bg-[#f97316] text-white flex items-center justify-center active:scale-90 transition-all">
+                        <Plus size={14} />
                       </button>
-                    )}
-                  </div>
+                      <span className="font-bold text-sm w-4 text-center text-gray-900 dark:text-white">{entry.qty}</span>
+                      <button
+                        onClick={() => changeQty(item.id, -1)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center active:scale-90 transition-all bg-gray-100 dark:bg-slate-700">
+                        <Minus size={14} className="text-gray-500 dark:text-slate-300" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleTapAdd(item)}
+                      className="flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-xl bg-[#f97316] text-white text-xs font-bold active:scale-95 transition-all">
+                      {hasExtras ? 'اختر إضافات +' : 'إضافة +'}
+                    </button>
+                  )}
                 </div>
               );
             })}
