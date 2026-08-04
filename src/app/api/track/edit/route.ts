@@ -69,6 +69,22 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'لا يمكن تعديل طلب فيه خصم مطبّق — تواصل مع المطعم مباشرة' }, { status: 409 });
   }
 
+  // زبون واحد = تعديل واحد فقط طوال عمر الطلب، بغض النظر عن نتيجته (قُبِل/
+  // رُفِض) — الحد لا يشمل تعديلات الكاشير (edited_by='cashier') من لوحة
+  // التحكم، فقط تعديلات الزبون من هذه الصفحة العامة.
+  const { data: priorCustomerEdit, error: priorEditError } = await supabaseAdmin
+    .from('order_edits')
+    .select('id')
+    .eq('order_id', order_id)
+    .eq('edited_by', 'customer')
+    .limit(1)
+    .maybeSingle();
+
+  if (priorEditError) return Response.json({ error: priorEditError.message }, { status: 500 });
+  if (priorCustomerEdit) {
+    return Response.json({ error: 'يمكنك تعديل الطلب مرة واحدة فقط' }, { status: 409 });
+  }
+
   // تحقق من أن المطعم غير موقوف — نفس شرط is_restaurant_active() المستخدَم
   // بسياسات RLS لإنشاء الطلبات (20260720090000_suspend_restaurant_enforcement.sql).
   if (await isRestaurantSuspended(order.restaurant_id)) {

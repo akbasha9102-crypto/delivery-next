@@ -51,8 +51,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!restaurantId) return;
     const ch = supabase.channel('admin-layout-orders')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: 'restaurant_id=eq.' + restaurantId }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: 'restaurant_id=eq.' + restaurantId }, ({ new: row }: any) => {
         if (!initialDone.current) return;
+        // طلبات الكاشير المحلي (local) — الكاشير هو من أنشأها بنفسه، لا داعي لتنبيهه
+        // بجرس "طلب جديد" عن فعله الخاص (نفس استثناء dashboard/page.tsx السطر 1033)
+        if (row?.order_type === 'local') return;
         if (bellRef.current) { bellRef.current.currentTime = 0; bellRef.current.play().catch(() => {}); }
       })
       .subscribe();

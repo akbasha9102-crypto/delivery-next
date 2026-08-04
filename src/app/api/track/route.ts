@@ -16,7 +16,9 @@ export async function GET(req: NextRequest) {
 
   if (id) {
     const { data } = await supabaseAdmin.from('orders').select('*, order_items(item_id, item_name, quantity, price)').eq('id', id).maybeSingle();
-    return Response.json({ order: data ?? null });
+    if (!data) return Response.json({ order: null });
+    const { data: priorEdit } = await supabaseAdmin.from('order_edits').select('id').eq('order_id', data.id).eq('edited_by', 'customer').limit(1).maybeSingle();
+    return Response.json({ order: { ...data, has_used_customer_edit: !!priorEdit } });
   }
 
   if (phone) {
@@ -26,7 +28,10 @@ export async function GET(req: NextRequest) {
       .neq('status', 'completed')
       .order('created_at', { ascending: false })
       .limit(1).maybeSingle();
-    if (active) return Response.json({ order: active });
+    if (active) {
+      const { data: priorEdit } = await supabaseAdmin.from('order_edits').select('id').eq('order_id', active.id).eq('edited_by', 'customer').limit(1).maybeSingle();
+      return Response.json({ order: { ...active, has_used_customer_edit: !!priorEdit } });
+    }
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: completed } = await supabaseAdmin
@@ -36,7 +41,9 @@ export async function GET(req: NextRequest) {
       .gte('created_at', since)
       .order('created_at', { ascending: false })
       .limit(1).maybeSingle();
-    return Response.json({ order: completed ?? null });
+    if (!completed) return Response.json({ order: null });
+    const { data: priorEdit } = await supabaseAdmin.from('order_edits').select('id').eq('order_id', completed.id).eq('edited_by', 'customer').limit(1).maybeSingle();
+    return Response.json({ order: { ...completed, has_used_customer_edit: !!priorEdit } });
   }
 
   return Response.json({ error: 'id أو phone مطلوب' }, { status: 400 });

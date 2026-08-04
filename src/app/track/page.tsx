@@ -210,6 +210,7 @@ type Order = {
   order_items?: OrderItemRow[];
   pending_edit_id?: string | null;
   discount_amount?: number | null;
+  has_used_customer_edit?: boolean;
 };
 
 
@@ -1153,7 +1154,15 @@ export default function TrackPage() {
                       <div className="rounded-2xl px-5 py-4 border-2 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-center">
                         <p className="font-bold text-amber-800 dark:text-amber-300 text-sm">✏️ تم إرسال طلب التعديل، بانتظار موافقة المطعم</p>
                       </div>
-                    ) : !(order.discount_amount && order.discount_amount > 0) ? (
+                    ) : (order.discount_amount && order.discount_amount > 0) ? (
+                      <p className="text-center text-xs text-gray-400 dark:text-slate-500">
+                        لا يمكن تعديل هذا الطلب لوجود خصم مطبّق — تواصل مع المطعم مباشرة
+                      </p>
+                    ) : order.has_used_customer_edit ? (
+                      <p className="text-center text-xs text-gray-400 dark:text-slate-500">
+                        يمكنك تعديل الطلب مرة واحدة فقط، وقد استخدمت فرصتك بالفعل
+                      </p>
+                    ) : (
                       <button
                         onClick={() => setShowEditPanel(true)}
                         className="w-full py-3.5 rounded-2xl border-2 font-bold text-sm active:scale-95 transition-all"
@@ -1161,10 +1170,6 @@ export default function TrackPage() {
                       >
                         ✏️ تعديل الطلب
                       </button>
-                    ) : (
-                      <p className="text-center text-xs text-gray-400 dark:text-slate-500">
-                        لا يمكن تعديل هذا الطلب لوجود خصم مطبّق — تواصل مع المطعم مباشرة
-                      </p>
                     )
                   )}
                 </>
