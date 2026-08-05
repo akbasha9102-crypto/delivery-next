@@ -11,6 +11,7 @@ import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import { Search, X, ChevronLeft, ChevronRight, Flame, Car, Package, LayoutGrid, ClipboardList, Download, FileSpreadsheet, FileText, Lock } from 'lucide-react';
 import { exportStatisticsToExcel, exportStatisticsToWord, type StatsExportData } from '@/lib/export/exportStatistics';
 import { SalesChart } from '@/components/shared/SalesChart';
+import { formatTime12h } from '@/lib/utils/formatTime';
 
 
 
@@ -238,7 +239,7 @@ export default function StatisticsPage() {
     topItems: topItemsStats,
     ordersSummary: filtered.map(o => ({
       orderId: o.id,
-      createdAt: new Date(o.created_at).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' }),
+      createdAt: `${new Date(o.created_at).toLocaleDateString('ar-IQ', { day: 'numeric', month: 'short', year: 'numeric' })} ${formatTime12h(o.created_at)}`,
       orderTypeLabel: orderTypeLabel(o.order_type),
       customerOrTable: o.table_number ? `طاولة ${o.table_number}` : o.client_name,
       itemsText: o.items.map(it => `${it.item_name}×${it.quantity}`).join('، ') || '-',
@@ -246,7 +247,7 @@ export default function StatisticsPage() {
       total: o.total_amount,
     })),
     orderItems: filtered.flatMap(o => {
-      const createdAt = new Date(o.created_at).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', year: 'numeric' });
+      const createdAt = `${new Date(o.created_at).toLocaleDateString('ar-IQ', { day: 'numeric', month: 'short', year: 'numeric' })} ${formatTime12h(o.created_at)}`;
       const subtotal = o.items.reduce((s2, it) => s2 + it.price * it.quantity, 0);
       const base = {
         orderId: o.id,
@@ -669,7 +670,7 @@ export default function StatisticsPage() {
                       {order.total_amount.toLocaleString()} <span className="text-xs font-normal" style={{ color: s.sub }}>د.ع</span>
                     </p>
                     <p className="text-xs mt-1" style={{ color: s.sub }}>
-                      {new Date(order.created_at).toLocaleString('ar-IQ', { hour:'2-digit', minute:'2-digit', day:'numeric', month:'short' })}
+                      {new Date(order.created_at).toLocaleDateString('ar-IQ', { day: 'numeric', month: 'short' })} {formatTime12h(order.created_at)}
                     </p>
                   </div>
                   <div className="text-right">

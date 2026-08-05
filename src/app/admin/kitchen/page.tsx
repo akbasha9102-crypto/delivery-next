@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { makeKitchenAlertWavUrl, makeKitchenEditWavUrl, makeKitchenCancelWavUrl } from '@/lib/utils/kitchenAlertSound';
+import { formatTime12h } from '@/lib/utils/formatTime';
 
 type KitchenOrderItem = { id: string; item_name: string; quantity: number; price: number };
 type KitchenOrder = { id: string; created_at: string; order_type: 'delivery' | 'pickup' | 'local' | null; driver_id: string | null; client_name: string; order_items?: KitchenOrderItem[]; last_edit_id: string | null };
@@ -30,11 +31,6 @@ function waitInfo(createdAt: string) {
   if (mins < 10) return { color: '#22c55e', text: `${mins} د` };
   if (mins < 20) return { color: '#f59e0b', text: `${mins} د` };
   return { color: '#ef4444', text: `${mins} د ⚠️` };
-}
-
-function fmtTime(iso: string) {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function orderTypeInfo(orderType: KitchenOrder['order_type']) {
@@ -127,7 +123,7 @@ function TicketCard({ order, dark, editPreviousItems, onMarkReady, saving, varia
           )}
         </div>
         <div className="flex items-center gap-2 mb-5">
-          <p className={`text-sm md:text-base ${dark ? 'text-slate-400' : 'text-gray-400'}`}>استُلم {fmtTime(order.created_at)}</p>
+          <p className={`text-sm md:text-base ${dark ? 'text-slate-400' : 'text-gray-400'}`}>استُلم {formatTime12h(order.created_at)}</p>
           {order.last_edit_id && editPreviousItems.has(order.last_edit_id) && (
             <span className="text-xs md:text-sm font-bold px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
               ✏️ معدّل
@@ -466,7 +462,7 @@ export default function KitchenDisplayPage() {
                   {entry.client_name || '— بدون اسم —'}
                 </span>
                 <span className={`text-sm md:text-base font-bold ${dark ? 'text-slate-400' : 'text-gray-400'}`}>
-                  {fmtTime(entry.created_at)}
+                  {formatTime12h(entry.created_at)}
                 </span>
               </div>
             ))}

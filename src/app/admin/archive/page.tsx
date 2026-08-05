@@ -7,6 +7,7 @@ import { AdminHeader } from '@/components/layout/AdminHeader';
 import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { MessageSquare, AlertCircle, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, MapPin, Car, Search, Calendar, X } from 'lucide-react';
+import { formatTime12h } from '@/lib/utils/formatTime';
 
 type Feedback = {
   id: string;
@@ -87,6 +88,19 @@ function classifyOrderTab(o: Pick<ArchivedOrder, 'order_type'>): 'delivery' | 'p
   return 'delivery';
 }
 
+// طلبات الكاشير المحلي (admin/local) ومودال "طلب سريع" بالداشبورد (admin/dashboard)
+// يضبطان client_phone على '0000000000' ثابتاً دائماً (لا يوجد حقل هاتف بهذين
+// النموذجين) — هذا يجعله مؤشراً موثوقاً 100% لـ"طلب داخلي/محلي"، ويغطي حتى
+// الطلبات القديمة المؤرشفة (بعكس created_by_staff المضاف حديثاً بدون تطبيق رجعي).
+const DEFAULT_LOCAL_NAMES = new Set(['زبون بدون جوال', 'زبون كاشير']);
+
+function localOrderDisplay(order: Pick<ArchivedOrder, 'client_name' | 'client_phone'>) {
+  const isInternalOrder = order.client_phone === '0000000000';
+  if (!isInternalOrder) return null;
+  const hasRealName = !DEFAULT_LOCAL_NAMES.has(order.client_name);
+  return { name: hasRealName ? order.client_name : 'طلب محلي', showLocalTag: hasRealName };
+}
+
 function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
@@ -125,7 +139,7 @@ function RejectedOrderModal({ order, onClose }: { order: RejectedOrder; onClose:
         </div>
         <div className="px-5 py-4 space-y-3">
           <div className="text-center py-2 rounded-xl text-sm font-bold bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
-            ✕ طلب مرفوض — {new Date(order.created_at).toLocaleString('ar-IQ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            ✕ طلب مرفوض — {new Date(order.created_at).toLocaleDateString('ar-IQ', { day: 'numeric', month: 'short' })} {formatTime12h(order.created_at)}
           </div>
           {order.items.length > 0 && (
             <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 space-y-2">
@@ -155,6 +169,7 @@ function RejectedOrderModal({ order, onClose }: { order: RejectedOrder; onClose:
 }
 
 function ArchivedOrderModal({ order, onClose }: { order: ArchivedOrder; onClose: () => void }) {
+  const local = localOrderDisplay(order);
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -162,19 +177,20 @@ function ArchivedOrderModal({ order, onClose }: { order: ArchivedOrder; onClose:
         <div className="flex items-center justify-between px-5 pb-3 border-b border-gray-100 dark:border-slate-700">
           <button onClick={onClose} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center">✕</button>
           <div className="text-right">
-            <p className="font-bold text-gray-900 dark:text-white text-lg">{order.client_name}</p>
-            {order.client_phone && <p className="text-xs text-gray-400 dark:text-slate-500" dir="ltr">{order.client_phone}</p>}
+            <p className="font-bold text-gray-900 dark:text-white text-lg">{local ? local.name : order.client_name}</p>
+            {local?.showLocalTag && <p className="text-xs text-gray-400 dark:text-slate-500">طلب محلي</p>}
+            {!local && order.client_phone && <p className="text-xs text-gray-400 dark:text-slate-500" dir="ltr">{order.client_phone}</p>}
           </div>
         </div>
         <div className="px-5 py-4 space-y-3">
           <div className="text-center py-2 rounded-xl text-sm font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
-            📦 مؤرشف — {new Date(order.archived_at ?? order.created_at).toLocaleString('ar-IQ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            📦 مؤرشف — {new Date(order.archived_at ?? order.created_at).toLocaleDateString('ar-IQ', { day: 'numeric', month: 'short' })} {formatTime12h(order.archived_at ?? order.created_at)}
           </div>
 
           <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl px-3 py-2.5 space-y-1.5">
             <div className="flex justify-between items-center">
               <p className="text-xs text-gray-400 dark:text-slate-500">
-                {new Date(order.created_at).toLocaleString('ar-IQ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                {new Date(order.created_at).toLocaleDateString('ar-IQ', { day: 'numeric', month: 'short' })} {formatTime12h(order.created_at)}
               </p>
               <p className="text-xs font-bold text-gray-600 dark:text-slate-300">تاريخ الطلب</p>
             </div>
@@ -539,7 +555,7 @@ export default function ArchivePage() {
                       </div>
                       <p className="text-gray-700 dark:text-slate-300 text-sm leading-relaxed text-right mb-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl px-3 py-2.5">{fb.message}</p>
                       <div className="flex justify-between items-center text-xs text-gray-400 dark:text-slate-500">
-                        <span>{new Date(fb.created_at).toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>{new Date(fb.created_at).toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' })} {formatTime12h(fb.created_at)}</span>
                         {fb.total_amount != null && <span className="text-green-500 font-bold">{fb.total_amount.toLocaleString()} د.ع</span>}
                       </div>
                     </div>
@@ -574,7 +590,7 @@ export default function ArchivePage() {
                       <p className="font-bold text-gray-900 dark:text-slate-100">{order.client_name}</p>
                       {order.delivery_address && <p className="text-xs text-gray-400 mt-0.5">📍 {order.delivery_address}</p>}
                       <p className="text-xs text-gray-300 dark:text-slate-600 mt-1">
-                        {new Date(order.created_at).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}
+                        {formatTime12h(order.created_at)}
                       </p>
                     </div>
                   </div>
@@ -663,7 +679,7 @@ export default function ArchivePage() {
                                 <div className="text-left">
                                   <p className="text-green-500 font-bold text-sm">{trip.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
                                   <p className="text-xs text-gray-400 dark:text-slate-500">
-                                    {new Date(trip.created_at).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}
+                                    {formatTime12h(trip.created_at)}
                                   </p>
                                 </div>
                               </div>
@@ -768,17 +784,20 @@ export default function ArchivePage() {
             <div className="text-center mt-24"><p className="text-gray-400 dark:text-slate-500 font-medium">لا توجد نتائج مطابقة للبحث</p></div>
           ) : (
             <div className="space-y-3 max-w-lg mx-auto">
-              {visibleArchivedOrders.map(order => (
+              {visibleArchivedOrders.map(order => {
+                const local = localOrderDisplay(order);
+                return (
                 <button key={order.id} onClick={() => setSelectedArchivedOrder(order)} className="w-full text-right active:scale-[0.98] transition-all bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700">
                   <div className="h-1.5 bg-[#8b5cf6]" />
                   <div className="p-4">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-green-500 font-bold">{order.total_amount.toLocaleString()} <span className="text-xs text-gray-400 font-normal">د.ع</span></p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5" dir="ltr">{order.client_phone}</p>
+                        {!local && <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5" dir="ltr">{order.client_phone}</p>}
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-gray-900 dark:text-slate-100">{order.client_name}</p>
+                        <p className="font-bold text-gray-900 dark:text-slate-100">{local ? local.name : order.client_name}</p>
+                        {local?.showLocalTag && <p className="text-xs text-gray-400 mt-0.5">طلب محلي</p>}
                         {order.table_number != null && <p className="text-xs text-gray-400 mt-0.5">🍽️ طاولة {order.table_number}</p>}
                         {order.delivery_address && <p className="text-xs text-gray-400 mt-0.5">📍 {order.delivery_address}</p>}
                         {order.driver_name && (
@@ -789,12 +808,13 @@ export default function ArchivePage() {
                       </div>
                     </div>
                     <div className="flex justify-between items-center text-xs text-gray-300 dark:text-slate-600 mt-2 pt-2 border-t border-gray-50 dark:border-slate-700/50">
-                      <span>أُرشف: {new Date(order.archived_at ?? order.created_at).toLocaleString('ar-IQ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                      <span>الطلب: {new Date(order.created_at).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>أُرشف: {new Date(order.archived_at ?? order.created_at).toLocaleDateString('ar-IQ', { day: 'numeric', month: 'short' })} {formatTime12h(order.archived_at ?? order.created_at)}</span>
+                      <span>الطلب: {formatTime12h(order.created_at)}</span>
                     </div>
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

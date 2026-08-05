@@ -9,6 +9,7 @@ import { AdminHeader } from '@/components/layout/AdminHeader';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import { ChevronRight, ChevronDown, Package } from 'lucide-react';
 import { formatConsumedQuantity } from '@/lib/utils/unitConversion';
+import { formatTime12h } from '@/lib/utils/formatTime';
 
 type StockMovementRow = {
   id: string;
@@ -257,7 +258,7 @@ export default function InventoryStatisticsPage() {
                         </span>
                         <div className="flex items-center gap-2 text-right min-w-0">
                           <span style={{ color: s.detailText }}>
-                            {new Date(info.time).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
+                            {new Date(info.time).toLocaleDateString('ar-IQ', { day: 'numeric', month: 'short' })} {formatTime12h(info.time)}
                           </span>
                           <span className="truncate" style={{ color: s.text }}>{orderNames.get(orderId) || 'طلب محذوف'}</span>
                         </div>

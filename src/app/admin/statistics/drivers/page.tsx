@@ -8,6 +8,7 @@ import { AdminBottomNav } from '@/components/layout/BottomNav';
 import { AdminHeader } from '@/components/layout/AdminHeader';
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
 import { ChevronRight, ChevronDown, Car, Phone } from 'lucide-react';
+import { formatTime12h } from '@/lib/utils/formatTime';
 
 type DriverRow = { id: string; name: string; phone: string; status: string };
 type DriverOrder = {
@@ -245,7 +246,7 @@ export default function DriverStatisticsPage() {
                         <span className="font-bold" style={{ color: '#22c55e' }}>{o.total_amount.toLocaleString()} د.ع</span>
                         <div className="flex items-center gap-2 text-right min-w-0">
                           <span style={{ color: s.sub }}>
-                            {new Date(o.created_at).toLocaleString('ar-IQ', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
+                            {new Date(o.created_at).toLocaleDateString('ar-IQ', { day: 'numeric', month: 'short' })} {formatTime12h(o.created_at)}
                           </span>
                           <span className="truncate" style={{ color: s.text }}>
                             {o.client_name}{o.delivery_address ? ` — ${o.delivery_address}` : ''}

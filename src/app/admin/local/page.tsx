@@ -17,6 +17,7 @@ import {
 import { useSettings } from '@/context/SettingsContext';
 import { useDarkMode } from '@/context/ThemeContext';
 import { deductStockForOrder } from '@/lib/utils/deduct-stock';
+import { formatTime12h } from '@/lib/utils/formatTime';
 
 type MenuCategory = { id: string; name: string };
 type MenuItem = { id: string; category_id: string; name: string; price: number; image_url: string; is_available: boolean; item_status?: string; extras_json?: string };
@@ -621,7 +622,7 @@ export default function LocalCashierPage() {
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">قيد التجهيز</span>
                     )}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">{o.order_items?.length ?? 0} صنف · {new Date(o.created_at).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{o.order_items?.length ?? 0} صنف · {formatTime12h(o.created_at)}</p>
                 </div>
                 <span className="font-bold text-sm text-[#f97316]">{o.total_amount.toLocaleString()} د.ع</span>
               </button>
