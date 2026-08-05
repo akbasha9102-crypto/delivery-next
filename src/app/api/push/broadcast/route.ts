@@ -46,6 +46,8 @@ export async function POST(request: NextRequest) {
       } catch (err: any) {
         if (err.statusCode === 410 || err.statusCode === 404) {
           await supabase.from('drivers').update({ push_subscription: null }).eq('id', driver.id);
+        } else {
+          console.error('[push/broadcast] sendNotification failed for driver', driver.id, err);
         }
       }
     })

@@ -156,9 +156,21 @@ export default function DriverDashboard() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {
         if (Notification.permission === 'granted') {
-          reg.pushManager.getSubscription().then(sub => {
-            if (sub) saveSubscription(session.id, sub);
-            else subscribeToPush(session.id, reg);
+          reg.pushManager.getSubscription().then(async sub => {
+            if (sub) {
+              const currentKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+              const appServerKey = sub.options.applicationServerKey;
+              const subKey = appServerKey ? new Uint8Array(appServerKey) : null;
+              const matches = !!subKey && subKey.length === currentKey.length && subKey.every((b, i) => b === currentKey[i]);
+              if (matches) {
+                saveSubscription(session.id, sub);
+              } else {
+                await sub.unsubscribe();
+                subscribeToPush(session.id, reg);
+              }
+            } else {
+              subscribeToPush(session.id, reg);
+            }
           });
         }
       }).catch(() => {});

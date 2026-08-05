@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: true });
   } catch (err: unknown) {
     const pushErr = err as { statusCode?: number; message?: string };
+    console.error('[push/notify-customer] sendNotification failed for order', order_id, pushErr);
     if (pushErr.statusCode === 410 || pushErr.statusCode === 404) {
       await supabase
         .from('orders')

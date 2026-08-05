@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
     // اشتراك منتهي الصلاحية - احذفه
     if (err.statusCode === 410 || err.statusCode === 404) {
       await supabase.from('drivers').update({ push_subscription: null }).eq('id', driver_id);
+    } else {
+      console.error('[push/notify] sendNotification failed for driver', driver_id, err);
     }
     return Response.json({ error: err.message }, { status: 500 });
   }
