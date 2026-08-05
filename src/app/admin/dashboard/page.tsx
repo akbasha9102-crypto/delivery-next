@@ -684,6 +684,7 @@ function QuickAddOrderModal({ restaurantId, editingOrder, onClose, onCreated }: 
       total_amount:      total,
       status:             'preparing',
       order_type:          'pickup',
+      created_by_staff:    true,
     }]).select().single();
 
     if (error || !order) {

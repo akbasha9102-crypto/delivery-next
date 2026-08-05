@@ -150,6 +150,7 @@ function QuickOrderSheet({ restaurantId, onClose, onCreated }: { restaurantId: s
       total_amount: total,
       status: 'preparing',
       order_type: 'local',
+      created_by_staff: true,
     }]).select().single();
 
     if (orderErr || !order) { setError('حدث خطأ أثناء حفظ الطلب'); setSubmitting(false); return; }

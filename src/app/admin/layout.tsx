@@ -53,9 +53,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const ch = supabase.channel('admin-layout-orders')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: 'restaurant_id=eq.' + restaurantId }, ({ new: row }: any) => {
         if (!initialDone.current) return;
-        // طلبات الكاشير المحلي (local) — الكاشير هو من أنشأها بنفسه، لا داعي لتنبيهه
-        // بجرس "طلب جديد" عن فعله الخاص (نفس استثناء dashboard/page.tsx السطر 1033)
-        if (row?.order_type === 'local') return;
+        // طلبات أنشأها موظف من داخل لوحة التحكم (كاشير محلي POS، أو مودال
+        // "الطلب للزبون" السريع بالداشبورد) — الموظف هو من أنشأها بنفسه،
+        // لا داعي لتنبيهه بجرس "طلب جديد" عن فعله الخاص. الجرس يجب أن يرنّ
+        // فقط لطلبات الزبون الحقيقي من منيو الواجهة العامة (delivery أو
+        // pickup تم إنشاؤهما من cart/page.tsx أو orders/page.tsx لدى الزبون).
+        if (row?.created_by_staff) return;
         if (bellRef.current) { bellRef.current.currentTime = 0; bellRef.current.play().catch(() => {}); }
       })
       .subscribe();
