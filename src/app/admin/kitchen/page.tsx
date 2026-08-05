@@ -11,7 +11,7 @@ type KitchenOrderItem = { id: string; item_name: string; quantity: number; price
 type KitchenOrder = { id: string; created_at: string; order_type: 'delivery' | 'pickup' | 'local' | null; driver_id: string | null; client_name: string; order_items?: KitchenOrderItem[]; last_edit_id: string | null };
 type CancelledTicket = KitchenOrder & { cancelledAt: number };
 type LogEntry = { id: string; created_at: string; client_name: string; items: string[] };
-type OrdersRealtimeRow = { id: string; status: string; last_edit_id: string | null };
+type OrdersRealtimeRow = { id: string; status: string; last_edit_id: string | null; order_type: 'delivery' | 'pickup' | 'local' | null };
 
 // لقطة عنصر سابق بجدول order_edits (previous_items JSONB) — تُعرض مشطوبة
 // بأعلى التذكرة عند وجود last_edit_id، لتنبيه المطبخ بأن الطلب عُدِّل.
@@ -294,7 +294,13 @@ export default function KitchenDisplayPage() {
       knownOrderStateRef.current.delete(row.id);
     }
 
-    if (kind === 'new') playOnce(alertAudioRef);
+    // طلبات الكاشير المحلي (local) — الكاشير هو من أنشأها بنفسه من قسم المحل
+    // بالداشبورد، لا داعي لتنبيه المطبخ بصوت "طلب جديد" عن فعله الخاص (نفس
+    // استثناء admin/layout.tsx). الطلب يظهر بصرياً بقائمة "قيد التجهيز" بشكل
+    // طبيعي كأي طلب آخر — الاستثناء يشمل الصوت فقط، وفقط عند الإنشاء الأول
+    // ('new')؛ التعديل والإلغاء (kind === 'edited' | 'cancelled') يبقيان
+    // يشغّلان صوتهما الطبيعي حتى لو كان الطلب local.
+    if (kind === 'new' && row.order_type !== 'local') playOnce(alertAudioRef);
     if (kind === 'edited') playOnce(editAudioRef);
     if (kind === 'cancelled') {
       playOnce(cancelAudioRef);
