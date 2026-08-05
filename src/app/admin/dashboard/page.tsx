@@ -626,42 +626,23 @@ function QuickAddOrderModal({ restaurantId, editingOrder, onClose, onCreated }: 
         return;
       }
 
-      // حراسة عرقية (race guard) أولاً — بنفس نمط reviewEdit بالضبط — قبل أي
-      // لمس لـ order_items. إن كان المطبخ قد أنهى تجهيز الطلب (kitchen_ready_at
-      // غير NULL) بلحظة حفظ الكاشير لهذا التعديل، يجب ألا نُطبِّق شيئاً على
-      // order_items إطلاقاً — التحديث المحروس هنا يسبق حذف/إدراج order_items.
-      const { data: updatedRows, error: updateErr } = await supabase.from('orders').update({
-        total_amount: total,
-        last_edit_id: edit.id,
-        pending_edit_id: null,
-        client_name: name,
-      }).eq('id', editingOrder.id)
-        .is('kitchen_ready_at', null)
-        .select('id');
+      // حراسة عرقية (race guard) + استبدال order_items + تحديث last_edit_id —
+      // كلها الآن ذرّية داخل apply_order_edit (دالة Postgres واحدة) بدل ثلاثة
+      // نداءات شبكية منفصلة، لسدّ ثغرة عرقية بشاشة المطبخ (تُعيد الجلب فوراً
+      // عند حدث last_edit_id قبل أن تُستبدل order_items فعلاً). انظر تعليق
+      // رأس ملف migration الخاص بـ apply_order_edit لتفاصيل المشكلة والحل.
+      const { error: applyErr } = await supabase.rpc('apply_order_edit', {
+        p_order_id: editingOrder.id,
+        p_edit_id: edit.id,
+        p_new_items: newItemsPayload,
+        p_new_total: total,
+        p_client_name: name,
+      });
 
-      if (updateErr) {
-        alert('حدث خطأ أثناء تحديث بيانات الطلب');
-        setSubmitting(false);
-        return;
-      }
-      if (!updatedRows || updatedRows.length === 0) {
-        alert('تم تجهيز الطلب بالفعل — لا يمكن تعديله الآن');
-        setSubmitting(false);
-        return;
-      }
-
-      const { error: deleteErr } = await supabase.from('order_items').delete().eq('order_id', editingOrder.id);
-      if (deleteErr) {
-        alert('حدث خطأ أثناء تحديث عناصر الطلب، حاول مجدداً');
-        setSubmitting(false);
-        return;
-      }
-
-      const { error: insertErr } = await supabase.from('order_items').insert(
-        newItemsPayload.map(i => ({ order_id: editingOrder.id, ...i }))
-      );
-      if (insertErr) {
-        alert('حدث خطأ أثناء حفظ عناصر الطلب الجديدة، حاول مجدداً — راجع الطلب يدوياً فوراً');
+      if (applyErr) {
+        alert(applyErr.message.includes('تم تجهيز الطلب بالفعل')
+          ? 'تم تجهيز الطلب بالفعل — لا يمكن تعديله الآن'
+          : 'حدث خطأ أثناء تحديث الطلب، حاول مجدداً');
         setSubmitting(false);
         return;
       }
@@ -1114,59 +1095,34 @@ export default function DashboardPage() {
         return;
       }
 
-      // فحص خصم طازج قبل أي شيء: order (المُمرَّر كـ prop) قد يكون قديماً — لو
-      // طُبِّق خصم على الطلب بعد إرسال الزبون لتعديله وقبل قبول الكاشير له،
-      // فيجب ألا نستبدل total_amount بـ edit.new_total (يمحو الخصم بصمت).
-      const { data: freshOrder, error: freshOrderErr } = await supabase
-        .from('orders')
-        .select('discount_amount')
-        .eq('id', order.id)
-        .maybeSingle();
-      if (freshOrderErr) { alert('تعذّر التحقق من بيانات الطلب، حاول مجدداً'); return; }
-      if ((freshOrder?.discount_amount ?? 0) > 0) {
-        alert('لا يمكن قبول هذا التعديل — تم تطبيق خصم على الطلب، راجع الطلب يدوياً');
-        return;
-      }
-
-      // القبول: حراسة عرقية (race guard) أولاً — بنفس نمط markReady بشاشة
-      // المطبخ — قبل أي لمس لـ order_items. إن كان المطبخ قد أنهى تجهيز
-      // الطلب (kitchen_ready_at غير NULL) بلحظة قبول الكاشير للتعديل، يجب
-      // ألا نُطبِّق شيئاً إطلاقاً — لا على orders ولا على order_items —
-      // وإلا نستبدل عناصر طلب جُهِّز بالفعل بالمطبخ (خطأ فعلي، وليس مجرد
-      // خطأ تعارض توقيت). لذلك التحديث المحروس هنا يسبق حذف/إدراج
-      // order_items، وليس العكس.
+      // القبول: فحص الخصم الطازج + حراسة عرقية (race guard) + استبدال
+      // order_items + تحديث last_edit_id + تحديث order_edits.status كلها الآن
+      // ذرّية داخل apply_order_edit (دالة Postgres واحدة) بدل خمسة نداءات
+      // شبكية منفصلة، لسدّ ثغرة عرقية بشاشة المطبخ (تُعيد الجلب فوراً عند
+      // حدث last_edit_id قبل أن تُستبدل order_items فعلاً). انظر تعليق رأس
+      // ملف migration الخاص بـ apply_order_edit لتفاصيل المشكلة والحل.
       const { data: { user } } = await supabase.auth.getUser();
 
-      const { data: updatedRows, error: updateErr } = await supabase.from('orders')
-        .update({ total_amount: edit.new_total, last_edit_id: edit.id, pending_edit_id: null })
-        .eq('id', order.id)
-        .is('kitchen_ready_at', null)
-        .select('id');
+      const { error: applyErr } = await supabase.rpc('apply_order_edit', {
+        p_order_id: order.id,
+        p_edit_id: edit.id,
+        p_new_items: edit.new_items,
+        p_new_total: edit.new_total,
+        p_mark_accepted: true,
+        p_accepted_by: user?.id ?? null,
+        p_check_discount: true,
+      });
 
-      if (updateErr) { alert('تعذّر تحديث الطلب، حاول مجدداً'); return; }
-      if (!updatedRows || updatedRows.length === 0) {
-        alert('تم تجهيز الطلب بالفعل — لا يمكن تطبيق التعديل');
+      if (applyErr) {
+        if (applyErr.message.includes('لا يمكن قبول هذا التعديل')) {
+          alert('لا يمكن قبول هذا التعديل — تم تطبيق خصم على الطلب، راجع الطلب يدوياً');
+        } else if (applyErr.message.includes('تم تجهيز الطلب بالفعل')) {
+          alert('تم تجهيز الطلب بالفعل — لا يمكن تطبيق التعديل');
+        } else {
+          alert('تعذّر تطبيق التعديل، حاول مجدداً');
+        }
         return;
       }
-
-      const { error: deleteErr } = await supabase.from('order_items').delete().eq('order_id', order.id);
-      if (deleteErr) { alert('تم تحديث الطلب لكن تعذّر استبدال عناصره — راجع الطلب يدوياً فوراً'); return; }
-
-      const { error: insertErr } = await supabase.from('order_items').insert(
-        edit.new_items.map(i => ({
-          order_id: order.id,
-          item_id: i.item_id ?? null,
-          item_name: i.item_name,
-          quantity: i.quantity,
-          price: i.price,
-        }))
-      );
-      if (insertErr) { alert('تم تحديث الطلب لكن تعذّر حفظ عناصره الجديدة — راجع الطلب يدوياً فوراً'); return; }
-
-      const { error: acceptErr } = await supabase.from('order_edits')
-        .update({ status: 'accepted', accepted_at: new Date().toISOString(), accepted_by: user?.id ?? null })
-        .eq('id', edit.id);
-      if (acceptErr) console.error('تعذّر تحديث حالة order_edits لـ accepted', acceptErr.message);
 
       // تسوية المخزون هنا فقط إن كان الطلب قد خُصم مخزونه فعلاً من قبل
       // (status === 'preparing' يعني handleAction خصم المخزون مرة عند القبول
