@@ -132,11 +132,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     run();
 
+    if (!restaurantId) return;
+
     const channel = supabase
-      .channel(`settings-live-${restaurantId ?? 'default'}`)
+      .channel(`settings-live-${restaurantId}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'restaurant_settings' },
+        { event: 'INSERT', schema: 'public', table: 'restaurant_settings', filter: `restaurant_id=eq.${restaurantId}` },
         ({ new: row }) => {
           if (restaurantId && (row as { restaurant_id?: string }).restaurant_id !== restaurantId) return;
           setSettings(row as Settings);
@@ -145,7 +147,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'restaurant_settings' },
+        { event: 'UPDATE', schema: 'public', table: 'restaurant_settings', filter: `restaurant_id=eq.${restaurantId}` },
         ({ new: row }) => {
           if (restaurantId && (row as { restaurant_id?: string }).restaurant_id !== restaurantId) return;
           setSettings(row as Settings);
