@@ -76,10 +76,10 @@ BEGIN
 
   INSERT INTO order_items (order_id, item_id, item_name, quantity, price)
   SELECT p_order_id,
-         NULLIF(i->>'item_id', ''),
+         NULLIF(i->>'item_id', '')::UUID,
          i->>'item_name',
-         i->>'quantity',
-         i->>'price'
+         (i->>'quantity')::INT,
+         (i->>'price')::NUMERIC
   FROM jsonb_array_elements(p_new_items) AS i;
 
   IF p_mark_accepted THEN
