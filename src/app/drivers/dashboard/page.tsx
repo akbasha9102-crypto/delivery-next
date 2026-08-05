@@ -42,6 +42,11 @@ function todayStart() {
   return d.toISOString();
 }
 
+const INCOMING_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 ساعات — طلبات preparing أقدم من هذا لا تُعرض كـ"طلبات جديدة" (تبقى بلوحة الإدارة)
+function incomingCutoff() {
+  return new Date(Date.now() - INCOMING_MAX_AGE_MS).toISOString();
+}
+
 function getRejected(driverId: string): string[] {
   try { return JSON.parse(localStorage.getItem(`rejected_${driverId}`) || '[]'); }
   catch { return []; }
@@ -116,6 +121,7 @@ export default function DriverDashboard() {
       .is('driver_id', null)
       // طلبات داخلي/سفري/كاشير محلي ليس لها سائق إطلاقاً — تُستبعد من قائمة السائقين
       .or('order_type.is.null,order_type.eq.delivery')
+      .gte('created_at', incomingCutoff())
       .order('created_at', { ascending: true })
       .then(({ data }) => {
         const filtered = ((data as Order[]) || []).filter(o => !rejected.includes(o.id));
@@ -255,6 +261,12 @@ export default function DriverDashboard() {
     setIncoming(prev => prev.filter(o => o.id !== orderId));
   };
 
+  const clearAllIncoming = () => {
+    if (!session || incoming.length === 0) return;
+    incoming.forEach(o => addRejected(session.id, o.id));
+    setIncoming([]);
+  };
+
   const logout = () => {
     supabase.auth.signOut().finally(() => router.replace('/drivers'));
   };
@@ -369,7 +381,13 @@ export default function DriverDashboard() {
           <div className="space-y-3">
             <div className="flex items-center gap-2 px-1">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse" />
-              <p className="text-blue-300 text-sm font-extrabold">طلبات جديدة ({incoming.length})</p>
+              <p className="text-blue-300 text-sm font-extrabold flex-1">طلبات جديدة ({incoming.length})</p>
+              <button
+                onClick={clearAllIncoming}
+                className="text-slate-400 text-xs font-medium px-2.5 py-1 rounded-lg bg-slate-800 active:scale-95 transition-all"
+              >
+                تجاهل الكل
+              </button>
             </div>
 
             <AnimatePresence>
