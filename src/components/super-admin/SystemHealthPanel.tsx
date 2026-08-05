@@ -109,8 +109,8 @@ export function SystemHealthPanel() {
         />
         <HealthCard
           label="حجم قاعدة البيانات"
-          valueNode={data.storage.sizePretty}
-          sub="حجم قاعدة البيانات"
+          valueNode={`${data.storage.sizePretty} من ${data.storage.quotaPretty}`}
+          sub={`نسبة الاستخدام: ${data.storage.percentUsedPretty}`}
           icon="💾"
           color="#8b5cf6"
           bg="rgba(139,92,246,0.12)"
@@ -138,7 +138,10 @@ export function SystemHealthPanel() {
           </div>
           <div>
             <p className="text-white/60 text-xs font-medium mb-1">الذاكرة المستخدمة (RSS)</p>
-            <p className="text-white font-black text-lg leading-none">{fmtMb(data.server.memory.rssBytes)}</p>
+            <p className="text-white font-black text-lg leading-none">
+              {fmtMb(data.server.memory.rssBytes)} <span className="text-white/40 text-xs font-medium">من {data.server.memory.totalSystemPretty}</span>
+            </p>
+            <p className="text-white/40 text-[11px] mt-1">{data.server.memory.percentUsedPretty} من إجمالي الذاكرة</p>
           </div>
         </div>
         <p className="text-white/40 text-[11px] mt-2">منذ آخر إعادة تشغيل</p>
