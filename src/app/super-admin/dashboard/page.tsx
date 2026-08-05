@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { startImpersonation } from '@/lib/impersonation/start-impersonation';
+import { SystemHealthPanel } from '@/components/super-admin/SystemHealthPanel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Restaurant = {
@@ -687,7 +688,7 @@ export default function SuperAdminDashboard() {
   const [authUsers,   setAuthUsers]   = useState<AuthUser[]>([]);
   const [orders,      setOrders]      = useState<Order[]>([]);
   const [loading,     setLoading]     = useState(true);
-  const [tab,         setTab]         = useState<'overview'|'restaurants'|'requests'|'archive'|'add'>('overview');
+  const [tab,         setTab]         = useState<'overview'|'restaurants'|'requests'|'archive'|'add'|'health'>('overview');
   const [toggling,    setToggling]    = useState<string|null>(null);
   const [togglingPackage, setTogglingPackage] = useState<string|null>(null);
   const [showBroadcast, setShowBroadcast] = useState(false);
@@ -940,9 +941,10 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="grid grid-cols-5 bg-[#13132b] rounded-2xl p-1 gap-1 border border-white/5">
+        <div className="grid grid-cols-6 bg-[#13132b] rounded-2xl p-1 gap-1 border border-white/5">
           {([
             { key: 'overview',    label: 'عام',            icon: '📊' },
+            { key: 'health',      label: 'الأداء',          icon: '⚡' },
             { key: 'restaurants', label: 'مطاعم',          icon: '🏪' },
             { key: 'requests',    label: 'طلبات جديدة',    icon: '📝' },
             { key: 'archive',     label: 'الأرشيف',        icon: '🗄️' },
@@ -989,6 +991,9 @@ export default function SuperAdminDashboard() {
             ))}
           </div>
         )}
+
+        {/* ══ Tab: الأداء ══ */}
+        {tab === 'health' && <SystemHealthPanel />}
 
         {/* ══ Tab: مطاعم ══ */}
         {tab === 'restaurants' && (
