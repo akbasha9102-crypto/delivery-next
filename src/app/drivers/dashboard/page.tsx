@@ -14,6 +14,8 @@ type Order = {
   client_name: string;
   client_phone: string;
   delivery_address: string | null;
+  client_lat: number | null;
+  client_lng: number | null;
   total_amount: number;
   status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed';
   created_at: string;
@@ -90,13 +92,10 @@ export default function DriverDashboard() {
   const [showIOSBanner, setShowIOSBanner] = useState(false);
   const [isAvailable,   setIsAvailable]   = useState(true);
   const [togglingAvail, setTogglingAvail] = useState(false);
-  const [mapAddress,    setMapAddress]    = useState<string | null>(null);
+  const [mapSheet, setMapSheet] = useState<{ address: string | null; lat: number | null; lng: number | null } | null>(null);
   const sessionRef = useRef<Session | null>(null);
   const knownActiveStateRef = useRef<Map<string, { status: string; last_edit_id: string | null }>>(new Map());
   const activeRef = useRef<Order[]>([]);
-
-  // شارة "تم تعديل الطلب" — تُخفى بعد ضغط السائق عليها لهذا last_edit_id تحديداً
-  const [dismissedEdits, setDismissedEdits] = useState<Map<string, string>>(new Map());
 
   // طلبات أُلغيت من الإدارة وسائق لم يطّلع عليها بعد — تبقى ظاهرة حتى يضغط "تم الاطلاع"
   const [cancelledOrders, setCancelledOrders] = useState<Order[]>([]);
@@ -145,7 +144,7 @@ export default function DriverDashboard() {
     const rejected = getRejected(driverId);
     supabase
       .from('orders')
-      .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at, kitchen_ready_at')
+      .select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, status, created_at, kitchen_ready_at')
       .eq('status', 'preparing')
       .is('driver_id', null)
       // طلبات داخلي/سفري/كاشير محلي ليس لها سائق إطلاقاً — تُستبعد من قائمة السائقين
@@ -161,7 +160,7 @@ export default function DriverDashboard() {
   const fetchActive = useCallback((driverId: string) => {
     supabase
       .from('orders')
-      .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at, last_edit_id')
+      .select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, status, created_at, last_edit_id')
       .eq('driver_id', driverId)
       .in('status', ['preparing', 'pickup', 'ready'])
       .order('created_at', { ascending: false })
@@ -525,7 +524,7 @@ export default function DriverDashboard() {
                             <p className="font-extrabold text-white text-lg">{order.client_name}</p>
                             {order.delivery_address && (
                               <button
-                                onClick={() => setMapAddress(order.delivery_address!)}
+                                onClick={() => setMapSheet({ address: order.delivery_address, lat: order.client_lat, lng: order.client_lng })}
                                 className="flex items-center gap-1 justify-end mt-0.5 w-full text-slate-400 text-xs active:opacity-70"
                               >
                                 <MapPin size={10} /> {order.delivery_address}
@@ -695,25 +694,11 @@ export default function DriverDashboard() {
                 className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
                 <div className="h-1 bg-blue-500" />
                 <div className="px-4 py-4">
-                  {/* وقت + رابط تفاصيل + شارة "تم التعديل" */}
-                  <div className="flex items-center justify-between mb-3 gap-2">
-                    <a href={`/delivery/${order.id}`}
-                      className="flex items-center gap-1 text-blue-400 text-xs active:scale-95 transition-all flex-shrink-0">
-                      تفاصيل <ChevronLeft size={12} />
-                    </a>
-                    <div className="flex items-center gap-2">
-                      {order.last_edit_id && dismissedEdits.get(order.id) !== order.last_edit_id && (
-                        <button
-                          onClick={() => setDismissedEdits(prev => new Map(prev).set(order.id, order.last_edit_id!))}
-                          className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-900/40 text-amber-300 active:scale-95 transition-all"
-                        >
-                          ✏️ تم تعديل الطلب — راجع التفاصيل
-                        </button>
-                      )}
-                      <div className="flex items-center gap-1.5 text-slate-500 text-xs flex-shrink-0">
-                        <Clock size={12} />
-                        <span>{timeAgo(order.created_at)}</span>
-                      </div>
+                  {/* وقت */}
+                  <div className="flex items-center justify-end mb-3 gap-2">
+                    <div className="flex items-center gap-1.5 text-slate-500 text-xs flex-shrink-0">
+                      <Clock size={12} />
+                      <span>{timeAgo(order.created_at)}</span>
                     </div>
                   </div>
 
@@ -735,7 +720,7 @@ export default function DriverDashboard() {
                   {/* العنوان — كبير وقابل للضغط لفتح الخريطة */}
                   {order.delivery_address && (
                     <button
-                      onClick={() => setMapAddress(order.delivery_address!)}
+                      onClick={() => setMapSheet({ address: order.delivery_address, lat: order.client_lat, lng: order.client_lng })}
                       className="w-full flex items-center gap-2 bg-blue-900/30 border border-blue-700/40 rounded-xl px-3 py-2.5 mb-3 active:scale-[0.98] transition-all text-right">
                       <MapPin size={18} className="text-blue-400 flex-shrink-0" />
                       <span className="text-blue-300 font-medium text-base flex-1">{order.delivery_address}</span>
@@ -756,7 +741,12 @@ export default function DriverDashboard() {
         )}
 
         {/* Modal الخريطة */}
-        <MapSheet address={mapAddress} onClose={() => setMapAddress(null)} />
+        <MapSheet
+          address={mapSheet?.address ?? null}
+          lat={mapSheet?.lat ?? null}
+          lng={mapSheet?.lng ?? null}
+          onClose={() => setMapSheet(null)}
+        />
 
         {/* لا يوجد طلبات */}
         {active.length === 0 && pickupOrders.length === 0 && (isAvailable ? incoming.length === 0 : true) && (

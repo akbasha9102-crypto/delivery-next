@@ -2,9 +2,10 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { MapPin, X } from 'lucide-react';
 
-type Props = { address: string | null; onClose: () => void };
+type Props = { address: string | null; lat?: number | null; lng?: number | null; onClose: () => void };
 
-export default function MapSheet({ address, onClose }: Props) {
+export default function MapSheet({ address, lat, lng, onClose }: Props) {
+  const hasCoords = typeof lat === 'number' && typeof lng === 'number';
   return (
     <AnimatePresence>
       {address && (
@@ -31,19 +32,25 @@ export default function MapSheet({ address, onClose }: Props) {
               <p className="text-white font-medium text-base">{address}</p>
             </div>
             <iframe
-              src={`https://maps.google.com/maps?q=${encodeURIComponent(address)}&output=embed&hl=ar`}
+              src={hasCoords
+                ? `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed&hl=ar`
+                : `https://maps.google.com/maps?q=${encodeURIComponent(address)}&output=embed&hl=ar`}
               className="w-full h-56 rounded-2xl border-0"
               loading="lazy"
             />
             <div className="grid grid-cols-2 gap-3">
               <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`}
+                href={hasCoords
+                  ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+                  : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`}
                 target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 py-3.5 bg-blue-600 text-white font-extrabold rounded-2xl text-sm active:scale-95 transition-all">
                 🗺️ Google Maps
               </a>
               <a
-                href={`https://waze.com/ul?q=${encodeURIComponent(address)}`}
+                href={hasCoords
+                  ? `https://waze.com/ul?ll=${lat}%2C${lng}&navigate=yes`
+                  : `https://waze.com/ul?q=${encodeURIComponent(address)}`}
                 target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 py-3.5 bg-[#00B4FF] text-white font-extrabold rounded-2xl text-sm active:scale-95 transition-all">
                 🚗 Waze
