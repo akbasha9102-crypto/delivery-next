@@ -12,6 +12,7 @@ import { LowStockAlert } from '@/components/shared/LowStockAlert';
 import { deductStockForOrder } from '@/lib/utils/deduct-stock';
 import { adjustStockForOrderEdit } from '@/lib/utils/edit-stock';
 import { makeKitchenEditWavUrl } from '@/lib/utils/kitchenAlertSound';
+import { localOrderDisplay } from '@/lib/utils/localOrder';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 
@@ -1970,6 +1971,7 @@ export default function DashboardPage() {
               const cfg = STATUS[order.status as keyof typeof STATUS] ?? STATUS.completed;
               const wait = order.status !== 'completed' ? waitInfo(order.created_at) : null;
               const countdown = order.status === 'pending' ? getCountdown(order.created_at) : null;
+              const local = localOrderDisplay(order);
               void tick;
               return order.status === 'pending' && countdown ? (
                   /* ══════════════ كارت الواردة ══════════════ */
@@ -2220,9 +2222,9 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-2">
                             <User size={14} className="text-gray-400 flex-shrink-0" />
                             <span className="text-gray-400 text-sm">الاسم:</span>
-                            <span className="font-bold text-gray-700 dark:text-slate-200 text-sm">{order.client_name}</span>
+                            <span className="font-bold text-gray-700 dark:text-slate-200 text-sm">{local ? local.name : order.client_name}</span>
                           </div>
-                          {order.client_phone && (
+                          {!local && order.client_phone && (
                             <a
                               href={`https://wa.me/${order.client_phone.replace(/\D/g,'').replace(/^0/,'964')}`}
                               target="_blank" rel="noopener noreferrer"

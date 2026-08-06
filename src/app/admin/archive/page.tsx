@@ -73,6 +73,7 @@ type ArchivedOrder = {
   created_at: string;
   archived_at: string | null;
   order_type: 'delivery' | 'pickup' | 'local' | null;
+  created_by_staff: boolean;
   table_number: number | null;
   driver_name: string | null;
   driver_phone: string | null;
@@ -82,10 +83,13 @@ type ArchivedOrder = {
 };
 
 // أي نوع غير pickup/local يُصنَّف "توصيل" افتراضياً (يشمل delivery وdine_in
-// وnull) — تصميم متعمد لعدم فقدان أي سجل قديم من الأرشيف.
-function classifyOrderTab(o: Pick<ArchivedOrder, 'order_type'>): 'delivery' | 'pickup' | 'local' {
-  if (o.order_type === 'pickup') return 'pickup';
+// وnull) — تصميم متعمد لعدم فقدان أي سجل قديم من الأرشيف. طلبات "طلب سريع"
+// من الموظفين (created_by_staff = true، مسار "المحل+" بالداشبورد) تُنشَأ بـ
+// order_type: 'pickup' لكنها تُصنَّف هنا "محلي" ليبقى تبويب "استلام" مقتصراً
+// على طلبات الاستلام الحقيقية من الزبون بموقع المطعم.
+function classifyOrderTab(o: Pick<ArchivedOrder, 'order_type' | 'created_by_staff'>): 'delivery' | 'pickup' | 'local' {
   if (o.order_type === 'local')  return 'local';
+  if (o.order_type === 'pickup') return o.created_by_staff ? 'local' : 'pickup';
   return 'delivery';
 }
 
@@ -283,7 +287,7 @@ export default function ArchivePage() {
       supabase.from('order_feedback').select('*, orders(total_amount, delivery_address)').eq('restaurant_id', restaurantId).gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }).limit(200),
       supabase.from('orders').select('id, client_name, client_phone, total_amount, delivery_address, created_at, client_note').eq('restaurant_id', restaurantId).eq('status', 'rejected').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
       supabase.from('orders').select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, created_at, driver_name, driver_phone, driver_id').eq('restaurant_id', restaurantId).eq('status', 'completed').not('driver_id', 'is', null).gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
-      supabase.from('orders').select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, discount_amount, coupon_code, delivery_fee, client_note, created_at, archived_at, order_type, table_number, driver_name, driver_phone, driver_id, status').eq('restaurant_id', restaurantId).not('archived_at', 'is', null).gte('created_at', start).lte('created_at', end).order('archived_at', { ascending: false }),
+      supabase.from('orders').select('id, client_name, client_phone, delivery_address, client_lat, client_lng, total_amount, discount_amount, coupon_code, delivery_fee, client_note, created_at, archived_at, order_type, created_by_staff, table_number, driver_name, driver_phone, driver_id, status').eq('restaurant_id', restaurantId).not('archived_at', 'is', null).gte('created_at', start).lte('created_at', end).order('archived_at', { ascending: false }),
     ]);
 
     const enriched: Feedback[] = (fbRes.data || []).map((f: any) => ({
