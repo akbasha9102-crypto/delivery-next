@@ -17,7 +17,10 @@ type Order = {
   total_amount: number;
   status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed';
   created_at: string;
+  last_edit_id: string | null;
 };
+
+type DriverOrdersRealtimeRow = { id: string; status: string; last_edit_id: string | null; driver_id: string | null };
 
 type Session = { id: string; name: string; phone: string; restaurantId: string };
 
@@ -34,6 +37,21 @@ function timeAgo(dateStr: string) {
   if (diff < 60)   return `${diff} ث`;
   if (diff < 3600) return `${Math.floor(diff / 60)} د`;
   return `${Math.floor(diff / 3600)} س`;
+}
+
+// تصنيف حدث realtime واحد بمقارنته بآخر حالة معروفة محلياً (knownActiveStateRef)
+// — يعنينا فقط طلبات هذا السائق (driver_id) التي كانت preparing سابقاً.
+function classifyDriverOrderEvent(
+  cache: Map<string, { status: string; last_edit_id: string | null }>,
+  driverId: string,
+  row: DriverOrdersRealtimeRow
+): 'edited' | 'cancelled' | 'ignore' {
+  if (row.driver_id !== driverId) return 'ignore';
+  const prev = cache.get(row.id);
+  if (!prev) return 'ignore';
+  if (prev.status === 'preparing' && row.status === 'rejected') return 'cancelled';
+  if (prev.status === 'preparing' && row.status === 'preparing' && row.last_edit_id && row.last_edit_id !== prev.last_edit_id) return 'edited';
+  return 'ignore';
 }
 
 function todayStart() {
@@ -73,6 +91,14 @@ export default function DriverDashboard() {
   const [togglingAvail, setTogglingAvail] = useState(false);
   const [mapAddress,    setMapAddress]    = useState<string | null>(null);
   const sessionRef = useRef<Session | null>(null);
+  const knownActiveStateRef = useRef<Map<string, { status: string; last_edit_id: string | null }>>(new Map());
+  const activeRef = useRef<Order[]>([]);
+
+  // شارة "تم تعديل الطلب" — تُخفى بعد ضغط السائق عليها لهذا last_edit_id تحديداً
+  const [dismissedEdits, setDismissedEdits] = useState<Map<string, string>>(new Map());
+
+  // طلبات أُلغيت من الإدارة وسائق لم يطّلع عليها بعد — تبقى ظاهرة حتى يضغط "تم الاطلاع"
+  const [cancelledOrders, setCancelledOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -112,6 +138,8 @@ export default function DriverDashboard() {
       .then(({ data }) => { if (data) setIsAvailable(data.status === 'available'); });
   }, [session]);
 
+  useEffect(() => { activeRef.current = active; }, [active]);
+
   const fetchIncoming = useCallback((driverId: string) => {
     const rejected = getRejected(driverId);
     supabase
@@ -132,11 +160,15 @@ export default function DriverDashboard() {
   const fetchActive = useCallback((driverId: string) => {
     supabase
       .from('orders')
-      .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at')
+      .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at, last_edit_id')
       .eq('driver_id', driverId)
       .in('status', ['preparing', 'pickup', 'ready'])
       .order('created_at', { ascending: false })
-      .then(({ data }) => setActive((data as Order[]) || []));
+      .then(({ data }) => {
+        const rows = (data as Order[]) || [];
+        setActive(rows);
+        rows.forEach(r => knownActiveStateRef.current.set(r.id, { status: r.status, last_edit_id: r.last_edit_id }));
+      });
   }, []);
 
   const fetchCompleted = useCallback((driverId: string) => {
@@ -149,6 +181,33 @@ export default function DriverDashboard() {
       .order('created_at', { ascending: false })
       .then(({ data }) => setCompleted((data as Order[]) || []));
   }, []);
+
+  // معالجة حدث realtime واحد على جدول orders — يصنّف الحدث (ألغي/عُدّل) بمقارنته
+  // بالحالة المعروفة محلياً قبل استدعاء fetchActive (الذي سيستبدل تلك الحالة المعروفة).
+  const handleDriverOrderEvent = useCallback((row: DriverOrdersRealtimeRow) => {
+    const s = sessionRef.current;
+    if (!s) return;
+
+    const kind = classifyDriverOrderEvent(knownActiveStateRef.current, s.id, row);
+
+    if (kind === 'cancelled') {
+      const snapshot = activeRef.current.find(o => o.id === row.id);
+      if (snapshot) setCancelledOrders(prev => [...prev.filter(o => o.id !== row.id), snapshot]);
+    }
+    // 'edited' needs no immediate action here — the badge is derived directly
+    // from order.last_edit_id vs dismissedEdits at render time (see 3f), and
+    // active state will carry the new last_edit_id once fetchActive resolves below.
+
+    if (row.driver_id === s.id && (row.status === 'preparing' || row.status === 'pickup' || row.status === 'ready')) {
+      knownActiveStateRef.current.set(row.id, { status: row.status, last_edit_id: row.last_edit_id });
+    } else if (row.driver_id === s.id) {
+      knownActiveStateRef.current.delete(row.id);
+    }
+
+    fetchIncoming(s.id);
+    fetchActive(s.id);
+    fetchCompleted(s.id);
+  }, [fetchIncoming, fetchActive, fetchCompleted]);
 
   useEffect(() => {
     if (!session) return;
@@ -184,14 +243,16 @@ export default function DriverDashboard() {
     // بدونها يعيد كل سائق بكل مطاعم المنصة جلب طلباته عند أي تحديث بأي مطعم آخر
     // (خطأ #25 بتقرير الفحص)
     const chIncoming = supabase.channel('driver-incoming')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${session.restaurantId}` }, () => {
-        const s = sessionRef.current;
-        if (s) { fetchIncoming(s.id); fetchActive(s.id); fetchCompleted(s.id); }
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${session.restaurantId}` }, (payload) => {
+        handleDriverOrderEvent(payload.new as DriverOrdersRealtimeRow);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${session.restaurantId}` }, (payload) => {
+        handleDriverOrderEvent(payload.new as DriverOrdersRealtimeRow);
       })
       .subscribe();
 
     return () => { supabase.removeChannel(chIncoming); };
-  }, [session, fetchIncoming, fetchActive, fetchCompleted]);
+  }, [session, fetchIncoming, fetchActive, fetchCompleted, handleDriverOrderEvent]);
 
   async function saveSubscription(driverId: string, sub: PushSubscription) {
     const { data: { session: authSession } } = await supabase.auth.getSession();
@@ -442,9 +503,12 @@ export default function DriverDashboard() {
                           <div className="text-right">
                             <p className="font-extrabold text-white text-lg">{order.client_name}</p>
                             {order.delivery_address && (
-                              <p className="text-slate-400 text-xs flex items-center gap-1 justify-end mt-0.5">
+                              <button
+                                onClick={() => setMapAddress(order.delivery_address!)}
+                                className="flex items-center gap-1 justify-end mt-0.5 w-full text-slate-400 text-xs active:opacity-70"
+                              >
                                 <MapPin size={10} /> {order.delivery_address}
-                              </p>
+                              </button>
                             )}
                           </div>
                         </div>
@@ -579,6 +643,28 @@ export default function DriverDashboard() {
           </div>
         </div>
 
+        {/* طلبات أُلغيت من الإدارة — تبقى ظاهرة حتى يضغط السائق "تم الاطلاع" */}
+        {cancelledOrders.length > 0 && (
+          <div className="space-y-2.5">
+            {cancelledOrders.map(order => (
+              <div key={order.id} className="bg-red-950/40 border border-red-700/60 rounded-2xl overflow-hidden">
+                <div className="px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="text-right">
+                    <p className="font-extrabold text-white text-base">{order.client_name}</p>
+                    <p className="text-red-300 text-xs font-bold mt-0.5">🚫 تم إلغاء هذا الطلب من الإدارة</p>
+                  </div>
+                  <button
+                    onClick={() => setCancelledOrders(prev => prev.filter(o => o.id !== order.id))}
+                    className="flex-shrink-0 px-3 py-2 rounded-xl bg-red-900/60 text-red-200 text-xs font-bold active:scale-95 transition-all"
+                  >
+                    تم الاطلاع
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* طلبات قيد التجهيز */}
         {preparingOrders.length > 0 && (
           <div className="space-y-2.5">
@@ -588,15 +674,25 @@ export default function DriverDashboard() {
                 className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
                 <div className="h-1 bg-blue-500" />
                 <div className="px-4 py-4">
-                  {/* وقت + رابط تفاصيل */}
-                  <div className="flex items-center justify-between mb-3">
+                  {/* وقت + رابط تفاصيل + شارة "تم التعديل" */}
+                  <div className="flex items-center justify-between mb-3 gap-2">
                     <a href={`/delivery/${order.id}`}
-                      className="flex items-center gap-1 text-blue-400 text-xs active:scale-95 transition-all">
+                      className="flex items-center gap-1 text-blue-400 text-xs active:scale-95 transition-all flex-shrink-0">
                       تفاصيل <ChevronLeft size={12} />
                     </a>
-                    <div className="flex items-center gap-1.5 text-slate-500 text-xs">
-                      <Clock size={12} />
-                      <span>{timeAgo(order.created_at)}</span>
+                    <div className="flex items-center gap-2">
+                      {order.last_edit_id && dismissedEdits.get(order.id) !== order.last_edit_id && (
+                        <button
+                          onClick={() => setDismissedEdits(prev => new Map(prev).set(order.id, order.last_edit_id!))}
+                          className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-900/40 text-amber-300 active:scale-95 transition-all"
+                        >
+                          ✏️ تم تعديل الطلب — راجع التفاصيل
+                        </button>
+                      )}
+                      <div className="flex items-center gap-1.5 text-slate-500 text-xs flex-shrink-0">
+                        <Clock size={12} />
+                        <span>{timeAgo(order.created_at)}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -657,32 +753,6 @@ export default function DriverDashboard() {
                 <p className="text-slate-500 text-sm">فعّل السويتش أعلاه لتستلم الطلبات</p>
               </>
             )}
-          </div>
-        )}
-
-        {/* توصيلات اليوم المكتملة */}
-        {completed.length > 0 && (
-          <div className="space-y-2.5 pt-2">
-            <div className="flex items-center gap-2 px-1">
-              <CheckCircle2 size={14} className="text-green-400" />
-              <p className="text-slate-400 text-xs font-medium">مكتملة اليوم ({completed.length})</p>
-            </div>
-            {completed.map(order => (
-              <div key={order.id} className="bg-slate-900/50 rounded-2xl border border-slate-800 px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-slate-500 text-xs">
-                  <Clock size={11} />
-                  <span>{timeAgo(order.created_at)}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-green-500 font-medium text-sm">
-                    {order.total_amount.toLocaleString()}
-                    <span className="text-xs font-normal text-slate-600"> د.ع</span>
-                  </span>
-                  <p className="text-slate-400 font-medium text-sm">{order.client_name}</p>
-                  <CheckCircle2 size={15} className="text-green-600" />
-                </div>
-              </div>
-            ))}
           </div>
         )}
 
