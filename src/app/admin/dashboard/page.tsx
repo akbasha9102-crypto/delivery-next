@@ -11,6 +11,7 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { LowStockAlert } from '@/components/shared/LowStockAlert';
 import { deductStockForOrder } from '@/lib/utils/deduct-stock';
 import { adjustStockForOrderEdit } from '@/lib/utils/edit-stock';
+import { makeKitchenEditWavUrl } from '@/lib/utils/kitchenAlertSound';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 
 
@@ -83,6 +84,13 @@ function waitInfo(createdAt: string) {
   if (mins < 10) return { color: '#22c55e', text: `${mins} د` };
   if (mins < 20) return { color: '#f59e0b', text: `${mins} د` };
   return { color: '#ef4444', text: `${mins} د ⚠️` };
+}
+
+function playOnce(ref: React.RefObject<HTMLAudioElement | null>) {
+  const a = ref.current;
+  if (!a) return;
+  a.currentTime = 0;
+  a.play().catch(() => {});
 }
 
 
@@ -959,6 +967,26 @@ export default function DashboardPage() {
 
   const initialLoadDone = useRef(false);
 
+  // ref مرآة لـ orders تُحدَّث بكل تغيّر — تُستخدم فقط لمقارنة pending_edit_id
+  // "قبل" مع "بعد" داخل معالج realtime UPDATE (state بالـ closure يبقى قديماً
+  // هناك، ولا يمكن الاعتماد على payload.old بجدول orders لغياب REPLICA IDENTITY
+  // FULL — نفس القيد الموثّق بـ admin/kitchen/page.tsx).
+  const ordersRef = useRef<Order[]>([]);
+  useEffect(() => { ordersRef.current = orders; }, [orders]);
+
+  // صوت "طلب تعديل من الزبون" بلوحة الكاشير — نفس مولّد نغمة التعديل المستخدم
+  // بشاشة المطبخ (makeKitchenEditWavUrl) لتوحيد الصوت المرتبط بمفهوم "تعديل"
+  // بكل شاشات الإدارة. يُنشأ مرة واحدة عند التحميل؛ لا شاشة قفل هنا كما بالمطبخ
+  // لأن الكاشير أصلاً يتفاعل مع الواجهة مباشرة (نقر على التابات وغيرها).
+  const editAlertAudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const url = makeKitchenEditWavUrl();
+    if (!url) return;
+    editAlertAudioRef.current = new Audio(url);
+    editAlertAudioRef.current.volume = 1;
+    return () => { URL.revokeObjectURL(url); editAlertAudioRef.current = null; };
+  }, []);
+
   // تحديث كل ثانية لعرض العداد التنازلي
   useEffect(() => {
     const t = setInterval(() => setTick(n => n + 1), 1000);
@@ -1021,7 +1049,17 @@ export default function DashboardPage() {
         }
         fetchOrders();
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` }, fetchOrders)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` }, ({ new: row }: any) => {
+        // تنبيه صوتي مرة واحدة فقط عند وصول تعديل زبون جديد فعلياً — بمقارنة
+        // pending_edit_id الوارد بقيمته "قبل" هذا التحديث (عبر ordersRef، وليس
+        // payload.old غير الموثوق بهذا الجدول). لا صوت لبقية تحديثات الطلب
+        // (تغيّر الحالة، تعيين سائق، ...) التي تمر بنفس هذا المعالج.
+        const prevOrder = ordersRef.current.find(o => o.id === row?.id);
+        if (row?.pending_edit_id && row.pending_edit_id !== prevOrder?.pending_edit_id) {
+          playOnce(editAlertAudioRef);
+        }
+        fetchOrders();
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [fetchOrders, restaurantId]);
@@ -1332,9 +1370,16 @@ export default function DashboardPage() {
           const isActive = filter === tab;
           const count    = counts[tab] || 0;
           const labels   = { pending: 'واردة', preparing: 'التجهيز', pickup: 'انتظار السائق', delivery: scope === 'internal' ? 'جاهز' : 'التوصيل', completed: 'مكتمل' };
+          // نقطة صفراء صغيرة فوق تاب "التجهيز" فقط، تظهر حصراً عند وجود طلب
+          // بحالة preparing له pending_edit_id (طلب تعديل من الزبون وصل ولم يُبتّ
+          // فيه بعد) — مستقلة تماماً عن عدّاد count الرقمي القائم أصلاً بنفس الزر.
+          const hasPendingEditInPreparing = tab === 'preparing' && orders.some(o => o.status === 'preparing' && o.pending_edit_id);
           const btn = (
             <button key={tab} onClick={() => setFilter(tab)}
-              className={`flex-1 min-w-[60px] py-2 px-2 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-white'}`}>
+              className={`relative flex-1 min-w-[60px] py-2 px-2 rounded-2xl text-xs font-bold text-center border transition-all active:scale-95 ${isActive ? 'bg-black border-black text-white dark:bg-white dark:border-white dark:text-black' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-white'}`}>
+              {hasPendingEditInPreparing && (
+                <span className="absolute -top-1 -end-1 w-2.5 h-2.5 rounded-full bg-yellow-400 ring-2 ring-white dark:ring-slate-800" />
+              )}
               <span className="block">{labels[tab]}</span>
               {count > 0 && (
                 <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-black mt-1 ${isActive ? 'bg-white text-black dark:bg-black dark:text-white' : 'bg-black text-white dark:bg-white dark:text-black'}`}>
