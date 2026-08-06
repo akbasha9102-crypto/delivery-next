@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase/client';
 
 const IDLE_LIMIT_MS = 15 * 60 * 1000; // 15 دقيقة خمول → تسجيل خروج تلقائي
 
-type ImpersonationState = { restaurantId: string; restaurantName: string; startedAt: number };
+type ImpersonationState = { restaurantId: string; restaurantName: string; startedAt: number; logId: string | null };
 
 // يُركَّب داخل src/app/admin/layout.tsx (يظهر بكل تبويبات لوحة تحكم المطعم).
 // لا يعرض شيئاً إطلاقاً إن لم تكن هناك جلسة انتحال نشطة بـ sessionStorage.
@@ -25,6 +25,15 @@ export function ImpersonationBanner() {
   const exitImpersonation = async () => {
     if (exitingRef.current) return;
     exitingRef.current = true;
+    if (state?.logId) {
+      try {
+        await fetch('/api/super-admin/impersonate/end', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ logId: state.logId }),
+        });
+      } catch { /* best-effort */ }
+    }
     try { await supabase.auth.signOut(); } catch { /* best-effort */ }
     sessionStorage.removeItem('impersonation_active');
     window.location.assign('/super-admin/dashboard');

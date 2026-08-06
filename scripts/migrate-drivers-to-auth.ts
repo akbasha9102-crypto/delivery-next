@@ -15,6 +15,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { randomBytes } from 'crypto';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -46,7 +47,7 @@ async function main() {
       console.log(`⚠️  تخطّي السائق ${d.name} (${d.id}) — لا يملك restaurant_id، راجعه يدوياً.`);
       continue;
     }
-    const password = d.password && d.password.length >= 6 ? d.password : `Driver@${d.id.slice(0, 8)}`;
+    const password = d.password && d.password.length >= 6 ? d.password : randomBytes(9).toString('base64url');
 
     const { data: authUser, error: createErr } = await admin.auth.admin.createUser({
       email: driverEmail(d.id),

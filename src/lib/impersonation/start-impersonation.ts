@@ -17,6 +17,6 @@ export async function startImpersonation(restaurantId: string, restaurantName: s
   const { error } = await supabase.auth.setSession({ access_token, refresh_token });
   if (error) throw error;
 
-  sessionStorage.setItem('impersonation_active', JSON.stringify({ restaurantId, restaurantName, startedAt: Date.now() }));
+  sessionStorage.setItem('impersonation_active', JSON.stringify({ restaurantId, restaurantName, startedAt: Date.now(), logId: json.logId ?? null }));
   window.location.assign('/admin/dashboard'); // نفس التبويب، ليس تبويباً جديداً
 }

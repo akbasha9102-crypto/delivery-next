@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
   // تسجيل الحدث بعد نجاح verifyOtp مباشرة، قبل إرجاع الاستجابة الناجحة —
   // best-effort، لا يوقف إصدار الجلسة عند فشله. لا تُخزَّن التوكنات هنا.
-  await logImpersonation({
+  const logId = await logImpersonation({
     restaurantId: restaurant.id,
     restaurantName: restaurant.name,
     targetOwnerId: restaurant.owner_id,
@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
     success: true,
     restaurant: { id: restaurant.id, name: restaurant.name },
     ownerEmail,
+    logId,
     session: { access_token, refresh_token, expires_at, expires_in },
   });
 }

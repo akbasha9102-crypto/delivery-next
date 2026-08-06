@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { getClientIp, isRateLimited, recordAttempt } from '@/lib/utils/rate-limit';
 
 // GET /api/track?id=<orderId>    — طلب واحد بمعرّفه (رابط التتبع مباشرة بعد الطلب)
 // GET /api/track?phone=<phone>   — آخر طلب نشط، وإلا آخر طلب مكتمل خلال 24 ساعة، لهذا الرقم
@@ -22,6 +23,12 @@ export async function GET(req: NextRequest) {
   }
 
   if (phone) {
+    const ip = getClientIp(req);
+    if (await isRateLimited('track_lookup_by_phone', ip, 20, 10 * 60 * 1000)) {
+      return Response.json({ error: 'محاولات كثيرة جداً، حاول لاحقاً' }, { status: 429 });
+    }
+    await recordAttempt('track_lookup_by_phone', ip);
+
     const { data: active } = await supabaseAdmin
       .from('orders').select('*, order_items(item_id, item_name, quantity, price)')
       .eq('client_phone', phone)

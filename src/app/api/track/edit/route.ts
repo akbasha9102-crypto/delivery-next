@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { isRestaurantSuspended } from '@/lib/auth/staff-auth';
+import { getClientIp, isRateLimited, recordAttempt } from '@/lib/utils/rate-limit';
 
 type EditItem = { item_id: string | null; item_name: string; quantity: number; price: number };
 type EditBody = { order_id?: string; client_phone?: string; items?: EditItem[] };
@@ -23,6 +24,12 @@ export async function POST(req: NextRequest) {
   if (!order_id || !client_phone) {
     return Response.json({ error: 'order_id و client_phone مطلوبان' }, { status: 400 });
   }
+
+  const ip = getClientIp(req);
+  if (await isRateLimited('track_edit', ip, 20, 10 * 60 * 1000)) {
+    return Response.json({ error: 'محاولات كثيرة جداً، حاول لاحقاً' }, { status: 429 });
+  }
+  await recordAttempt('track_edit', ip);
 
   if (!Array.isArray(items) || items.length === 0) {
     return Response.json({ error: 'يجب اختيار صنف واحد على الأقل' }, { status: 400 });
