@@ -1,6 +1,31 @@
 import type { NextConfig } from "next";
+import { execSync } from "node:child_process";
+
+// معرّف النشر (deploymentId) — يمنع "version skew": بعد كل npm run build يتغيّر
+// هاش ملفات JS/CSS بمجلد .next/static وتُحذف النسخة القديمة. الموظف اللي فاتح
+// تبويب من قبل عملية النشر ولسا ما عمل تحديث للصفحة، لما يدوس على قسم فرعي
+// (إحصائيات/أرشيف) بتنقل من جانب العميل (client-side)، هذا التنقل يطلب ملفات
+// الهاش القديم اللي بقت 404 — فتفشل الصفحة بالتحميل من غير أيقونات ولا تنسيق.
+// بوجود deploymentId، Next.js يكتشف الفرق بين هوية العميل وهوية السيرفر ويعمل
+// hard navigation (تحديث كامل) بدل تنقل جزئي معطوب. نجمع commit SHA (لتتبّع
+// النشرة بسهولة بالسجلات) مع Date.now() (لضمان تفرّد المعرّف بكل بناء فعلي حتى
+// لو صار البناء بدون commit جديد — الديبلوي هنا "npm run build" فقط، ممكن
+// يشتغل على تعديلات غير مرفوعة بـ commit بعد).
+function getDeploymentId(): string {
+  try {
+    const sha = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+    return `${sha}-${Date.now()}`;
+  } catch {
+    // git غير متوفر (حالة نادرة جداً — كل سير عمل النشر بهذا المشروع مبني على
+    // git أصلاً) — نستخدم الطابع الزمني فقط بدل تعطيل البناء بالكامل.
+    return `${Date.now()}`;
+  }
+}
 
 const nextConfig: NextConfig = {
+  deploymentId: getDeploymentId(),
   // ملاحظة أمنية: كان هنا experimental.staleTimes.dynamic = 120 (يبقي صفحات مثل
   // المنيو/السائقين/الإعدادات محفوظة بكاش المتصفح دقيقتين). هذا يعني أن حارس
   // OwnerOnly لا يُعاد تقييمه عند التنقل ضمن نافذة الكاش — فإذا زار المالك هذه
