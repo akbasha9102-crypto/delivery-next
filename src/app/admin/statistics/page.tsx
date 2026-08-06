@@ -12,6 +12,7 @@ import { Search, X, ChevronLeft, ChevronRight, Flame, Car, Package, LayoutGrid, 
 import { exportStatisticsToExcel, exportStatisticsToWord, type StatsExportData } from '@/lib/export/exportStatistics';
 import { SalesChart } from '@/components/shared/SalesChart';
 import { formatTime12h } from '@/lib/utils/formatTime';
+import { localOrderDisplay } from '@/lib/utils/localOrder';
 
 
 
@@ -659,7 +660,9 @@ export default function StatisticsPage() {
               <p className="text-4xl mb-3">📋</p>
               <p style={{ color: s.sub }}>لا توجد طلبات</p>
             </div>
-          ) : filtered.map(order => (
+          ) : filtered.map(order => {
+            const local = localOrderDisplay(order);
+            return (
             <div key={order.id} className="rounded-2xl overflow-hidden border" style={{ backgroundColor: s.surface, borderColor: s.border }}>
               <div className="h-1.5 bg-green-400" />
               <div className="p-4">
@@ -674,8 +677,9 @@ export default function StatisticsPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-base" style={{ color: s.text }}>{order.client_name}</p>
-                    <p className="text-sm mt-0.5" style={{ color: s.sub }}>{order.client_phone}</p>
+                    <p className="font-bold text-base" style={{ color: s.text }}>{local ? local.name : order.client_name}</p>
+                    {!local && <p className="text-sm mt-0.5" style={{ color: s.sub }}>{order.client_phone}</p>}
+                    {local?.showLocalTag && <p className="text-sm mt-0.5" style={{ color: s.sub }}>طلب محلي</p>}
                     {order.delivery_address && <p className="text-xs mt-0.5" style={{ color: s.sub }}>📍 {order.delivery_address}</p>}
                   </div>
                 </div>
@@ -702,7 +706,8 @@ export default function StatisticsPage() {
                 {order.client_note && <p className="text-sm mt-2 text-right" style={{ color: '#d97706' }}>📝 {order.client_note}</p>}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </>)}
 

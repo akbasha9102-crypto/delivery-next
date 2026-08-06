@@ -8,6 +8,7 @@ import { useDarkMode } from '@/context/ThemeContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { MessageSquare, AlertCircle, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, MapPin, Car, Search, Calendar, X } from 'lucide-react';
 import { formatTime12h } from '@/lib/utils/formatTime';
+import { localOrderDisplay } from '@/lib/utils/localOrder';
 
 type Feedback = {
   id: string;
@@ -86,19 +87,6 @@ function classifyOrderTab(o: Pick<ArchivedOrder, 'order_type'>): 'delivery' | 'p
   if (o.order_type === 'pickup') return 'pickup';
   if (o.order_type === 'local')  return 'local';
   return 'delivery';
-}
-
-// طلبات الكاشير المحلي (admin/local) ومودال "طلب سريع" بالداشبورد (admin/dashboard)
-// يضبطان client_phone على '0000000000' ثابتاً دائماً (لا يوجد حقل هاتف بهذين
-// النموذجين) — هذا يجعله مؤشراً موثوقاً 100% لـ"طلب داخلي/محلي"، ويغطي حتى
-// الطلبات القديمة المؤرشفة (بعكس created_by_staff المضاف حديثاً بدون تطبيق رجعي).
-const DEFAULT_LOCAL_NAMES = new Set(['زبون بدون جوال', 'زبون كاشير']);
-
-function localOrderDisplay(order: Pick<ArchivedOrder, 'client_name' | 'client_phone'>) {
-  const isInternalOrder = order.client_phone === '0000000000';
-  if (!isInternalOrder) return null;
-  const hasRealName = !DEFAULT_LOCAL_NAMES.has(order.client_name);
-  return { name: hasRealName ? order.client_name : 'طلب محلي', showLocalTag: hasRealName };
 }
 
 function localDate(d = new Date()) {
