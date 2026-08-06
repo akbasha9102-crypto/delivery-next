@@ -18,6 +18,7 @@ type Order = {
   status: 'pending' | 'preparing' | 'pickup' | 'ready' | 'completed';
   created_at: string;
   last_edit_id: string | null;
+  kitchen_ready_at: string | null;
 };
 
 type DriverOrdersRealtimeRow = { id: string; status: string; last_edit_id: string | null; driver_id: string | null };
@@ -144,7 +145,7 @@ export default function DriverDashboard() {
     const rejected = getRejected(driverId);
     supabase
       .from('orders')
-      .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at')
+      .select('id, client_name, client_phone, delivery_address, total_amount, status, created_at, kitchen_ready_at')
       .eq('status', 'preparing')
       .is('driver_id', null)
       // طلبات داخلي/سفري/كاشير محلي ليس لها سائق إطلاقاً — تُستبعد من قائمة السائقين
@@ -302,14 +303,28 @@ export default function DriverDashboard() {
   const acceptOrder = async (order: Order) => {
     if (!session || accepting) return;
     setAccepting(order.id);
+
+    const update: {
+      driver_id: string;
+      driver_name: string;
+      driver_phone: string;
+      status?: 'pickup';
+    } = {
+      driver_id:    session.id,
+      driver_name:  session.name,
+      driver_phone: session.phone,
+    };
+    // المطبخ خلّص التجهيز قبل ما يقبل أي سائق (kitchen_ready_at موجود مسبقاً) —
+    // ننتقل مباشرة لحالة "جاهز، اذهب للمطعم" بنفس الاستدعاء بدل الانتظار
+    // لحدث لاحق لن يأتي أبداً (markReady لا يُعاد تشغيله لكل طلب إلا مرة واحدة).
+    if (order.kitchen_ready_at) {
+      update.status = 'pickup';
+    }
+
     // نحاول نعين الطلب — فقط إذا لا يزال بلا سائق (race condition protection)
     const { data, error } = await supabase
       .from('orders')
-      .update({
-        driver_id:    session.id,
-        driver_name:  session.name,
-        driver_phone: session.phone,
-      })
+      .update(update)
       .eq('id', order.id)
       .is('driver_id', null)
       .eq('status', 'preparing')
@@ -483,14 +498,20 @@ export default function DriverDashboard() {
                     </div>
                   ) : (
                     <>
-                      <div className="px-4 py-2 bg-blue-600/20 flex items-center justify-between border-b border-blue-500/20">
+                      <div className={`px-4 py-2 flex items-center justify-between border-b ${
+                        order.kitchen_ready_at
+                          ? 'bg-green-600/20 border-green-500/20'
+                          : 'bg-blue-600/20 border-blue-500/20'
+                      }`}>
                         <div className="flex items-center gap-1.5">
-                          <Clock size={12} className="text-blue-400" />
-                          <span className="text-blue-300 text-xs">{timeAgo(order.created_at)}</span>
+                          <Clock size={12} className={order.kitchen_ready_at ? 'text-green-400' : 'text-blue-400'} />
+                          <span className={`text-xs ${order.kitchen_ready_at ? 'text-green-300' : 'text-blue-300'}`}>{timeAgo(order.created_at)}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Package size={13} className="text-blue-400" />
-                          <span className="text-blue-200 text-xs font-medium">طلب جديد</span>
+                          <Package size={13} className={order.kitchen_ready_at ? 'text-green-400' : 'text-blue-400'} />
+                          <span className={`text-xs font-medium ${order.kitchen_ready_at ? 'text-green-200' : 'text-blue-200'}`}>
+                            {order.kitchen_ready_at ? 'تم التجهيز ✓' : 'طلب جديد'}
+                          </span>
                         </div>
                       </div>
 
