@@ -1,14 +1,12 @@
 import { OwnerOnly } from '@/components/guards/OwnerOnly';
-import { RequireProfessionalPackage } from '@/components/guards/RequireProfessionalPackage';
 
 // إدارة الموظفين تبقى owner-only حتى بعد فتح /admin/settings العامة
 // للكاشير — راجع src/app/admin/dashboard/layout.tsx للتفصيل الأمني الكامل.
-// مقيَّدة أيضاً بالباقة المحترفين (RequireProfessionalPackage) — طبقة
-// إضافية داخل OwnerOnly، لا تستبدله.
+// لم تعد مقيَّدة بالباقة (متاحة لكل الباقات standard/professional) —
+// أُزيل RequireProfessionalPackage عمداً؛ راجع migration
+// 20260806130000 لإزالة قيد الباقة المقابل عن API الموظفين وRLS سجل التدقيق.
 export default function StaffManagementLayout({ children }: { children: React.ReactNode }) {
   return (
-    <OwnerOnly>
-      <RequireProfessionalPackage>{children}</RequireProfessionalPackage>
-    </OwnerOnly>
+    <OwnerOnly>{children}</OwnerOnly>
   );
 }

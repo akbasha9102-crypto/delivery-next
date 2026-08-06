@@ -121,7 +121,9 @@ export async function isRestaurantSuspended(restaurantId: string): Promise<boole
 /**
  * فحص باقة الاشتراك (standard/professional) — مصدر الحقيقة الوحيد
  * restaurant_settings.subscription_tier، حيّ من القاعدة في كل طلب. يُستخدم
- * لحجب الأقسام المحصورة بالباقة المحترفين (الموظفين، سجل التدقيق، المخزون).
+ * حصراً لحجب قسم المخزون بالباقة المحترفين (/api/inventory/list،
+ * /api/inventory/waste). الموظفين وسجل التدقيق متاحان بكل الباقات —
+ * راجع تاريخ 20260806 لإزالة القيد المقابل.
  * fallback آمن غير حاجب: صف بلا subscription_tier يُعامَل كـ professional.
  */
 export async function isProfessionalPackage(restaurantId: string): Promise<boolean> {

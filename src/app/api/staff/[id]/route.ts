@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { verifyOwnerRequest, normalizeStaffUsername, isValidStaffUsername, staffCodeToEmail, isProfessionalPackage, MIN_STAFF_PASSWORD_LENGTH, type StaffRole } from '@/lib/auth/staff-auth';
+import { verifyOwnerRequest, normalizeStaffUsername, isValidStaffUsername, staffCodeToEmail, MIN_STAFF_PASSWORD_LENGTH, type StaffRole } from '@/lib/auth/staff-auth';
 
 const STAFF_SELECT =
   'id, restaurant_id, display_name, role, is_active, user_id, code, max_discount_pct, max_void_amount, created_at, updated_at';
@@ -36,10 +36,6 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
   const auth = await verifyOwnerRequest(req, existing.restaurant_id);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
-  if (!(await isProfessionalPackage(existing.restaurant_id))) {
-    return NextResponse.json({ error: 'إدارة الموظفين غير متاحة بالباقة الحالية' }, { status: 403 });
-  }
 
   const update: Record<string, unknown> = {};
 

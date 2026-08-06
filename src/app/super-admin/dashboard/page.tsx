@@ -602,7 +602,7 @@ function RestaurantCard({
           <div className="flex items-center justify-between bg-violet-950/30 border border-violet-900/30 rounded-xl px-3 py-3">
             <div>
               <p className="text-violet-300 text-sm font-semibold">الباقة: {r.subscription_tier === 'professional' ? 'المحترفين' : 'العادية'}</p>
-              <p className="text-violet-500/70 text-[10px] mt-0.5">تتحكم بالوصول لأقسام الموظفين وسجل التدقيق والمخزون</p>
+              <p className="text-violet-500/70 text-[10px] mt-0.5">تتحكم بالوصول لقسم المخزون فقط (الموظفين وسجل التدقيق متاحان بكل الباقات الآن)</p>
             </div>
             <ToggleSwitch on={r.subscription_tier === 'professional'} onChange={onTogglePackage} disabled={togglingPackage} />
           </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { normalizeStaffUsername, isValidStaffUsername, staffCodeToEmail, verifyOwnerRequest, isProfessionalPackage, MIN_STAFF_PASSWORD_LENGTH, type StaffRole } from '@/lib/auth/staff-auth';
+import { normalizeStaffUsername, isValidStaffUsername, staffCodeToEmail, verifyOwnerRequest, MIN_STAFF_PASSWORD_LENGTH, type StaffRole } from '@/lib/auth/staff-auth';
 
 const STAFF_SELECT =
   'id, restaurant_id, display_name, role, is_active, user_id, code, max_discount_pct, max_void_amount, created_at, updated_at';
@@ -12,10 +12,6 @@ export async function GET(req: NextRequest) {
   const restaurantId = req.nextUrl.searchParams.get('restaurant_id') ?? '';
   const auth = await verifyOwnerRequest(req, restaurantId);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
-  if (!(await isProfessionalPackage(restaurantId))) {
-    return NextResponse.json({ error: 'إدارة الموظفين غير متاحة بالباقة الحالية' }, { status: 403 });
-  }
 
   const { data, error } = await supabaseAdmin
     .from('user_roles')
@@ -54,10 +50,6 @@ export async function POST(req: NextRequest) {
 
   const auth = await verifyOwnerRequest(req, restaurant_id ?? '');
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
-  if (!(await isProfessionalPackage(restaurant_id ?? ''))) {
-    return NextResponse.json({ error: 'إدارة الموظفين غير متاحة بالباقة الحالية' }, { status: 403 });
-  }
 
   if (!display_name?.trim()) {
     return NextResponse.json({ error: 'display_name مطلوب' }, { status: 400 });
