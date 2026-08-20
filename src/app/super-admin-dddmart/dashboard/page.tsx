@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 // لوحة سوبر أدمن مصغّرة مخصصة لمتاجر dddmart فقط — منفصلة كلياً عن لوحة
 // المطاعم (src/app/super-admin/dashboard). تنفّذ ثلاثة أشياء فقط بحسب
 // التصميم المُقرّ: قائمة متاجر، إنشاء متجر (+ أول حساب دخول له)، تبديل
-// حالة الاشتراك تفعيل/تعليق. عمداً بلا تعديل/حذف/باقات/انتحال هوية.
+// حالة الاشتراك تفعيل/تعليق، وإعادة تعيين كلمة مرور أدمن المتجر. عمداً بلا
+// تعديل/حذف/باقات/انتحال هوية.
 
 type Store = {
   id: string;
@@ -33,12 +34,24 @@ function ToggleSwitch({ on, onChange, disabled }: { on: boolean; onChange: () =>
   );
 }
 
+function generateStrongPassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
 export default function SuperAdminDddmartDashboard() {
   const router = useRouter();
   const [stores,  setStores]  = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  // نافذة إعادة تعيين كلمة مرور أدمن متجر
+  const [pwStore, setPwStore] = useState<Store | null>(null); // null = مغلقة
+  const [pwValue, setPwValue] = useState('');
+  const [pwSubmitting, setPwSubmitting] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwResult, setPwResult] = useState<{ password: string; adminEmail: string } | null>(null);
 
   // نموذج إنشاء متجر جديد
   const [storeName,     setStoreName]     = useState('');
@@ -101,6 +114,39 @@ export default function SuperAdminDddmartDashboard() {
       setStores(prev => prev.map(s => s.id === store.id ? { ...s, is_active: !s.is_active } : s));
     }
     setTogglingId(null);
+  };
+
+  const openPasswordModal = (store: Store) => {
+    setPwStore(store);
+    setPwValue(generateStrongPassword());
+    setPwError('');
+    setPwResult(null);
+  };
+
+  const closePasswordModal = () => {
+    if (pwSubmitting) return; // لا إغلاق أثناء إرسال الطلب
+    setPwStore(null);
+    setPwValue('');
+    setPwError('');
+    setPwResult(null);
+  };
+
+  const handlePasswordReset = async () => {
+    if (!pwStore || !pwValue.trim()) return;
+    setPwSubmitting(true);
+    setPwError('');
+    const res = await fetch(`/api/super-admin-dddmart/stores/${pwStore.id}/password`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPassword: pwValue }),
+    });
+    const json = await res.json();
+    setPwSubmitting(false);
+    if (!res.ok) {
+      setPwError(json.error ?? 'فشل تحديث كلمة المرور');
+      return;
+    }
+    setPwResult({ password: pwValue, adminEmail: json.adminEmail });
   };
 
   return (
@@ -198,7 +244,7 @@ export default function SuperAdminDddmartDashboard() {
                     <th className="text-right px-6 py-3 font-semibold">المعرّف</th>
                     <th className="text-right px-6 py-3 font-semibold">الحالة</th>
                     <th className="text-right px-6 py-3 font-semibold">تاريخ الإنشاء</th>
-                    <th className="text-right px-6 py-3 font-semibold">تبديل</th>
+                    <th className="text-right px-6 py-3 font-semibold">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -217,11 +263,19 @@ export default function SuperAdminDddmartDashboard() {
                       </td>
                       <td className="px-6 py-4 text-slate-400">{fmtDate(store.created_at)}</td>
                       <td className="px-6 py-4">
-                        <ToggleSwitch
-                          on={store.is_active}
-                          disabled={togglingId === store.id}
-                          onChange={() => handleToggle(store)}
-                        />
+                        <div className="flex items-center gap-3">
+                          <ToggleSwitch
+                            on={store.is_active}
+                            disabled={togglingId === store.id}
+                            onChange={() => handleToggle(store)}
+                          />
+                          <button
+                            onClick={() => openPasswordModal(store)}
+                            className="text-xs font-semibold text-violet-400 hover:text-violet-300 bg-violet-900/20 hover:bg-violet-900/30 border border-violet-700/40 rounded-lg px-3 py-1.5 transition-all active:scale-95"
+                          >
+                            🔑 كلمة المرور
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -231,6 +285,68 @@ export default function SuperAdminDddmartDashboard() {
           )}
         </div>
       </div>
+
+      {/* نافذة محلية لإعادة تعيين كلمة المرور — بلا مكوّن Modal مشترك، بنفس مبدأ العزل بهذا الملف */}
+      {pwStore && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={closePasswordModal}>
+          <div
+            className="bg-[#1a1a2e] rounded-2xl p-6 border border-slate-700/50 shadow-xl w-full max-w-sm"
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 className="text-white font-bold mb-1">إعادة تعيين كلمة المرور</h2>
+            <p className="text-slate-400 text-sm mb-4">{pwStore.name}</p>
+
+            {pwError && (
+              <div className="bg-red-900/30 border border-red-700/50 rounded-xl px-4 py-3 mb-4 text-red-400 text-sm text-center">
+                {pwError}
+              </div>
+            )}
+
+            {pwResult ? (
+              <>
+                <div className="bg-green-900/30 border border-green-700/50 rounded-xl px-4 py-3 mb-4 text-green-400 text-sm text-center">
+                  تم تحديث كلمة المرور — سلّم البيانات التالية لصاحب المتجر:
+                  <div className="mt-2 text-white font-mono text-sm" dir="ltr">{pwResult.adminEmail}</div>
+                  <div className="text-white font-mono text-sm" dir="ltr">{pwResult.password}</div>
+                </div>
+                <button
+                  onClick={closePasswordModal}
+                  className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95"
+                >
+                  إغلاق
+                </button>
+              </>
+            ) : (
+              <>
+                <label className="block text-slate-300 text-sm font-semibold mb-2">كلمة المرور الجديدة</label>
+                <input
+                  type="text"
+                  value={pwValue}
+                  onChange={e => setPwValue(e.target.value)}
+                  dir="ltr"
+                  className="w-full bg-[#0f0f1a] border border-slate-600 rounded-xl px-4 py-3 text-left text-white outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-600 mb-4"
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={closePasswordModal}
+                    disabled={pwSubmitting}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-60 text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    onClick={handlePasswordReset}
+                    disabled={pwSubmitting || !pwValue.trim()}
+                    className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95"
+                  >
+                    {pwSubmitting ? 'جاري التحديث...' : 'تأكيد'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
